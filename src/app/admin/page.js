@@ -13,6 +13,8 @@ import {
   saveExecutiveRecord,
   deleteExecutiveRecord,
   syncAllSeedDataToFirestore,
+  clearAllPersonnelData,
+  clearAllExecutivesData,
   resetLocalSeedData,
 } from '@/lib/storageService';
 import {
@@ -203,6 +205,15 @@ export default function AdminPage() {
   const handleResetData = () => {
     if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นตัวอย่างใช่หรือไม่?')) {
       resetLocalSeedData();
+    }
+  };
+
+  const handleClearDummyData = async () => {
+    if (confirm('คุณต้องการลบข้อมูลบุคลากรและฝ่ายบริหารตัวอย่างทั้งหมด เพื่อเริ่มต้นใส่ข้อมูลบุคลากรจริงใช่หรือไม่? (ระบบจะคงบัญชี Admin ปัจจุบันของคุณไว้)')) {
+      const keepEmail = currentPersonnel?.email || '';
+      await clearAllPersonnelData(keepEmail);
+      await clearAllExecutivesData();
+      alert('ล้างข้อมูลตัวอย่างเรียบร้อยแล้ว! ตอนนี้ฐานข้อมูลว่างและพร้อมสำหรับการเพิ่มบุคลากรจริงแล้วครับ');
     }
   };
 
@@ -826,6 +837,14 @@ export default function AdminPage() {
                 <button onClick={handleResetData} className="btn btn-secondary btn-sm">
                   <RotateCcw size={14} />
                   <span>รีเซ็ตข้อมูลตัวอย่าง</span>
+                </button>
+                <button
+                  onClick={handleClearDummyData}
+                  className="btn btn-danger btn-sm"
+                  title="ลบเฉพาะข้อมูลบุคลากรตัวอย่าง เพื่อเริ่มกรอกข้อมูลบุคลากรจริง"
+                >
+                  <Trash2 size={14} />
+                  <span>ล้างข้อมูลตัวอย่าง (เริ่มใช้งานจริง)</span>
                 </button>
               </div>
             </div>

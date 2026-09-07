@@ -45,7 +45,7 @@ function initLocalStorage() {
  */
 export function subscribePersonnelList(callback) {
   if (typeof window === 'undefined') {
-    callback(INITIAL_PERSONNEL);
+    callback([]);
     return () => {};
   }
 
@@ -59,10 +59,8 @@ export function subscribePersonnelList(callback) {
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
             callback(list);
           } else {
-            // If collection is empty in Firestore, automatically seed it
-            syncAllSeedDataToFirestore().then(() => {
-              callback(INITIAL_PERSONNEL);
-            });
+            localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify([]));
+            callback([]);
           }
         },
         (error) => {
@@ -154,10 +152,8 @@ export function subscribeExecutiveList(callback) {
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
             callback(list);
           } else {
-            for (const ex of INITIAL_EXECUTIVES) {
-              setDoc(doc(db, 'executives', ex.id), ex);
-            }
-            callback(INITIAL_EXECUTIVES);
+            localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
+            callback([]);
           }
         },
         (error) => {
@@ -417,6 +413,55 @@ export async function syncAllSeedDataToFirestore() {
   } catch (e) {
     console.error('Failed to sync seed data to Firestore', e);
     throw e;
+  }
+}
+
+/**
+ * Clear all dummy personnel (optionally keeping the current admin's email)
+ */
+export async function clearAllPersonnelData(keepEmail = '') {
+  const cleanKeepEmail = keepEmail ? keepEmail.trim().toLowerCase() : '';
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'personnel'));
+      for (const d of snap.docs) {
+        const data = d.data();
+        if (!cleanKeepEmail || (data.email && data.email.trim().toLowerCase() !== cleanKeepEmail)) {
+          await deleteDoc(doc(db, 'personnel', d.id));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to clear personnel in Firestore', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+    const filtered = cleanKeepEmail
+      ? list.filter((p) => p.email && p.email.trim().toLowerCase() === cleanKeepEmail)
+      : [];
+    localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
+  }
+}
+
+/**
+ * Clear all dummy executives
+ */
+export async function clearAllExecutivesData() {
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'executives'));
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, 'executives', d.id));
+      }
+    } catch (e) {
+      console.error('Failed to clear executives in Firestore', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
   }
 }
 
