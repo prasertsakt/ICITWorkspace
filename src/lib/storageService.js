@@ -521,6 +521,34 @@ export async function deleteLeaveRecord(id) {
 }
 
 /**
+ * Synchronize all local leaves to Cloud Firestore
+ */
+export async function syncAllLocalLeavesToFirestore() {
+  if (!isFirebaseConfigured || !db) {
+    return { success: false, reason: 'Firebase not configured' };
+  }
+
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  let successCount = 0;
+  let errorCount = 0;
+  let lastError = null;
+
+  for (const item of list) {
+    try {
+      await setDoc(doc(db, 'leaves', item.id), item, { merge: true });
+      successCount++;
+    } catch (e) {
+      errorCount++;
+      lastError = e;
+      console.error('Failed to sync leave record to Firestore:', item.id, e);
+    }
+  }
+
+  return { success: errorCount === 0, successCount, errorCount, lastError };
+}
+
+/**
  * ----------------- 3. QUERY HELPERS -----------------
  */
 

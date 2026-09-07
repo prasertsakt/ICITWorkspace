@@ -8,6 +8,7 @@ import {
   subscribePersonnelList,
   saveLeaveRecord,
   deleteLeaveRecord,
+  syncAllLocalLeavesToFirestore,
 } from '@/lib/storageService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
 import LeaveCalendar from '@/components/LeaveCalendar';
@@ -25,6 +26,9 @@ import {
   Sun,
   Baby,
   ArrowRight,
+  CloudUpload,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function LeavePage() {
@@ -34,6 +38,8 @@ export default function LeavePage() {
   const [personnelList, setPersonnelList] = useState([]);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [editingLeave, setEditingLeave] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
 
   // Subscribe to real-time leave list and personnel list
   useEffect(() => {
@@ -99,6 +105,30 @@ export default function LeavePage() {
   const handleDeleteLeave = async (id, personName) => {
     setLeaves((prev) => prev.filter((l) => l.id !== id));
     await deleteLeaveRecord(id);
+  };
+
+  const handleSyncToCloud = async () => {
+    setIsSyncing(true);
+    setSyncStatus(null);
+    try {
+      const res = await syncAllLocalLeavesToFirestore();
+      if (res.success) {
+        setSyncStatus(`ซิงก์สำเร็จ ${res.successCount} รายการ`);
+        setTimeout(() => setSyncStatus(null), 4000);
+      } else {
+        alert(
+          `⚠️ การซิงก์ขึ้น Firebase ยังไม่สำเร็จ (${res.errorCount} รายการล้มเหลว)\n\n` +
+          `สาเหตุ: ${res.lastError?.code || ''} ${res.lastError?.message || 'ติด Security Rules'}\n\n` +
+          `วิธีแก้:\n1. ไปที่ Firebase Console > Firestore Database > แท็บ Rules\n` +
+          `2. ตรวจสอบว่ากฎความปลอดภัยเปิดอนุญาตให้อ่าน/เขียนคอลเลกชัน leaves\n` +
+          `3. กด Publish แล้วลองกดซิงก์ใหม่อีกครั้ง`
+        );
+      }
+    } catch (e) {
+      alert(`เกิดข้อผิดพลาด: ${e.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleOpenAddModal = () => {
@@ -202,14 +232,33 @@ export default function LeavePage() {
         </div>
 
         {isAdmin && (
-          <button
-            onClick={handleOpenAddModal}
-            className="btn btn-primary btn-sm"
-            style={{ padding: '0.6rem 1.15rem' }}
-          >
-            <Plus size={16} />
-            <span>บันทึกการลาใหม่</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <button
+              onClick={handleSyncToCloud}
+              disabled={isSyncing}
+              className="btn btn-secondary btn-sm"
+              title="ซิงก์ข้อมูลวันลาทั้งหมดจากเครื่องขึ้น Cloud Firestore"
+              style={{ padding: '0.6rem 0.95rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isSyncing ? (
+                <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : syncStatus ? (
+                <CheckCircle2 size={15} color="var(--mint-600)" />
+              ) : (
+                <CloudUpload size={15} color="var(--primary-600)" />
+              )}
+              <span>{isSyncing ? 'กำลังซิงก์...' : syncStatus || 'ซิงก์ขึ้น Firebase'}</span>
+            </button>
+
+            <button
+              onClick={handleOpenAddModal}
+              className="btn btn-primary btn-sm"
+              style={{ padding: '0.6rem 1.15rem' }}
+            >
+              <Plus size={16} />
+              <span>บันทึกการลาใหม่</span>
+            </button>
+          </div>
         )}
       </div>
 
