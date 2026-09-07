@@ -1,27 +1,51 @@
 // Initial Seed Data for Organization Management System
 
-export const INITIAL_EXECUTIVES = [
+export const INITIAL_PERSONNEL = [
   {
-    id: 'exec-1',
+    id: 'pers-exec-1',
     name: 'รศ.ดร.ประสิทธิ์ เจริญสุข',
-    position: 'ผู้อำนวยการสำนัก',
+    email: 'prasit.director@icit.org',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    department: 'สำนักงานผู้อำนวยการ',
+    position: 'ผู้บริหาร',
+    level: 'ชำนาญการพิเศษ',
+    appointmentDate: '01-10-2550',
+    retirementDate: '30-09-2575',
+    status: 'ปกติ',
+    role: 'Admin',
+    note: 'ผู้อำนวยการสำนักวิทยบริการและเทคโนโลยีสารสนเทศ',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
   },
   {
-    id: 'exec-2',
+    id: 'pers-exec-2',
     name: 'ผศ.ดร.กมลวรรณ ธนสารเจริญ',
-    position: 'รองผู้อำนวยการฝ่ายวิชาการและวิจัย',
+    email: 'kamolwan.deputy@icit.org',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
+    position: 'ผู้บริหาร',
+    level: 'ชำนาญการพิเศษ',
+    appointmentDate: '01-10-2554',
+    retirementDate: '30-09-2579',
+    status: 'ปกติ',
+    role: 'Admin',
+    note: 'รองผู้อำนวยการฝ่ายวิชาการและวิจัย',
     avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
   },
   {
-    id: 'exec-3',
+    id: 'pers-exec-3',
     name: 'ดร.ชาญชัย เกียรติวัฒนา',
-    position: 'รองผู้อำนวยการฝ่ายพัฒนาระบบและโครงสร้างพื้นฐาน',
+    email: 'chanchai.deputy@icit.org',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    department: 'ฝ่ายพัฒนาระบบสารสนเทศ',
+    position: 'ผู้บริหาร',
+    level: 'ชำนาญการพิเศษ',
+    appointmentDate: '01-10-2556',
+    retirementDate: '30-09-2582',
+    status: 'ปกติ',
+    role: 'Admin',
+    note: 'รองผู้อำนวยการฝ่ายพัฒนาระบบและโครงสร้างพื้นฐาน',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
   },
-];
-
-export const INITIAL_PERSONNEL = [
   {
     id: 'pers-1',
     name: 'นายสมชาย ใจดี',
@@ -141,6 +165,30 @@ export const INITIAL_PERSONNEL = [
     role: 'USER',
     note: 'ลาออกไปประกอบธุรกิจส่วนตัว (ตัวอย่างบุคลากรสถานะลาออกสำหรับทดสอบระบบบล็อกการเข้าสู่ระบบ)',
     avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+export const INITIAL_EXECUTIVES = [
+  {
+    id: 'exec-1',
+    personnelId: 'pers-exec-1',
+    name: 'รศ.ดร.ประสิทธิ์ เจริญสุข',
+    position: 'ผู้อำนวยการสำนัก',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'exec-2',
+    personnelId: 'pers-exec-2',
+    name: 'ผศ.ดร.กมลวรรณ ธนสารเจริญ',
+    position: 'รองผู้อำนวยการฝ่ายวิชาการและวิจัย',
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'exec-3',
+    personnelId: 'pers-exec-3',
+    name: 'ดร.ชาญชัย เกียรติวัฒนา',
+    position: 'รองผู้อำนวยการฝ่ายพัฒนาระบบและโครงสร้างพื้นฐาน',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
   },
 ];
 

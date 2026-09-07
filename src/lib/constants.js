@@ -18,6 +18,7 @@ export const PERSONNEL_TYPES = [
 
 // 3. ตัวเลือกตำแหน่งงาน (Positions)
 export const POSITIONS = [
+  'ผู้บริหาร',
   'นักวิชาการคอมพิวเตอร์',
   'นักวิชาการพัสดุ',
   'บุคลากร',

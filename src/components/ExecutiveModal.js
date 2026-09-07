@@ -1,12 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, Award, AlertCircle } from 'lucide-react';
+import { X, Check, Award, AlertCircle, User, Building2 } from 'lucide-react';
 
-export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdit }) {
+export default function ExecutiveModal({
+  isOpen,
+  onClose,
+  onSave,
+  executiveToEdit,
+  personnelList = [],
+}) {
   const isEditing = Boolean(executiveToEdit);
 
   const [formData, setFormData] = useState({
+    personnelId: '',
     name: '',
     position: '',
     avatarUrl: '',
@@ -17,12 +24,14 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
   useEffect(() => {
     if (executiveToEdit) {
       setFormData({
+        personnelId: executiveToEdit.personnelId || '',
         name: executiveToEdit.name || '',
         position: executiveToEdit.position || '',
         avatarUrl: executiveToEdit.avatarUrl || '',
       });
     } else {
       setFormData({
+        personnelId: '',
         name: '',
         position: '',
         avatarUrl: '',
@@ -33,10 +42,32 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
 
   if (!isOpen) return null;
 
+  // Separate personnel: those with position "ผู้บริหาร" vs others
+  const execPersonnel = personnelList.filter((p) => p.position === 'ผู้บริหาร');
+  const otherPersonnel = personnelList.filter((p) => p.position !== 'ผู้บริหาร');
+
+  const handleSelectPersonnel = (personId) => {
+    const person = personnelList.find((p) => p.id === personId);
+    if (person) {
+      setFormData((prev) => ({
+        ...prev,
+        personnelId: person.id,
+        name: person.name,
+        avatarUrl: person.avatarUrl || '',
+      }));
+      setErrors((prev) => ({ ...prev, personnelId: null, name: null }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        personnelId: '',
+      }));
+    }
+  };
+
   const validate = () => {
     const errs = {};
-    if (!formData.name.trim()) errs.name = 'กรุณาระบุชื่อ-นามสกุลผู้บริหาร';
-    if (!formData.position.trim()) errs.position = 'กรุณาระบุตำแหน่งผู้บริหาร';
+    if (!formData.name.trim()) errs.name = 'กรุณาเลือกบุคลากร';
+    if (!formData.position.trim()) errs.position = 'กรุณาระบุตำแหน่งผู้บริหาร (เช่น ผู้อำนวยการสำนัก)';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -54,12 +85,14 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
     onClose();
   };
 
+  const selectedPerson = personnelList.find((p) => p.id === formData.personnelId);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '480px' }}
+        style={{ maxWidth: '520px' }}
       >
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -82,7 +115,7 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
                 {isEditing ? 'แก้ไขข้อมูลผู้บริหาร' : 'เพิ่มผู้บริหารใหม่'}
               </h3>
               <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                โครงสร้างฝ่ายบริหาร
+                เลือกจากรายชื่อบุคลากรเพื่อแต่งตั้งเป็นฝ่ายบริหาร
               </p>
             </div>
           </div>
@@ -92,18 +125,37 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Step 1: Select Personnel */}
             <div className="input-group">
               <label className="input-label">
-                ชื่อ-นามสกุล <span className="required">*</span>
+                เลือกบุคลากร <span className="required">*</span>
               </label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="เช่น ผศ.ดร.ประสิทธิ์ เจริญสุข"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <select
+                className="form-select"
+                value={formData.personnelId}
+                onChange={(e) => handleSelectPersonnel(e.target.value)}
+              >
+                <option value="">-- กรุณาเลือกบุคลากรจากรายชื่อ --</option>
+
+                {execPersonnel.length > 0 && (
+                  <optgroup label="⭐ บุคลากรในตำแหน่ง 'ผู้บริหาร'">
+                    {execPersonnel.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.department})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+
+                <optgroup label="👤 บุคลากรทั้งหมดในองค์กร">
+                  {otherPersonnel.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} - {p.department} ({p.position})
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
               {errors.name && (
                 <span style={{ fontSize: '0.75rem', color: 'var(--rose-500)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <AlertCircle size={12} /> {errors.name}
@@ -111,26 +163,101 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
               )}
             </div>
 
+            {/* Selected Personnel Preview */}
+            {selectedPerson && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  background: 'var(--peach-50)',
+                  border: '1px solid var(--peach-100)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                {selectedPerson.avatarUrl ? (
+                  <img
+                    src={selectedPerson.avatarUrl}
+                    alt=""
+                    style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      background: 'var(--peach-500)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {selectedPerson.name?.charAt(0)}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0, fontSize: '0.825rem' }}>
+                  <strong style={{ display: 'block', color: 'var(--text-primary)' }}>
+                    {selectedPerson.name}
+                  </strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {selectedPerson.department} &bull; ตำแหน่ง: {selectedPerson.position}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Executive Position Title */}
             <div className="input-group">
               <label className="input-label">
-                ตำแหน่งผู้บริหาร <span className="required">*</span>
+                ตำแหน่งผู้บริหารในโครงสร้าง <span className="required">*</span>
               </label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="เช่น ผู้อำนวยการสำนัก, รองผู้อำนวยการ"
+                placeholder="เช่น ผู้อำนวยการสำนัก, รองผู้อำนวยการฝ่ายวิชาการและวิจัย"
                 value={formData.position}
                 onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               />
-              {errors.position && (
+              {errors.position ? (
                 <span style={{ fontSize: '0.75rem', color: 'var(--rose-500)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <AlertCircle size={12} /> {errors.position}
                 </span>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>ตัวอย่างคลิกด่วน:</span>
+                  {[
+                    'ผู้อำนวยการสำนัก',
+                    'รองผู้อำนวยการฝ่ายวิชาการและวิจัย',
+                    'รองผู้อำนวยการฝ่ายพัฒนาระบบและโครงสร้างพื้นฐาน',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, position: preset })}
+                      style={{
+                        background: '#F1F5F9',
+                        border: 'none',
+                        borderRadius: '99px',
+                        padding: '0.15rem 0.5rem',
+                        fontSize: '0.7rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
+            {/* Optional Avatar Override */}
             <div className="input-group">
-              <label className="input-label">URL รูปถ่าย (ไม่บังคับ)</label>
+              <label className="input-label">URL รูปถ่าย (ดึงอัตโนมัติจากบุคลากร หรือระบุใหม่)</label>
               <input
                 type="url"
                 className="form-input"
@@ -147,7 +274,7 @@ export default function ExecutiveModal({ isOpen, onClose, onSave, executiveToEdi
             </button>
             <button type="submit" className="btn btn-primary btn-sm">
               <Check size={16} />
-              <span>{isEditing ? 'บันทึกการแก้ไข' : 'เพิ่มผู้บริหาร'}</span>
+              <span>{isEditing ? 'บันทึกการแก้ไข' : 'แต่งตั้งผู้บริหาร'}</span>
             </button>
           </div>
         </form>

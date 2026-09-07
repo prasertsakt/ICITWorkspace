@@ -733,6 +733,14 @@ export default function AdminPage() {
                   <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', margin: 0, fontWeight: 500 }}>
                     {exec.position}
                   </p>
+                  {(() => {
+                    const linked = personnelList.find((p) => p.id === exec.personnelId || p.name === exec.name);
+                    return linked ? (
+                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                        🏢 {linked.department} ({linked.position})
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
@@ -862,6 +870,7 @@ export default function AdminPage() {
         onClose={() => setIsExecutiveModalOpen(false)}
         onSave={handleSaveExecutive}
         executiveToEdit={editingExecutive}
+        personnelList={personnelList}
       />
 
       <DepartmentModal
