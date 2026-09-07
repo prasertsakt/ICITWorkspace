@@ -37,8 +37,43 @@ function initLocalStorage() {
 }
 
 /**
- * ----------------- 1. REAL-TIME SUBSCRIPTIONS (ONSNAPSHOT) -----------------
+ * ----------------- 1. REAL-TIME SUBSCRIPTIONS & PUB-SUB -----------------
  */
+
+// In-memory subscribers for instantaneous, synchronous zero-latency UI updates
+const personnelSubscribers = new Set();
+const departmentSubscribers = new Set();
+const executiveSubscribers = new Set();
+
+function notifyPersonnelSubscribers(list) {
+  personnelSubscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Error notifying personnel subscriber', e);
+    }
+  });
+}
+
+function notifyDepartmentSubscribers(list) {
+  departmentSubscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Error notifying department subscriber', e);
+    }
+  });
+}
+
+function notifyExecutiveSubscribers(list) {
+  executiveSubscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Error notifying executive subscriber', e);
+    }
+  });
+}
 
 /**
  * Subscribe to real-time changes of Personnel list
@@ -49,41 +84,53 @@ export function subscribePersonnelList(callback) {
     return () => {};
   }
 
+  personnelSubscribers.add(callback);
+
+  let firestoreUnsub = null;
   if (isFirebaseConfigured && db) {
     try {
-      const unsub = onSnapshot(
+      firestoreUnsub = onSnapshot(
         collection(db, 'personnel'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
-            callback(list);
+            notifyPersonnelSubscribers(list);
           } else {
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify([]));
-            callback([]);
+            notifyPersonnelSubscribers([]);
           }
         },
         (error) => {
           console.warn('Firestore personnel snapshot error, fallback to local', error);
           initLocalStorage();
-          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+          callback(list);
         }
       );
-      return unsub;
     } catch (e) {
       console.warn('Failed to attach Firestore snapshot listener', e);
     }
   }
 
-  // Fallback / Demo Mode
+  // Immediate invoke with cached data
   initLocalStorage();
-  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+  callback(cachedList);
 
   const handleStorageChange = () => {
-    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+    callback(list);
   };
   window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
+
+  return () => {
+    personnelSubscribers.delete(callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
 }
 
 /**
@@ -95,42 +142,54 @@ export function subscribeDepartmentList(callback) {
     return () => {};
   }
 
+  departmentSubscribers.add(callback);
+
+  let firestoreUnsub = null;
   if (isFirebaseConfigured && db) {
     try {
-      const unsub = onSnapshot(
+      firestoreUnsub = onSnapshot(
         collection(db, 'departments'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
-            callback(list);
+            notifyDepartmentSubscribers(list);
           } else {
             for (const d of INITIAL_DEPARTMENTS) {
               setDoc(doc(db, 'departments', d.id), d);
             }
-            callback(INITIAL_DEPARTMENTS);
+            notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
           }
         },
         (error) => {
           console.warn('Firestore department snapshot error', error);
           initLocalStorage();
-          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+          callback(list);
         }
       );
-      return unsub;
     } catch (e) {
       console.warn('Failed to attach department listener', e);
     }
   }
 
   initLocalStorage();
-  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+  callback(cachedList);
 
   const handleStorageChange = () => {
-    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+    callback(list);
   };
   window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
+
+  return () => {
+    departmentSubscribers.delete(callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
 }
 
 /**
@@ -142,40 +201,52 @@ export function subscribeExecutiveList(callback) {
     return () => {};
   }
 
+  executiveSubscribers.add(callback);
+
+  let firestoreUnsub = null;
   if (isFirebaseConfigured && db) {
     try {
-      const unsub = onSnapshot(
+      firestoreUnsub = onSnapshot(
         collection(db, 'executives'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
-            callback(list);
+            notifyExecutiveSubscribers(list);
           } else {
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
-            callback([]);
+            notifyExecutiveSubscribers([]);
           }
         },
         (error) => {
           console.warn('Firestore executive snapshot error', error);
           initLocalStorage();
-          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+          callback(list);
         }
       );
-      return unsub;
     } catch (e) {
       console.warn('Failed to attach executive listener', e);
     }
   }
 
   initLocalStorage();
-  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+  callback(cachedList);
 
   const handleStorageChange = () => {
-    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+    callback(list);
   };
   window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
+
+  return () => {
+    executiveSubscribers.delete(callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
 }
 
 /**
@@ -186,6 +257,19 @@ export function subscribeExecutiveList(callback) {
  * Save / Update Personnel
  */
 export async function savePersonnelRecord(personnel) {
+  // 1. Immediately update local storage and notify all subscribers with zero latency
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+  const idx = list.findIndex((p) => p.id === personnel.id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...personnel };
+  } else {
+    list.unshift(personnel);
+  }
+  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
+  notifyPersonnelSubscribers(list);
+
+  // 2. Persist to Firestore
   if (isFirebaseConfigured && db) {
     try {
       await setDoc(doc(db, 'personnel', personnel.id), personnel, { merge: true });
@@ -194,16 +278,6 @@ export async function savePersonnelRecord(personnel) {
     }
   }
 
-  // Update local cache
-  initLocalStorage();
-  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
-  const idx = list.findIndex((p) => p.id === personnel.id);
-  if (idx >= 0) {
-    list[idx] = personnel;
-  } else {
-    list.unshift(personnel);
-  }
-  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
   return personnel;
 }
 
@@ -211,6 +285,14 @@ export async function savePersonnelRecord(personnel) {
  * Delete Personnel
  */
 export async function deletePersonnelRecord(id) {
+  // 1. Immediately update local storage and notify all subscribers with zero latency
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+  const filtered = list.filter((p) => p.id !== id);
+  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
+  notifyPersonnelSubscribers(filtered);
+
+  // 2. Persist deletion to Firestore
   if (isFirebaseConfigured && db) {
     try {
       await deleteDoc(doc(db, 'personnel', id));
@@ -219,10 +301,6 @@ export async function deletePersonnelRecord(id) {
     }
   }
 
-  initLocalStorage();
-  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
-  const filtered = list.filter((p) => p.id !== id);
-  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
   return true;
 }
 
@@ -230,6 +308,17 @@ export async function deletePersonnelRecord(id) {
  * Save / Update Department
  */
 export async function saveDepartmentRecord(department) {
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+  const idx = list.findIndex((d) => d.id === department.id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...department };
+  } else {
+    list.push(department);
+  }
+  localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
+  notifyDepartmentSubscribers(list);
+
   if (isFirebaseConfigured && db) {
     try {
       await setDoc(doc(db, 'departments', department.id), department, { merge: true });
@@ -238,15 +327,6 @@ export async function saveDepartmentRecord(department) {
     }
   }
 
-  initLocalStorage();
-  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-  const idx = list.findIndex((d) => d.id === department.id);
-  if (idx >= 0) {
-    list[idx] = department;
-  } else {
-    list.push(department);
-  }
-  localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
   return department;
 }
 
@@ -254,6 +334,17 @@ export async function saveDepartmentRecord(department) {
  * Save / Update Executive
  */
 export async function saveExecutiveRecord(executive) {
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+  const idx = list.findIndex((ex) => ex.id === executive.id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...executive };
+  } else {
+    list.push(executive);
+  }
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
+  notifyExecutiveSubscribers(list);
+
   if (isFirebaseConfigured && db) {
     try {
       await setDoc(doc(db, 'executives', executive.id), executive, { merge: true });
@@ -262,15 +353,6 @@ export async function saveExecutiveRecord(executive) {
     }
   }
 
-  initLocalStorage();
-  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
-  const idx = list.findIndex((ex) => ex.id === executive.id);
-  if (idx >= 0) {
-    list[idx] = executive;
-  } else {
-    list.push(executive);
-  }
-  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
   return executive;
 }
 
@@ -278,6 +360,12 @@ export async function saveExecutiveRecord(executive) {
  * Delete Executive
  */
 export async function deleteExecutiveRecord(id) {
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+  const filtered = list.filter((ex) => ex.id !== id);
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(filtered));
+  notifyExecutiveSubscribers(filtered);
+
   if (isFirebaseConfigured && db) {
     try {
       await deleteDoc(doc(db, 'executives', id));
@@ -286,10 +374,6 @@ export async function deleteExecutiveRecord(id) {
     }
   }
 
-  initLocalStorage();
-  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
-  const filtered = list.filter((ex) => ex.id !== id);
-  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(filtered));
   return true;
 }
 
@@ -422,6 +506,15 @@ export async function syncAllSeedDataToFirestore() {
 export async function clearAllPersonnelData(keepEmail = '') {
   const cleanKeepEmail = keepEmail ? keepEmail.trim().toLowerCase() : '';
 
+  if (typeof window !== 'undefined') {
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+    const filtered = cleanKeepEmail
+      ? list.filter((p) => p.email && p.email.trim().toLowerCase() === cleanKeepEmail)
+      : [];
+    localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
+    notifyPersonnelSubscribers(filtered);
+  }
+
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDocs(collection(db, 'personnel'));
@@ -435,20 +528,17 @@ export async function clearAllPersonnelData(keepEmail = '') {
       console.error('Failed to clear personnel in Firestore', e);
     }
   }
-
-  if (typeof window !== 'undefined') {
-    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
-    const filtered = cleanKeepEmail
-      ? list.filter((p) => p.email && p.email.trim().toLowerCase() === cleanKeepEmail)
-      : [];
-    localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
-  }
 }
 
 /**
  * Clear all dummy executives
  */
 export async function clearAllExecutivesData() {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
+    notifyExecutiveSubscribers([]);
+  }
+
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDocs(collection(db, 'executives'));
@@ -458,10 +548,6 @@ export async function clearAllExecutivesData() {
     } catch (e) {
       console.error('Failed to clear executives in Firestore', e);
     }
-  }
-
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
   }
 }
 
@@ -473,4 +559,7 @@ export function resetLocalSeedData() {
   localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(INITIAL_PERSONNEL));
   localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(INITIAL_DEPARTMENTS));
   localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(INITIAL_EXECUTIVES));
+  notifyPersonnelSubscribers(INITIAL_PERSONNEL);
+  notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
+  notifyExecutiveSubscribers(INITIAL_EXECUTIVES);
 }

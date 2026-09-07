@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminPage() {
-  const { currentPersonnel, isAdmin, isFirebaseConfigured, switchDemoUser } = useAuth();
+  const { currentPersonnel, isAdmin, isFirebaseConfigured } = useAuth();
 
   const [activeTab, setActiveTab] = useState('personnel'); // 'personnel' | 'departments' | 'executives' | 'settings'
 
@@ -145,13 +145,6 @@ export default function AdminPage() {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <button
-              onClick={() => switchDemoUser('admin@icit.org')}
-              className="btn btn-primary btn-sm"
-            >
-              <Sparkles size={16} />
-              <span>สลับไปใช้บัญชี Admin ทดสอบ (admin@icit.org)</span>
-            </button>
             <Link href="/" className="btn btn-secondary btn-sm">
               กลับหน้าหลัก
             </Link>
@@ -161,13 +154,24 @@ export default function AdminPage() {
     );
   }
 
-  // Handle Personnel Actions
+  // Handle Personnel Actions with Immediate State Update
   const handleSavePersonnel = async (data) => {
+    // Immediate optimistic update (0ms UI latency)
+    setPersonnelList((prev) => {
+      const idx = prev.findIndex((p) => p.id === data.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...data };
+        return next;
+      }
+      return [data, ...prev];
+    });
     await savePersonnelRecord(data);
   };
 
   const handleDeletePersonnel = async (id, name) => {
     if (confirm(`คุณต้องการลบข้อมูล "${name}" ออกจากระบบใช่หรือไม่?`)) {
+      setPersonnelList((prev) => prev.filter((p) => p.id !== id));
       await deletePersonnelRecord(id);
     }
   };
@@ -177,28 +181,51 @@ export default function AdminPage() {
       person.status === PERSONNEL_STATUS.ACTIVE
         ? PERSONNEL_STATUS.RESIGNED
         : PERSONNEL_STATUS.ACTIVE;
-    await savePersonnelRecord({ ...person, status: newStatus });
+    const updated = { ...person, status: newStatus };
+    setPersonnelList((prev) => prev.map((p) => (p.id === person.id ? updated : p)));
+    await savePersonnelRecord(updated);
   };
 
   const handleTogglePersonnelRole = async (person) => {
     const newRole =
       person.role === USER_ROLES.ADMIN ? USER_ROLES.USER : USER_ROLES.ADMIN;
-    await savePersonnelRecord({ ...person, role: newRole });
+    const updated = { ...person, role: newRole };
+    setPersonnelList((prev) => prev.map((p) => (p.id === person.id ? updated : p)));
+    await savePersonnelRecord(updated);
   };
 
-  // Handle Executive Actions
+  // Handle Executive Actions with Immediate State Update
   const handleSaveExecutive = async (data) => {
+    setExecutiveList((prev) => {
+      const idx = prev.findIndex((e) => e.id === data.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...data };
+        return next;
+      }
+      return [...prev, data];
+    });
     await saveExecutiveRecord(data);
   };
 
   const handleDeleteExecutive = async (id, name) => {
     if (confirm(`คุณต้องการลบผู้บริหาร "${name}" ใช่หรือไม่?`)) {
+      setExecutiveList((prev) => prev.filter((e) => e.id !== id));
       await deleteExecutiveRecord(id);
     }
   };
 
-  // Handle Department Actions
+  // Handle Department Actions with Immediate State Update
   const handleSaveDepartment = async (data) => {
+    setDepartmentList((prev) => {
+      const idx = prev.findIndex((d) => d.id === data.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...data };
+        return next;
+      }
+      return [...prev, data];
+    });
     await saveDepartmentRecord(data);
   };
 
