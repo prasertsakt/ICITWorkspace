@@ -85,8 +85,8 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
         department: PREDEFINED_DEPARTMENTS[0],
         position: POSITIONS[0],
         level: POSITION_LEVELS[0],
-        appointmentDate: '01-10-2565',
-        retirementDate: '30-09-2595',
+        appointmentDate: '',
+        retirementDate: '',
         status: PERSONNEL_STATUS.ACTIVE,
         role: USER_ROLES.USER,
         note: '',
@@ -107,15 +107,13 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
       errs.email = 'รูปแบบอีเมลไม่ถูกต้อง';
     }
 
-    if (!formData.appointmentDate.trim()) {
-      errs.appointmentDate = 'กรุณาระบุวันที่บรรจุ';
-    } else if (!isValidBuddhistDate(formData.appointmentDate.trim())) {
+    // appointmentDate is optional; validate format only if filled
+    if (formData.appointmentDate.trim() && !isValidBuddhistDate(formData.appointmentDate.trim())) {
       errs.appointmentDate = 'รูปแบบต้องเป็น DD-MM-YYYY (พ.ศ.) เช่น 01-10-2565';
     }
 
-    if (!formData.retirementDate.trim()) {
-      errs.retirementDate = 'กรุณาระบุวันที่เกษียณ';
-    } else if (!isValidBuddhistDate(formData.retirementDate.trim())) {
+    // retirementDate is optional; validate format only if filled
+    if (formData.retirementDate.trim() && !isValidBuddhistDate(formData.retirementDate.trim())) {
       errs.retirementDate = 'รูปแบบต้องเป็น DD-MM-YYYY (พ.ศ.) เช่น 30-09-2595';
     }
 
@@ -302,7 +300,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
               <div className="input-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                   <label className="input-label" style={{ margin: 0 }}>
-                    วันเริ่มทำงาน / วันที่บรรจุ <span className="required">*</span>
+                    วันเริ่มทำงาน / วันที่บรรจุ <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(ไม่บังคับ)</span>
                   </label>
                   {formData.appointmentDate && isValidBuddhistDate(formData.appointmentDate) && (
                     <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', fontWeight: 600 }}>
@@ -316,7 +314,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                     <input
                       type="text"
                       className={`form-input ${errors.appointmentDate ? 'input-error' : ''}`}
-                      placeholder="01-10-2565"
+                      placeholder="เช่น 01-10-2565"
                       value={formData.appointmentDate}
                       onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
                       style={{ paddingRight: '2.5rem' }}
@@ -392,6 +390,19 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                   >
                     วันนี้
                   </button>
+
+                  {/* Clear button if has value */}
+                  {formData.appointmentDate && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, appointmentDate: '' }))}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.55rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}
+                      title="ล้างข้อมูลวันที่"
+                    >
+                      ล้าง
+                    </button>
+                  )}
                 </div>
 
                 {errors.appointmentDate ? (
@@ -400,7 +411,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                   </span>
                 ) : (
                   <span className="input-hint">
-                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน
+                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน (ไม่บังคับ)
                   </span>
                 )}
               </div>
@@ -409,7 +420,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
               <div className="input-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                   <label className="input-label" style={{ margin: 0 }}>
-                    วันเกษียณอายุราชการ <span className="required">*</span>
+                    วันเกษียณอายุราชการ <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(ไม่บังคับ)</span>
                   </label>
                   {formData.retirementDate && isValidBuddhistDate(formData.retirementDate) && (
                     <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', fontWeight: 600 }}>
@@ -423,7 +434,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                     <input
                       type="text"
                       className={`form-input ${errors.retirementDate ? 'input-error' : ''}`}
-                      placeholder="30-09-2595"
+                      placeholder="เช่น 30-09-2595"
                       value={formData.retirementDate}
                       onChange={(e) => setFormData({ ...formData, retirementDate: e.target.value })}
                       style={{ paddingRight: '2.5rem' }}
@@ -510,6 +521,19 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                   >
                     30 ก.ย.
                   </button>
+
+                  {/* Clear button if has value */}
+                  {formData.retirementDate && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, retirementDate: '' }))}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.55rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}
+                      title="ล้างข้อมูลวันที่"
+                    >
+                      ล้าง
+                    </button>
+                  )}
                 </div>
 
                 {errors.retirementDate ? (
@@ -518,7 +542,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                   </span>
                 ) : (
                   <span className="input-hint">
-                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน
+                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน (ไม่บังคับ)
                   </span>
                 )}
               </div>
