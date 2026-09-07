@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PREDEFINED_DEPARTMENTS,
   PERSONNEL_TYPES,
@@ -9,12 +9,40 @@ import {
   PERSONNEL_STATUS,
   USER_ROLES,
 } from '@/lib/constants';
-import { isValidBuddhistDate, formatThaiDisplayDate } from '@/lib/dateUtils';
+import { isValidBuddhistDate, formatThaiDisplayDate, formatToBuddhistDate } from '@/lib/dateUtils';
 import { sanitizeText, sanitizeUrl, sanitizeEmail } from '@/lib/securityUtils';
 import { X, Check, AlertCircle, User, Calendar, Shield, Mail } from 'lucide-react';
 
+// Helper: Convert DD-MM-YYYY (Buddhist Era) to YYYY-MM-DD (ISO/CE) for HTML5 date picker
+function beToIso(beDateStr) {
+  if (!beDateStr) return '';
+  const parts = beDateStr.split('-');
+  if (parts.length !== 3) return '';
+  const day = parts[0].padStart(2, '0');
+  const month = parts[1].padStart(2, '0');
+  const beYear = parseInt(parts[2], 10);
+  if (isNaN(beYear)) return '';
+  const ceYear = beYear - 543;
+  return `${ceYear}-${month}-${day}`;
+}
+
+// Helper: Convert YYYY-MM-DD (ISO/CE) from HTML5 date picker to DD-MM-YYYY (Buddhist Era)
+function isoToBe(isoDateStr) {
+  if (!isoDateStr) return '';
+  const parts = isoDateStr.split('-');
+  if (parts.length !== 3) return '';
+  const ceYear = parseInt(parts[0], 10);
+  const month = parts[1].padStart(2, '0');
+  const day = parts[2].padStart(2, '0');
+  if (isNaN(ceYear)) return '';
+  const beYear = ceYear + 543;
+  return `${day}-${month}-${beYear}`;
+}
+
 export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdit }) {
   const isEditing = Boolean(personnelToEdit);
+  const appointmentPickerRef = useRef(null);
+  const retirementPickerRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -268,52 +296,229 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
               </div>
             </div>
 
-            {/* Grid 2: Dates (DD-MM-YYYY Buddhist Era) */}
+            {/* Grid 2: Dates (DD-MM-YYYY Buddhist Era) with Calendar Pickers */}
             <div className="grid-2">
+              {/* Field 1: วันที่บรรจุ / วันเริ่มทำงาน */}
               <div className="input-group">
-                <label className="input-label">
-                  วันที่บรรจุ (DD-MM-YYYY พ.ศ.) <span className="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="01-10-2565"
-                  value={formData.appointmentDate}
-                  onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                  <label className="input-label" style={{ margin: 0 }}>
+                    วันเริ่มทำงาน / วันที่บรรจุ <span className="required">*</span>
+                  </label>
+                  {formData.appointmentDate && isValidBuddhistDate(formData.appointmentDate) && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', fontWeight: 600 }}>
+                      {formatThaiDisplayDate(formData.appointmentDate)}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className={`form-input ${errors.appointmentDate ? 'input-error' : ''}`}
+                      placeholder="01-10-2565"
+                      value={formData.appointmentDate}
+                      onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+
+                    {/* Hidden Native Date Picker for seamless cross-browser calendar pop-up */}
+                    <input
+                      type="date"
+                      ref={appointmentPickerRef}
+                      value={beToIso(formData.appointmentDate)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            appointmentDate: isoToBe(e.target.value),
+                          }));
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '38px',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        zIndex: 2,
+                      }}
+                      title="เลือกวันจากปฏิทิน"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          appointmentPickerRef.current?.showPicker();
+                        } catch {
+                          appointmentPickerRef.current?.focus();
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--primary-600)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        zIndex: 1,
+                      }}
+                      title="เปิดปฏิทินเลือกวันที่"
+                    >
+                      <Calendar size={18} />
+                    </button>
+                  </div>
+
+                  {/* Quick Preset: วันนี้ */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = new Date();
+                      setFormData((prev) => ({
+                        ...prev,
+                        appointmentDate: formatToBuddhistDate(today),
+                      }));
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.55rem 0.65rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    title="ตั้งค่าเป็นวันปัจจุบัน"
+                  >
+                    วันนี้
+                  </button>
+                </div>
+
                 {errors.appointmentDate ? (
                   <span style={{ fontSize: '0.75rem', color: 'var(--rose-500)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <AlertCircle size={12} /> {errors.appointmentDate}
                   </span>
                 ) : (
                   <span className="input-hint">
-                    {isValidBuddhistDate(formData.appointmentDate)
-                      ? `🗓️ ${formatThaiDisplayDate(formData.appointmentDate)}`
-                      : 'ระบุเป็น วัน-เดือน-ปี พ.ศ. เช่น 01-10-2565'}
+                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน
                   </span>
                 )}
               </div>
 
+              {/* Field 2: วันเกษียณอายุราชการ */}
               <div className="input-group">
-                <label className="input-label">
-                  วันที่เกษียณ (DD-MM-YYYY พ.ศ.) <span className="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="30-09-2595"
-                  value={formData.retirementDate}
-                  onChange={(e) => setFormData({ ...formData, retirementDate: e.target.value })}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                  <label className="input-label" style={{ margin: 0 }}>
+                    วันเกษียณอายุราชการ <span className="required">*</span>
+                  </label>
+                  {formData.retirementDate && isValidBuddhistDate(formData.retirementDate) && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', fontWeight: 600 }}>
+                      {formatThaiDisplayDate(formData.retirementDate)}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className={`form-input ${errors.retirementDate ? 'input-error' : ''}`}
+                      placeholder="30-09-2595"
+                      value={formData.retirementDate}
+                      onChange={(e) => setFormData({ ...formData, retirementDate: e.target.value })}
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+
+                    {/* Hidden Native Date Picker for seamless calendar pop-up */}
+                    <input
+                      type="date"
+                      ref={retirementPickerRef}
+                      value={beToIso(formData.retirementDate)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            retirementDate: isoToBe(e.target.value),
+                          }));
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '38px',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        zIndex: 2,
+                      }}
+                      title="เลือกวันจากปฏิทิน"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          retirementPickerRef.current?.showPicker();
+                        } catch {
+                          retirementPickerRef.current?.focus();
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--primary-600)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        zIndex: 1,
+                      }}
+                      title="เปิดปฏิทินเลือกวันที่"
+                    >
+                      <Calendar size={18} />
+                    </button>
+                  </div>
+
+                  {/* Quick Preset: 30 ก.ย. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let targetYear = 2595;
+                      if (formData.retirementDate) {
+                        const parts = formData.retirementDate.split('-');
+                        if (parts.length === 3 && !isNaN(parseInt(parts[2], 10))) {
+                          targetYear = parseInt(parts[2], 10);
+                        }
+                      } else if (formData.appointmentDate) {
+                        const parts = formData.appointmentDate.split('-');
+                        if (parts.length === 3 && !isNaN(parseInt(parts[2], 10))) {
+                          targetYear = parseInt(parts[2], 10) + 30;
+                        }
+                      }
+                      setFormData((prev) => ({
+                        ...prev,
+                        retirementDate: `30-09-${targetYear}`,
+                      }));
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.55rem 0.65rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    title="กำหนดเป็นวันที่ 30 กันยายน (วันเกษียณราชการตามระเบียบ)"
+                  >
+                    30 ก.ย.
+                  </button>
+                </div>
+
                 {errors.retirementDate ? (
                   <span style={{ fontSize: '0.75rem', color: 'var(--rose-500)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <AlertCircle size={12} /> {errors.retirementDate}
                   </span>
                 ) : (
                   <span className="input-hint">
-                    {isValidBuddhistDate(formData.retirementDate)
-                      ? `🗓️ ${formatThaiDisplayDate(formData.retirementDate)}`
-                      : 'ระบุเป็น วัน-เดือน-ปี พ.ศ. เช่น 30-09-2595'}
+                    ระบุเป็น DD-MM-YYYY (พ.ศ.) หรือคลิก 🗓️ เพื่อเลือกจากปฏิทิน
                   </span>
                 )}
               </div>
