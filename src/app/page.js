@@ -29,6 +29,8 @@ import {
   ChevronRight,
   LogIn,
   CheckCircle2,
+  BookOpen,
+  HeartHandshake,
 } from 'lucide-react';
 
 export default function PortalLandingPage() {
@@ -137,7 +139,7 @@ export default function PortalLandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              🚀 ระบบงานหลัก (Core Services)
+              🚀 ระบบสารสนเทศและบริการ
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               เลือกระบบงานที่ต้องการเข้าใช้งาน
@@ -363,144 +365,161 @@ export default function PortalLandingPage() {
               </span>
             </div>
           </Link>
+
+          {/* Service 4: ICIT Personal Knowledge Map (External) */}
+          <a
+            href="https://script.google.com/macros/s/AKfycbzRNmWQ9gDvjPvV-Grx-7B3WK54dd-J7q6LiIYeuqSAXMLNOepAPof1ofRMSCikx2BK/exec"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card-glass"
+            style={{
+              padding: '1.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              borderTop: '5px solid #8B5CF6',
+              transition: 'var(--transition)',
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#EDE9FE',
+                    color: '#8B5CF6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <BookOpen size={24} />
+                </div>
+                <span className="badge badge-active">
+                  <span className="pulse-dot" />
+                  เปิดให้บริการ
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                ICIT Personal Knowledge Map
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                แผนที่องค์ความรู้และทักษะความเชี่ยวชาญเฉพาะบุคคลของบุคลากรภายในสำนัก
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '1rem',
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                ไม่ต้องเข้าสู่ระบบ &bull; แหล่งข้อมูลภายนอก
+              </span>
+              <span
+                style={{
+                  color: '#8B5CF6',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                เปิดใช้งาน <ExternalLink size={15} />
+              </span>
+            </div>
+          </a>
+
+          {/* Service 5: แบบสำรวจปัจจัยความผูกพันของพนักงาน (External) */}
+          <a
+            href="https://script.google.com/macros/s/AKfycbwOb1JYVMKCOhvh4HS5br-VXF-AG-QWDoFMYQvjeZbwBe7CbgDUzkGc7_EEDE6JAaH5JA/exec"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card-glass"
+            style={{
+              padding: '1.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              borderTop: '5px solid #EC4899',
+              transition: 'var(--transition)',
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#FCE7F3',
+                    color: '#EC4899',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <HeartHandshake size={24} />
+                </div>
+                <span className="badge badge-active">
+                  <span className="pulse-dot" />
+                  เปิดให้บริการ
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                แบบสำรวจปัจจัยความผูกพันของพนักงาน
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                แบบประเมินและสำรวจความคิดเห็นเพื่อเสริมสร้างความผูกพันและความสุขในการทำงานของบุคลากร
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '1rem',
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                ไม่ต้องเข้าสู่ระบบ &bull; แหล่งข้อมูลภายนอก
+              </span>
+              <span
+                style={{
+                  color: '#EC4899',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                เปิดใช้งาน <ExternalLink size={15} />
+              </span>
+            </div>
+          </a>
         </div>
       </section>
 
       {/* Future Systems / Extensible Modules Section */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              📦 ระบบและบริการที่จะเปิดเร็วๆ นี้ (Coming Soon)
-            </h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              ระบบสารสนเทศที่อยู่ระหว่างการพัฒนาเพื่อรองรับการใช้งานภายในองค์กร
-            </p>
-          </div>
-        </div>
 
-        <div className="grid-3" style={{ gap: '1.25rem' }}>
-          {/* Module 1 */}
-          <div
-            className="card-glass"
-            style={{
-              padding: '1.5rem',
-              opacity: 0.85,
-              background: '#FAFBFD',
-              border: '1px dashed var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F1F5F9',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <CalendarCheck size={20} />
-              </div>
-              <span
-                className="badge"
-                style={{ background: '#F1F5F9', color: '#64748B', fontSize: '0.7rem' }}
-              >
-                เร็วๆ นี้
-              </span>
-            </div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              ระบบจองห้องประชุมและทรัพยากร
-            </h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              จองห้องประชุม ห้องสัมมนา ห้องปฏิบัติการคอมพิวเตอร์ และอุปกรณ์โสตทัศนูปกรณ์
-            </p>
-          </div>
-
-          {/* Module 2 */}
-          <div
-            className="card-glass"
-            style={{
-              padding: '1.5rem',
-              opacity: 0.85,
-              background: '#FAFBFD',
-              border: '1px dashed var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F1F5F9',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Wrench size={20} />
-              </div>
-              <span
-                className="badge"
-                style={{ background: '#F1F5F9', color: '#64748B', fontSize: '0.7rem' }}
-              >
-                เร็วๆ นี้
-              </span>
-            </div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              ระบบแจ้งซ่อมและบริการไอซีที (Service Desk)
-            </h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              แจ้งปัญหาการใช้งานคอมพิวเตอร์ อินเทอร์เน็ต เครือข่าย และบริการเทคโนโลยีสารสนเทศ
-            </p>
-          </div>
-
-          {/* Module 3 */}
-          <div
-            className="card-glass"
-            style={{
-              padding: '1.5rem',
-              opacity: 0.85,
-              background: '#FAFBFD',
-              border: '1px dashed var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F1F5F9',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FileText size={20} />
-              </div>
-              <span
-                className="badge"
-                style={{ background: '#F1F5F9', color: '#64748B', fontSize: '0.7rem' }}
-              >
-                เร็วๆ นี้
-              </span>
-            </div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              ระบบคลังเอกสารและแบบฟอร์มดิจิทัล
-            </h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              ดาวน์โหลดและยื่นแบบฟอร์มคำขอ ระเบียบ ประกาศ และเอกสารเผยแพร่ภายในองค์กร
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* System Status Footer Bar */}
       <section
@@ -526,7 +545,7 @@ export default function PortalLandingPage() {
               boxShadow: '0 0 8px var(--mint-500)',
             }}
           />
-          <span>สถานะระบบ: ระบบสารสนเทศทำงานปกติ (All Systems Operational)</span>
+          <span>Core Value: ICIT+R</span>
         </div>
 
         <div>
