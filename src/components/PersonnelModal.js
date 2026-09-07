@@ -10,6 +10,7 @@ import {
   USER_ROLES,
 } from '@/lib/constants';
 import { isValidBuddhistDate, formatThaiDisplayDate } from '@/lib/dateUtils';
+import { sanitizeText, sanitizeUrl, sanitizeEmail } from '@/lib/securityUtils';
 import { X, Check, AlertCircle, User, Calendar, Shield, Mail } from 'lucide-react';
 
 export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdit }) {
@@ -101,9 +102,12 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
     const payload = {
       ...formData,
       id: isEditing ? personnelToEdit.id : `pers-${Date.now()}`,
-      email: formData.email.trim().toLowerCase(),
-      appointmentDate: formData.appointmentDate.trim(),
-      retirementDate: formData.retirementDate.trim(),
+      name: sanitizeText(formData.name),
+      email: sanitizeEmail(formData.email),
+      note: sanitizeText(formData.note),
+      avatarUrl: sanitizeUrl(formData.avatarUrl),
+      appointmentDate: sanitizeText(formData.appointmentDate),
+      retirementDate: sanitizeText(formData.retirementDate),
     };
 
     onSave(payload);

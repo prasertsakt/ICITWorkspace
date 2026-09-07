@@ -479,6 +479,31 @@ export async function findPersonnelByEmail(email) {
 }
 
 /**
+ * Check if the database already has at least one active Admin
+ * Used to prevent privilege escalation on first-admin bootstrap
+ */
+export async function hasAnyAdmin() {
+  if (isFirebaseConfigured && db) {
+    try {
+      const q = query(
+        collection(db, 'personnel'),
+        where('role', '==', USER_ROLES.ADMIN),
+        where('status', '==', PERSONNEL_STATUS.ACTIVE)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) return true;
+    } catch (e) {
+      console.warn('Firestore hasAnyAdmin query failed, checking list fallback', e);
+    }
+  }
+
+  const list = await getPersonnelList();
+  return list.some(
+    (p) => p.role === USER_ROLES.ADMIN && p.status === PERSONNEL_STATUS.ACTIVE
+  );
+}
+
+/**
  * ----------------- 4. FULL FIRESTORE SYNC & RESET -----------------
  */
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Check, Award, AlertCircle, User, Building2 } from 'lucide-react';
+import { sanitizeText, sanitizeUrl } from '@/lib/securityUtils';
 
 export default function ExecutiveModal({
   isOpen,
@@ -79,6 +80,9 @@ export default function ExecutiveModal({
     const payload = {
       ...formData,
       id: isEditing ? executiveToEdit.id : `exec-${Date.now()}`,
+      name: sanitizeText(formData.name),
+      position: sanitizeText(formData.position),
+      avatarUrl: sanitizeUrl(formData.avatarUrl),
     };
 
     onSave(payload);

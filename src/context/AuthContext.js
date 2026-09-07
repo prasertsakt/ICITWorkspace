@@ -11,6 +11,7 @@ import {
   findPersonnelByEmail,
   getPersonnelList,
   savePersonnelRecord,
+  hasAnyAdmin,
 } from '@/lib/storageService';
 import { PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
 
@@ -97,13 +98,15 @@ export function AuthProvider({ children }) {
           setIsLoading(false);
         });
       } else {
-        // Local preview/demo mode: check saved session or auto-login with first admin for demo convenience
+        // Fallback mode: check if a previous session was saved
         if (typeof window !== 'undefined') {
-          const savedEmail = sessionStorage.getItem(SESSION_KEY) || 'admin@icit.org';
-          await authenticatePersonnelRecord(savedEmail, {
-            email: savedEmail,
-            displayName: 'ผู้ดูแลระบบตัวอย่าง',
-          });
+          const savedEmail = sessionStorage.getItem(SESSION_KEY);
+          if (savedEmail) {
+            await authenticatePersonnelRecord(savedEmail, {
+              email: savedEmail,
+              displayName: savedEmail.split('@')[0],
+            });
+          }
         }
         setIsLoading(false);
       }
@@ -143,10 +146,19 @@ export function AuthProvider({ children }) {
   };
 
   // Action: Bootstrap / Claim First Admin (Solve the chicken-and-egg bootstrap problem)
+  // Security guard: STRICTLY allowed only if NO active Admin exists in the system
   const bootstrapFirstAdmin = async (customName) => {
     setIsLoading(true);
     const emailToUse = unauthorizedEmail;
     if (!emailToUse) {
+      setIsLoading(false);
+      return false;
+    }
+
+    // Security Check: Prevent privilege escalation if an admin already exists
+    const adminAlreadyExists = await hasAnyAdmin();
+    if (adminAlreadyExists) {
+      alert('⚠️ ปฏิเสธคำขอ: มีผู้ดูแลระบบ (Admin) อยู่ในระบบแล้ว ไม่สามารถแต่งตั้งเพิ่มด้วยวิธีนี้ได้');
       setIsLoading(false);
       return false;
     }

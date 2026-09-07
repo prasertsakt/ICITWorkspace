@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { hasAnyAdmin } from '@/lib/storageService';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -22,12 +23,23 @@ export default function UnauthorizedModal() {
   } = useAuth();
 
   const [isBootstrapping, setIsBootstrapping] = useState(false);
-
-  if (!authError) return null;
+  const [canBootstrap, setCanBootstrap] = useState(false);
 
   const isNotWhitelisted = authError === 'EMAIL_NOT_WHITELISTED';
   const isResigned = authError === 'STATUS_RESIGNED';
   const isConfigMissing = authError === 'FIREBASE_CONFIG_MISSING';
+
+  useEffect(() => {
+    if (isNotWhitelisted) {
+      hasAnyAdmin().then((exists) => {
+        setCanBootstrap(!exists);
+      });
+    } else {
+      setCanBootstrap(false);
+    }
+  }, [isNotWhitelisted]);
+
+  if (!authError) return null;
 
   const handleClaimFirstAdmin = async () => {
     setIsBootstrapping(true);
@@ -102,8 +114,8 @@ export default function UnauthorizedModal() {
             )}
           </p>
 
-          {/* FIRST ADMIN BOOTSTRAP BOX */}
-          {isNotWhitelisted && (
+          {/* FIRST ADMIN BOOTSTRAP BOX (Only shown if NO Admin currently exists in the system) */}
+          {isNotWhitelisted && canBootstrap && (
             <div
               style={{
                 background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)',
