@@ -7,6 +7,7 @@ import {
   subscribePersonnelList,
   subscribeDepartmentList,
   subscribeExecutiveList,
+  saveExecutiveOrder,
 } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS, PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
 import { formatThaiDisplayDate } from '@/lib/dateUtils';
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   UserCheck,
   ChevronRight,
+  ChevronLeft,
   Filter,
   Sparkles,
   ArrowUpRight,
@@ -27,6 +29,8 @@ import {
   Briefcase,
   Layers,
   ArrowLeft,
+  ArrowUpDown,
+  GripVertical,
 } from 'lucide-react';
 
 export default function OrganizationPage() {
@@ -40,6 +44,50 @@ export default function OrganizationPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedPersonnelDetail, setSelectedPersonnelDetail] = useState(null);
+
+  // Executive Rearrange state (Admin only)
+  const [isRearrangingExecs, setIsRearrangingExecs] = useState(false);
+  const [draggedExecIndex, setDraggedExecIndex] = useState(null);
+  const [dragOverExecIndex, setDragOverExecIndex] = useState(null);
+
+  const moveExecutive = async (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= executiveList.length || fromIndex === toIndex) return;
+    const next = [...executiveList];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setExecutiveList(next);
+    await saveExecutiveOrder(next);
+  };
+
+  const handleExecDragStart = (e, index) => {
+    setDraggedExecIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleExecDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverExecIndex !== index) {
+      setDragOverExecIndex(index);
+    }
+  };
+
+  const handleExecDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedExecIndex === null || draggedExecIndex === dropIndex) {
+      setDraggedExecIndex(null);
+      setDragOverExecIndex(null);
+      return;
+    }
+    await moveExecutive(draggedExecIndex, dropIndex);
+    setDraggedExecIndex(null);
+    setDragOverExecIndex(null);
+  };
+
+  const handleExecDragEnd = () => {
+    setDraggedExecIndex(null);
+    setDragOverExecIndex(null);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -250,92 +298,230 @@ export default function OrganizationPage() {
 
       {/* Executive Board Section */}
       <section style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.25rem',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+        >
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               🏛️ คณะผู้บริหาร (Executive Board)
             </h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              โครงสร้างฝ่ายบริหารและผู้กำกับดูแลหน่วยงาน
+              {isRearrangingExecs
+                ? '💡 ลากการ์ดเพื่อสลับตำแหน่ง หรือใช้ปุ่ม ◀ ▶ บนการ์ดแต่ละใบเพื่อจัดเรียงลำดับ'
+                : 'โครงสร้างฝ่ายบริหารและผู้กำกับดูแลหน่วยงาน'}
             </p>
           </div>
+
+          {isAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={() => setIsRearrangingExecs(!isRearrangingExecs)}
+                className={`btn btn-sm ${isRearrangingExecs ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}
+              >
+                {isRearrangingExecs ? (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>เสร็จสิ้นการจัดเรียง</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown size={15} />
+                    <span>จัดเรียงการ์ดผู้บริหาร</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid-3">
-          {executiveList.map((exec) => (
-            <div
-              key={exec.id}
-              className="card-glass"
-              style={{
-                padding: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFF 100%)',
-              }}
-            >
-              {exec.avatarUrl ? (
-                <img
-                  src={exec.avatarUrl}
-                  alt={exec.name}
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: 'var(--radius-full)',
-                    objectFit: 'cover',
-                    border: '3px solid var(--peach-100)',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'var(--peach-50)',
-                    color: 'var(--peach-500)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {exec.name?.charAt(0) || 'ผ'}
-                </div>
-              )}
+          {executiveList.map((exec, index) => {
+            const isDragging = draggedExecIndex === index;
+            const isDragTarget = dragOverExecIndex === index && draggedExecIndex !== index;
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span
-                  className="badge"
-                  style={{
-                    backgroundColor: 'var(--peach-50)',
-                    color: 'var(--peach-text)',
-                    fontSize: '0.7rem',
-                    marginBottom: '0.35rem',
-                  }}
-                >
-                  ผู้บริหาร
-                </span>
-                <h4
-                  style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    marginBottom: '0.2rem',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {exec.name}
-                </h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', fontWeight: 500, margin: 0 }}>
-                  {exec.position}
-                </p>
+            return (
+              <div
+                key={exec.id}
+                className="card-glass"
+                draggable={isRearrangingExecs}
+                onDragStart={(e) => handleExecDragStart(e, index)}
+                onDragOver={(e) => handleExecDragOver(e, index)}
+                onDrop={(e) => handleExecDrop(e, index)}
+                onDragEnd={handleExecDragEnd}
+                style={{
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                  position: 'relative',
+                  cursor: isRearrangingExecs ? 'grab' : 'default',
+                  opacity: isDragging ? 0.4 : 1,
+                  transform: isDragging ? 'scale(0.97)' : 'scale(1)',
+                  border: isDragTarget
+                    ? '2px dashed var(--primary-500)'
+                    : isRearrangingExecs
+                    ? '1px dashed var(--peach-300)'
+                    : undefined,
+                  backgroundColor: isDragTarget
+                    ? 'rgba(99, 102, 241, 0.05)'
+                    : isRearrangingExecs
+                    ? 'rgba(255, 255, 255, 0.95)'
+                    : 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFF 100%)',
+                  boxShadow: isRearrangingExecs
+                    ? '0 6px 16px -3px rgba(249, 115, 22, 0.12)'
+                    : undefined,
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                }}
+              >
+                {/* Rearrange Bar when in rearrange mode */}
+                {isRearrangingExecs && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingBottom: '0.6rem',
+                      borderBottom: '1px dashed var(--peach-200)',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <GripVertical size={16} style={{ color: 'var(--peach-500)' }} />
+                      <span
+                        className="badge"
+                        style={{
+                          background: 'var(--peach-50)',
+                          color: 'var(--peach-600)',
+                          border: '1px solid var(--peach-200)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        ลำดับที่ {index + 1}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveExecutive(index, index - 1);
+                        }}
+                        disabled={index === 0}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          padding: '0.2rem 0.45rem',
+                          fontSize: '0.72rem',
+                          opacity: index === 0 ? 0.35 : 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
+                        title="เลื่อนไปซ้าย (ลำดับก่อนหน้า)"
+                      >
+                        <ChevronLeft size={13} />
+                        <span>ซ้าย</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveExecutive(index, index + 1);
+                        }}
+                        disabled={index === executiveList.length - 1}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          padding: '0.2rem 0.45rem',
+                          fontSize: '0.72rem',
+                          opacity: index === executiveList.length - 1 ? 0.35 : 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
+                        title="เลื่อนไปขวา (ลำดับถัดไป)"
+                      >
+                        <span>ขวา</span>
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Card Content */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {exec.avatarUrl ? (
+                    <img
+                      src={exec.avatarUrl}
+                      alt={exec.name}
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: 'var(--radius-full)',
+                        objectFit: 'cover',
+                        border: '3px solid var(--peach-100)',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: 'var(--radius-full)',
+                        background: 'var(--peach-50)',
+                        color: 'var(--peach-500)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {exec.name?.charAt(0) || 'ผ'}
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span
+                      className="badge"
+                      style={{
+                        backgroundColor: 'var(--peach-50)',
+                        color: 'var(--peach-text)',
+                        fontSize: '0.7rem',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      ผู้บริหาร
+                    </span>
+                    <h4
+                      style={{
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        marginBottom: '0.2rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {exec.name}
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', fontWeight: 500, margin: 0 }}>
+                      {exec.position}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

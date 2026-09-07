@@ -12,6 +12,7 @@ import {
   saveDepartmentRecord,
   saveExecutiveRecord,
   deleteExecutiveRecord,
+  saveExecutiveOrder,
   syncAllSeedDataToFirestore,
   clearAllPersonnelData,
   clearAllExecutivesData,
@@ -45,8 +46,11 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
   Filter,
   CloudUpload,
+  ArrowUpDown,
+  GripVertical,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -75,6 +79,50 @@ export default function AdminPage() {
 
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
+
+  // Executive rearrange states
+  const [isRearrangingExecs, setIsRearrangingExecs] = useState(false);
+  const [draggedExecIndex, setDraggedExecIndex] = useState(null);
+  const [dragOverExecIndex, setDragOverExecIndex] = useState(null);
+
+  const moveExecutive = async (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= executiveList.length || fromIndex === toIndex) return;
+    const next = [...executiveList];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setExecutiveList(next);
+    await saveExecutiveOrder(next);
+  };
+
+  const handleExecDragStart = (e, index) => {
+    setDraggedExecIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleExecDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverExecIndex !== index) {
+      setDragOverExecIndex(index);
+    }
+  };
+
+  const handleExecDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedExecIndex === null || draggedExecIndex === dropIndex) {
+      setDraggedExecIndex(null);
+      setDragOverExecIndex(null);
+      return;
+    }
+    await moveExecutive(draggedExecIndex, dropIndex);
+    setDraggedExecIndex(null);
+    setDragOverExecIndex(null);
+  };
+
+  const handleExecDragEnd = () => {
+    setDraggedExecIndex(null);
+    setDragOverExecIndex(null);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -705,115 +753,246 @@ export default function AdminPage() {
                 คณะฝ่ายบริหาร ({executiveList.length} ท่าน)
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                ผู้บริหารระดับสูงและผู้กำกับดูแลฝ่ายงาน
+                {isRearrangingExecs
+                  ? '💡 ลากการ์ดเพื่อสลับตำแหน่ง หรือใช้ปุ่ม ◀ ▶ บนการ์ดแต่ละใบเพื่อจัดเรียงลำดับ'
+                  : 'ผู้บริหารระดับสูงและผู้กำกับดูแลฝ่ายงาน'}
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setEditingExecutive(null);
-                setIsExecutiveModalOpen(true);
-              }}
-              className="btn btn-primary btn-sm"
-            >
-              <Plus size={16} />
-              <span>เพิ่มผู้บริหารใหม่</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setIsRearrangingExecs(!isRearrangingExecs)}
+                className={`btn btn-sm ${isRearrangingExecs ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {isRearrangingExecs ? (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>เสร็จสิ้นการจัดเรียง</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown size={15} />
+                    <span>จัดเรียงการ์ดผู้บริหาร</span>
+                  </>
+                )}
+              </button>
+
+              {!isRearrangingExecs && (
+                <button
+                  onClick={() => {
+                    setEditingExecutive(null);
+                    setIsExecutiveModalOpen(true);
+                  }}
+                  className="btn btn-primary btn-sm"
+                >
+                  <Plus size={16} />
+                  <span>เพิ่มผู้บริหารใหม่</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid-3">
-            {executiveList.map((exec) => (
-              <div
-                key={exec.id}
-                className="card-glass"
-                style={{
-                  padding: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  position: 'relative',
-                }}
-              >
-                {exec.avatarUrl ? (
-                  <img
-                    src={exec.avatarUrl}
-                    alt=""
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid var(--peach-200)',
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '50%',
-                      background: 'var(--peach-50)',
-                      color: 'var(--peach-500)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.4rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {exec.name?.charAt(0)}
+            {executiveList.map((exec, index) => {
+              const isDragging = draggedExecIndex === index;
+              const isDragTarget = dragOverExecIndex === index && draggedExecIndex !== index;
+
+              return (
+                <div
+                  key={exec.id}
+                  className="card-glass"
+                  draggable={isRearrangingExecs}
+                  onDragStart={(e) => handleExecDragStart(e, index)}
+                  onDragOver={(e) => handleExecDragOver(e, index)}
+                  onDrop={(e) => handleExecDrop(e, index)}
+                  onDragEnd={handleExecDragEnd}
+                  style={{
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.85rem',
+                    position: 'relative',
+                    cursor: isRearrangingExecs ? 'grab' : 'default',
+                    opacity: isDragging ? 0.4 : 1,
+                    transform: isDragging ? 'scale(0.97)' : 'scale(1)',
+                    border: isDragTarget
+                      ? '2px dashed var(--primary-500)'
+                      : isRearrangingExecs
+                      ? '1px dashed var(--peach-300)'
+                      : undefined,
+                    backgroundColor: isDragTarget
+                      ? 'rgba(99, 102, 241, 0.05)'
+                      : isRearrangingExecs
+                      ? 'rgba(255, 255, 255, 0.95)'
+                      : undefined,
+                    boxShadow: isRearrangingExecs
+                      ? '0 6px 16px -3px rgba(249, 115, 22, 0.12)'
+                      : undefined,
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                  }}
+                >
+                  {/* Rearrange Bar when in rearrange mode */}
+                  {isRearrangingExecs && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingBottom: '0.6rem',
+                        borderBottom: '1px dashed var(--peach-200)',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <GripVertical size={16} style={{ color: 'var(--peach-500)' }} />
+                        <span
+                          className="badge"
+                          style={{
+                            background: 'var(--peach-50)',
+                            color: 'var(--peach-600)',
+                            border: '1px solid var(--peach-200)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          ลำดับที่ {index + 1}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveExecutive(index, index - 1);
+                          }}
+                          disabled={index === 0}
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            padding: '0.2rem 0.45rem',
+                            fontSize: '0.72rem',
+                            opacity: index === 0 ? 0.35 : 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                          title="เลื่อนไปซ้าย (ลำดับก่อนหน้า)"
+                        >
+                          <ChevronLeft size={13} />
+                          <span>ซ้าย</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveExecutive(index, index + 1);
+                          }}
+                          disabled={index === executiveList.length - 1}
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            padding: '0.2rem 0.45rem',
+                            fontSize: '0.72rem',
+                            opacity: index === executiveList.length - 1 ? 0.35 : 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                          title="เลื่อนไปขวา (ลำดับถัดไป)"
+                        >
+                          <span>ขวา</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Main Card Content */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {exec.avatarUrl ? (
+                      <img
+                        src={exec.avatarUrl}
+                        alt=""
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--peach-200)',
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '50%',
+                          background: 'var(--peach-50)',
+                          color: 'var(--peach-500)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.4rem',
+                          fontWeight: 700,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {exec.name?.charAt(0)}
+                      </div>
+                    )}
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4
+                        style={{
+                          fontSize: '0.95rem',
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          marginBottom: '0.2rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {exec.name}
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', margin: 0, fontWeight: 500 }}>
+                        {exec.position}
+                      </p>
+                      {(() => {
+                        const linked = personnelList.find((p) => p.id === exec.personnelId || p.name === exec.name);
+                        return linked ? (
+                          <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                            🏢 {linked.department} ({linked.position})
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
+
+                    {!isRearrangingExecs && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <button
+                          onClick={() => {
+                            setEditingExecutive(exec);
+                            setIsExecutiveModalOpen(true);
+                          }}
+                          className="btn btn-ghost btn-icon"
+                          title="แก้ไข"
+                        >
+                          <Edit2 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExecutive(exec.id, exec.name)}
+                          className="btn btn-ghost btn-icon"
+                          style={{ color: 'var(--rose-500)' }}
+                          title="ลบ"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h4
-                    style={{
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      color: 'var(--text-primary)',
-                      marginBottom: '0.2rem',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {exec.name}
-                  </h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', margin: 0, fontWeight: 500 }}>
-                    {exec.position}
-                  </p>
-                  {(() => {
-                    const linked = personnelList.find((p) => p.id === exec.personnelId || p.name === exec.name);
-                    return linked ? (
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
-                        🏢 {linked.department} ({linked.position})
-                      </span>
-                    ) : null;
-                  })()}
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <button
-                    onClick={() => {
-                      setEditingExecutive(exec);
-                      setIsExecutiveModalOpen(true);
-                    }}
-                    className="btn btn-ghost btn-icon"
-                    title="แก้ไข"
-                  >
-                    <Edit2 size={15} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteExecutive(exec.id, exec.name)}
-                    className="btn btn-ghost btn-icon"
-                    style={{ color: 'var(--rose-500)' }}
-                    title="ลบ"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

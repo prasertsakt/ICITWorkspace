@@ -171,6 +171,7 @@ export const INITIAL_PERSONNEL = [
 export const INITIAL_EXECUTIVES = [
   {
     id: 'exec-1',
+    order: 0,
     personnelId: 'pers-exec-1',
     name: 'รศ.ดร.ประสิทธิ์ เจริญสุข',
     position: 'ผู้อำนวยการสำนัก',
@@ -178,6 +179,7 @@ export const INITIAL_EXECUTIVES = [
   },
   {
     id: 'exec-2',
+    order: 1,
     personnelId: 'pers-exec-2',
     name: 'ผศ.ดร.กมลวรรณ ธนสารเจริญ',
     position: 'รองผู้อำนวยการฝ่ายวิชาการและวิจัย',
@@ -185,6 +187,7 @@ export const INITIAL_EXECUTIVES = [
   },
   {
     id: 'exec-3',
+    order: 2,
     personnelId: 'pers-exec-3',
     name: 'ดร.ชาญชัย เกียรติวัฒนา',
     position: 'รองผู้อำนวยการฝ่ายพัฒนาระบบและโครงสร้างพื้นฐาน',

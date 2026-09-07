@@ -228,11 +228,24 @@ export function subscribeDepartmentList(callback) {
 }
 
 /**
+ * Helper: Sort executives by custom order, then ID
+ */
+export function sortExecutives(list) {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const ordA = a.order !== undefined && a.order !== null ? Number(a.order) : 999;
+    const ordB = b.order !== undefined && b.order !== null ? Number(b.order) : 999;
+    if (ordA !== ordB) return ordA - ordB;
+    return (a.id || '').localeCompare(b.id || '');
+  });
+}
+
+/**
  * Subscribe to real-time changes of Executives list
  */
 export function subscribeExecutiveList(callback) {
   if (typeof window === 'undefined') {
-    callback(INITIAL_EXECUTIVES);
+    callback(sortExecutives(INITIAL_EXECUTIVES));
     return () => {};
   }
 
@@ -245,7 +258,8 @@ export function subscribeExecutiveList(callback) {
         collection(db, 'executives'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const list = sortExecutives(rawList);
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
             notifyExecutiveSubscribers(list);
           } else {
@@ -256,7 +270,7 @@ export function subscribeExecutiveList(callback) {
         (error) => {
           console.warn('Firestore executive snapshot error', error);
           initLocalStorage();
-          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+          const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
           callback(list);
         }
       );
@@ -266,11 +280,11 @@ export function subscribeExecutiveList(callback) {
   }
 
   initLocalStorage();
-  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+  const cachedList = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
   callback(cachedList);
 
   const handleStorageChange = () => {
-    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+    const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
     callback(list);
   };
   window.addEventListener('storage', handleStorageChange);
@@ -624,23 +638,66 @@ export async function saveExecutiveRecord(executive) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
   const idx = list.findIndex((ex) => ex.id === executive.id);
+  const execWithOrder = {
+    ...executive,
+    order: executive.order !== undefined ? executive.order : (idx >= 0 && list[idx].order !== undefined ? list[idx].order : list.length),
+  };
+
   if (idx >= 0) {
-    list[idx] = { ...list[idx], ...executive };
+    list[idx] = { ...list[idx], ...execWithOrder };
   } else {
-    list.push(executive);
+    list.push(execWithOrder);
   }
-  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
-  notifyExecutiveSubscribers(list);
+  const sorted = sortExecutives(list);
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(sorted));
+  notifyExecutiveSubscribers(sorted);
 
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'executives', executive.id), executive, { merge: true });
+      await setDoc(doc(db, 'executives', execWithOrder.id), execWithOrder, { merge: true });
     } catch (e) {
       console.error('Firestore save executive failed', e);
     }
   }
 
-  return executive;
+  return execWithOrder;
+}
+
+/**
+ * Save / Update Executive Order (Moveable Executive Cards)
+ */
+export async function saveExecutiveOrder(reorderedList) {
+  initLocalStorage();
+  const updatedList = reorderedList.map((exec, idx) => ({
+    ...exec,
+    order: idx,
+  }));
+
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(updatedList));
+  notifyExecutiveSubscribers(updatedList);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((exec) => {
+        batch.set(doc(db, 'executives', exec.id), { order: exec.order }, { merge: true });
+      });
+      batch.set(
+        doc(db, 'settings', 'executives_order'),
+        {
+          order: updatedList.map((e) => e.id),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      await batch.commit();
+      console.log('✅ Successfully persisted executive order to Firestore');
+    } catch (e) {
+      console.error('Firestore save executive order failed', e);
+    }
+  }
+
+  return updatedList;
 }
 
 /**
@@ -650,8 +707,9 @@ export async function deleteExecutiveRecord(id) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
   const filtered = list.filter((ex) => ex.id !== id);
-  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(filtered));
-  notifyExecutiveSubscribers(filtered);
+  const reindexed = filtered.map((ex, idx) => ({ ...ex, order: idx }));
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(reindexed));
+  notifyExecutiveSubscribers(reindexed);
 
   if (isFirebaseConfigured && db) {
     try {
