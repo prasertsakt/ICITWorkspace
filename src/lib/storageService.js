@@ -28,6 +28,9 @@ const LOCAL_KEY_LEAVES = 'icit_org_leaves';
 const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
 const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
 
+export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'leave', 'knowledge', 'survey'];
+const LOCAL_KEY_PORTAL_SERVICES = 'icit_portal_services_order';
+
 // Helper: Ensure local storage has seed data
 function initLocalStorage() {
   if (typeof window === 'undefined') return;
@@ -55,6 +58,17 @@ const personnelSubscribers = new Set();
 const departmentSubscribers = new Set();
 const executiveSubscribers = new Set();
 const leaveSubscribers = new Set();
+const portalServiceSubscribers = new Set();
+
+function notifyPortalServiceSubscribers(order) {
+  portalServiceSubscribers.forEach((cb) => {
+    try {
+      cb(order);
+    } catch (e) {
+      console.error('Error notifying portal service subscriber', e);
+    }
+  });
+}
 
 function notifyPersonnelSubscribers(list) {
   personnelSubscribers.forEach((cb) => {
@@ -419,6 +433,93 @@ export function subscribeLeaveList(callback, { year = new Date().getFullYear(), 
       firestoreUnsub();
     }
   };
+}
+
+/**
+ * Subscribe to real-time changes of Portal Services Order
+ */
+export function subscribePortalServicesOrder(callback) {
+  if (typeof window === 'undefined') {
+    callback(DEFAULT_SERVICE_ORDER);
+    return () => {};
+  }
+
+  portalServiceSubscribers.add(callback);
+
+  let firestoreUnsub = null;
+  if (isFirebaseConfigured && db) {
+    try {
+      firestoreUnsub = onSnapshot(
+        doc(db, 'settings', 'portal_services'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (Array.isArray(data?.order) && data.order.length > 0) {
+              localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(data.order));
+              notifyPortalServiceSubscribers(data.order);
+            }
+          }
+        },
+        (err) => {
+          console.warn('Firestore portal_services listener error', err);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach portal_services listener', e);
+    }
+  }
+
+  // Initial emit from localStorage or default
+  const cached = localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES);
+  const initialOrder = cached ? JSON.parse(cached) : DEFAULT_SERVICE_ORDER;
+  callback(initialOrder);
+
+  const handleStorageChange = (e) => {
+    if (e.key === LOCAL_KEY_PORTAL_SERVICES && e.newValue) {
+      try {
+        callback(JSON.parse(e.newValue));
+      } catch {}
+    }
+  };
+  window.addEventListener('storage', handleStorageChange);
+
+  return () => {
+    portalServiceSubscribers.delete(callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
+}
+
+/**
+ * Save Portal Services Order
+ */
+export async function savePortalServicesOrder(order) {
+  if (!Array.isArray(order)) return order;
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(order));
+  }
+  notifyPortalServiceSubscribers(order);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(
+        doc(db, 'settings', 'portal_services'),
+        {
+          order,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      console.log('✅ Successfully persisted portal services order to Firestore');
+    } catch (e) {
+      console.error('Failed to persist portal services order to Firestore', e);
+    }
+  }
+
+  return order;
 }
 
 /**

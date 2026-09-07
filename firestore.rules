@@ -57,5 +57,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'settings' collection (Portal Configurations, Service Order, etc.)
+    match /settings/{settingId} {
+      allow read: if true; // Any visitor can read portal card order
+      allow write: if isAuthenticated(); // Only logged-in users / admins can save order
+    }
   }
 }
