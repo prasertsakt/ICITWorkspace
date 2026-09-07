@@ -1,4 +1,4 @@
-// Unified Storage Layer: Supports Firestore (Live) and LocalStorage (Demo/Fallback)
+// Unified Real-Time Storage Layer: Deeply Synchronized with Firebase Firestore
 import { db, isFirebaseConfigured } from './firebase';
 import {
   INITIAL_PERSONNEL,
@@ -12,6 +12,9 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  onSnapshot,
+  query,
+  where,
 } from 'firebase/firestore';
 
 const LOCAL_KEY_PERSONNEL = 'icit_org_personnel';
@@ -34,42 +37,168 @@ function initLocalStorage() {
 }
 
 /**
- * ----------------- PERSONNEL (บุคลากร) -----------------
+ * ----------------- 1. REAL-TIME SUBSCRIPTIONS (ONSNAPSHOT) -----------------
  */
-export async function getPersonnelList() {
-  if (typeof window === 'undefined') return INITIAL_PERSONNEL;
+
+/**
+ * Subscribe to real-time changes of Personnel list
+ */
+export function subscribePersonnelList(callback) {
+  if (typeof window === 'undefined') {
+    callback(INITIAL_PERSONNEL);
+    return () => {};
+  }
 
   if (isFirebaseConfigured && db) {
     try {
-      const snap = await getDocs(collection(db, 'personnel'));
-      if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      }
-      // If collection empty, seed it
-      for (const p of INITIAL_PERSONNEL) {
-        await setDoc(doc(db, 'personnel', p.id), p);
-      }
-      return INITIAL_PERSONNEL;
+      const unsub = onSnapshot(
+        collection(db, 'personnel'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
+            callback(list);
+          } else {
+            // If collection is empty in Firestore, automatically seed it
+            syncAllSeedDataToFirestore().then(() => {
+              callback(INITIAL_PERSONNEL);
+            });
+          }
+        },
+        (error) => {
+          console.warn('Firestore personnel snapshot error, fallback to local', error);
+          initLocalStorage();
+          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+        }
+      );
+      return unsub;
     } catch (e) {
-      console.warn('Firestore fetch failed, using local storage fallback', e);
+      console.warn('Failed to attach Firestore snapshot listener', e);
+    }
+  }
+
+  // Fallback / Demo Mode
+  initLocalStorage();
+  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+
+  const handleStorageChange = () => {
+    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]'));
+  };
+  window.addEventListener('storage', handleStorageChange);
+  return () => window.removeEventListener('storage', handleStorageChange);
+}
+
+/**
+ * Subscribe to real-time changes of Departments list
+ */
+export function subscribeDepartmentList(callback) {
+  if (typeof window === 'undefined') {
+    callback(INITIAL_DEPARTMENTS);
+    return () => {};
+  }
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const unsub = onSnapshot(
+        collection(db, 'departments'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
+            callback(list);
+          } else {
+            for (const d of INITIAL_DEPARTMENTS) {
+              setDoc(doc(db, 'departments', d.id), d);
+            }
+            callback(INITIAL_DEPARTMENTS);
+          }
+        },
+        (error) => {
+          console.warn('Firestore department snapshot error', error);
+          initLocalStorage();
+          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+        }
+      );
+      return unsub;
+    } catch (e) {
+      console.warn('Failed to attach department listener', e);
     }
   }
 
   initLocalStorage();
-  const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
-  return raw ? JSON.parse(raw) : INITIAL_PERSONNEL;
+  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+
+  const handleStorageChange = () => {
+    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]'));
+  };
+  window.addEventListener('storage', handleStorageChange);
+  return () => window.removeEventListener('storage', handleStorageChange);
 }
 
-export async function savePersonnelRecord(personnel) {
+/**
+ * Subscribe to real-time changes of Executives list
+ */
+export function subscribeExecutiveList(callback) {
+  if (typeof window === 'undefined') {
+    callback(INITIAL_EXECUTIVES);
+    return () => {};
+  }
+
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'personnel', personnel.id), personnel);
+      const unsub = onSnapshot(
+        collection(db, 'executives'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
+            callback(list);
+          } else {
+            for (const ex of INITIAL_EXECUTIVES) {
+              setDoc(doc(db, 'executives', ex.id), ex);
+            }
+            callback(INITIAL_EXECUTIVES);
+          }
+        },
+        (error) => {
+          console.warn('Firestore executive snapshot error', error);
+          initLocalStorage();
+          callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+        }
+      );
+      return unsub;
     } catch (e) {
-      console.error('Firestore save failed', e);
+      console.warn('Failed to attach executive listener', e);
     }
   }
 
-  // Always update local cache
+  initLocalStorage();
+  callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+
+  const handleStorageChange = () => {
+    callback(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+  };
+  window.addEventListener('storage', handleStorageChange);
+  return () => window.removeEventListener('storage', handleStorageChange);
+}
+
+/**
+ * ----------------- 2. CRUD OPERATIONS (WRITE & DELETE) -----------------
+ */
+
+/**
+ * Save / Update Personnel
+ */
+export async function savePersonnelRecord(personnel) {
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'personnel', personnel.id), personnel, { merge: true });
+    } catch (e) {
+      console.error('Firestore save personnel failed', e);
+    }
+  }
+
+  // Update local cache
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
   const idx = list.findIndex((p) => p.id === personnel.id);
@@ -82,12 +211,15 @@ export async function savePersonnelRecord(personnel) {
   return personnel;
 }
 
+/**
+ * Delete Personnel
+ */
 export async function deletePersonnelRecord(id) {
   if (isFirebaseConfigured && db) {
     try {
       await deleteDoc(doc(db, 'personnel', id));
     } catch (e) {
-      console.error('Firestore delete failed', e);
+      console.error('Firestore delete personnel failed', e);
     }
   }
 
@@ -99,47 +231,14 @@ export async function deletePersonnelRecord(id) {
 }
 
 /**
- * Find personnel by email (case-insensitive) for whitelist check
+ * Save / Update Department
  */
-export async function findPersonnelByEmail(email) {
-  if (!email) return null;
-  const list = await getPersonnelList();
-  const cleanEmail = email.trim().toLowerCase();
-  return list.find((p) => p.email && p.email.trim().toLowerCase() === cleanEmail) || null;
-}
-
-/**
- * ----------------- DEPARTMENTS (ฝ่าย) -----------------
- */
-export async function getDepartmentList() {
-  if (typeof window === 'undefined') return INITIAL_DEPARTMENTS;
-
-  if (isFirebaseConfigured && db) {
-    try {
-      const snap = await getDocs(collection(db, 'departments'));
-      if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      }
-      for (const d of INITIAL_DEPARTMENTS) {
-        await setDoc(doc(db, 'departments', d.id), d);
-      }
-      return INITIAL_DEPARTMENTS;
-    } catch (e) {
-      console.warn('Firestore fetch failed, using local fallback', e);
-    }
-  }
-
-  initLocalStorage();
-  const raw = localStorage.getItem(LOCAL_KEY_DEPTS);
-  return raw ? JSON.parse(raw) : INITIAL_DEPARTMENTS;
-}
-
 export async function saveDepartmentRecord(department) {
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'departments', department.id), department);
+      await setDoc(doc(db, 'departments', department.id), department, { merge: true });
     } catch (e) {
-      console.error('Firestore save failed', e);
+      console.error('Firestore save department failed', e);
     }
   }
 
@@ -156,37 +255,14 @@ export async function saveDepartmentRecord(department) {
 }
 
 /**
- * ----------------- EXECUTIVES (ผู้บริหาร) -----------------
+ * Save / Update Executive
  */
-export async function getExecutiveList() {
-  if (typeof window === 'undefined') return INITIAL_EXECUTIVES;
-
-  if (isFirebaseConfigured && db) {
-    try {
-      const snap = await getDocs(collection(db, 'executives'));
-      if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      }
-      for (const ex of INITIAL_EXECUTIVES) {
-        await setDoc(doc(db, 'executives', ex.id), ex);
-      }
-      return INITIAL_EXECUTIVES;
-    } catch (e) {
-      console.warn('Firestore fetch failed, using local fallback', e);
-    }
-  }
-
-  initLocalStorage();
-  const raw = localStorage.getItem(LOCAL_KEY_EXECS);
-  return raw ? JSON.parse(raw) : INITIAL_EXECUTIVES;
-}
-
 export async function saveExecutiveRecord(executive) {
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'executives', executive.id), executive);
+      await setDoc(doc(db, 'executives', executive.id), executive, { merge: true });
     } catch (e) {
-      console.error('Firestore save failed', e);
+      console.error('Firestore save executive failed', e);
     }
   }
 
@@ -202,12 +278,15 @@ export async function saveExecutiveRecord(executive) {
   return executive;
 }
 
+/**
+ * Delete Executive
+ */
 export async function deleteExecutiveRecord(id) {
   if (isFirebaseConfigured && db) {
     try {
       await deleteDoc(doc(db, 'executives', id));
     } catch (e) {
-      console.error('Firestore delete failed', e);
+      console.error('Firestore delete executive failed', e);
     }
   }
 
@@ -219,7 +298,130 @@ export async function deleteExecutiveRecord(id) {
 }
 
 /**
- * Reset data back to initial seeds
+ * ----------------- 3. QUERY HELPERS -----------------
+ */
+
+export async function getPersonnelList() {
+  if (typeof window === 'undefined') return INITIAL_PERSONNEL;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'personnel'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+    } catch (e) {
+      console.warn('Firestore fetch failed', e);
+    }
+  }
+
+  initLocalStorage();
+  const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
+  return raw ? JSON.parse(raw) : INITIAL_PERSONNEL;
+}
+
+export async function getDepartmentList() {
+  if (typeof window === 'undefined') return INITIAL_DEPARTMENTS;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'departments'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+    } catch (e) {
+      console.warn('Firestore getDepartmentList failed', e);
+    }
+  }
+
+  initLocalStorage();
+  const raw = localStorage.getItem(LOCAL_KEY_DEPTS);
+  return raw ? JSON.parse(raw) : INITIAL_DEPARTMENTS;
+}
+
+export async function getExecutiveList() {
+  if (typeof window === 'undefined') return INITIAL_EXECUTIVES;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'executives'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+    } catch (e) {
+      console.warn('Firestore getExecutiveList failed', e);
+    }
+  }
+
+  initLocalStorage();
+  const raw = localStorage.getItem(LOCAL_KEY_EXECS);
+  return raw ? JSON.parse(raw) : INITIAL_EXECUTIVES;
+}
+
+/**
+ * Find personnel by email (case-insensitive) for whitelist check
+ * First checks Firestore directly, then fallback to local cache
+ */
+export async function findPersonnelByEmail(email) {
+  if (!email) return null;
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (isFirebaseConfigured && db) {
+    try {
+      // Query Firestore directly for the matching email
+      const q = query(collection(db, 'personnel'), where('email', '==', cleanEmail));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docSnap = snap.docs[0];
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+    } catch (e) {
+      console.warn('Firestore email query failed, checking list', e);
+    }
+  }
+
+  const list = await getPersonnelList();
+  return list.find((p) => p.email && p.email.trim().toLowerCase() === cleanEmail) || null;
+}
+
+/**
+ * ----------------- 4. FULL FIRESTORE SYNC & RESET -----------------
+ */
+
+/**
+ * Force sync all initial seed data into Cloud Firestore
+ */
+export async function syncAllSeedDataToFirestore() {
+  if (!isFirebaseConfigured || !db) {
+    console.warn('Cannot sync to Firestore: Firebase is not configured');
+    return false;
+  }
+
+  try {
+    // 1. Sync Personnel
+    for (const p of INITIAL_PERSONNEL) {
+      await setDoc(doc(db, 'personnel', p.id), p, { merge: true });
+    }
+
+    // 2. Sync 6 Departments
+    for (const d of INITIAL_DEPARTMENTS) {
+      await setDoc(doc(db, 'departments', d.id), d, { merge: true });
+    }
+
+    // 3. Sync Executives
+    for (const ex of INITIAL_EXECUTIVES) {
+      await setDoc(doc(db, 'executives', ex.id), ex, { merge: true });
+    }
+
+    return true;
+  } catch (e) {
+    console.error('Failed to sync seed data to Firestore', e);
+    throw e;
+  }
+}
+
+/**
+ * Reset local seed data
  */
 export function resetLocalSeedData() {
   if (typeof window === 'undefined') return;

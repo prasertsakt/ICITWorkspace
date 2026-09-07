@@ -4,14 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  getPersonnelList,
+  subscribePersonnelList,
+  subscribeDepartmentList,
+  subscribeExecutiveList,
   savePersonnelRecord,
   deletePersonnelRecord,
-  getDepartmentList,
   saveDepartmentRecord,
-  getExecutiveList,
   saveExecutiveRecord,
   deleteExecutiveRecord,
+  syncAllSeedDataToFirestore,
   resetLocalSeedData,
 } from '@/lib/storageService';
 import {
@@ -43,6 +44,7 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  CloudUpload,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -55,6 +57,7 @@ export default function AdminPage() {
   const [departmentList, setDepartmentList] = useState([]);
   const [executiveList, setExecutiveList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Search and filters for personnel
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,27 +74,43 @@ export default function AdminPage() {
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
 
-  const loadAllData = async () => {
+  useEffect(() => {
     setLoading(true);
-    try {
-      const [pData, dData, eData] = await Promise.all([
-        getPersonnelList(),
-        getDepartmentList(),
-        getExecutiveList(),
-      ]);
-      setPersonnelList(pData || []);
-      setDepartmentList(dData || []);
-      setExecutiveList(eData || []);
-    } catch (err) {
-      console.error('Failed to load admin data', err);
-    } finally {
+    const unsubPersonnel = subscribePersonnelList((list) => {
+      setPersonnelList(list || []);
       setLoading(false);
+    });
+
+    const unsubDepts = subscribeDepartmentList((list) => {
+      setDepartmentList(list || []);
+    });
+
+    const unsubExecs = subscribeExecutiveList((list) => {
+      setExecutiveList(list || []);
+    });
+
+    return () => {
+      unsubPersonnel();
+      unsubDepts();
+      unsubExecs();
+    };
+  }, []);
+
+  const handleSyncToFirestore = async () => {
+    if (!confirm('ต้องการอัปโหลด/ซิงค์ข้อมูลเริ่มต้นทั้งหมด (6 ฝ่าย, บุคลากร, ฝ่ายบริหาร) ขึ้น Cloud Firestore ใช่หรือไม่?')) {
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      await syncAllSeedDataToFirestore();
+      alert('✅ ซิงค์ข้อมูลขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!');
+    } catch (err) {
+      console.error('Sync failed', err);
+      alert('เกิดข้อผิดพลาดในการซิงค์ข้อมูล กรุณาตรวจสอบการตั้งค่า Firebase');
+    } finally {
+      setIsSyncing(false);
     }
   };
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
 
   // Access check
   if (!isAdmin) {
@@ -143,13 +162,11 @@ export default function AdminPage() {
   // Handle Personnel Actions
   const handleSavePersonnel = async (data) => {
     await savePersonnelRecord(data);
-    await loadAllData();
   };
 
   const handleDeletePersonnel = async (id, name) => {
     if (confirm(`คุณต้องการลบข้อมูล "${name}" ออกจากระบบใช่หรือไม่?`)) {
       await deletePersonnelRecord(id);
-      await loadAllData();
     }
   };
 
@@ -159,39 +176,33 @@ export default function AdminPage() {
         ? PERSONNEL_STATUS.RESIGNED
         : PERSONNEL_STATUS.ACTIVE;
     await savePersonnelRecord({ ...person, status: newStatus });
-    await loadAllData();
   };
 
   const handleTogglePersonnelRole = async (person) => {
     const newRole =
       person.role === USER_ROLES.ADMIN ? USER_ROLES.USER : USER_ROLES.ADMIN;
     await savePersonnelRecord({ ...person, role: newRole });
-    await loadAllData();
   };
 
   // Handle Executive Actions
   const handleSaveExecutive = async (data) => {
     await saveExecutiveRecord(data);
-    await loadAllData();
   };
 
   const handleDeleteExecutive = async (id, name) => {
     if (confirm(`คุณต้องการลบผู้บริหาร "${name}" ใช่หรือไม่?`)) {
       await deleteExecutiveRecord(id);
-      await loadAllData();
     }
   };
 
   // Handle Department Actions
   const handleSaveDepartment = async (data) => {
     await saveDepartmentRecord(data);
-    await loadAllData();
   };
 
   const handleResetData = () => {
     if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นตัวอย่างใช่หรือไม่?')) {
       resetLocalSeedData();
-      loadAllData();
     }
   };
 
@@ -801,10 +812,22 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <button onClick={handleResetData} className="btn btn-secondary btn-sm">
-                <RotateCcw size={14} />
-                <span>รีเซ็ตข้อมูลตัวอย่าง</span>
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {isFirebaseConfigured && (
+                  <button
+                    onClick={handleSyncToFirestore}
+                    disabled={isSyncing}
+                    className="btn btn-primary btn-sm"
+                  >
+                    <CloudUpload size={14} />
+                    <span>{isSyncing ? 'กำลังซิงค์ขึ้น Firestore...' : '☁️ ซิงค์ข้อมูลทั้งหมดขึ้น Firestore'}</span>
+                  </button>
+                )}
+                <button onClick={handleResetData} className="btn btn-secondary btn-sm">
+                  <RotateCcw size={14} />
+                  <span>รีเซ็ตข้อมูลตัวอย่าง</span>
+                </button>
+              </div>
             </div>
           </div>
 

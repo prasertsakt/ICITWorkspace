@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  getPersonnelList,
-  getDepartmentList,
-  getExecutiveList,
+  subscribePersonnelList,
+  subscribeDepartmentList,
+  subscribeExecutiveList,
 } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS, PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
 import { formatThaiDisplayDate } from '@/lib/dateUtils';
@@ -41,24 +41,25 @@ export default function HomePage() {
   const [selectedPersonnelDetail, setSelectedPersonnelDetail] = useState(null);
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [pData, dData, eData] = await Promise.all([
-          getPersonnelList(),
-          getDepartmentList(),
-          getExecutiveList(),
-        ]);
-        setPersonnelList(pData || []);
-        setDepartmentList(dData || []);
-        setExecutiveList(eData || []);
-      } catch (err) {
-        console.error('Failed to load org data', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    setLoading(true);
+    const unsubPersonnel = subscribePersonnelList((list) => {
+      setPersonnelList(list || []);
+      setLoading(false);
+    });
+
+    const unsubDepts = subscribeDepartmentList((list) => {
+      setDepartmentList(list || []);
+    });
+
+    const unsubExecs = subscribeExecutiveList((list) => {
+      setExecutiveList(list || []);
+    });
+
+    return () => {
+      unsubPersonnel();
+      unsubDepts();
+      unsubExecs();
+    };
   }, []);
 
   // Filtered personnel
