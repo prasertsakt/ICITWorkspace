@@ -1,11 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldAlert, AlertTriangle, RefreshCw, Sparkles, Mail } from 'lucide-react';
+import {
+  ShieldAlert,
+  AlertTriangle,
+  RefreshCw,
+  Sparkles,
+  ShieldCheck,
+  UserPlus,
+  ArrowRight,
+} from 'lucide-react';
 
 export default function UnauthorizedModal() {
-  const { authError, unauthorizedEmail, clearAuthError, switchDemoUser } = useAuth();
+  const {
+    authError,
+    unauthorizedEmail,
+    pendingUserData,
+    clearAuthError,
+    switchDemoUser,
+    bootstrapFirstAdmin,
+    isFirebaseConfigured,
+  } = useAuth();
+
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
 
   if (!authError) return null;
 
@@ -13,9 +31,20 @@ export default function UnauthorizedModal() {
   const isResigned = authError === 'STATUS_RESIGNED';
   const isConfigMissing = authError === 'FIREBASE_CONFIG_MISSING';
 
+  const handleClaimFirstAdmin = async () => {
+    setIsBootstrapping(true);
+    try {
+      await bootstrapFirstAdmin();
+    } catch (e) {
+      console.error('Failed to bootstrap first admin', e);
+    } finally {
+      setIsBootstrapping(false);
+    }
+  };
+
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '480px', textAlign: 'center' }}>
+      <div className="modal-content" style={{ maxWidth: '500px', textAlign: 'center' }}>
         <div className="modal-body" style={{ padding: '2rem 1.75rem' }}>
           {/* Icon */}
           <div
@@ -42,7 +71,7 @@ export default function UnauthorizedModal() {
 
           {/* Title */}
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-            {isNotWhitelisted && 'ไม่พบอีเมลในระบบ (Whitelist)'}
+            {isNotWhitelisted && 'ไม่พบอีเมลในรายชื่อบุคลากร (Whitelist)'}
             {isResigned && 'สถานะพ้นสภาพการปฏิบัติงาน (ลาออก)'}
             {isConfigMissing && 'โหมดทดสอบระบบ (Demo Mode)'}
             {!isNotWhitelisted && !isResigned && !isConfigMissing && 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'}
@@ -52,9 +81,7 @@ export default function UnauthorizedModal() {
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
             {isNotWhitelisted && (
               <>
-                อีเมล <strong style={{ color: 'var(--rose-500)' }}>{unauthorizedEmail}</strong> ยังไม่ได้รับการบันทึกในรายชื่อบุคลากรโดยผู้ดูแลระบบ
-                <br />
-                ระบบนี้อนุญาตให้เฉพาะบุคลากรภายในองค์กรที่ Admin เพิ่มข้อมูลไว้เท่านั้น
+                บัญชี Google <strong style={{ color: 'var(--rose-500)' }}>{unauthorizedEmail}</strong> ยังไม่ได้รับการบันทึกในรายชื่อบุคลากรของระบบ
               </>
             )}
             {isResigned && (
@@ -67,7 +94,7 @@ export default function UnauthorizedModal() {
             )}
             {isConfigMissing && (
               <>
-                ยังไม่ได้เชื่อมต่อ Firebase API Keys ในไฟล์ <code>.env.local</code>
+                ยังไม่ได้เชื่อมต่อ Firebase API Keys ในไฟล์ <code>.env.local</code> หรือบน Vercel
                 <br />
                 คุณสามารถใช้ปุ่ม <strong>"สลับบัญชีทดสอบ"</strong> เพื่อทดลองใช้งานเป็น Admin หรือ บุคลากร ได้ทันที!
               </>
@@ -77,24 +104,38 @@ export default function UnauthorizedModal() {
             )}
           </p>
 
-          {/* Contact Box */}
-          <div
-            style={{
-              background: '#F8FAFC',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.75rem 1rem',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1.5rem',
-              textAlign: 'left',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-              📞 ช่องทางติดต่อฝ่ายดูแลระบบ:
+          {/* FIRST ADMIN BOOTSTRAP BOX */}
+          {isNotWhitelisted && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)',
+                border: '1px solid var(--primary-200)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary-600)', fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                <ShieldCheck size={18} />
+                <span>คุณคือผู้ติดตั้งระบบคนแรกใช่หรือไม่?</span>
+              </div>
+              <p style={{ fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 0.75rem 0' }}>
+                หากคุณเพิ่งเริ่มใช้งานและยังไม่มี Admin ในระบบ คุณสามารถคลิกปุ่มด้านล่างเพื่อแต่งตั้งบัญชีนี้เป็น <strong>Super Admin คนแรก</strong> ได้ทันที
+              </p>
+              <button
+                onClick={handleClaimFirstAdmin}
+                disabled={isBootstrapping}
+                className="btn btn-primary btn-sm"
+                style={{ width: '100%', fontSize: '0.8rem' }}
+              >
+                <UserPlus size={15} />
+                <span>
+                  {isBootstrapping ? 'กำลังบันทึกข้อมูล...' : `ตั้งค่า ${unauthorizedEmail} เป็น Admin คนแรก`}
+                </span>
+              </button>
             </div>
-            <div>สำนักงานผู้อำนวยการ / ผู้ดูแลระบบไอที (admin@icit.org)</div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -103,19 +144,19 @@ export default function UnauthorizedModal() {
                 clearAuthError();
                 switchDemoUser('admin@icit.org');
               }}
-              className="btn btn-primary"
+              className="btn btn-secondary btn-sm"
               style={{ width: '100%' }}
             >
               <Sparkles size={16} />
-              <span>เข้าใช้งานด้วยบัญชีตัวอย่าง Admin</span>
+              <span>เข้าใช้งานด้วยบัญชีตัวอย่าง Admin จำลอง</span>
             </button>
 
             <button
               onClick={clearAuthError}
-              className="btn btn-secondary"
+              className="btn btn-ghost btn-sm"
               style={{ width: '100%' }}
             >
-              <RefreshCw size={16} />
+              <RefreshCw size={14} />
               <span>ปิดหน้าต่างนี้</span>
             </button>
           </div>

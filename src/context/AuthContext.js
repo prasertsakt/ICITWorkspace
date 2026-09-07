@@ -7,7 +7,11 @@ import {
   subscribeToAuth,
   isFirebaseConfigured,
 } from '@/lib/firebase';
-import { findPersonnelByEmail, getPersonnelList } from '@/lib/storageService';
+import {
+  findPersonnelByEmail,
+  getPersonnelList,
+  savePersonnelRecord,
+} from '@/lib/storageService';
 import { PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
 
 const AuthContext = createContext(null);
@@ -20,6 +24,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [unauthorizedEmail, setUnauthorizedEmail] = useState('');
+  const [pendingUserData, setPendingUserData] = useState(null);
 
   // Helper to validate and bind personnel record
   const authenticatePersonnelRecord = async (userEmail, userObj) => {
@@ -35,6 +40,11 @@ export function AuthProvider({ children }) {
       // Email is not in admin pre-defined list
       setAuthError('EMAIL_NOT_WHITELISTED');
       setUnauthorizedEmail(cleanEmail);
+      setPendingUserData({
+        email: cleanEmail,
+        displayName: userObj?.displayName || '',
+        photoURL: userObj?.photoURL || '',
+      });
       if (isFirebaseConfigured) {
         await logOut();
       }
@@ -47,6 +57,7 @@ export function AuthProvider({ children }) {
       // Personnel has resigned
       setAuthError('STATUS_RESIGNED');
       setUnauthorizedEmail(cleanEmail);
+      setPendingUserData(null);
       if (isFirebaseConfigured) {
         await logOut();
       }
@@ -60,6 +71,7 @@ export function AuthProvider({ children }) {
     setCurrentPersonnel(personnel);
     setAuthError(null);
     setUnauthorizedEmail('');
+    setPendingUserData(null);
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(SESSION_KEY, cleanEmail);
@@ -107,7 +119,6 @@ export function AuthProvider({ children }) {
     setAuthError(null);
     try {
       if (!isFirebaseConfigured) {
-        // In demo mode without Firebase keys, prompt to test with pre-defined accounts
         setAuthError('FIREBASE_CONFIG_MISSING');
         setIsLoading(false);
         return;
@@ -129,6 +140,50 @@ export function AuthProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Action: Bootstrap / Claim First Admin (Solve the chicken-and-egg bootstrap problem)
+  const bootstrapFirstAdmin = async (customName) => {
+    setIsLoading(true);
+    const emailToUse = unauthorizedEmail;
+    if (!emailToUse) {
+      setIsLoading(false);
+      return false;
+    }
+
+    const cleanEmail = emailToUse.trim().toLowerCase();
+    const newAdmin = {
+      id: `pers-${Date.now()}`,
+      name: customName || pendingUserData?.displayName || cleanEmail.split('@')[0],
+      email: cleanEmail,
+      personnelType: 'พนักงานมหาวิทยาลัย',
+      department: 'สำนักงานผู้อำนวยการ',
+      position: 'ผู้บริหาร',
+      level: 'ชำนาญการพิเศษ',
+      appointmentDate: '01-10-2565',
+      retirementDate: '30-09-2595',
+      status: PERSONNEL_STATUS.ACTIVE,
+      role: USER_ROLES.ADMIN,
+      note: 'ผู้ดูแลระบบคนแรก (Super Admin)',
+      avatarUrl: pendingUserData?.photoURL || '',
+    };
+
+    await savePersonnelRecord(newAdmin);
+    setAuthError(null);
+    setUnauthorizedEmail('');
+    setPendingUserData(null);
+    setCurrentUser({
+      email: cleanEmail,
+      displayName: newAdmin.name,
+      photoURL: newAdmin.avatarUrl,
+    });
+    setCurrentPersonnel(newAdmin);
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(SESSION_KEY, cleanEmail);
+    }
+    setIsLoading(false);
+    return true;
   };
 
   // Action: Quick switch demo user (useful for testing Whitelist, User, and Admin views)
@@ -156,12 +211,14 @@ export function AuthProvider({ children }) {
     setCurrentPersonnel(null);
     setAuthError(null);
     setUnauthorizedEmail('');
+    setPendingUserData(null);
     setIsLoading(false);
   };
 
   const clearAuthError = () => {
     setAuthError(null);
     setUnauthorizedEmail('');
+    setPendingUserData(null);
   };
 
   const isAdmin = currentPersonnel?.role === USER_ROLES.ADMIN;
@@ -176,9 +233,11 @@ export function AuthProvider({ children }) {
         isLoading,
         authError,
         unauthorizedEmail,
+        pendingUserData,
         handleGoogleSignIn,
         handleSignOut,
         switchDemoUser,
+        bootstrapFirstAdmin,
         clearAuthError,
         isFirebaseConfigured,
       }}
