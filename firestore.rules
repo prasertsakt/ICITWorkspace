@@ -45,5 +45,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'leaves' collection (Leave Calendar Records)
+    match /leaves/{leaveId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }

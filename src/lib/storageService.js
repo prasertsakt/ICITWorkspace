@@ -4,6 +4,7 @@ import {
   INITIAL_PERSONNEL,
   INITIAL_DEPARTMENTS,
   INITIAL_EXECUTIVES,
+  INITIAL_LEAVES,
 } from './initialData';
 import {
   collection,
@@ -20,6 +21,7 @@ import {
 const LOCAL_KEY_PERSONNEL = 'icit_org_personnel';
 const LOCAL_KEY_DEPTS = 'icit_org_departments';
 const LOCAL_KEY_EXECS = 'icit_org_executives';
+const LOCAL_KEY_LEAVES = 'icit_org_leaves';
 
 // Helper: Ensure local storage has seed data
 function initLocalStorage() {
@@ -34,6 +36,9 @@ function initLocalStorage() {
   if (!localStorage.getItem(LOCAL_KEY_EXECS)) {
     localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(INITIAL_EXECUTIVES));
   }
+  if (!localStorage.getItem(LOCAL_KEY_LEAVES)) {
+    localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(INITIAL_LEAVES));
+  }
 }
 
 /**
@@ -44,6 +49,7 @@ function initLocalStorage() {
 const personnelSubscribers = new Set();
 const departmentSubscribers = new Set();
 const executiveSubscribers = new Set();
+const leaveSubscribers = new Set();
 
 function notifyPersonnelSubscribers(list) {
   personnelSubscribers.forEach((cb) => {
@@ -71,6 +77,16 @@ function notifyExecutiveSubscribers(list) {
       cb(list);
     } catch (e) {
       console.error('Error notifying executive subscriber', e);
+    }
+  });
+}
+
+function notifyLeaveSubscribers(list) {
+  leaveSubscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Error notifying leave subscriber', e);
     }
   });
 }
@@ -250,6 +266,58 @@ export function subscribeExecutiveList(callback) {
 }
 
 /**
+ * Subscribe to real-time changes of Leaves list
+ */
+export function subscribeLeaveList(callback) {
+  if (typeof window === 'undefined') {
+    callback([]);
+    return () => {};
+  }
+
+  leaveSubscribers.add(callback);
+
+  let firestoreUnsub = null;
+  if (isFirebaseConfigured && db) {
+    try {
+      firestoreUnsub = onSnapshot(
+        collection(db, 'leaves'),
+        (snapshot) => {
+          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(list));
+          notifyLeaveSubscribers(list);
+        },
+        (error) => {
+          console.warn('Firestore leaves snapshot error', error);
+          initLocalStorage();
+          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+          callback(list);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to attach leaves listener', e);
+    }
+  }
+
+  initLocalStorage();
+  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  callback(cachedList);
+
+  const handleStorageChange = () => {
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+    callback(list);
+  };
+  window.addEventListener('storage', handleStorageChange);
+
+  return () => {
+    leaveSubscribers.delete(callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
+}
+
+/**
  * ----------------- 2. CRUD OPERATIONS (WRITE & DELETE) -----------------
  */
 
@@ -392,6 +460,55 @@ export async function deleteExecutiveRecord(id) {
 }
 
 /**
+ * Save / Update Leave Record
+ */
+export async function saveLeaveRecord(leave) {
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  const idx = list.findIndex((l) => l.id === leave.id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...leave };
+  } else {
+    list.unshift(leave);
+  }
+  localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(list));
+  notifyLeaveSubscribers(list);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'leaves', leave.id), leave, { merge: true });
+      console.log('✅ Successfully persisted leave to Cloud Firestore:', leave.id);
+    } catch (e) {
+      console.error('Firestore save leave failed', e);
+    }
+  }
+
+  return leave;
+}
+
+/**
+ * Delete Leave Record
+ */
+export async function deleteLeaveRecord(id) {
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  const filtered = list.filter((l) => l.id !== id);
+  localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(filtered));
+  notifyLeaveSubscribers(filtered);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'leaves', id));
+      console.log('✅ Successfully deleted leave from Cloud Firestore:', id);
+    } catch (e) {
+      console.error('Firestore delete leave failed', e);
+    }
+  }
+
+  return true;
+}
+
+/**
  * ----------------- 3. QUERY HELPERS -----------------
  */
 
@@ -450,6 +567,25 @@ export async function getExecutiveList() {
   initLocalStorage();
   const raw = localStorage.getItem(LOCAL_KEY_EXECS);
   return raw ? JSON.parse(raw) : INITIAL_EXECUTIVES;
+}
+
+export async function getLeaveList() {
+  if (typeof window === 'undefined') return [];
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'leaves'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+    } catch (e) {
+      console.warn('Firestore getLeaveList failed', e);
+    }
+  }
+
+  initLocalStorage();
+  const raw = localStorage.getItem(LOCAL_KEY_LEAVES);
+  return raw ? JSON.parse(raw) : [];
 }
 
 /**

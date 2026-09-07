@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Home, Building2, User, ShieldCheck } from 'lucide-react';
+import { Home, Building2, User, ShieldCheck, Calendar } from 'lucide-react';
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -35,13 +35,25 @@ export default function MobileNav() {
 
         {currentPersonnel && (
           <Link
+            href="/leave"
+            className={`mobile-nav-item ${pathname === '/leave' ? 'active' : ''}`}
+          >
+            <div className="mobile-icon-wrapper">
+              <Calendar size={18} />
+            </div>
+            <span>วันลา</span>
+          </Link>
+        )}
+
+        {currentPersonnel && (
+          <Link
             href="/profile"
             className={`mobile-nav-item ${pathname === '/profile' ? 'active' : ''}`}
           >
             <div className="mobile-icon-wrapper">
               <User size={18} />
             </div>
-            <span>ข้อมูลของฉัน</span>
+            <span>ข้อมูลฉัน</span>
           </Link>
         )}
 

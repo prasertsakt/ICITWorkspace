@@ -291,7 +291,78 @@ export default function PortalLandingPage() {
             </div>
           </Link>
 
+          {/* Service 3: Leave Calendar & Dashboard */}
+          <Link
+            href="/leave"
+            className="card-glass"
+            style={{
+              padding: '1.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              borderTop: '5px solid var(--peach-500)',
+              transition: 'var(--transition)',
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--peach-50)',
+                    color: 'var(--peach-500)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Calendar size={24} />
+                </div>
+                <span className="badge badge-active">
+                  <span className="pulse-dot" />
+                  เปิดให้บริการ
+                </span>
+              </div>
 
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                ปฏิทินวันลา (Leave Calendar)
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                แดชบอร์ดสรุปสถิติและปฏิทินแสดงวันลาป่วย ลากิจ ลาพักผ่อน และขาดงานของบุคลากร
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '1rem',
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {currentPersonnel ? 'คลิกเพื่อดูปฏิทินวันลา' : 'ต้องเข้าสู่ระบบเพื่อใช้งาน'}
+              </span>
+              <span
+                style={{
+                  color: 'var(--peach-500)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                เข้าใช้งาน <ArrowRight size={15} />
+              </span>
+            </div>
+          </Link>
         </div>
       </section>
 

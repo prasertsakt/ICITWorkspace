@@ -14,6 +14,7 @@ import {
   Sparkles,
   ChevronDown,
   UserCheck,
+  Calendar,
 } from 'lucide-react';
 export default function Navbar() {
   const pathname = usePathname();
@@ -60,13 +61,23 @@ export default function Navbar() {
             </Link>
 
             {currentPersonnel && (
-              <Link
-                href="/profile"
-                className={`nav-link-item ${pathname === '/profile' ? 'active' : ''}`}
-              >
-                <User size={16} />
-                <span>ข้อมูลของฉัน</span>
-              </Link>
+              <>
+                <Link
+                  href="/leave"
+                  className={`nav-link-item ${pathname === '/leave' ? 'active' : ''}`}
+                >
+                  <Calendar size={16} />
+                  <span>ปฏิทินวันลา</span>
+                </Link>
+
+                <Link
+                  href="/profile"
+                  className={`nav-link-item ${pathname === '/profile' ? 'active' : ''}`}
+                >
+                  <User size={16} />
+                  <span>ข้อมูลของฉัน</span>
+                </Link>
+              </>
             )}
 
             {isAdmin && (
