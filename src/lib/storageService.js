@@ -480,6 +480,13 @@ export async function saveLeaveRecord(leave) {
       console.log('✅ Successfully persisted leave to Cloud Firestore:', leave.id);
     } catch (e) {
       console.error('Firestore save leave failed', e);
+      if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
+        alert(
+          '⚠️ ข้อมูลการลาถูกบันทึกในแคชของเบราว์เซอร์ แต่ยังไม่สามารถบันทึกลง Cloud Firestore ได้!\n\n' +
+          'สาเหตุ: ติด Security Rules (Permission Denied)\n' +
+          'วิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วตรวจดูว่าอนุญาตคอลเลกชัน leaves หรือไม่'
+        );
+      }
     }
   }
 
@@ -502,6 +509,11 @@ export async function deleteLeaveRecord(id) {
       console.log('✅ Successfully deleted leave from Cloud Firestore:', id);
     } catch (e) {
       console.error('Firestore delete leave failed', e);
+      if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
+        alert(
+          '⚠️ ข้อมูลถูกลบในแคช แต่ไม่สามารถลบจาก Cloud Firestore ได้เนื่องจากติดสิทธิ์ (Permission Denied)'
+        );
+      }
     }
   }
 
