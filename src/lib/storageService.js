@@ -16,12 +16,17 @@ import {
   onSnapshot,
   query,
   where,
+  writeBatch,
+  orderBy,
+  limit,
 } from 'firebase/firestore';
 
 const LOCAL_KEY_PERSONNEL = 'icit_org_personnel';
 const LOCAL_KEY_DEPTS = 'icit_org_departments';
 const LOCAL_KEY_EXECS = 'icit_org_executives';
 const LOCAL_KEY_LEAVES = 'icit_org_leaves';
+const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
+const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
 
 // Helper: Ensure local storage has seed data
 function initLocalStorage() {
@@ -266,50 +271,149 @@ export function subscribeExecutiveList(callback) {
 }
 
 /**
- * Subscribe to real-time changes of Leaves list
+ * Helper: Merge fetched Firestore documents into local storage cache
  */
-export function subscribeLeaveList(callback) {
+function mergeLeavesIntoLocalStorage(fetchedDocs, year) {
+  if (typeof window === 'undefined') return [];
+  initLocalStorage();
+  const existing = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  
+  const map = new Map();
+  // Keep all existing leaves from cache
+  existing.forEach((item) => map.set(item.id, item));
+  // Overwrite or insert fetched docs
+  fetchedDocs.forEach((item) => map.set(item.id, item));
+
+  const merged = Array.from(map.values());
+  localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(merged));
+  localStorage.setItem(LOCAL_KEY_LEAVES_SYNC_TIME, Date.now().toString());
+  return merged;
+}
+
+/**
+ * Helper: Filter a list of leaves by calendar year
+ */
+function filterLeavesByYear(list, year) {
+  if (!year) return list;
+  const yStr = year.toString();
+  return list.filter((l) => {
+    return (l.startDate && l.startDate.startsWith(yStr)) || (l.endDate && l.endDate.startsWith(yStr));
+  });
+}
+
+/**
+ * Fetch leaves from Cloud Firestore for a specific year and update local cache
+ */
+export async function refreshLeaveList(year = new Date().getFullYear()) {
+  if (!isFirebaseConfigured || !db) {
+    initLocalStorage();
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+    return filterLeavesByYear(list, year);
+  }
+
+  try {
+    const startStr = `${year}-01-01`;
+    const endStr = `${year}-12-31T23:59:59`;
+    const leavesQuery = query(
+      collection(db, 'leaves'),
+      where('startDate', '>=', startStr),
+      where('startDate', '<=', endStr)
+    );
+
+    const snapshot = await getDocs(leavesQuery);
+    const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const merged = mergeLeavesIntoLocalStorage(docs, year);
+    notifyLeaveSubscribers(merged);
+    return filterLeavesByYear(merged, year);
+  } catch (err) {
+    console.warn('Firestore leaves fetch error (falling back to cache):', err);
+    initLocalStorage();
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+    return filterLeavesByYear(list, year);
+  }
+}
+
+/**
+ * Get timestamp of last leave sync
+ */
+export function getLastLeaveSyncTime() {
+  if (typeof window === 'undefined') return null;
+  const t = localStorage.getItem(LOCAL_KEY_LEAVES_SYNC_TIME);
+  return t ? parseInt(t, 10) : null;
+}
+
+/**
+ * Subscribe to Leaves list with Scoped Year Query, Smart Cache TTL (15m), and On-Demand Refresh
+ */
+export function subscribeLeaveList(callback, { year = new Date().getFullYear(), enableRealtime = false } = {}) {
   if (typeof window === 'undefined') {
     callback([]);
     return () => {};
   }
 
-  leaveSubscribers.add(callback);
+  // Wrapper callback to ensure caller receives only the requested year's leaves (or all if year is null)
+  const wrappedCallback = (allLeaves) => {
+    callback(filterLeavesByYear(allLeaves, year));
+  };
+
+  leaveSubscribers.add(wrappedCallback);
 
   let firestoreUnsub = null;
+
   if (isFirebaseConfigured && db) {
-    try {
-      firestoreUnsub = onSnapshot(
-        collection(db, 'leaves'),
-        (snapshot) => {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-          localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(list));
-          notifyLeaveSubscribers(list);
-        },
-        (error) => {
-          console.warn('Firestore leaves snapshot error', error);
-          initLocalStorage();
-          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
-          callback(list);
-        }
-      );
-    } catch (e) {
-      console.warn('Failed to attach leaves listener', e);
+    const startStr = `${year}-01-01`;
+    const endStr = `${year}-12-31T23:59:59`;
+    const leavesQuery = query(
+      collection(db, 'leaves'),
+      where('startDate', '>=', startStr),
+      where('startDate', '<=', endStr)
+    );
+
+    if (enableRealtime) {
+      // 1. Real-time mode (Admin / Live collaboration)
+      try {
+        firestoreUnsub = onSnapshot(
+          leavesQuery,
+          (snapshot) => {
+            const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const merged = mergeLeavesIntoLocalStorage(docs, year);
+            notifyLeaveSubscribers(merged);
+          },
+          (error) => {
+            console.warn('Firestore leaves snapshot error', error);
+            initLocalStorage();
+            const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+            wrappedCallback(list);
+          }
+        );
+      } catch (e) {
+        console.warn('Failed to attach leaves listener', e);
+      }
+    } else {
+      // 2. Cache-First with Stale-While-Revalidate mode (General staff view)
+      const lastSync = parseInt(localStorage.getItem(LOCAL_KEY_LEAVES_SYNC_TIME) || '0', 10);
+      const isCacheStale = Date.now() - lastSync > LEAVES_CACHE_TTL_MS;
+
+      if (isCacheStale) {
+        // Fetch fresh copy in background without blocking UI
+        refreshLeaveList(year).catch((e) => console.warn('Background leave refresh failed', e));
+      }
     }
   }
 
+  // 3. Immediately emit cached data in 0ms
   initLocalStorage();
   const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
-  callback(cachedList);
+  wrappedCallback(cachedList);
 
   const handleStorageChange = () => {
     const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
-    callback(list);
+    wrappedCallback(list);
   };
   window.addEventListener('storage', handleStorageChange);
 
   return () => {
-    leaveSubscribers.delete(callback);
+    leaveSubscribers.delete(wrappedCallback);
     window.removeEventListener('storage', handleStorageChange);
     if (firestoreUnsub) {
       firestoreUnsub();
@@ -521,7 +625,8 @@ export async function deleteLeaveRecord(id) {
 }
 
 /**
- * Synchronize all local leaves to Cloud Firestore
+ * Synchronize all local leaves to Cloud Firestore using Atomic writeBatch
+ * Chunks into batches of up to 450 documents (Firestore limit: 500 ops/batch)
  */
 export async function syncAllLocalLeavesToFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -530,22 +635,103 @@ export async function syncAllLocalLeavesToFirestore() {
 
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  if (list.length === 0) {
+    return { success: true, count: 0, successCount: 0 };
+  }
+
+  const BATCH_SIZE = 450;
   let successCount = 0;
-  let errorCount = 0;
   let lastError = null;
 
-  for (const item of list) {
+  for (let i = 0; i < list.length; i += BATCH_SIZE) {
+    const chunk = list.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+
+    chunk.forEach((item) => {
+      const ref = doc(db, 'leaves', item.id);
+      batch.set(ref, item, { merge: true });
+    });
+
     try {
-      await setDoc(doc(db, 'leaves', item.id), item, { merge: true });
-      successCount++;
+      await batch.commit();
+      successCount += chunk.length;
+      console.log(`✅ Successfully batch synced ${chunk.length} leaves to Firestore`);
     } catch (e) {
-      errorCount++;
+      console.error('Batch sync leaves failed', e);
       lastError = e;
-      console.error('Failed to sync leave record to Firestore:', item.id, e);
+      break;
     }
   }
 
-  return { success: errorCount === 0, successCount, errorCount, lastError };
+  if (lastError) {
+    return {
+      success: false,
+      successCount,
+      errorCount: list.length - successCount,
+      lastError,
+    };
+  }
+
+  localStorage.setItem(LOCAL_KEY_LEAVES_SYNC_TIME, Date.now().toString());
+  return { success: true, successCount, count: successCount };
+}
+
+/**
+ * Archive leave records older than cutoffYear (e.g. before cutoffYear-01-01)
+ * Moves docs from 'leaves' collection to 'leaves_archive' and updates cache
+ */
+export async function archiveOldLeaves(cutoffYear) {
+  if (!isFirebaseConfigured || !db) {
+    return { success: false, reason: 'Firebase not configured' };
+  }
+
+  initLocalStorage();
+  const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  const cutoffStr = `${cutoffYear}-01-01`;
+
+  // Find records strictly before the cutoff date
+  const toArchive = list.filter((l) => l.endDate && l.endDate < cutoffStr);
+  if (toArchive.length === 0) {
+    return { success: true, archivedCount: 0, message: 'ไม่มีข้อมูลวันลาเก่าที่เข้าเกณฑ์จัดเก็บ' };
+  }
+
+  // Each record requires 2 ops (1 set into archive + 1 delete from leaves), max 225 records per batch (450 ops)
+  const BATCH_SIZE = 225;
+  let archivedCount = 0;
+  let lastError = null;
+
+  for (let i = 0; i < toArchive.length; i += BATCH_SIZE) {
+    const chunk = toArchive.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+
+    chunk.forEach((item) => {
+      const archiveRef = doc(db, 'leaves_archive', item.id);
+      const leaveRef = doc(db, 'leaves', item.id);
+      batch.set(archiveRef, { ...item, archivedAt: new Date().toISOString() });
+      batch.delete(leaveRef);
+    });
+
+    try {
+      await batch.commit();
+      archivedCount += chunk.length;
+      console.log(`📦 Archived ${chunk.length} leave records to leaves_archive`);
+    } catch (e) {
+      console.error('Batch archive failed', e);
+      lastError = e;
+      break;
+    }
+  }
+
+  if (lastError) {
+    return { success: false, archivedCount, lastError };
+  }
+
+  // Remove archived items from active localStorage cache
+  const remaining = list.filter((l) => !toArchive.some((a) => a.id === l.id));
+  localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(remaining));
+  notifyLeaveSubscribers(remaining);
+
+  return { success: true, archivedCount };
 }
 
 /**

@@ -9,6 +9,9 @@ import {
   saveLeaveRecord,
   deleteLeaveRecord,
   syncAllLocalLeavesToFirestore,
+  refreshLeaveList,
+  getLastLeaveSyncTime,
+  archiveOldLeaves,
 } from '@/lib/storageService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
 import LeaveCalendar from '@/components/LeaveCalendar';
@@ -29,6 +32,7 @@ import {
   CloudUpload,
   RefreshCw,
   CheckCircle2,
+  Archive,
 } from 'lucide-react';
 
 export default function LeavePage() {
@@ -40,22 +44,32 @@ export default function LeavePage() {
   const [editingLeave, setEditingLeave] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  // Subscribe to real-time leave list and personnel list
+  // Subscribe to leaves scoped by selectedYear with Smart Cache TTL & Real-time for Admin
   useEffect(() => {
-    const unsubLeaves = subscribeLeaveList((list) => {
-      setLeaves(list || []);
-    });
+    const unsubLeaves = subscribeLeaveList(
+      (list) => {
+        setLeaves(list || []);
+        setLastSyncTime(getLastLeaveSyncTime());
+      },
+      { year: selectedYear, enableRealtime: isAdmin }
+    );
 
     const unsubPersonnel = subscribePersonnelList((list) => {
       setPersonnelList(list || []);
     });
 
+    setLastSyncTime(getLastLeaveSyncTime());
+
     return () => {
       unsubLeaves();
       unsubPersonnel();
     };
-  }, []);
+  }, [selectedYear, isAdmin]);
 
   // Dashboard Metrics Calculations
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -130,6 +144,48 @@ export default function LeavePage() {
       setIsSyncing(false);
     }
   };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const fresh = await refreshLeaveList(selectedYear);
+      setLeaves(fresh || []);
+      setLastSyncTime(getLastLeaveSyncTime());
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleArchiveOldData = async () => {
+    const cutoffYear = selectedYear - 1;
+    const confirm = window.confirm(
+      `คุณต้องการย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${cutoffYear + 543} (${cutoffYear}) เข้าสู่คลังประวัติ (leaves_archive) หรือไม่?\n\n` +
+      `การย้ายเข้าคลังประวัติจะช่วยให้คอลเลกชันปัจจุบันมีขนาดกะทัดรัด โหลดเร็ว และประหยัดโควตาการอ่าน`
+    );
+    if (!confirm) return;
+
+    setIsArchiving(true);
+    try {
+      const res = await archiveOldLeaves(cutoffYear);
+      if (res.success) {
+        if (res.archivedCount > 0) {
+          alert(`✅ ย้ายข้อมูลเข้าคลังประวัติสำเร็จ ${res.archivedCount} รายการ`);
+        } else {
+          alert('ℹ️ ไม่พบข้อมูลวันลาเก่าที่เข้าเกณฑ์จัดเก็บ');
+        }
+      } else {
+        alert(`⚠️ ไม่สามารถจัดเก็บได้: ${res.lastError?.message || 'โปรดตรวจสอบสิทธิ์'}`);
+      }
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const formattedSyncTime = useMemo(() => {
+    if (!lastSyncTime) return null;
+    const d = new Date(lastSyncTime);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+  }, [lastSyncTime]);
 
   const handleOpenAddModal = () => {
     setEditingLeave(null);
@@ -231,35 +287,63 @@ export default function LeavePage() {
           </p>
         </div>
 
-        {isAdmin && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <button
-              onClick={handleSyncToCloud}
-              disabled={isSyncing}
-              className="btn btn-secondary btn-sm"
-              title="ซิงก์ข้อมูลวันลาทั้งหมดจากเครื่องขึ้น Cloud Firestore"
-              style={{ padding: '0.6rem 0.95rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              {isSyncing ? (
-                <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
-              ) : syncStatus ? (
-                <CheckCircle2 size={15} color="var(--mint-600)" />
-              ) : (
-                <CloudUpload size={15} color="var(--primary-600)" />
-              )}
-              <span>{isSyncing ? 'กำลังซิงก์...' : syncStatus || 'ซิงก์ขึ้น Firebase'}</span>
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Cache & Refresh button (all users) */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="btn btn-secondary btn-sm"
+            title="รีเฟรชดึงข้อมูลล่าสุดจาก Cloud Firestore"
+            style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+            <span>{isRefreshing ? 'กำลังโหลด...' : formattedSyncTime ? `แคช: ${formattedSyncTime}` : 'รีเฟรช'}</span>
+          </button>
 
-            <button
-              onClick={handleOpenAddModal}
-              className="btn btn-primary btn-sm"
-              style={{ padding: '0.6rem 1.15rem' }}
-            >
-              <Plus size={16} />
-              <span>บันทึกการลาใหม่</span>
-            </button>
-          </div>
-        )}
+          {isAdmin && (
+            <>
+              {/* Batch Sync to Firebase */}
+              <button
+                onClick={handleSyncToCloud}
+                disabled={isSyncing}
+                className="btn btn-secondary btn-sm"
+                title="ซิงก์ข้อมูลวันลาขึ้น Cloud Firestore ด้วย Atomic Batch Write"
+                style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isSyncing ? (
+                  <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : syncStatus ? (
+                  <CheckCircle2 size={14} color="var(--mint-600)" />
+                ) : (
+                  <CloudUpload size={14} color="var(--primary-600)" />
+                )}
+                <span>{isSyncing ? 'กำลังซิงก์...' : syncStatus || 'ซิงก์ขึ้น Firebase'}</span>
+              </button>
+
+              {/* Archive Old Data button */}
+              <button
+                onClick={handleArchiveOldData}
+                disabled={isArchiving}
+                className="btn btn-secondary btn-sm"
+                title={`ย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${selectedYear + 542} เข้าคลังประวัติ`}
+                style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Archive size={14} color="var(--amber-600)" />
+                <span>{isArchiving ? 'กำลังจัดเก็บ...' : 'จัดเก็บข้อมูลเก่า'}</span>
+              </button>
+
+              {/* Add Leave */}
+              <button
+                onClick={handleOpenAddModal}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '0.6rem 1.15rem' }}
+              >
+                <Plus size={16} />
+                <span>บันทึกการลาใหม่</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Dashboard Summary Metric Cards */}
@@ -439,7 +523,7 @@ export default function LeavePage() {
           </div>
 
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            ประวัติการลาสะสมทั้งหมด: {leaves.length} รายการ
+            ประวัติการลาปี {selectedYear + 543}: {leaves.length} รายการ
           </div>
         </div>
       </div>
@@ -450,6 +534,7 @@ export default function LeavePage() {
         isAdmin={isAdmin}
         onEditLeave={handleOpenEditModal}
         onDeleteLeave={handleDeleteLeave}
+        onYearChange={setSelectedYear}
       />
 
       {/* Modal for Adding / Editing Leave */}

@@ -40,6 +40,7 @@ export default function LeaveCalendar({
   isAdmin = false,
   onEditLeave,
   onDeleteLeave,
+  onYearChange,
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filterDept, setFilterDept] = useState('ALL');
@@ -53,6 +54,13 @@ export default function LeaveCalendar({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0 - 11
   const thaiYear = year + 543;
+
+  // Notify parent component about current active year
+  React.useEffect(() => {
+    if (onYearChange) {
+      onYearChange(year);
+    }
+  }, [year, onYearChange]);
 
   // Navigation handlers
   const handlePrevMonth = () => {

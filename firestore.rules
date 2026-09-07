@@ -51,5 +51,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'leaves_archive' collection (Archived Historical Leave Records)
+    match /leaves_archive/{archiveId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }
