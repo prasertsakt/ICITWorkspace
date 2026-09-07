@@ -273,8 +273,16 @@ export async function savePersonnelRecord(personnel) {
   if (isFirebaseConfigured && db) {
     try {
       await setDoc(doc(db, 'personnel', personnel.id), personnel, { merge: true });
+      console.log('✅ Successfully persisted personnel to Cloud Firestore:', personnel.id);
     } catch (e) {
       console.error('Firestore save personnel failed', e);
+      if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
+        alert(
+          '⚠️ ข้อมูลถูกบันทึกใน Local Cache แต่ยังไม่สามารถส่งขึ้น Cloud Firestore ได้!\n\n' +
+          'สาเหตุ: Firestore ติด Security Rules (Permission Denied)\n' +
+          'วิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วเปลี่ยนกฎเป็น allow read, write: if true; แล้วกด Publish'
+        );
+      }
     }
   }
 
@@ -296,8 +304,14 @@ export async function deletePersonnelRecord(id) {
   if (isFirebaseConfigured && db) {
     try {
       await deleteDoc(doc(db, 'personnel', id));
+      console.log('✅ Successfully deleted personnel from Cloud Firestore:', id);
     } catch (e) {
       console.error('Firestore delete personnel failed', e);
+      if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
+        alert(
+          '⚠️ ลบจาก Local Cache แล้วแต่ไม่สามารถลบใน Firestore ได้เนื่องจากติด Firestore Security Rules (Permission Denied)'
+        );
+      }
     }
   }
 
