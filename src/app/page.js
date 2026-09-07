@@ -94,7 +94,7 @@ export default function HomePage() {
             style={{ marginBottom: '0.75rem', background: 'white', border: '1px solid var(--primary-200)' }}
           >
             <Sparkles size={14} />
-            <span>ระบบสารสนเทศองค์กรภายใน</span>
+            <span>ICIT WORKSPACE</span>
           </div>
 
           <h2
@@ -107,11 +107,11 @@ export default function HomePage() {
               marginBottom: '0.75rem',
             }}
           >
-            ยินดีต้อนรับสู่ระบบบริหารโครงสร้างองค์กรและบุคลากร
+            ระบบบริหารจัดการภายในองค์กร
           </h2>
 
           <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-            ศูนย์รวมข้อมูลโครงสร้างฝ่ายงาน ข้อมูลบุคลากร และฝ่ายบริหาร จัดการสิทธิ์ความปลอดภัยผ่าน Google Workspace Whitelist
+            โครงสร้างฝ่ายงาน ข้อมูลบุคลากร และฝ่ายบริหาร
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -749,9 +749,8 @@ export default function HomePage() {
                   </p>
                   <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
                     <span
-                      className={`badge ${
-                        selectedPersonnelDetail.status === PERSONNEL_STATUS.ACTIVE ? 'badge-active' : 'badge-resigned'
-                      }`}
+                      className={`badge ${selectedPersonnelDetail.status === PERSONNEL_STATUS.ACTIVE ? 'badge-active' : 'badge-resigned'
+                        }`}
                     >
                       {selectedPersonnelDetail.status}
                     </span>
