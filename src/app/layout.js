@@ -7,6 +7,14 @@ import UnauthorizedModal from '@/components/UnauthorizedModal';
 export const metadata = {
   title: 'ระบบบริหารจัดการองค์กร | ICIT Organization Hub',
   description: 'ระบบสารสนเทศบริหารจัดการองค์กร โครงสร้างบุคลากร ฝ่าย และฝ่ายบริหาร',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
 };
 
 export default function RootLayout({ children }) {

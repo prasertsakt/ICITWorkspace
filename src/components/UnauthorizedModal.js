@@ -6,7 +6,6 @@ import {
   ShieldAlert,
   AlertTriangle,
   RefreshCw,
-  Sparkles,
   ShieldCheck,
   UserPlus,
   ArrowRight,
@@ -18,7 +17,6 @@ export default function UnauthorizedModal() {
     unauthorizedEmail,
     pendingUserData,
     clearAuthError,
-    switchDemoUser,
     bootstrapFirstAdmin,
     isFirebaseConfigured,
   } = useAuth();
@@ -96,7 +94,7 @@ export default function UnauthorizedModal() {
               <>
                 ยังไม่ได้เชื่อมต่อ Firebase API Keys ในไฟล์ <code>.env.local</code> หรือบน Vercel
                 <br />
-                คุณสามารถใช้ปุ่ม <strong>"สลับบัญชีทดสอบ"</strong> เพื่อทดลองใช้งานเป็น Admin หรือ บุคลากร ได้ทันที!
+                โปรดตั้งค่า Environment Variables ให้ครบถ้วนเพื่อเริ่มใช้งาน
               </>
             )}
             {!isNotWhitelisted && !isResigned && !isConfigMissing && (
@@ -139,18 +137,6 @@ export default function UnauthorizedModal() {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <button
-              onClick={() => {
-                clearAuthError();
-                switchDemoUser('admin@icit.org');
-              }}
-              className="btn btn-secondary btn-sm"
-              style={{ width: '100%' }}
-            >
-              <Sparkles size={16} />
-              <span>เข้าใช้งานด้วยบัญชีตัวอย่าง Admin จำลอง</span>
-            </button>
-
             <button
               onClick={clearAuthError}
               className="btn btn-ghost btn-sm"

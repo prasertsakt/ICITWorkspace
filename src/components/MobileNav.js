@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Home, Building2, User, ShieldCheck, Sparkles } from 'lucide-react';
-import DemoSwitcherModal from './DemoSwitcherModal';
+import { Home, Building2, User, ShieldCheck } from 'lucide-react';
 
 export default function MobileNav() {
   const pathname = usePathname();
   const { currentPersonnel, isAdmin } = useAuth();
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   return (
     <>
@@ -58,22 +56,7 @@ export default function MobileNav() {
             <span>จัดการระบบ</span>
           </Link>
         )}
-
-        <button
-          onClick={() => setIsDemoModalOpen(true)}
-          className="mobile-nav-item"
-          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-        >
-          <div className="mobile-icon-wrapper">
-            <Sparkles size={18} style={{ color: 'var(--primary-500)' }} />
-          </div>
-          <span>สลับบัญชี</span>
-        </button>
       </nav>
-
-      {isDemoModalOpen && (
-        <DemoSwitcherModal onClose={() => setIsDemoModalOpen(false)} />
-      )}
     </>
   );
 }

@@ -15,8 +15,6 @@ import {
   ChevronDown,
   UserCheck,
 } from 'lucide-react';
-import DemoSwitcherModal from './DemoSwitcherModal';
-
 export default function Navbar() {
   const pathname = usePathname();
   const {
@@ -27,8 +25,6 @@ export default function Navbar() {
     handleSignOut,
     isFirebaseConfigured,
   } = useAuth();
-
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   return (
     <>
@@ -86,17 +82,6 @@ export default function Navbar() {
 
           {/* User Profile & Auth */}
           <div className="nav-user-area">
-            {/* Quick Demo Switcher Button */}
-            <button
-              onClick={() => setIsDemoModalOpen(true)}
-              className="btn btn-secondary btn-sm"
-              title="สลับบัญชีทดสอบระบบ"
-              style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
-            >
-              <Sparkles size={14} style={{ color: 'var(--primary-500)' }} />
-              <span className="hidden sm:inline">สลับบัญชีทดสอบ</span>
-            </button>
-
             {currentPersonnel ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Link href="/profile" className="user-badge-pill" style={{ cursor: 'pointer' }}>
@@ -139,11 +124,6 @@ export default function Navbar() {
           </div>
         </div>
       </header>
-
-      {/* Demo Switcher Modal */}
-      {isDemoModalOpen && (
-        <DemoSwitcherModal onClose={() => setIsDemoModalOpen(false)} />
-      )}
     </>
   );
 }

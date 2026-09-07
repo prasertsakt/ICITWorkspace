@@ -110,7 +110,7 @@ export default function PortalLandingPage() {
               </>
             ) : (
               <>
-                ยินดีต้อนรับสู่ <span style={{ color: 'var(--primary-600)' }}>ICIT Workspace Portal</span>
+                <span style={{ color: 'var(--primary-600)' }}>ICIT Workspace Portal</span>
               </>
             )}
           </h1>
@@ -126,28 +126,9 @@ export default function PortalLandingPage() {
                 เข้าถึงระบบสารสนเทศ โครงสร้างองค์กร และบริการดิจิทัลทั้งหมดได้จากหน้านี้
               </>
             ) : (
-              'ศูนย์กลางเชื่อมต่อระบบสารสนเทศ โครงสร้างองค์กร และข้อมูลบุคลากรภายในองค์กร กรุณาเข้าสู่ระบบด้วย Google เพื่อเข้าถึงบริการเต็มรูปแบบ'
+              'ศูนย์รวมระบบสารสนเทศภายในองค์กร'
             )}
           </p>
-
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <Link href="/organization" className="btn btn-primary btn-sm">
-              <Building2 size={16} />
-              <span>เข้าสู่โครงสร้างองค์กร</span>
-            </Link>
-
-            {currentPersonnel ? (
-              <Link href="/profile" className="btn btn-secondary btn-sm">
-                <UserCheck size={16} />
-                <span>ดูข้อมูลของฉัน</span>
-              </Link>
-            ) : (
-              <button onClick={handleGoogleSignIn} className="btn btn-secondary btn-sm">
-                <LogIn size={16} />
-                <span>เข้าสู่ระบบ Google</span>
-              </button>
-            )}
-          </div>
         </div>
       </section>
 
