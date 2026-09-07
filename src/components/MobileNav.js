@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Home, User, ShieldCheck, Sparkles } from 'lucide-react';
+import { Home, Building2, User, ShieldCheck, Sparkles } from 'lucide-react';
 import DemoSwitcherModal from './DemoSwitcherModal';
 
 export default function MobileNav() {
@@ -23,6 +23,16 @@ export default function MobileNav() {
             <Home size={18} />
           </div>
           <span>หน้าหลัก</span>
+        </Link>
+
+        <Link
+          href="/organization"
+          className={`mobile-nav-item ${pathname === '/organization' ? 'active' : ''}`}
+        >
+          <div className="mobile-icon-wrapper">
+            <Building2 size={18} />
+          </div>
+          <span>โครงสร้าง</span>
         </Link>
 
         {currentPersonnel && (

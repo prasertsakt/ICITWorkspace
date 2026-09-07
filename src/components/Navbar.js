@@ -52,7 +52,15 @@ export default function Navbar() {
               className={`nav-link-item ${pathname === '/' ? 'active' : ''}`}
             >
               <Home size={16} />
-              <span>หน้าหลัก</span>
+              <span>หน้าหลัก (Portal)</span>
+            </Link>
+
+            <Link
+              href="/organization"
+              className={`nav-link-item ${pathname === '/organization' ? 'active' : ''}`}
+            >
+              <Building2 size={16} />
+              <span>โครงสร้างองค์กร</span>
             </Link>
 
             {currentPersonnel && (
