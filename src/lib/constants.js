@@ -69,6 +69,13 @@ export const LEAVE_TYPE_CONFIG = {
     border: '#FCA5A5',
     pillBg: '#EF4444',
   },
+  'สาย': {
+    label: 'สาย',
+    bg: '#E0F2FE',
+    color: '#0284C7',
+    border: '#BAE6FD',
+    pillBg: '#0EA5E9',
+  },
   'ลาป่วย': {
     label: 'ลาป่วย',
     bg: '#FFE4E6',
