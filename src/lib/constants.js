@@ -179,4 +179,9 @@ export const TIME_ATTENDANCE_STEP_CONFIG = {
   },
 };
 
+// 10. การกำหนดระยะเวลาเซสชัน (Session Timeout Configuration)
+export const SESSION_TIMEOUT_HOURS = 3;
+export const SESSION_TIMEOUT_MS = 3 * 60 * 60 * 1000; // 3 hours (10,800,000 ms)
+
+
 

@@ -13,11 +13,12 @@ import {
   savePersonnelRecord,
   hasAnyAdmin,
 } from '@/lib/storageService';
-import { PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
+import { PERSONNEL_STATUS, USER_ROLES, SESSION_TIMEOUT_MS, SESSION_TIMEOUT_HOURS } from '@/lib/constants';
 
 const AuthContext = createContext(null);
 
 const SESSION_KEY = 'icit_active_session_user';
+const SESSION_LAST_ACTIVE_KEY = 'icit_session_last_active';
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -26,6 +27,33 @@ export function AuthProvider({ children }) {
   const [authError, setAuthError] = useState(null);
   const [unauthorizedEmail, setUnauthorizedEmail] = useState('');
   const [pendingUserData, setPendingUserData] = useState(null);
+
+  // Check if session has exceeded 3 hours
+  const checkIsSessionExpired = () => {
+    if (typeof window === 'undefined') return false;
+    const lastActiveStr = localStorage.getItem(SESSION_LAST_ACTIVE_KEY);
+    if (!lastActiveStr) return false;
+    const lastActive = parseInt(lastActiveStr, 10);
+    if (isNaN(lastActive)) return false;
+    return Date.now() - lastActive > SESSION_TIMEOUT_MS;
+  };
+
+  // Trigger graceful session timeout
+  const expireSession = async () => {
+    if (isFirebaseConfigured) {
+      try {
+        await logOut();
+      } catch {}
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_LAST_ACTIVE_KEY);
+    }
+    setCurrentUser(null);
+    setCurrentPersonnel(null);
+    setAuthError('SESSION_TIMEOUT');
+    setIsLoading(false);
+  };
 
   // Helper to validate and bind personnel record
   const authenticatePersonnelRecord = async (userEmail, userObj) => {
@@ -76,19 +104,30 @@ export function AuthProvider({ children }) {
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(SESSION_KEY, cleanEmail);
+      localStorage.setItem(SESSION_LAST_ACTIVE_KEY, Date.now().toString());
     }
     return true;
   };
 
-  // Restore session on mount
+  // Restore session on mount & enforce 3-hr timeout
   useEffect(() => {
     let unsubscribe = () => {};
 
     const initAuth = async () => {
       setIsLoading(true);
 
+      // Check if past session has already expired (> 3 hours)
+      if (checkIsSessionExpired()) {
+        await expireSession();
+        return;
+      }
+
       if (isFirebaseConfigured) {
         unsubscribe = subscribeToAuth(async (firebaseUser) => {
+          if (checkIsSessionExpired()) {
+            await expireSession();
+            return;
+          }
           if (firebaseUser?.email) {
             await authenticatePersonnelRecord(firebaseUser.email, firebaseUser);
           } else {
@@ -115,6 +154,56 @@ export function AuthProvider({ children }) {
     initAuth();
     return () => unsubscribe();
   }, []);
+
+  // Periodic Heartbeat Check (every 30s) and Visibility / Focus listener for 3-hr timeout
+  useEffect(() => {
+    if (!currentPersonnel) return;
+
+    const checkExpiry = () => {
+      if (checkIsSessionExpired()) {
+        expireSession();
+      }
+    };
+
+    const interval = setInterval(checkExpiry, 30 * 1000);
+    window.addEventListener('visibilitychange', checkExpiry);
+    window.addEventListener('focus', checkExpiry);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', checkExpiry);
+      window.removeEventListener('focus', checkExpiry);
+    };
+  }, [currentPersonnel]);
+
+  // User Activity Tracker: update last active timestamp on interaction (throttled to 60s)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !currentPersonnel) return;
+
+    const updateActivity = () => {
+      const now = Date.now();
+      const lastActiveStr = localStorage.getItem(SESSION_LAST_ACTIVE_KEY);
+      const lastActive = lastActiveStr ? parseInt(lastActiveStr, 10) : 0;
+
+      // Check if session has already expired before refreshing
+      if (lastActive > 0 && now - lastActive > SESSION_TIMEOUT_MS) {
+        expireSession();
+        return;
+      }
+
+      // Write at most once every 60 seconds
+      if (now - lastActive > 60 * 1000) {
+        localStorage.setItem(SESSION_LAST_ACTIVE_KEY, now.toString());
+      }
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((ev) => window.addEventListener(ev, updateActivity, { passive: true }));
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, updateActivity));
+    };
+  }, [currentPersonnel]);
 
   // Action: Sign In With Google
   const handleGoogleSignIn = async () => {
@@ -193,6 +282,7 @@ export function AuthProvider({ children }) {
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(SESSION_KEY, cleanEmail);
+      localStorage.setItem(SESSION_LAST_ACTIVE_KEY, Date.now().toString());
     }
     setIsLoading(false);
     return true;
@@ -218,6 +308,7 @@ export function AuthProvider({ children }) {
     }
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_LAST_ACTIVE_KEY);
     }
     setCurrentUser(null);
     setCurrentPersonnel(null);

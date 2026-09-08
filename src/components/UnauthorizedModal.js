@@ -10,6 +10,9 @@ import {
   ShieldCheck,
   UserPlus,
   ArrowRight,
+  Clock,
+  LogIn,
+  Sparkles,
 } from 'lucide-react';
 
 export default function UnauthorizedModal() {
@@ -20,6 +23,7 @@ export default function UnauthorizedModal() {
     clearAuthError,
     bootstrapFirstAdmin,
     isFirebaseConfigured,
+    handleGoogleSignIn,
   } = useAuth();
 
   const [isBootstrapping, setIsBootstrapping] = useState(false);
@@ -28,6 +32,7 @@ export default function UnauthorizedModal() {
   const isNotWhitelisted = authError === 'EMAIL_NOT_WHITELISTED';
   const isResigned = authError === 'STATUS_RESIGNED';
   const isConfigMissing = authError === 'FIREBASE_CONFIG_MISSING';
+  const isTimeout = authError === 'SESSION_TIMEOUT';
 
   useEffect(() => {
     if (isNotWhitelisted) {
@@ -62,15 +67,17 @@ export default function UnauthorizedModal() {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              background: isResigned ? 'var(--rose-50)' : isConfigMissing ? 'var(--peach-50)' : 'var(--rose-50)',
-              color: isResigned ? 'var(--rose-500)' : isConfigMissing ? 'var(--peach-500)' : 'var(--rose-500)',
+              background: isTimeout ? '#FEF3C7' : isResigned ? 'var(--rose-50)' : isConfigMissing ? 'var(--peach-50)' : 'var(--rose-50)',
+              color: isTimeout ? '#D97706' : isResigned ? 'var(--rose-500)' : isConfigMissing ? 'var(--peach-500)' : 'var(--rose-500)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
             }}
           >
-            {isResigned ? (
+            {isTimeout ? (
+              <Clock size={32} />
+            ) : isResigned ? (
               <AlertTriangle size={32} />
             ) : isConfigMissing ? (
               <Sparkles size={32} />
@@ -81,14 +88,22 @@ export default function UnauthorizedModal() {
 
           {/* Title */}
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+            {isTimeout && 'เซสชันหมดอายุ (Session Timeout)'}
             {isNotWhitelisted && 'ไม่พบอีเมลในรายชื่อบุคลากร (Whitelist)'}
             {isResigned && 'สถานะพ้นสภาพการปฏิบัติงาน (ลาออก)'}
             {isConfigMissing && 'โหมดทดสอบระบบ (Demo Mode)'}
-            {!isNotWhitelisted && !isResigned && !isConfigMissing && 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'}
+            {!isTimeout && !isNotWhitelisted && !isResigned && !isConfigMissing && 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'}
           </h3>
 
           {/* Description */}
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            {isTimeout && (
+              <>
+                เซสชันการเข้าใช้งานของท่านหมดอายุเนื่องจากไม่มีการใช้งานติดต่อกันเกิน <strong>3 ชั่วโมง</strong>
+                <br />
+                เพื่อความปลอดภัยของข้อมูลองค์กร กรุณาลงชื่อเข้าใช้ด้วยบัญชี Google ใหม่อีกครั้ง
+              </>
+            )}
             {isNotWhitelisted && (
               <>
                 บัญชี Google <strong style={{ color: 'var(--rose-500)' }}>{unauthorizedEmail}</strong> ยังไม่ได้รับการบันทึกในรายชื่อบุคลากรของระบบ
@@ -109,7 +124,7 @@ export default function UnauthorizedModal() {
                 โปรดตั้งค่า Environment Variables ให้ครบถ้วนเพื่อเริ่มใช้งาน
               </>
             )}
-            {!isNotWhitelisted && !isResigned && !isConfigMissing && (
+            {!isTimeout && !isNotWhitelisted && !isResigned && !isConfigMissing && (
               <span>โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือลองใหม่อีกครั้ง</span>
             )}
           </p>
@@ -148,18 +163,42 @@ export default function UnauthorizedModal() {
           )}
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <button
-              onClick={clearAuthError}
-              className="btn btn-ghost btn-sm"
-              style={{ width: '100%' }}
-            >
-              <RefreshCw size={14} />
-              <span>ปิดหน้าต่างนี้</span>
-            </button>
-          </div>
+          {isTimeout ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <button
+                onClick={async () => {
+                  clearAuthError();
+                  await handleGoogleSignIn();
+                }}
+                className="btn btn-primary"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <LogIn size={16} />
+                <span>เข้าสู่ระบบใหม่ด้วย Google</span>
+              </button>
+              <button
+                onClick={clearAuthError}
+                className="btn btn-ghost btn-sm"
+                style={{ width: '100%' }}
+              >
+                <span>ปิดหน้าต่างนี้</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <button
+                onClick={clearAuthError}
+                className="btn btn-ghost btn-sm"
+                style={{ width: '100%' }}
+              >
+                <RefreshCw size={14} />
+                <span>ปิดหน้าต่างนี้</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
