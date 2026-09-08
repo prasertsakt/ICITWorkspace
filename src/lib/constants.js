@@ -26,6 +26,7 @@ export const POSITIONS = [
   'นักวิเคราะห์นโยบายและแผน',
   'นักวิชาการเงินและบัญชี',
   'วิศวกร',
+  'ช่างเครื่องคอมพิวเตอร์',
   'ช่างเทคนิค',
 ];
 
@@ -110,4 +111,72 @@ export const LEAVE_TYPE_CONFIG = {
     pillBg: '#F59E0B',
   },
 };
+
+// 8. ตัวเลือกประเภทใบลงเวลา (Time Attendance Types)
+export const TIME_ATTENDANCE_TYPES = [
+  'ลงเวลามาปฏิบัติราชการ',
+  'ลงเวลากลับปฏิบัติราชการ',
+];
+
+// 9. ลำดับขั้นตอนการอนุมัติใบลงเวลา (Time Attendance Workflow Steps)
+export const TIME_ATTENDANCE_STEPS = {
+  HR_REVIEW: 'HR_REVIEW',                 // 1. รอเจ้าหน้าที่ฝ่ายบุคคลตรวจสอบ
+  WITNESS_CONFIRM: 'WITNESS_CONFIRM',     // 2. รอพยานรับรอง
+  DEPT_HEAD_APPROVE: 'DEPT_HEAD_APPROVE', // 3. รอหัวหน้าฝ่ายอนุมัติ
+  DEPUTY_APPROVE: 'DEPUTY_APPROVE',       // 4. รอรอง ผอ.ฝ่ายบริหาร อนุมัติ
+  COMPLETED: 'COMPLETED',                 // อนุมัติสมบูรณ์ (จบกระบวนการ)
+  REJECTED: 'REJECTED',                   // ไม่อนุมัติ / ไม่ผ่านการตรวจสอบ
+};
+
+export const TIME_ATTENDANCE_STEP_CONFIG = {
+  HR_REVIEW: {
+    label: 'รอฝ่ายบุคคลตรวจสอบ',
+    stepNumber: 1,
+    bg: '#FEF3C7',
+    color: '#B45309',
+    badgeClass: 'badge-warning',
+    roleRequired: 'เจ้าหน้าที่ฝ่ายบุคคล',
+  },
+  WITNESS_CONFIRM: {
+    label: 'รอพยานรับรอง',
+    stepNumber: 2,
+    bg: '#E0E7FF',
+    color: '#4338CA',
+    badgeClass: 'badge-info',
+    roleRequired: 'พยานที่ถูกระบุ',
+  },
+  DEPT_HEAD_APPROVE: {
+    label: 'รอหัวหน้าฝ่ายอนุมัติ',
+    stepNumber: 3,
+    bg: '#F3E8FF',
+    color: '#7E22CE',
+    badgeClass: 'badge-primary',
+    roleRequired: 'หัวหน้าฝ่าย',
+  },
+  DEPUTY_APPROVE: {
+    label: 'รอรอง ผอ. อนุมัติ',
+    stepNumber: 4,
+    bg: '#FCE7F3',
+    color: '#BE185D',
+    badgeClass: 'badge-secondary',
+    roleRequired: 'รองผู้อำนวยการฝ่ายบริหาร',
+  },
+  COMPLETED: {
+    label: 'อนุมัติสมบูรณ์',
+    stepNumber: 5,
+    bg: '#DCFCE7',
+    color: '#15803D',
+    badgeClass: 'badge-success',
+    roleRequired: null,
+  },
+  REJECTED: {
+    label: 'ไม่อนุมัติ',
+    stepNumber: 0,
+    bg: '#FEE2E2',
+    color: '#B91C1C',
+    badgeClass: 'badge-danger',
+    roleRequired: null,
+  },
+};
+
 

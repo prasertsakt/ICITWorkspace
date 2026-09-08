@@ -5,7 +5,9 @@ import {
   INITIAL_DEPARTMENTS,
   INITIAL_EXECUTIVES,
   INITIAL_LEAVES,
+  INITIAL_TIME_ATTENDANCES,
 } from './initialData';
+import { sendTimeAttendanceNotification, validateApprovalToken } from './emailNotificationService';
 import {
   collection,
   doc,
@@ -27,8 +29,9 @@ const LOCAL_KEY_EXECS = 'icit_org_executives';
 const LOCAL_KEY_LEAVES = 'icit_org_leaves';
 const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
 const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
+const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 
-export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'leave', 'knowledge', 'survey'];
+export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'attendance', 'leave', 'knowledge', 'survey'];
 const LOCAL_KEY_PORTAL_SERVICES = 'icit_portal_services_order';
 
 // Helper: Ensure local storage has seed data
@@ -47,6 +50,9 @@ function initLocalStorage() {
   if (!localStorage.getItem(LOCAL_KEY_LEAVES)) {
     localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(INITIAL_LEAVES));
   }
+  if (!localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES)) {
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(INITIAL_TIME_ATTENDANCES));
+  }
 }
 
 /**
@@ -59,6 +65,19 @@ const departmentSubscribers = new Set();
 const executiveSubscribers = new Set();
 const leaveSubscribers = new Set();
 const portalServiceSubscribers = new Set();
+const timeAttendanceSubscribers = new Set();
+let cachedTimeAttendances = null;
+
+function notifyTimeAttendanceSubscribers(list) {
+  cachedTimeAttendances = list;
+  timeAttendanceSubscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Time attendance subscriber notification error', e);
+    }
+  });
+}
 
 function notifyPortalServiceSubscribers(order) {
   portalServiceSubscribers.forEach((cb) => {
@@ -469,8 +488,20 @@ export function subscribePortalServicesOrder(callback) {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (Array.isArray(data?.order) && data.order.length > 0) {
-              localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(data.order));
-              notifyPortalServiceSubscribers(data.order);
+              let mergedOrder = [...data.order];
+              if (!mergedOrder.includes('attendance')) {
+                const profileIdx = mergedOrder.indexOf('profile');
+                if (profileIdx !== -1) {
+                  mergedOrder.splice(profileIdx + 1, 0, 'attendance');
+                } else {
+                  mergedOrder.push('attendance');
+                }
+              }
+              DEFAULT_SERVICE_ORDER.forEach((id) => {
+                if (!mergedOrder.includes(id)) mergedOrder.push(id);
+              });
+              localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(mergedOrder));
+              notifyPortalServiceSubscribers(mergedOrder);
             }
           }
         },
@@ -485,13 +516,38 @@ export function subscribePortalServicesOrder(callback) {
 
   // Initial emit from localStorage or default
   const cached = localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES);
-  const initialOrder = cached ? JSON.parse(cached) : DEFAULT_SERVICE_ORDER;
+  let initialOrder = DEFAULT_SERVICE_ORDER;
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        let merged = [...parsed];
+        if (!merged.includes('attendance')) {
+          const profileIdx = merged.indexOf('profile');
+          if (profileIdx !== -1) {
+            merged.splice(profileIdx + 1, 0, 'attendance');
+          } else {
+            merged.push('attendance');
+          }
+        }
+        DEFAULT_SERVICE_ORDER.forEach((id) => {
+          if (!merged.includes(id)) merged.push(id);
+        });
+        initialOrder = merged;
+      }
+    } catch {}
+  }
   callback(initialOrder);
 
   const handleStorageChange = (e) => {
     if (e.key === LOCAL_KEY_PORTAL_SERVICES && e.newValue) {
       try {
-        callback(JSON.parse(e.newValue));
+        const parsed = JSON.parse(e.newValue);
+        if (Array.isArray(parsed)) {
+          let merged = [...parsed];
+          if (!merged.includes('attendance')) merged.push('attendance');
+          callback(merged);
+        }
       } catch {}
     }
   };
@@ -1123,3 +1179,354 @@ export function resetLocalSeedData() {
   notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
   notifyExecutiveSubscribers(INITIAL_EXECUTIVES);
 }
+
+/**
+ * ----------------- 8. TIME ATTENDANCE REQUESTS (ระบบใบลงเวลา) -----------------
+ */
+
+/**
+ * Read time attendance list from localStorage synchronously
+ */
+export function getTimeAttendanceList() {
+  if (cachedTimeAttendances !== null) return cachedTimeAttendances;
+  if (typeof window === 'undefined') return INITIAL_TIME_ATTENDANCES;
+  initLocalStorage();
+  const raw = localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES);
+  cachedTimeAttendances = raw ? JSON.parse(raw) : INITIAL_TIME_ATTENDANCES;
+  return cachedTimeAttendances;
+}
+
+/**
+ * Find time attendance record by ID
+ */
+export function getTimeAttendanceById(id) {
+  const list = getTimeAttendanceList();
+  return list.find((item) => item.id === id) || null;
+}
+
+/**
+ * Subscribe to Time Attendance Requests with Real-Time Firestore Sync
+ */
+export function subscribeTimeAttendanceList(callback, options = {}) {
+  // 1. Immediate sync response (0ms)
+  const initialData = getTimeAttendanceList();
+  callback(initialData);
+
+  // 2. Register in-memory pub-sub callback
+  timeAttendanceSubscribers.add(callback);
+
+  let unsubscribeFirestore = () => {};
+
+  // 3. Connect to Firestore if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      const q = query(collection(db, 'time_attendances'), orderBy('createdAt', 'desc'));
+      unsubscribeFirestore = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+            }
+            notifyTimeAttendanceSubscribers(list);
+          }
+        },
+        (err) => {
+          console.warn('Firestore time_attendances subscription error (using local cache)', err);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed setting up Firestore listener for time_attendances', e);
+    }
+  }
+
+  return () => {
+    timeAttendanceSubscribers.delete(callback);
+    unsubscribeFirestore();
+  };
+}
+
+/**
+ * Save / Create Time Attendance Request
+ */
+export async function saveTimeAttendanceRecord(record, createdByPersonnel = null) {
+  initLocalStorage();
+  const list = getTimeAttendanceList();
+  const isNew = !record.id;
+  const id = record.id || `ta-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+  const nowIso = new Date().toISOString();
+  const fullRecord = {
+    ...record,
+    id,
+    currentStep: record.currentStep || 'HR_REVIEW',
+    statusHr: record.statusHr || 'รอตรวจสอบ',
+    commentHr: record.commentHr || '',
+    statusWitness: record.statusWitness || 'รอรับรอง',
+    witnessComment: record.witnessComment || '',
+    statusDeptHead: record.statusDeptHead || 'รออนุมัติ',
+    deptHeadComment: record.deptHeadComment || '',
+    statusDeputy: record.statusDeputy || 'รออนุมัติ',
+    deputyComment: record.deputyComment || '',
+    finalStatus: record.finalStatus || 'รอดำเนินการ',
+    activityLog: record.activityLog || [
+      {
+        step: 'CREATE',
+        actorName: createdByPersonnel?.name || record.requesterName,
+        actorEmail: createdByPersonnel?.email || record.requesterEmail,
+        action: `ยื่นคำขอ${record.requestType || 'ใบลงเวลา'}`,
+        timestamp: nowIso,
+      },
+    ],
+    createdAt: record.createdAt || nowIso,
+    updatedAt: nowIso,
+  };
+
+  // Optimistic update
+  const idx = list.findIndex((item) => item.id === id);
+  if (idx >= 0) {
+    list[idx] = fullRecord;
+  } else {
+    list.unshift(fullRecord);
+  }
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+  }
+  notifyTimeAttendanceSubscribers(list);
+
+  // Firestore sync
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'time_attendances', id), fullRecord, { merge: true });
+    } catch (e) {
+      console.error('Failed to sync time attendance to Firestore', e);
+    }
+  }
+
+  // Trigger initial email notification to HR officer if new request
+  if (isNew) {
+    try {
+      const allPersonnel = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+      const hrPerson = allPersonnel.find((p) => p.position === 'บุคลากร' && p.status === 'ปกติ') || {
+        name: 'เจ้าหน้าที่ฝ่ายบุคคล',
+        email: 'hr@icit.org',
+      };
+      await sendTimeAttendanceNotification(fullRecord, 'HR_REVIEW', hrPerson);
+    } catch (err) {
+      console.warn('Initial email dispatch error', err);
+    }
+  }
+
+  return fullRecord;
+}
+
+/**
+ * Progress Workflow: Update Time Attendance Approval at each of the 4 steps
+ */
+export async function updateTimeAttendanceApproval(
+  id,
+  step,
+  decision, // 'approve' | 'reject'
+  comment = '',
+  actorPersonnel = null
+) {
+  initLocalStorage();
+  const list = getTimeAttendanceList();
+  const idx = list.findIndex((item) => item.id === id);
+  if (idx < 0) throw new Error('ไม่พบข้อมูลใบลงเวลาที่ระบุ');
+
+  const rec = { ...list[idx] };
+  const nowIso = new Date().toISOString();
+  const actorName = actorPersonnel?.name || 'ผู้มีอำนาจอนุมัติ';
+  const actorEmail = actorPersonnel?.email || '';
+
+  let actionText = '';
+  let nextStep = rec.currentStep;
+  let nextRecipient = null;
+
+  if (step === 'HR_REVIEW') {
+    if (decision === 'approve') {
+      rec.statusHr = 'ตรวจสอบแล้ว';
+      rec.currentStep = 'WITNESS_CONFIRM';
+      nextStep = 'WITNESS_CONFIRM';
+      actionText = 'ตรวจสอบแล้ว (ผ่านการตรวจสอบ)';
+    } else {
+      rec.statusHr = 'ไม่ผ่านการตรวจสอบ';
+      rec.currentStep = 'REJECTED';
+      rec.finalStatus = 'ไม่ผ่านการตรวจสอบ (ฝ่ายบุคคล)';
+      nextStep = 'REJECTED';
+      actionText = 'ไม่ผ่านการตรวจสอบ';
+    }
+    rec.commentHr = comment || rec.commentHr;
+    rec.checkedByHrName = actorName;
+    rec.checkedByHrAt = nowIso;
+  } else if (step === 'WITNESS_CONFIRM') {
+    if (decision === 'approve') {
+      rec.statusWitness = 'รับรอง';
+      rec.currentStep = 'DEPT_HEAD_APPROVE';
+      nextStep = 'DEPT_HEAD_APPROVE';
+      actionText = 'รับรองการเป็นพยาน';
+    } else {
+      rec.statusWitness = 'ไม่รับรอง';
+      rec.currentStep = 'REJECTED';
+      rec.finalStatus = 'พยานไม่รับรอง';
+      nextStep = 'REJECTED';
+      actionText = 'ไม่รับรองการเป็นพยาน';
+    }
+    rec.witnessComment = comment;
+    rec.witnessConfirmedAt = nowIso;
+  } else if (step === 'DEPT_HEAD_APPROVE') {
+    if (decision === 'approve') {
+      rec.statusDeptHead = 'อนุมัติ';
+      rec.currentStep = 'DEPUTY_APPROVE';
+      nextStep = 'DEPUTY_APPROVE';
+      actionText = 'หัวหน้าฝ่ายอนุมัติ';
+    } else {
+      rec.statusDeptHead = 'ไม่อนุมัติ';
+      rec.currentStep = 'REJECTED';
+      rec.finalStatus = 'หัวหน้าฝ่ายไม่อนุมัติ';
+      nextStep = 'REJECTED';
+      actionText = 'หัวหน้าฝ่ายไม่อนุมัติ';
+    }
+    rec.deptHeadComment = comment;
+    rec.deptHeadApprovedAt = nowIso;
+  } else if (step === 'DEPUTY_APPROVE') {
+    if (decision === 'approve') {
+      rec.statusDeputy = 'อนุมัติ';
+      rec.currentStep = 'COMPLETED';
+      rec.finalStatus = 'อนุมัติสมบูรณ์';
+      nextStep = 'COMPLETED';
+      actionText = 'รอง ผอ.ฝ่ายบริหาร อนุมัติ (จบกระบวนการ)';
+    } else {
+      rec.statusDeputy = 'ไม่อนุมัติ';
+      rec.currentStep = 'REJECTED';
+      rec.finalStatus = 'รอง ผอ. ไม่อนุมัติ';
+      nextStep = 'REJECTED';
+      actionText = 'รอง ผอ. ไม่อนุมัติ';
+    }
+    rec.deputyComment = comment;
+    rec.deputyApprovedAt = nowIso;
+  }
+
+  // Append to Activity Timeline Log
+  const activityItem = {
+    step,
+    actorName,
+    actorEmail,
+    action: actionText,
+    comment: comment || '-',
+    timestamp: nowIso,
+  };
+
+  rec.activityLog = [...(rec.activityLog || []), activityItem];
+  rec.updatedAt = nowIso;
+
+  // Optimistic update
+  list[idx] = rec;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+  }
+  notifyTimeAttendanceSubscribers(list);
+
+  // Firestore sync
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'time_attendances', id), rec, { merge: true });
+    } catch (e) {
+      console.error('Failed to update time attendance in Firestore', e);
+    }
+  }
+
+  // Dispatch Email Notification to next actor
+  try {
+    const allPersonnel = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+    if (nextStep === 'WITNESS_CONFIRM') {
+      nextRecipient = allPersonnel.find((p) => p.id === rec.witnessId) || {
+        name: rec.witnessName,
+        email: rec.witnessEmail,
+      };
+    } else if (nextStep === 'DEPT_HEAD_APPROVE') {
+      nextRecipient = allPersonnel.find((p) => p.id === rec.departmentHeadId) || {
+        name: rec.departmentHeadName,
+        email: rec.departmentHeadEmail,
+      };
+    } else if (nextStep === 'DEPUTY_APPROVE') {
+      nextRecipient = allPersonnel.find((p) => p.id === rec.deputyDirectorId) || {
+        name: rec.deputyDirectorName,
+        email: rec.deputyDirectorEmail,
+      };
+    } else if (nextStep === 'COMPLETED' || nextStep === 'REJECTED') {
+      nextRecipient = allPersonnel.find((p) => p.id === rec.requesterId) || {
+        name: rec.requesterName,
+        email: rec.requesterEmail,
+      };
+    }
+
+    if (nextRecipient) {
+      await sendTimeAttendanceNotification(rec, nextStep, nextRecipient);
+    }
+  } catch (err) {
+    console.warn('Email dispatch to next workflow reviewer failed', err);
+  }
+
+  return rec;
+}
+
+/**
+ * 1-Click Action Executor (from Email link)
+ */
+export async function executeOneClickApproval(actionId, step, decision, token, actorPersonnel) {
+  if (!validateApprovalToken(token, actionId, step)) {
+    throw new Error('รหัสยืนยัน (Token) ในลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  }
+  const record = getTimeAttendanceById(actionId);
+  if (!record) {
+    throw new Error('ไม่พบข้อมูลคำขอใบลงเวลาในระบบ');
+  }
+  if (record.currentStep !== step) {
+    throw new Error(`คำขอนี้ไม่อยู่ในขั้นตอนที่ระบุแล้ว (สถานะปัจจุบัน: ${record.currentStep})`);
+  }
+
+  return await updateTimeAttendanceApproval(
+    actionId,
+    step,
+    decision,
+    'ดำเนินการผ่านลิงก์ยืนยันในอีเมล (1-Click Action)',
+    actorPersonnel || { name: 'ผู้ดำเนินการผ่านอีเมล' }
+  );
+}
+
+/**
+ * Delete Time Attendance Record
+ */
+export async function deleteTimeAttendanceRecord(id) {
+  initLocalStorage();
+  const list = getTimeAttendanceList();
+  const filtered = list.filter((item) => item.id !== id);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(filtered));
+  }
+  notifyTimeAttendanceSubscribers(filtered);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'time_attendances', id));
+    } catch (e) {
+      console.error('Failed to delete time attendance in Firestore', e);
+    }
+  }
+  return true;
+}
+
+/**
+ * Reset Time Attendance seed data
+ */
+export function resetTimeAttendanceSeedData() {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(INITIAL_TIME_ATTENDANCES));
+  notifyTimeAttendanceSubscribers(INITIAL_TIME_ATTENDANCES);
+}
+

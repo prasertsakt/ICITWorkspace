@@ -312,9 +312,32 @@ export default function PortalLandingPage() {
                 iconColor: 'var(--mint-500)',
                 borderColor: 'var(--mint-500)',
                 badge: <span className="badge badge-user">ข้อมูลส่วนบุคคล</span>,
-                footerLeft: currentPersonnel ? `เข้าสู่ระบบในชื่อ: ${currentPersonnel.name}` : 'ต้องเข้าสู่ระบบ Google',
+                footerLeft: currentPersonnel ? `เข้าสู่ระบบในชื่อ: ${currentPersonnel.name}` : 'ต้องเข้าสู่ระบบเพื่อใช้งาน',
                 footerRight: (
                   <span style={{ color: 'var(--mint-600)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    เข้าใช้งาน <ArrowRight size={15} />
+                  </span>
+                ),
+              };
+            } else if (serviceId === 'attendance') {
+              cardData = {
+                title: 'ระบบใบลงเวลา',
+                desc: 'ยื่นคำขอลงเวลามา/กลับปฏิบัติราชการ กระบวนการอนุมัติ 4 ขั้นตอน พร้อมระบบแจ้งเตือนทางอีเมล',
+                href: '/time-attendance',
+                isExternal: false,
+                icon: <Clock size={24} />,
+                iconBg: '#EEF2FF',
+                iconColor: '#4F46E5',
+                borderColor: '#4F46E5',
+                badge: (
+                  <span className="badge badge-active">
+                    <span className="pulse-dot" />
+                    เปิดให้บริการ
+                  </span>
+                ),
+                footerLeft: currentPersonnel ? 'คลิกเพื่อเข้าสู่ระบบใบลงเวลา' : 'ต้องเข้าสู่ระบบเพื่อใช้งาน',
+                footerRight: (
+                  <span style={{ color: '#4F46E5', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     เข้าใช้งาน <ArrowRight size={15} />
                   </span>
                 ),
@@ -367,7 +390,7 @@ export default function PortalLandingPage() {
               };
             } else if (serviceId === 'survey') {
               cardData = {
-                title: 'แบบสำรวจปัจจัยความผูกพันของพนักงาน',
+                title: 'แบบสำรวจปัจจัยความผูกพันของบุคลากร',
                 desc: 'แบบประเมินและสำรวจความคิดเห็นเพื่อเสริมสร้างความผูกพันและความสุขในการทำงานของบุคลากร',
                 href: 'https://script.google.com/macros/s/AKfycbwOb1JYVMKCOhvh4HS5br-VXF-AG-QWDoFMYQvjeZbwBe7CbgDUzkGc7_EEDE6JAaH5JA/exec',
                 isExternal: true,

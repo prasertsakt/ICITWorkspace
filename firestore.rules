@@ -58,6 +58,12 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // Rules for 'time_attendances' collection (Time Attendance Requests)
+    match /time_attendances/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Rules for 'settings' collection (Portal Configurations, Service Order, etc.)
     match /settings/{settingId} {
       allow read: if true; // Any visitor can read portal card order

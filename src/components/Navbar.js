@@ -15,6 +15,7 @@ import {
   ChevronDown,
   UserCheck,
   Calendar,
+  Clock,
 } from 'lucide-react';
 export default function Navbar() {
   const pathname = usePathname();
@@ -62,6 +63,14 @@ export default function Navbar() {
 
             {currentPersonnel && (
               <>
+                <Link
+                  href="/time-attendance"
+                  className={`nav-link-item ${pathname === '/time-attendance' ? 'active' : ''}`}
+                >
+                  <Clock size={16} />
+                  <span>ใบลงเวลา</span>
+                </Link>
+
                 <Link
                   href="/leave"
                   className={`nav-link-item ${pathname === '/leave' ? 'active' : ''}`}
