@@ -227,17 +227,24 @@ export default function LeaveReportModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '10px',
-                background: '#EEF2FF',
-                color: '#4F46E5',
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#FFFFFF',
+                border: '1.5px solid #E2E8F0',
+                padding: '4px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06)',
+                overflow: 'hidden',
               }}
             >
-              <FileText size={22} />
+              <img
+                src="/icit-logo.png"
+                alt="ICIT Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
@@ -538,22 +545,18 @@ export default function LeaveReportModal({
                 marginBottom: '20px',
               }}
             >
-              {/* Emblem / Logo Icon */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '50%',
-                  background: '#F1F5F9',
-                  border: '1.5px solid #CBD5E1',
-                  marginBottom: '8px',
-                  color: '#4F46E5',
-                }}
-              >
-                <Layers size={28} />
+              {/* Official ICIT Logo Header */}
+              <div style={{ marginBottom: '12px' }}>
+                <img
+                  src="/icit-logo.png"
+                  alt="ICIT Logo"
+                  style={{
+                    height: '62px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                    display: 'inline-block',
+                  }}
+                />
               </div>
 
               <h2

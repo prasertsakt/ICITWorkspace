@@ -15,15 +15,15 @@ export function getEmailConfig() {
   const envHrEmail =
     process.env.NEXT_PUBLIC_HR_EMAIL ||
     process.env.HR_EMAIL ||
-    'tiawongsombat@gmail.com';
+    '';
   const envDeptHeadEmail =
     process.env.NEXT_PUBLIC_DEPT_HEAD_EMAIL ||
     process.env.DEPT_HEAD_EMAIL ||
-    'tiawongsombat@gmail.com';
+    '';
   const envDeputyEmail =
     process.env.NEXT_PUBLIC_DEPUTY_DIRECTOR_EMAIL ||
     process.env.DEPUTY_DIRECTOR_EMAIL ||
-    'tiawongsombat@gmail.com';
+    '';
 
   const defaults = {
     googleAppsScriptUrl: envUrl,
@@ -44,13 +44,19 @@ export function getEmailConfig() {
     if (raw) {
       const parsed = JSON.parse(raw);
       const effectiveScriptUrl = parsed.googleAppsScriptUrl || envUrl;
+      // Strip legacy hardcoded email if user didn't explicitly set their own custom email
+      const sanitizeLegacyEmail = (val, envVal) => {
+        if (!val || val === 'tiawongsombat@gmail.com') return envVal || '';
+        return val;
+      };
+
       return {
         googleAppsScriptUrl: effectiveScriptUrl,
         senderName: parsed.senderName || defaults.senderName,
         senderEmail: parsed.senderEmail || defaults.senderEmail,
-        hrEmail: parsed.hrEmail || envHrEmail,
-        deptHeadEmail: parsed.deptHeadEmail || envDeptHeadEmail,
-        deputyDirectorEmail: parsed.deputyDirectorEmail || envDeputyEmail,
+        hrEmail: sanitizeLegacyEmail(parsed.hrEmail, envHrEmail),
+        deptHeadEmail: sanitizeLegacyEmail(parsed.deptHeadEmail, envDeptHeadEmail),
+        deputyDirectorEmail: sanitizeLegacyEmail(parsed.deputyDirectorEmail, envDeputyEmail),
         enableLiveSending:
           parsed.enableLiveSending !== undefined && parsed.googleAppsScriptUrl
             ? parsed.enableLiveSending
@@ -394,6 +400,100 @@ function isDeliverableRealEmail(email) {
 }
 
 /**
+ * Auto-resolve official role notification recipients and emails directly from the personnel directory
+ */
+export function resolveRoleEmailsFromDirectory(personnelList = [], departmentList = [], executiveList = [], record = null) {
+  const allPersonnel = Array.isArray(personnelList) ? personnelList : [];
+  const allDepts = Array.isArray(departmentList) ? departmentList : [];
+  const allExecs = Array.isArray(executiveList) ? executiveList : [];
+
+  // 1. HR Officer
+  // Find active staff whose position is 'บุคลากร' or note includes 'บุคคล' / 'งานตรวจสอบเวลา'
+  let hrPerson = allPersonnel.find(
+    (p) => p.status === 'ปกติ' && (p.position === 'บุคลากร' || p.note?.includes('บุคคล') || p.note?.includes('ตรวจสอบเวลา')) && p.email && !p.email.endsWith('@icit.org')
+  );
+  if (!hrPerson) {
+    hrPerson = allPersonnel.find(
+      (p) => p.status === 'ปกติ' && (p.position === 'บุคลากร' || p.note?.includes('บุคคล') || p.note?.includes('ตรวจสอบเวลา')) && p.email
+    );
+  }
+  if (!hrPerson) {
+    hrPerson = allPersonnel.find(
+      (p) => p.status === 'ปกติ' && (p.role === 'Admin' || p.position?.includes('บริหารงานทั่วไป')) && p.email
+    );
+  }
+
+  // 2. Department Head
+  let deptHeadPerson = null;
+  let targetDeptName = '';
+  if (record) {
+    const dept = allDepts.find(
+      (d) =>
+        d.name === record.requesterDepartment ||
+        d.id === record.departmentHeadId ||
+        d.id === record.requesterDepartmentId
+    );
+    if (dept) {
+      targetDeptName = dept.name;
+      deptHeadPerson = allPersonnel.find((p) => p.id === dept.headPersonnelId);
+    }
+    if (!deptHeadPerson && record.departmentHeadId) {
+      deptHeadPerson = allPersonnel.find((p) => p.id === record.departmentHeadId);
+    }
+  }
+  if (!deptHeadPerson && allDepts.length > 0) {
+    for (const d of allDepts) {
+      const p = allPersonnel.find((pers) => pers.id === d.headPersonnelId);
+      if (p && p.email) {
+        deptHeadPerson = p;
+        targetDeptName = d.name;
+        break;
+      }
+    }
+  }
+  if (!deptHeadPerson) {
+    deptHeadPerson = allPersonnel.find(
+      (p) => p.status === 'ปกติ' && p.position?.includes('หัวหน้าฝ่าย') && p.email
+    );
+  }
+
+  // 3. Deputy Director (Administration)
+  let deputyPerson = null;
+  if (allExecs.length > 0) {
+    const execAdmin = allExecs.find(
+      (e) => (e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')) && e.position?.includes('รอง')
+    );
+    if (execAdmin) {
+      deputyPerson = allPersonnel.find((p) => p.id === execAdmin.personnelId);
+      if (!deputyPerson && execAdmin.email) {
+        deputyPerson = { id: execAdmin.personnelId || execAdmin.id, name: execAdmin.name, email: execAdmin.email, position: execAdmin.position };
+      }
+    }
+  }
+  if (!deputyPerson) {
+    deputyPerson = allPersonnel.find(
+      (p) =>
+        p.status === 'ปกติ' &&
+        (p.note?.includes('รองผู้อำนวยการฝ่ายบริหาร') ||
+         (p.position?.includes('ผู้บริหาร') && p.note?.includes('บริหาร')) ||
+         p.position?.includes('รองผู้อำนวยการฝ่ายบริหาร')) &&
+        p.email
+    );
+  }
+  if (!deputyPerson) {
+    deputyPerson = allPersonnel.find(
+      (p) => p.status === 'ปกติ' && (p.note?.includes('รองผู้อำนวยการ') || p.position?.includes('รองผู้อำนวยการ')) && p.email
+    );
+  }
+
+  return {
+    hr: hrPerson ? { id: hrPerson.id, name: hrPerson.name, email: hrPerson.email || '', position: hrPerson.position || 'เจ้าหน้าที่ฝ่ายบุคคล', department: hrPerson.department } : null,
+    deptHead: deptHeadPerson ? { id: deptHeadPerson.id, name: deptHeadPerson.name, email: deptHeadPerson.email || '', position: deptHeadPerson.position || 'หัวหน้าฝ่าย', department: targetDeptName || deptHeadPerson.department } : null,
+    deputyDirector: deputyPerson ? { id: deputyPerson.id, name: deputyPerson.name, email: deputyPerson.email || '', position: deputyPerson.position || 'รองผู้อำนวยการฝ่ายบริหาร', department: deputyPerson.department } : null,
+  };
+}
+
+/**
  * Find designated recipient for a given step with real email deliverability guarantee
  */
 export function getNotificationRecipientForStep(
@@ -405,40 +505,32 @@ export function getNotificationRecipientForStep(
 ) {
   if (!record || !step) return null;
   const config = getEmailConfig();
+  const dir = resolveRoleEmailsFromDirectory(allPersonnel, departmentList, executiveList, record);
 
   if (step === 'HR_REVIEW') {
-    // 1. If explicit HR email configured in config or env
+    // 1. Directory HR Officer (Real active personnel from directory)
+    if (dir.hr && dir.hr.email) {
+      return {
+        id: dir.hr.id,
+        name: dir.hr.name,
+        email: dir.hr.email.trim(),
+        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+      };
+    }
+
+    // 2. Explicit HR email configured in config or env
     if (config.hrEmail && isDeliverableRealEmail(config.hrEmail)) {
       return {
-        name: config.hrName || 'เจ้าหน้าที่ฝ่ายบุคคล',
+        name: config.senderName || 'เจ้าหน้าที่ฝ่ายบุคคล',
         email: config.hrEmail.trim(),
         role: 'เจ้าหน้าที่ฝ่ายบุคคล',
       };
     }
 
-    // 2. Personnel with position 'บุคลากร' whose email is not a dummy mock domain
-    const hrReal = allPersonnel.find(
-      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ' && isDeliverableRealEmail(p.email)
-    );
-    if (hrReal) return hrReal;
-
-    // 3. Any active Admin with a real email
-    const adminReal = allPersonnel.find(
-      (p) => p.role === 'Admin' && p.status === 'ปกติ' && isDeliverableRealEmail(p.email)
-    );
-    if (adminReal) {
-      return {
-        id: adminReal.id,
-        name: `${adminReal.name} (ฝ่ายบุคคล/ผู้ดูแลระบบ)`,
-        email: adminReal.email.trim(),
-        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
-      };
-    }
-
-    // 4. Default fallback
+    // 3. Fallback
     return {
       name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-      email: (config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      email: (config.hrEmail || '').trim(),
       role: 'เจ้าหน้าที่ฝ่ายบุคคล',
     };
   }
@@ -457,7 +549,7 @@ export function getNotificationRecipientForStep(
     }
     return {
       name: record.witnessName || p?.name || 'พยานผู้รับรอง',
-      email: (config.deptHeadEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      email: (record.witnessEmail || config.deptHeadEmail || config.hrEmail || '').trim(),
       role: 'พยานผู้รับรอง',
     };
   }
@@ -474,25 +566,14 @@ export function getNotificationRecipientForStep(
       };
     }
 
-    // 2. Try to find via departmentList matching requester's department
-    if (departmentList && departmentList.length > 0) {
-      const dept = departmentList.find(
-        (d) =>
-          d.name === record.requesterDepartment ||
-          d.id === record.departmentHeadId ||
-          d.id === record.requesterDepartmentId
-      );
-      if (dept && dept.headPersonnelId) {
-        const headPerson = allPersonnel.find((person) => person.id === dept.headPersonnelId);
-        if (headPerson && isDeliverableRealEmail(headPerson.email)) {
-          return {
-            id: headPerson.id,
-            name: headPerson.name,
-            email: headPerson.email.trim(),
-            role: `หัวหน้าฝ่าย (${dept.name})`,
-          };
-        }
-      }
+    // 2. Try from directory resolution
+    if (dir.deptHead && dir.deptHead.email) {
+      return {
+        id: dir.deptHead.id,
+        name: dir.deptHead.name,
+        email: dir.deptHead.email.trim(),
+        role: `หัวหน้าฝ่าย (${dir.deptHead.department || ''})`,
+      };
     }
 
     // 3. Check record's departmentHeadEmail
@@ -515,20 +596,11 @@ export function getNotificationRecipientForStep(
       };
     }
 
-    // 5. Active Personnel with position 'หัวหน้าฝ่าย' and real email
-    const headByPosition = allPersonnel.find(
-      (person) =>
-        person.position?.includes('หัวหน้าฝ่าย') &&
-        person.status === 'ปกติ' &&
-        isDeliverableRealEmail(person.email)
-    );
-    if (headByPosition) return headByPosition;
-
-    // 6. Safe fallback to ensure real email API delivers
+    // 5. Fallback
     return {
       id: record.departmentHeadId || '',
       name: record.departmentHeadName || 'หัวหน้าฝ่าย',
-      email: (config.deptHeadEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      email: (config.deptHeadEmail || config.hrEmail || '').trim(),
       role: 'หัวหน้าฝ่าย',
     };
   }
@@ -545,24 +617,14 @@ export function getNotificationRecipientForStep(
       };
     }
 
-    // 2. Try to find executive for administration from executiveList
-    if (executiveList && executiveList.length > 0) {
-      const deputyExec = executiveList.find(
-        (e) =>
-          (e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')) &&
-          e.position?.includes('รอง')
-      );
-      if (deputyExec) {
-        const deputyPerson = allPersonnel.find((person) => person.id === deputyExec.personnelId);
-        if (deputyPerson && isDeliverableRealEmail(deputyPerson.email)) {
-          return {
-            id: deputyPerson.id,
-            name: deputyPerson.name,
-            email: deputyPerson.email.trim(),
-            role: 'รองผู้อำนวยการฝ่ายบริหาร',
-          };
-        }
-      }
+    // 2. Try from directory resolution
+    if (dir.deputyDirector && dir.deputyDirector.email) {
+      return {
+        id: dir.deputyDirector.id,
+        name: dir.deputyDirector.name,
+        email: dir.deputyDirector.email.trim(),
+        role: 'รองผู้อำนวยการฝ่ายบริหาร',
+      };
     }
 
     // 3. Check record's deputyDirectorEmail
@@ -585,11 +647,11 @@ export function getNotificationRecipientForStep(
       };
     }
 
-    // 5. Fallback to ensure real email API delivers
+    // 5. Fallback
     return {
       id: record.deputyDirectorId || '',
       name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
-      email: (config.deputyDirectorEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      email: (config.deputyDirectorEmail || config.hrEmail || '').trim(),
       role: 'รองผู้อำนวยการฝ่ายบริหาร',
     };
   }
@@ -610,7 +672,7 @@ export function getNotificationRecipientForStep(
     return {
       id: record.requesterId || '',
       name: record.requesterName || 'ผู้ขอลงเวลา',
-      email: (config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      email: (record.requesterEmail || config.hrEmail || '').trim(),
       role: 'ผู้ขอลงเวลา',
     };
   }

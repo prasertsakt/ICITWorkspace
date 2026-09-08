@@ -148,10 +148,14 @@ export default function PortalLandingPage() {
                 color: 'var(--primary-600)',
                 border: '1px solid var(--primary-200)',
                 boxShadow: 'var(--shadow-sm)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px 4px 6px',
               }}
             >
-              <Sparkles size={13} />
-              ICIT PORTAL &bull; ศูนย์รวมระบบสารสนเทศ
+              <img src="/icit-logo.png" alt="ICIT" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
+              <span>ICIT PORTAL &bull; ศูนย์รวมระบบสารสนเทศ</span>
             </span>
 
             <span

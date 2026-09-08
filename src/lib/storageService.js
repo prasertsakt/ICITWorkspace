@@ -11,6 +11,7 @@ import {
   sendTimeAttendanceNotification,
   validateApprovalToken,
   getNotificationRecipientForStep,
+  resolveRoleEmailsFromDirectory,
 } from './emailNotificationService';
 import {
   collection,
@@ -30,8 +31,7 @@ import {
 const LOCAL_KEY_PERSONNEL = 'icit_org_personnel';
 const LOCAL_KEY_DEPTS = 'icit_org_departments';
 const LOCAL_KEY_EXECS = 'icit_org_executives';
-const LOCAL_KEY_LEAVES = 'icit_org_leaves';
-const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
+const LOCAL_KEY_LEAVES = 'icit_leaves_data';
 const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
 const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 
@@ -51,6 +51,23 @@ export function isDummyLeaveRecord(l) {
     if (pId.startsWith('pers-2') || pId.startsWith('pers-3') || pId.startsWith('pers-4') || pId.startsWith('pers-8') || pId.startsWith('pers-sample')) {
       return true;
     }
+  }
+  return false;
+}
+
+/**
+ * Helper: Check if a time attendance record is sample / dummy data
+ */
+export function isDummyTimeAttendanceRecord(ta) {
+  if (!ta) return true;
+  const id = String(ta.id || '');
+  if (id.startsWith('ta-sample') || id.startsWith('sample-')) return true;
+  if (id === 'ta-sample-1' || id === 'ta-sample-2' || id === 'ta-sample-3') return true;
+  const reqEmail = String(ta.requesterEmail || '').trim().toLowerCase();
+  if (reqEmail.endsWith('@icit.org')) return true;
+  const reqName = String(ta.requesterName || '').trim();
+  if ((reqName === 'นางสาวธัญนันท์ กระดาษ' || reqName === 'นายประเสริฐ สุขใจ') && id.includes('sample')) {
+    return true;
   }
   return false;
 }
@@ -83,7 +100,18 @@ function initLocalStorage() {
     }
   }
   if (!localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES)) {
-    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(INITIAL_TIME_ATTENDANCES));
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify([]));
+  } else {
+    // Purge any legacy dummy sample time attendances from existing local storage
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES) || '[]');
+      const cleaned = stored.filter((t) => !isDummyTimeAttendanceRecord(t));
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(cleaned));
+      }
+    } catch (e) {
+      console.warn('Error purging dummy time attendances from localStorage', e);
+    }
   }
 }
 
@@ -1256,14 +1284,18 @@ export function resetLocalSeedData() {
  */
 
 /**
- * Read time attendance list from localStorage synchronously
+ * Read time attendance list from localStorage synchronously (with dummy filter)
  */
 export function getTimeAttendanceList() {
-  if (cachedTimeAttendances !== null) return cachedTimeAttendances;
-  if (typeof window === 'undefined') return INITIAL_TIME_ATTENDANCES;
+  if (cachedTimeAttendances !== null) {
+    return cachedTimeAttendances.filter((item) => !isDummyTimeAttendanceRecord(item));
+  }
+  if (typeof window === 'undefined') return [];
   initLocalStorage();
   const raw = localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES);
-  cachedTimeAttendances = raw ? JSON.parse(raw) : INITIAL_TIME_ATTENDANCES;
+  const parsed = raw ? JSON.parse(raw) : [];
+  const cleaned = Array.isArray(parsed) ? parsed.filter((item) => !isDummyTimeAttendanceRecord(item)) : [];
+  cachedTimeAttendances = cleaned;
   return cachedTimeAttendances;
 }
 
@@ -1276,7 +1308,7 @@ export function getTimeAttendanceById(id) {
 }
 
 /**
- * Subscribe to Time Attendance Requests with Real-Time Firestore Sync
+ * Subscribe to Time Attendance Requests with Real-Time Firestore Sync & Dummy Purge
  */
 export function subscribeTimeAttendanceList(callback, options = {}) {
   // 1. Immediate sync response (0ms)
@@ -1296,11 +1328,23 @@ export function subscribeTimeAttendanceList(callback, options = {}) {
         q,
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const rawDocs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const list = rawDocs.filter((item) => !isDummyTimeAttendanceRecord(item));
             if (typeof window !== 'undefined') {
               localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
             }
             notifyTimeAttendanceSubscribers(list);
+
+            // Clean up any lingering dummy records in Firestore
+            rawDocs.forEach((docItem) => {
+              if (isDummyTimeAttendanceRecord(docItem) && docItem.id) {
+                try {
+                  deleteDoc(doc(db, 'time_attendances', docItem.id)).catch(() => {});
+                } catch (e) {}
+              }
+            });
+          } else {
+            notifyTimeAttendanceSubscribers([]);
           }
         },
         (err) => {
@@ -1318,7 +1362,8 @@ export function subscribeTimeAttendanceList(callback, options = {}) {
       try {
         const parsed = JSON.parse(e.newValue);
         if (Array.isArray(parsed)) {
-          notifyTimeAttendanceSubscribers(parsed);
+          const cleaned = parsed.filter((item) => !isDummyTimeAttendanceRecord(item));
+          notifyTimeAttendanceSubscribers(cleaned);
         }
       } catch {}
     }
@@ -1345,20 +1390,27 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
   const isNew = !record.id;
   const id = record.id || `ta-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  // Automatically detect HR officer: ดึงจาก email ของ เจ้าหน้าที่ตำแหน่งบุคลากร
+  // Automatically detect HR officer, Department Head, and Deputy Director from directory
   const allPersonnel = await getPersonnelList();
   const allDepts = await getDepartmentList();
   const allExecs = await getExecutiveList();
+  const dirRoles = resolveRoleEmailsFromDirectory(allPersonnel, allDepts, allExecs, record);
   const hrOfficer = getNotificationRecipientForStep(record, 'HR_REVIEW', allPersonnel, allDepts, allExecs);
 
   const nowIso = new Date().toISOString();
   const fullRecord = {
     ...record,
     id,
-    hrOfficerId: record.hrOfficerId || hrOfficer?.id || '',
-    hrOfficerName: record.hrOfficerName || hrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
-    hrOfficerEmail: record.hrOfficerEmail || hrOfficer?.email || '',
-    hrEmail: record.hrEmail || record.hrOfficerEmail || hrOfficer?.email || '',
+    hrOfficerId: record.hrOfficerId || hrOfficer?.id || dirRoles.hr?.id || '',
+    hrOfficerName: record.hrOfficerName || hrOfficer?.name || dirRoles.hr?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
+    hrOfficerEmail: record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || '',
+    hrEmail: record.hrEmail || record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || '',
+    departmentHeadId: record.departmentHeadId || dirRoles.deptHead?.id || '',
+    departmentHeadName: record.departmentHeadName || dirRoles.deptHead?.name || '',
+    departmentHeadEmail: record.departmentHeadEmail || dirRoles.deptHead?.email || '',
+    deputyDirectorId: record.deputyDirectorId || dirRoles.deputyDirector?.id || '',
+    deputyDirectorName: record.deputyDirectorName || dirRoles.deputyDirector?.name || '',
+    deputyDirectorEmail: record.deputyDirectorEmail || dirRoles.deputyDirector?.email || '',
     currentStep: record.currentStep || 'HR_REVIEW',
     statusHr: record.statusHr || 'รอตรวจสอบ',
     commentHr: record.commentHr || '',

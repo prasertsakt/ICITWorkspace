@@ -34,12 +34,25 @@ export default function Navbar() {
         <div className="navbar-inner">
           {/* Brand */}
           <Link href="/" className="brand-link">
-            <div className="brand-logo-icon">
-              <Building2 size={24} />
+            <div
+              className="brand-logo-icon"
+              style={{
+                background: '#FFFFFF',
+                padding: '4px',
+                border: '1.5px solid var(--border-subtle, #E2E8F0)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+                overflow: 'hidden',
+              }}
+            >
+              <img
+                src="/icit-logo.png"
+                alt="ICIT Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <div className="brand-text">
               <h1>ระบบบริหารจัดการองค์กร</h1>
-              <p>Organization Management System</p>
+              <p>สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</p>
             </div>
           </Link>
 
@@ -68,7 +81,7 @@ export default function Navbar() {
                   className={`nav-link-item ${pathname === '/time-attendance' ? 'active' : ''}`}
                 >
                   <Clock size={16} />
-                  <span>ใบลงเวลา</span>
+                  <span>ขอลงเวลา</span>
                 </Link>
 
                 <Link

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Mail,
@@ -11,6 +11,9 @@ import {
   History,
   Copy,
   Check,
+  UserCheck,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import {
   generateEmailContent,
@@ -19,6 +22,7 @@ import {
   sendTimeAttendanceNotification,
   getSentEmailLogs,
   getNotificationRecipientForStep,
+  resolveRoleEmailsFromDirectory,
 } from '@/lib/emailNotificationService';
 
 export default function TimeAttendanceEmailModal({
@@ -26,6 +30,8 @@ export default function TimeAttendanceEmailModal({
   onClose,
   record,
   personnelList = [],
+  departmentList = [],
+  executiveList = [],
 }) {
   const [selectedStep, setSelectedStep] = useState('HR_REVIEW');
   const [activeTab, setActiveTab] = useState('preview'); // 'preview' | 'logs' | 'config'
@@ -34,24 +40,66 @@ export default function TimeAttendanceEmailModal({
   const [copiedLink, setCopiedLink] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
-  const [customRecipientEmail, setCustomRecipientEmail] = useState('tiawongsombat@gmail.com');
+  const [customRecipientEmail, setCustomRecipientEmail] = useState('');
+  const [autoSyncedToast, setAutoSyncedToast] = useState(false);
+
+  // Automatically resolve official notification emails directly from directory
+  const autoResolvedEmails = useMemo(() => {
+    return resolveRoleEmailsFromDirectory(personnelList, departmentList, executiveList, record);
+  }, [personnelList, departmentList, executiveList, record]);
 
   useEffect(() => {
     if (isOpen && record) {
       setSelectedStep(record.currentStep || 'HR_REVIEW');
-      setEmailConfig(getEmailConfig());
+      const loadedConfig = getEmailConfig();
+
+      // Automatically set from personnel list if config is empty or legacy placeholder
+      const resolvedHr = autoResolvedEmails.hr?.email || '';
+      const resolvedDeptHead = autoResolvedEmails.deptHead?.email || '';
+      const resolvedDeputy = autoResolvedEmails.deputyDirector?.email || '';
+
+      const updatedConfig = {
+        ...loadedConfig,
+        hrEmail: (!loadedConfig.hrEmail || loadedConfig.hrEmail === 'tiawongsombat@gmail.com')
+          ? resolvedHr
+          : loadedConfig.hrEmail,
+        deptHeadEmail: (!loadedConfig.deptHeadEmail || loadedConfig.deptHeadEmail === 'tiawongsombat@gmail.com')
+          ? resolvedDeptHead
+          : loadedConfig.deptHeadEmail,
+        deputyDirectorEmail: (!loadedConfig.deputyDirectorEmail || loadedConfig.deputyDirectorEmail === 'tiawongsombat@gmail.com')
+          ? resolvedDeputy
+          : loadedConfig.deputyDirectorEmail,
+      };
+
+      setEmailConfig(updatedConfig);
       setSentLogs(getSentEmailLogs(record.id));
       setSendSuccess(false);
+
+      // Pre-fill test recipient email with the current step's recipient
+      const initialTarget = getNotificationRecipientForStep(
+        record,
+        record.currentStep || 'HR_REVIEW',
+        personnelList,
+        departmentList,
+        executiveList
+      );
+      setCustomRecipientEmail(initialTarget?.email || record.requesterEmail || '');
     }
-  }, [isOpen, record]);
+  }, [isOpen, record, autoResolvedEmails]);
 
   if (!isOpen || !record) return null;
 
   // Determine recipient for the selected preview step
-  const resolvedRecipient = getNotificationRecipientForStep(record, selectedStep, personnelList);
+  const resolvedRecipient = getNotificationRecipientForStep(
+    record,
+    selectedStep,
+    personnelList,
+    departmentList,
+    executiveList
+  );
   const targetRecipient = resolvedRecipient || {
     name: record.requesterName || 'ผู้เกี่ยวข้อง',
-    email: record.requesterEmail || 'tiawongsombat@gmail.com',
+    email: record.requesterEmail || '',
   };
 
   // If user entered custom test email, reflect it in the generated email content
@@ -85,6 +133,21 @@ export default function TimeAttendanceEmailModal({
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleAutoSyncFromDirectory = () => {
+    const resolvedHr = autoResolvedEmails.hr?.email || '';
+    const resolvedDeptHead = autoResolvedEmails.deptHead?.email || '';
+    const resolvedDeputy = autoResolvedEmails.deputyDirector?.email || '';
+
+    setEmailConfig((prev) => ({
+      ...prev,
+      hrEmail: resolvedHr || prev.hrEmail || '',
+      deptHeadEmail: resolvedDeptHead || prev.deptHeadEmail || '',
+      deputyDirectorEmail: resolvedDeputy || prev.deputyDirectorEmail || '',
+    }));
+    setAutoSyncedToast(true);
+    setTimeout(() => setAutoSyncedToast(false), 3500);
   };
 
   const handleSaveConfig = (e) => {
@@ -381,7 +444,7 @@ export default function TimeAttendanceEmailModal({
                   type="email"
                   value={customRecipientEmail}
                   onChange={(e) => setCustomRecipientEmail(e.target.value)}
-                  placeholder="tiawongsombat@gmail.com"
+                  placeholder="ระบุอีเมลสำหรับทดสอบ (เช่น hr@icit.kmutnb.ac.th)"
                   className="form-input"
                   style={{
                     flex: '1 1 260px',
@@ -523,51 +586,203 @@ export default function TimeAttendanceEmailModal({
               />
             </div>
 
+            {/* Role Notification Email Settings Header */}
+            <div
+              style={{
+                marginTop: '1.5rem',
+                marginBottom: '1rem',
+                padding: '0.85rem 1rem',
+                background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.07), rgba(124, 58, 237, 0.07))',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <UserCheck size={16} color="#4F46E5" />
+                  <span>กำหนดอีเมลแจ้งเตือนตามบทบาท (ดึงอัตโนมัติจากฐานข้อมูลบุคลากร)</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  ระบบดึงอีเมลฝ่ายบุคคล, หัวหน้าฝ่าย, และรอง ผอ. ฝ่ายบริหารจากรายชื่อบุคลากรปัจจุบันให้อัตโนมัติ
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAutoSyncFromDirectory}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  padding: '6px 12px',
+                  background: '#EEF2FF',
+                  borderColor: '#C7D2FE',
+                  color: '#4338CA',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+                title="คลิกเพื่อดึงอีเมลล่าสุดจากข้อมูลบุคลากร"
+              >
+                <RefreshCw size={14} className={autoSyncedToast ? 'animate-spin' : ''} />
+                <span>ดึงอีเมลอัตโนมัติจากฐานข้อมูล</span>
+              </button>
+            </div>
+
+            {autoSyncedToast && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: '6px',
+                  color: '#065F46',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Check size={16} />
+                <span>อัปเดตอีเมลจากฐานข้อมูลบุคลากรเรียบร้อยแล้ว! อย่าลืมกดบันทึกการตั้งค่า</span>
+              </div>
+            )}
+
+            {/* HR Email */}
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                อีเมลฝ่ายบุคคลรับแจ้งเตือน (HR Notification Email)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                  อีเมลฝ่ายบุคคลรับแจ้งเตือน (HR Notification Email)
+                </label>
+                {autoResolvedEmails.hr && (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: '#ECFDF5',
+                      color: '#047857',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      border: '1px solid #A7F3D0',
+                    }}
+                  >
+                    <UserCheck size={12} /> พบในบุคลากร: {autoResolvedEmails.hr.name}
+                  </span>
+                )}
+              </div>
               <input
                 type="email"
-                placeholder="tiawongsombat@gmail.com"
+                placeholder={autoResolvedEmails.hr?.email || "hr@icit.kmutnb.ac.th"}
                 value={emailConfig.hrEmail || ''}
                 onChange={(e) => setEmailConfig({ ...emailConfig, hrEmail: e.target.value })}
                 className="form-input"
               />
               <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
-                อีเมลเจ้าหน้าที่ฝ่ายบุคคลสำหรับรับแจ้งเตือนใบลงเวลาใหม่และลิงก์ตรวจสอบ 1-Click
+                {autoResolvedEmails.hr ? (
+                  <span>
+                    ดึงอัตโนมัติจากตำแหน่งบุคลากร: <strong>{autoResolvedEmails.hr.name}</strong> ({autoResolvedEmails.hr.position})
+                  </span>
+                ) : (
+                  <span>อีเมลเจ้าหน้าที่ฝ่ายบุคคลสำหรับรับแจ้งเตือนใบลงเวลาใหม่และลิงก์ตรวจสอบ 1-Click</span>
+                )}
               </small>
             </div>
 
+            {/* Dept Head Email */}
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                อีเมลหัวหน้าฝ่ายรับแจ้งเตือน (Dept Head Notification Email)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                  อีเมลหัวหน้าฝ่ายรับแจ้งเตือน (Dept Head Notification Email)
+                </label>
+                {autoResolvedEmails.deptHead && (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: '#EEF2FF',
+                      color: '#4338CA',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      border: '1px solid #C7D2FE',
+                    }}
+                  >
+                    <UserCheck size={12} /> พบในบุคลากร: {autoResolvedEmails.deptHead.name}
+                  </span>
+                )}
+              </div>
               <input
                 type="email"
-                placeholder="tiawongsombat@gmail.com"
+                placeholder={autoResolvedEmails.deptHead?.email || "depthead@icit.kmutnb.ac.th"}
                 value={emailConfig.deptHeadEmail || ''}
                 onChange={(e) => setEmailConfig({ ...emailConfig, deptHeadEmail: e.target.value })}
                 className="form-input"
               />
               <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
-                อีเมลหัวหน้าฝ่าย (หรืออีเมลสำรอง) สำหรับรับการแจ้งเตือนพิจารณาอนุมัติใบลงเวลาจริง
+                {autoResolvedEmails.deptHead ? (
+                  <span>
+                    ดึงอัตโนมัติจากหัวหน้า{autoResolvedEmails.deptHead.department || 'ฝ่าย'}: <strong>{autoResolvedEmails.deptHead.name}</strong>
+                  </span>
+                ) : (
+                  <span>อีเมลหัวหน้าฝ่าย (หรืออีเมลสำรอง) สำหรับรับการแจ้งเตือนพิจารณาอนุมัติใบลงเวลาจริง</span>
+                )}
               </small>
             </div>
 
+            {/* Deputy Director Email */}
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                อีเมลรองผู้อำนวยการฝ่ายบริหารรับแจ้งเตือน (Deputy Director Notification Email)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                  อีเมลรองผู้อำนวยการฝ่ายบริหารรับแจ้งเตือน (Deputy Director Notification Email)
+                </label>
+                {autoResolvedEmails.deputyDirector && (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: '#FEF3C7',
+                      color: '#92400E',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      border: '1px solid #FDE68A',
+                    }}
+                  >
+                    <UserCheck size={12} /> พบในผู้บริหาร: {autoResolvedEmails.deputyDirector.name}
+                  </span>
+                )}
+              </div>
               <input
                 type="email"
-                placeholder="tiawongsombat@gmail.com"
+                placeholder={autoResolvedEmails.deputyDirector?.email || "deputy.admin@icit.kmutnb.ac.th"}
                 value={emailConfig.deputyDirectorEmail || ''}
                 onChange={(e) => setEmailConfig({ ...emailConfig, deputyDirectorEmail: e.target.value })}
                 className="form-input"
               />
               <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
-                อีเมลรอง ผอ. ฝ่ายบริหาร สำหรับรับการแจ้งเตือนพิจารณาอนุมัติขั้นตอนสุดท้ายจริง
+                {autoResolvedEmails.deputyDirector ? (
+                  <span>
+                    ดึงอัตโนมัติจาก: <strong>{autoResolvedEmails.deputyDirector.name}</strong> ({autoResolvedEmails.deputyDirector.position})
+                  </span>
+                ) : (
+                  <span>อีเมลรอง ผอ. ฝ่ายบริหาร สำหรับรับการแจ้งเตือนพิจารณาอนุมัติขั้นตอนสุดท้ายจริง</span>
+                )}
               </small>
             </div>
 

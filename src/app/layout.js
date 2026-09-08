@@ -5,15 +5,15 @@ import MobileNav from '@/components/MobileNav';
 import UnauthorizedModal from '@/components/UnauthorizedModal';
 
 export const metadata = {
-  title: 'ระบบบริหารจัดการองค์กร | ICIT Organization Hub',
-  description: 'ระบบสารสนเทศบริหารจัดการองค์กร โครงสร้างบุคลากร ฝ่าย และฝ่ายบริหาร',
+  title: 'ระบบบริหารจัดการองค์กร | ICIT Workspace',
+  description: 'ระบบสารสนเทศบริหารจัดการองค์กร โครงสร้างบุคลากร ฝ่าย และฝ่ายบริหาร สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.',
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icit-logo.png', type: 'image/png' },
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
     ],
-    shortcut: '/icon.svg',
-    apple: '/apple-icon.png',
+    shortcut: '/icit-logo.png',
+    apple: '/icit-logo.png',
   },
 };
 

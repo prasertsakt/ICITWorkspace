@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { TIME_ATTENDANCE_TYPES } from '@/lib/constants';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
-import { getNotificationRecipientForStep } from '@/lib/emailNotificationService';
+import { getNotificationRecipientForStep, resolveRoleEmailsFromDirectory } from '@/lib/emailNotificationService';
 
 export default function TimeAttendanceModal({
   isOpen,
@@ -39,33 +39,22 @@ export default function TimeAttendanceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Auto initialize dates
+  // Pre-fill defaults on modal open
   useEffect(() => {
     if (isOpen) {
-      const now = new Date();
-      // Format as M/D/YYYY or DD/MM/YYYY matching screenshot (e.g. 9/7/2026)
-      const m = now.getMonth() + 1;
-      const d = now.getDate();
-      const y = now.getFullYear();
-      setActionDate(`${m}/${d}/${y}`);
+      const today = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const todayYmd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+      const todayDisplay = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
 
-      // Default attendance date to today or yesterday
-      const isoDate = now.toISOString().split('T')[0];
-      setAttendanceDate(isoDate);
-
-      // Default time based on type
-      if (requestType === 'ลงเวลามาปฏิบัติราชการ') {
-        setAttendanceTime('08:30');
-      } else {
-        setAttendanceTime('18:00');
-      }
-
+      setActionDate(todayDisplay);
+      setAttendanceDate(todayYmd);
+      setAttendanceTime(requestType.includes('มา') ? '08:30' : '18:00');
+      setErrorMsg('');
       setRequesterId(currentPersonnel?.id || (personnelList[0]?.id || ''));
       setWitnessId('');
       setImageProofUrl('');
       setReason('');
-      setErrorMsg('');
-      setIsSubmitting(false);
     }
   }, [isOpen, currentPersonnel, personnelList, requestType]);
 
@@ -74,46 +63,35 @@ export default function TimeAttendanceModal({
     return personnelList.find((p) => p.id === requesterId) || currentPersonnel || null;
   }, [personnelList, requesterId, currentPersonnel]);
 
+  // Automatically resolve official roles from directory
+  const directoryRoles = useMemo(() => {
+    return resolveRoleEmailsFromDirectory(
+      personnelList,
+      departmentList,
+      executiveList,
+      selectedRequester ? { requesterDepartment: selectedRequester.department } : null
+    );
+  }, [personnelList, departmentList, executiveList, selectedRequester]);
+
   // Auto-find department head corresponding to requester's department
   const detectedDeptHead = useMemo(() => {
-    if (!selectedRequester?.department) return null;
-    const dept = departmentList.find((d) => d.name === selectedRequester.department);
-    if (!dept) return null;
-    const head = personnelList.find((p) => p.id === dept.headPersonnelId);
-    return head || null;
-  }, [selectedRequester, departmentList, personnelList]);
+    return directoryRoles.deptHead || null;
+  }, [directoryRoles]);
 
   // Auto-find Deputy Director of Administration (รองผู้อำนวยการฝ่ายบริหาร)
   const detectedDeputyDirector = useMemo(() => {
-    // 1. Check executive list for "รองผู้อำนวยการฝ่ายบริหาร"
-    const exec = executiveList.find((e) =>
-      e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')
-    );
-    if (exec) {
-      const person = personnelList.find((p) => p.id === exec.personnelId);
-      return person || { id: exec.personnelId || 'pers-exec-4', name: exec.name, email: 'wichai.deputy@icit.org' };
-    }
-    // Fallback to second executive or admin
-    return executiveList[1] || personnelList[0] || null;
-  }, [executiveList, personnelList]);
+    return directoryRoles.deputyDirector || null;
+  }, [directoryRoles]);
 
-  // Auto-find HR Officer: ดึงจาก email ของ เจ้าหน้าที่ตำแหน่งบุคลากร
+  // Auto-find HR Officer
   const detectedHrOfficer = useMemo(() => {
-    // 1. Exact match position 'บุคลากร' and status 'ปกติ'
-    const hrPerson = personnelList.find(
-      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ'
-    );
-    if (hrPerson) return hrPerson;
+    return directoryRoles.hr || null;
+  }, [directoryRoles]);
 
-    // 2. Position containing 'บุคลากร'
-    const hrByPos = personnelList.find(
-      (p) => p.position && p.position.includes('บุคลากร') && p.status === 'ปกติ'
-    );
-    if (hrByPos) return hrByPos;
-
-    // 3. Fallback to getNotificationRecipientForStep
-    return getNotificationRecipientForStep({}, 'HR_REVIEW', personnelList);
-  }, [personnelList]);
+  // Selected witness person
+  const witnessPerson = useMemo(() => {
+    return personnelList.find((p) => p.id === witnessId) || null;
+  }, [personnelList, witnessId]);
 
   // List of candidate witnesses (excluding requester)
   const candidateWitnesses = useMemo(() => {
@@ -147,8 +125,6 @@ export default function TimeAttendanceModal({
       setErrorMsg('กรุณาระบุพยานผู้รับรอง หรือแนบไฟล์ภาพหลักฐานกล้องวงจรปิด');
       return;
     }
-
-    const witnessPerson = personnelList.find((p) => p.id === witnessId);
 
     // Format display date M/D/YYYY
     let displayAttendanceDate = attendanceDate;
@@ -568,7 +544,8 @@ export default function TimeAttendanceModal({
                 {detectedDeptHead?.email && <span style={{ color: 'var(--text-muted)' }}>({detectedDeptHead.email})</span>}
               </div>
               <div>
-                4. <strong>รองผู้อำนวยการฝ่ายบริหาร:</strong> {detectedDeputyDirector?.name || 'รองผู้อำนวยการฝ่ายบริหาร'}
+                4. <strong>รองผู้อำนวยการฝ่ายบริหาร:</strong> {detectedDeputyDirector?.name || 'รองผู้อำนวยการฝ่ายบริหาร'}{' '}
+                {detectedDeputyDirector?.email && <span style={{ color: 'var(--text-muted)' }}>({detectedDeputyDirector.email})</span>}
               </div>
             </div>
           </div>

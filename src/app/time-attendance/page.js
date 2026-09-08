@@ -15,6 +15,7 @@ import {
   cancelTimeAttendanceRecord,
   deleteTimeAttendanceRecord,
   resetTimeAttendanceSeedData,
+  isDummyTimeAttendanceRecord,
 } from '@/lib/storageService';
 import {
   TIME_ATTENDANCE_TYPES,
@@ -101,7 +102,8 @@ function TimeAttendanceContent() {
   // Subscriptions
   useEffect(() => {
     const unsubAttendances = subscribeTimeAttendanceList((list) => {
-      setAttendances(list || []);
+      const validRecords = (list || []).filter((r) => !isDummyTimeAttendanceRecord(r));
+      setAttendances(validRecords);
     });
     const unsubPersonnel = subscribePersonnelList((list) => {
       setPersonnelList(list || []);
@@ -346,7 +348,7 @@ function TimeAttendanceContent() {
       const hrEmail = saved?._notifiedRecipient?.email;
       const dispatchOk = saved?._emailDispatchResult?.success;
 
-      let msg = 'ยื่นคำขอใบลงเวลาเรียบร้อยแล้ว';
+      let msg = 'ยื่นคำขอลงเวลาเรียบร้อยแล้ว';
       if (dispatchOk && hrEmail) {
         msg += ` ส่งอีเมลแจ้งเตือนถึงฝ่ายบุคคล (${hrEmail}) สำเร็จ`;
       } else if (hrEmail) {
@@ -364,7 +366,7 @@ function TimeAttendanceContent() {
       console.error('Error saving time attendance request:', err);
       setNotificationBanner({
         type: 'error',
-        text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลใบลงเวลา',
+        text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลขอลงเวลา',
       });
     }
   };
@@ -699,7 +701,7 @@ function TimeAttendanceContent() {
                 }}
               >
                 <Clock size={13} />
-                ระบบใบลงเวลา (Time Attendance)
+                ระบบขอลงเวลา
               </span>
 
             </div>
@@ -714,7 +716,7 @@ function TimeAttendanceContent() {
                 marginBottom: '0.65rem',
               }}
             >
-              ระบบใบลงเวลาปฏิบัติราชการ
+              ระบบขอลงเวลาปฏิบัติราชการ
             </h1>
 
             <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
@@ -732,11 +734,11 @@ function TimeAttendanceContent() {
                 style={{ padding: '0.75rem 1.35rem', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)' }}
               >
                 <Plus size={18} />
-                <span>สร้างใบลงเวลา</span>
+                <span>สร้างขอลงเวลา</span>
               </button>
             ) : (
               <button onClick={handleGoogleSignIn} className="btn btn-primary">
-                <span>เข้าสู่ระบบเพื่อสร้างใบลงเวลา</span>
+                <span>เข้าสู่ระบบเพื่อสร้างขอลงเวลา</span>
               </button>
             )}
 
@@ -767,7 +769,7 @@ function TimeAttendanceContent() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (confirm('ต้องการรีเซ็ตข้อมูลตัวอย่างใบลงเวลาหรือไม่?')) {
+                    if (confirm('ต้องการรีเซ็ตข้อมูลตัวอย่างขอลงเวลาหรือไม่?')) {
                       resetTimeAttendanceSeedData();
                     }
                   }}
@@ -1421,10 +1423,10 @@ function TimeAttendanceContent() {
             <div style={{ padding: '3.5rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <Clock size={42} style={{ margin: '0 auto 1rem auto', opacity: 0.4 }} />
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                ไม่พบข้อมูลใบลงเวลาตามเงื่อนไขที่เลือก
+                ไม่พบข้อมูลขอลงเวลาตามเงื่อนไขที่เลือก
               </h3>
               <p style={{ fontSize: '0.85rem', margin: '0 0 1.25rem 0' }}>
-                ลองเปลี่ยนตัวกรอง ค้นหาด้วยคำอื่น หรือกดสร้างใบลงเวลาใหม่
+                ลองเปลี่ยนตัวกรอง ค้นหาด้วยคำอื่น หรือกดสร้างขอลงเวลาใหม่
               </p>
               {currentPersonnel && (
                 <button
@@ -1433,7 +1435,7 @@ function TimeAttendanceContent() {
                   className="btn btn-primary btn-sm"
                 >
                   <Plus size={16} />
-                  <span>สร้างใบลงเวลา</span>
+                  <span>สร้างขอลงเวลา</span>
                 </button>
               )}
             </div>
@@ -1472,6 +1474,8 @@ function TimeAttendanceContent() {
         onClose={() => setEmailModalRecord(null)}
         record={emailModalRecord}
         personnelList={personnelList}
+        departmentList={departmentList}
+        executiveList={executiveList}
       />
 
       {/* Themed Request Cancellation Confirmation Modal */}
@@ -1493,7 +1497,7 @@ export default function TimeAttendancePage() {
           <div style={{ color: 'var(--primary-600)', marginBottom: '1rem' }}>
             <Clock size={36} className="spin" style={{ margin: '0 auto' }} />
           </div>
-          <p style={{ color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลระบบใบลงเวลา...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลระบบขอลงเวลา...</p>
         </div>
       }
     >
