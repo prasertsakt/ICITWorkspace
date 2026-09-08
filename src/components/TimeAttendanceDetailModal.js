@@ -28,6 +28,7 @@ import {
   getNotificationRecipientForStep,
   resendNotificationEmail,
 } from '@/lib/emailNotificationService';
+import TimeAttendanceCancelModal from '@/components/TimeAttendanceCancelModal';
 
 export default function TimeAttendanceDetailModal({
   isOpen,
@@ -48,6 +49,7 @@ export default function TimeAttendanceDetailModal({
   const [mailSentNotice, setMailSentNotice] = useState('');
 
   // Cancellation State
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [showCancelBox, setShowCancelBox] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
@@ -55,6 +57,7 @@ export default function TimeAttendanceDetailModal({
 
   // Reset cancellation box on record change
   useEffect(() => {
+    setIsCancelModalOpen(false);
     setShowCancelBox(false);
     setCancelReason('');
     setCancelError('');
@@ -757,84 +760,34 @@ export default function TimeAttendanceDetailModal({
                   borderRadius: 'var(--radius-md)',
                 }}
               >
-                {!showCancelBox ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <XCircle size={16} />
-                        <span>ยกเลิกคำขอลงเวลา (โดยผู้ยื่นคำขอ)</span>
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#B91C1C', marginTop: '2px' }}>
-                        สามารถยกเลิกคำขอได้ก่อนที่รองผู้อำนวยการฝ่ายบริหารจะอนุมัติสมบูรณ์
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCancelBox(true)}
-                      className="btn btn-secondary btn-sm"
-                      style={{
-                        color: '#DC2626',
-                        borderColor: '#FCA5A5',
-                        background: '#FFFFFF',
-                        fontWeight: 600,
-                      }}
-                    >
-                      ขอยกเลิกคำขอ
-                    </button>
-                  </div>
-                ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991B1B', marginBottom: '0.5rem' }}>
-                      ยืนยันการยกเลิกคำขอลงเวลา
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <XCircle size={16} />
+                      <span>ยกเลิกคำขอลงเวลา (โดยผู้ยื่นคำขอ)</span>
                     </div>
-                    <p style={{ fontSize: '0.82rem', color: '#7F1D1D', marginBottom: '0.75rem' }}>
-                      เมื่อยกเลิกแล้ว กระบวนการพิจารณาอนุมัติจะยุติลงทันที และสถานะคำขอจะเปลี่ยนเป็น <strong>"ยกเลิกคำขอ"</strong>
-                    </p>
-
-                    {cancelError && (
-                      <div style={{ padding: '0.5rem 0.75rem', background: '#FEE2E2', color: '#B91C1C', borderRadius: '6px', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
-                        {cancelError}
-                      </div>
-                    )}
-
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
-                        เหตุผลในการยกเลิกคำขอ (ถ้ามี)
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="เช่น ระบุเวลาผิดพลาด, ได้รับการแก้ไขแล้ว, ขอยื่นใหม่..."
-                        value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        style={{ fontSize: '0.85rem' }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowCancelBox(false);
-                          setCancelError('');
-                        }}
-                        disabled={isCancelling}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        ปิด / ไม่ยกเลิก
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleConfirmCancel}
-                        disabled={isCancelling}
-                        className="btn btn-primary btn-sm"
-                        style={{ background: '#DC2626', borderColor: '#DC2626' }}
-                      >
-                        {isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกคำขอนี้'}
-                      </button>
+                    <div style={{ fontSize: '0.8rem', color: '#B91C1C', marginTop: '2px' }}>
+                      สามารถยกเลิกคำขอได้ก่อนที่รองผู้อำนวยการฝ่ายบริหารจะอนุมัติสมบูรณ์
                     </div>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setIsCancelModalOpen(true)}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      color: '#DC2626',
+                      borderColor: '#FCA5A5',
+                      background: '#FFFFFF',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <XCircle size={14} />
+                    <span>ขอยกเลิกคำขอ</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -949,6 +902,19 @@ export default function TimeAttendanceDetailModal({
           </button>
         </div>
       </div>
+
+      {/* Themed Cancellation Modal */}
+      <TimeAttendanceCancelModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        record={record}
+        onConfirmCancel={async (recordId, reason) => {
+          if (onCancelRequest) {
+            await onCancelRequest(recordId, reason);
+          }
+          setIsCancelModalOpen(false);
+        }}
+      />
     </div>
   );
 }

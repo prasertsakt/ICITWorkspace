@@ -25,6 +25,7 @@ import {
 import TimeAttendanceModal from '@/components/TimeAttendanceModal';
 import TimeAttendanceDetailModal from '@/components/TimeAttendanceDetailModal';
 import TimeAttendanceEmailModal from '@/components/TimeAttendanceEmailModal';
+import TimeAttendanceCancelModal from '@/components/TimeAttendanceCancelModal';
 import {
   Clock,
   Calendar,
@@ -73,6 +74,7 @@ function TimeAttendanceContent() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [emailModalRecord, setEmailModalRecord] = useState(null);
+  const [cancelModalRecord, setCancelModalRecord] = useState(null);
 
   // Filters & Search
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'mine' | 'pending_me'
@@ -381,12 +383,14 @@ function TimeAttendanceContent() {
         text: 'ยกเลิกคำขอลงเวลาเรียบร้อยแล้ว',
       });
       setTimeout(() => setNotificationBanner(null), 5000);
+      return updated;
     } catch (err) {
       console.error('Error cancelling request:', err);
       setNotificationBanner({
         type: 'error',
         text: err.message || 'เกิดข้อผิดพลาดในการยกเลิกคำขอ',
       });
+      throw err;
     }
   };
 
@@ -1281,12 +1285,7 @@ function TimeAttendanceContent() {
                                 return (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      const reason = prompt('กรุณาระบุเหตุผลในการยกเลิกคำขอลงเวลา (ถ้ามี):', 'ขอยกเลิกคำขอ');
-                                      if (reason !== null) {
-                                        handleCancelRequest(item.id, reason);
-                                      }
-                                    }}
+                                    onClick={() => setCancelModalRecord(item)}
                                     className="btn btn-ghost btn-sm"
                                     style={{
                                       display: 'flex',
@@ -1447,6 +1446,14 @@ function TimeAttendanceContent() {
         onClose={() => setEmailModalRecord(null)}
         record={emailModalRecord}
         personnelList={personnelList}
+      />
+
+      {/* Themed Request Cancellation Confirmation Modal */}
+      <TimeAttendanceCancelModal
+        isOpen={!!cancelModalRecord}
+        onClose={() => setCancelModalRecord(null)}
+        record={cancelModalRecord}
+        onConfirmCancel={handleCancelRequest}
       />
     </div>
   );

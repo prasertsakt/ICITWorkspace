@@ -1262,7 +1262,9 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
 
   // Automatically detect HR officer: ดึงจาก email ของ เจ้าหน้าที่ตำแหน่งบุคลากร
   const allPersonnel = await getPersonnelList();
-  const hrOfficer = getNotificationRecipientForStep(record, 'HR_REVIEW', allPersonnel);
+  const allDepts = await getDepartmentList();
+  const allExecs = await getExecutiveList();
+  const hrOfficer = getNotificationRecipientForStep(record, 'HR_REVIEW', allPersonnel, allDepts, allExecs);
 
   const nowIso = new Date().toISOString();
   const fullRecord = {
@@ -1323,7 +1325,9 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
   if (isNew) {
     try {
       const allPersonnel = await getPersonnelList();
-      notifiedRecipient = getNotificationRecipientForStep(fullRecord, 'HR_REVIEW', allPersonnel);
+      const allDepts = await getDepartmentList();
+      const allExecs = await getExecutiveList();
+      notifiedRecipient = getNotificationRecipientForStep(fullRecord, 'HR_REVIEW', allPersonnel, allDepts, allExecs);
       emailDispatchResult = await sendTimeAttendanceNotification(fullRecord, 'HR_REVIEW', notifiedRecipient);
     } catch (err) {
       console.warn('Initial email dispatch error', err);
@@ -1453,7 +1457,9 @@ export async function updateTimeAttendanceApproval(
   // Dispatch Email Notification to next actor
   try {
     const allPersonnel = await getPersonnelList();
-    const nextRecipient = getNotificationRecipientForStep(rec, nextStep, allPersonnel);
+    const allDepts = await getDepartmentList();
+    const allExecs = await getExecutiveList();
+    const nextRecipient = getNotificationRecipientForStep(rec, nextStep, allPersonnel, allDepts, allExecs);
     if (nextRecipient) {
       await sendTimeAttendanceNotification(rec, nextStep, nextRecipient);
     }
@@ -1552,6 +1558,19 @@ export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel
     } catch (e) {
       console.error('Failed to update cancelled time attendance in Firestore', e);
     }
+  }
+
+  // Dispatch Cancellation Email Notification
+  try {
+    const allPersonnel = await getPersonnelList();
+    const allDepts = await getDepartmentList();
+    const allExecs = await getExecutiveList();
+    const notifyRecipient = getNotificationRecipientForStep(rec, 'HR_REVIEW', allPersonnel, allDepts, allExecs);
+    if (notifyRecipient) {
+      await sendTimeAttendanceNotification(rec, 'CANCELLED', notifyRecipient);
+    }
+  } catch (err) {
+    console.warn('Email dispatch for cancellation failed', err);
   }
 
   return rec;

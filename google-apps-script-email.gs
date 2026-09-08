@@ -11,7 +11,7 @@
  *    - Execute as: "Me" (ฉัน - บัญชี Google ของท่าน)
  *    - Who has access: "Anyone" (ทุกคน)
  * 6. กด "Deploy" และคัดลอก "Web app URL" (ลงท้ายด้วย /exec)
- * 7. นำ URL ที่ได้ไปวางในช่อง Google Apps Script Webhook URL ในระบบใบลงเวลา
+ * 7. นำ URL ที่ได้ไปวางในช่อง Google Apps Script Webhook URL ในระบบขอลงเวลา
  */
 
 function doPost(e) {
@@ -33,7 +33,7 @@ function doPost(e) {
     // Send email using GmailApp / MailApp
     GmailApp.sendEmail(recipient, subject, '', {
       htmlBody: htmlBody,
-      name: 'ระบบใบลงเวลา ICIT Workspace',
+      name: 'ระบบขอลงเวลา ICIT Workspace',
       noReply: true
     });
 

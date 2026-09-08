@@ -18,6 +18,7 @@ import {
   saveEmailConfig,
   sendTimeAttendanceNotification,
   getSentEmailLogs,
+  getNotificationRecipientForStep,
 } from '@/lib/emailNotificationService';
 
 export default function TimeAttendanceEmailModal({
@@ -47,33 +48,11 @@ export default function TimeAttendanceEmailModal({
   if (!isOpen || !record) return null;
 
   // Determine recipient for the selected preview step
-  let targetRecipient = null;
-  if (selectedStep === 'HR_REVIEW') {
-    targetRecipient = personnelList.find((p) => p.position === 'บุคลากร') || {
-      name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-      email: 'hr@icit.org',
-    };
-  } else if (selectedStep === 'WITNESS_CONFIRM') {
-    targetRecipient = personnelList.find((p) => p.id === record.witnessId) || {
-      name: record.witnessName,
-      email: record.witnessEmail || 'witness@icit.org',
-    };
-  } else if (selectedStep === 'DEPT_HEAD_APPROVE') {
-    targetRecipient = personnelList.find((p) => p.id === record.departmentHeadId) || {
-      name: record.departmentHeadName,
-      email: record.departmentHeadEmail || 'head@icit.org',
-    };
-  } else if (selectedStep === 'DEPUTY_APPROVE') {
-    targetRecipient = personnelList.find((p) => p.id === record.deputyDirectorId) || {
-      name: record.deputyDirectorName,
-      email: record.deputyDirectorEmail || 'deputy@icit.org',
-    };
-  } else {
-    targetRecipient = {
-      name: record.requesterName,
-      email: record.requesterEmail,
-    };
-  }
+  const resolvedRecipient = getNotificationRecipientForStep(record, selectedStep, personnelList);
+  const targetRecipient = resolvedRecipient || {
+    name: record.requesterName || 'ผู้เกี่ยวข้อง',
+    email: record.requesterEmail || 'tiawongsombat@gmail.com',
+  };
 
   // If user entered custom test email, reflect it in the generated email content
   const previewRecipient = customRecipientEmail.trim()
@@ -557,6 +536,38 @@ export default function TimeAttendanceEmailModal({
               />
               <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
                 อีเมลเจ้าหน้าที่ฝ่ายบุคคลสำหรับรับแจ้งเตือนใบลงเวลาใหม่และลิงก์ตรวจสอบ 1-Click
+              </small>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                อีเมลหัวหน้าฝ่ายรับแจ้งเตือน (Dept Head Notification Email)
+              </label>
+              <input
+                type="email"
+                placeholder="tiawongsombat@gmail.com"
+                value={emailConfig.deptHeadEmail || ''}
+                onChange={(e) => setEmailConfig({ ...emailConfig, deptHeadEmail: e.target.value })}
+                className="form-input"
+              />
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
+                อีเมลหัวหน้าฝ่าย (หรืออีเมลสำรอง) สำหรับรับการแจ้งเตือนพิจารณาอนุมัติใบลงเวลาจริง
+              </small>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                อีเมลรองผู้อำนวยการฝ่ายบริหารรับแจ้งเตือน (Deputy Director Notification Email)
+              </label>
+              <input
+                type="email"
+                placeholder="tiawongsombat@gmail.com"
+                value={emailConfig.deputyDirectorEmail || ''}
+                onChange={(e) => setEmailConfig({ ...emailConfig, deputyDirectorEmail: e.target.value })}
+                className="form-input"
+              />
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
+                อีเมลรอง ผอ. ฝ่ายบริหาร สำหรับรับการแจ้งเตือนพิจารณาอนุมัติขั้นตอนสุดท้ายจริง
               </small>
             </div>
 

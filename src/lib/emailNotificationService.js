@@ -16,12 +16,22 @@ export function getEmailConfig() {
     process.env.NEXT_PUBLIC_HR_EMAIL ||
     process.env.HR_EMAIL ||
     'tiawongsombat@gmail.com';
+  const envDeptHeadEmail =
+    process.env.NEXT_PUBLIC_DEPT_HEAD_EMAIL ||
+    process.env.DEPT_HEAD_EMAIL ||
+    'tiawongsombat@gmail.com';
+  const envDeputyEmail =
+    process.env.NEXT_PUBLIC_DEPUTY_DIRECTOR_EMAIL ||
+    process.env.DEPUTY_DIRECTOR_EMAIL ||
+    'tiawongsombat@gmail.com';
 
   const defaults = {
     googleAppsScriptUrl: envUrl,
     senderName: 'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)',
     senderEmail: 'noreply-icit@icit.kmutnb.ac.th',
     hrEmail: envHrEmail,
+    deptHeadEmail: envDeptHeadEmail,
+    deputyDirectorEmail: envDeputyEmail,
     enableLiveSending: Boolean(envUrl),
   };
 
@@ -39,6 +49,8 @@ export function getEmailConfig() {
         senderName: parsed.senderName || defaults.senderName,
         senderEmail: parsed.senderEmail || defaults.senderEmail,
         hrEmail: parsed.hrEmail || envHrEmail,
+        deptHeadEmail: parsed.deptHeadEmail || envDeptHeadEmail,
+        deputyDirectorEmail: parsed.deputyDirectorEmail || envDeputyEmail,
         enableLiveSending:
           parsed.enableLiveSending !== undefined && parsed.googleAppsScriptUrl
             ? parsed.enableLiveSending
@@ -93,7 +105,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
 
   switch (targetStep) {
     case 'HR_REVIEW':
-      stepTitle = 'แจ้งเตือนฝ่ายบุคคลตรวจสอบใบลงเวลา';
+      stepTitle = 'แจ้งเตือนฝ่ายบุคคลตรวจสอบขอลงเวลา';
       recipientRoleText = 'เจ้าหน้าที่ ตำแหน่งบุคลากร';
       actionPrompt = 'กรุณาตรวจสอบข้อมูลเวลาปฏิบัติราชการและบันทึกความเห็นการตรวจสอบ';
       approveBtnText = 'ตรวจสอบแล้ว (ผ่าน)';
@@ -107,7 +119,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       rejectBtnText = 'ไม่รับรอง';
       break;
     case 'DEPT_HEAD_APPROVE':
-      stepTitle = 'แจ้งเตือนหัวหน้าฝ่ายพิจารณาอนุมัติใบลงเวลา';
+      stepTitle = 'แจ้งเตือนหัวหน้าฝ่ายพิจารณาอนุมัติขอลงเวลา';
       recipientRoleText = 'หัวหน้าฝ่าย';
       actionPrompt = 'คำขอได้รับการตรวจสอบจากฝ่ายบุคคลและพยานรับรองแล้ว กรุณาพิจารณาอนุมัติ';
       approveBtnText = 'อนุมัติ';
@@ -121,30 +133,45 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       rejectBtnText = 'ไม่อนุมัติ';
       break;
     case 'COMPLETED':
-      stepTitle = 'แจ้งผลการอนุมัติใบลงเวลา (อนุมัติสมบูรณ์)';
+      stepTitle = 'แจ้งผลการอนุมัติขอลงเวลา (อนุมัติสมบูรณ์)';
       recipientRoleText = 'ผู้ขอลงเวลา';
       actionPrompt = 'คำขอลงเวลาปฏิบัติราชการของท่านได้รับการอนุมัติเสร็จสมบูรณ์เรียบร้อยแล้ว';
       showActionButtons = false;
       break;
     case 'REJECTED':
-      stepTitle = 'แจ้งผลการพิจารณาใบลงเวลา (ไม่อนุมัติ)';
+      stepTitle = 'แจ้งผลการพิจารณาขอลงเวลา (ไม่อนุมัติ)';
       recipientRoleText = 'ผู้ขอลงเวลา';
       actionPrompt = 'คำขอลงเวลาปฏิบัติราชการของท่านไม่ผ่านการอนุมัติ';
       showActionButtons = false;
       break;
+    case 'CANCELLED':
+      stepTitle = 'แจ้งเตือนการยกเลิกคำขอลงเวลา (โดยผู้ยื่นคำขอ)';
+      recipientRoleText = 'ผู้เกี่ยวข้อง / ฝ่ายบุคคล';
+      actionPrompt = `คำขอลงเวลาปฏิบัติราชการนี้ได้รับการยกเลิกโดย ${record.cancelledByName || record.requesterName} (เหตุผล: ${record.cancelReason || 'ผู้ยื่นขอยกเลิกคำขอ'}) กระบวนการพิจารณาอนุมัติสิ้นสุดลงแล้ว`;
+      showActionButtons = false;
+      break;
     default:
-      stepTitle = 'แจ้งเตือนระบบใบลงเวลา';
+      stepTitle = 'แจ้งเตือนระบบขอลงเวลา';
       recipientRoleText = 'ผู้เกี่ยวข้อง';
-      actionPrompt = 'มีรายการใบลงเวลาปฏิบัติราชการที่ต้องดำเนินการ';
+      actionPrompt = 'มีรายการขอลงเวลาปฏิบัติราชการที่ต้องดำเนินการ';
   }
 
-  const subject = `[ระบบใบลงเวลา ICIT] ${stepTitle}: ${record.requesterName} (${record.requestType})`;
+  const subject = `[ระบบขอลงเวลา ICIT] ${stepTitle}: ${record.requesterName} (${record.requestType})`;
 
   const approveUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=approve&token=${token}`;
   const rejectUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=reject&token=${token}`;
   const viewUrl = `${baseUrl}/time-attendance?viewId=${record.id}`;
 
   const previewImageUrl = formatImageDisplayUrl(record.imageProofUrl);
+
+  const headerGradient =
+    targetStep === 'CANCELLED'
+      ? 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)'
+      : targetStep === 'REJECTED'
+        ? 'linear-gradient(135deg, #E11D48 0%, #BE123C 100%)'
+        : targetStep === 'COMPLETED'
+          ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+          : 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)';
 
   const html = `
 <!DOCTYPE html>
@@ -158,12 +185,12 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
   <div style="max-width: 620px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #E2E8F0;">
     
     <!-- Header Banner -->
-    <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 28px 24px; color: #FFFFFF; text-align: center;">
+    <div style="background: ${headerGradient}; padding: 28px 24px; color: #FFFFFF; text-align: center;">
       <div style="font-size: 13px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; margin-bottom: 6px; font-weight: 600;">
-        ICIT WORKSPACE &bull; ระบบใบลงเวลา
+        ICIT WORKSPACE &bull; ระบบขอลงเวลา
       </div>
       <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #FFFFFF;">
-        ${record.requestType || 'ใบลงเวลาปฏิบัติราชการ'}
+        ${record.requestType || 'ขอลงเวลาปฏิบัติราชการ'}
       </h1>
       <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">
         ${stepTitle}
@@ -222,10 +249,10 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       </table>
 
       ${record.commentHr ? `
-      <!-- Related comment_บันทึกใบลงเวลา -->
+      <!-- Related comment_บันทึกขอลงเวลา -->
       <div style="margin-bottom: 20px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px;">
         <div style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-          <span>Related comment_บันทึกใบลงเวลา</span>
+          <span>Related comment_บันทึกขอลงเวลา</span>
         </div>
         <div style="font-size: 13.5px; color: #0F172A; background: #FFFFFF; padding: 10px 12px; border-radius: 6px; border: 1px solid #CBD5E1;">
           ${record.commentHr}
@@ -330,7 +357,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       <!-- Link to open system -->
       <div style="text-align: center; padding: 10px 0;">
         <a href="${viewUrl}" target="_blank" style="display: inline-block; color: #4F46E5; font-size: 14px; font-weight: 600; text-decoration: underline;">
-          เปิดดูรายละเอียดใบลงเวลาและประวัติกิจกรรมในระบบ ICIT Workspace &rarr;
+          เปิดดูรายละเอียดขอลงเวลาและประวัติกิจกรรมในระบบ ICIT Workspace &rarr;
         </a>
       </div>
 
@@ -338,7 +365,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
 
     <!-- Footer -->
     <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; text-align: center; font-size: 12px; color: #94A3B8;">
-      อีเมลนี้เป็นข้อความอัตโนมัติจากระบบใบลงเวลา สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)<br />
+      อีเมลนี้เป็นข้อความอัตโนมัติจากระบบขอลงเวลา สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)<br />
       หากมีข้อสงสัยหรือข้อผิดพลาด กรุณาติดต่อฝ่ายบริหารงานบุคคล สำนักงานผู้อำนวยการ
     </div>
   </div>
@@ -356,94 +383,236 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
 }
 
 /**
- * Find designated recipient for a given step
+ * Helper: Check if an email address is deliverable and not a dummy/mock domain
  */
-export function getNotificationRecipientForStep(record, step, allPersonnel = []) {
+function isDeliverableRealEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  if (!clean.includes('@') || !clean.includes('.')) return false;
+  if (clean.endsWith('@icit.org')) return false; // dummy mock domain
+  return true;
+}
+
+/**
+ * Find designated recipient for a given step with real email deliverability guarantee
+ */
+export function getNotificationRecipientForStep(
+  record,
+  step,
+  allPersonnel = [],
+  departmentList = [],
+  executiveList = []
+) {
   if (!record || !step) return null;
   const config = getEmailConfig();
 
   if (step === 'HR_REVIEW') {
     // 1. If explicit HR email configured in config or env
-    if (config.hrEmail) {
+    if (config.hrEmail && isDeliverableRealEmail(config.hrEmail)) {
       return {
         name: config.hrName || 'เจ้าหน้าที่ฝ่ายบุคคล',
-        email: config.hrEmail,
+        email: config.hrEmail.trim(),
         role: 'เจ้าหน้าที่ฝ่ายบุคคล',
       };
     }
 
     // 2. Personnel with position 'บุคลากร' whose email is not a dummy mock domain
     const hrReal = allPersonnel.find(
-      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ' && p.email && !p.email.endsWith('@icit.org')
+      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ' && isDeliverableRealEmail(p.email)
     );
     if (hrReal) return hrReal;
 
     // 3. Any active Admin with a real email
     const adminReal = allPersonnel.find(
-      (p) => p.role === 'Admin' && p.status === 'ปกติ' && p.email && !p.email.endsWith('@icit.org')
+      (p) => p.role === 'Admin' && p.status === 'ปกติ' && isDeliverableRealEmail(p.email)
     );
     if (adminReal) {
       return {
         id: adminReal.id,
         name: `${adminReal.name} (ฝ่ายบุคคล/ผู้ดูแลระบบ)`,
-        email: adminReal.email,
+        email: adminReal.email.trim(),
         role: 'เจ้าหน้าที่ฝ่ายบุคคล',
       };
     }
 
     // 4. Default fallback
-    const hrFallback = allPersonnel.find((p) => p.position === 'บุคลากร' && p.status === 'ปกติ');
-    return (
-      hrFallback || {
-        name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-        email: 'tiawongsombat@gmail.com',
-        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
-      }
-    );
+    return {
+      name: 'เจ้าหน้าที่ฝ่ายบุคคล',
+      email: (config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+    };
   }
 
   if (step === 'WITNESS_CONFIRM') {
     const p = allPersonnel.find((person) => person.id === record.witnessId);
-    return (
-      p || {
+    if (p && isDeliverableRealEmail(p.email)) {
+      return p;
+    }
+    if (isDeliverableRealEmail(record.witnessEmail)) {
+      return {
         name: record.witnessName || 'พยานผู้รับรอง',
-        email: record.witnessEmail || 'witness@icit.org',
+        email: record.witnessEmail.trim(),
         role: 'พยานผู้รับรอง',
-      }
-    );
+      };
+    }
+    return {
+      name: record.witnessName || p?.name || 'พยานผู้รับรอง',
+      email: (config.deptHeadEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      role: 'พยานผู้รับรอง',
+    };
   }
 
   if (step === 'DEPT_HEAD_APPROVE') {
+    // 1. Try to find the person by departmentHeadId
     const p = allPersonnel.find((person) => person.id === record.departmentHeadId);
-    return (
-      p || {
-        name: record.departmentHeadName || 'หัวหน้าฝ่าย',
-        email: record.departmentHeadEmail || 'head@icit.org',
+    if (p && isDeliverableRealEmail(p.email)) {
+      return {
+        id: p.id,
+        name: p.name,
+        email: p.email.trim(),
         role: 'หัวหน้าฝ่าย',
+      };
+    }
+
+    // 2. Try to find via departmentList matching requester's department
+    if (departmentList && departmentList.length > 0) {
+      const dept = departmentList.find(
+        (d) =>
+          d.name === record.requesterDepartment ||
+          d.id === record.departmentHeadId ||
+          d.id === record.requesterDepartmentId
+      );
+      if (dept && dept.headPersonnelId) {
+        const headPerson = allPersonnel.find((person) => person.id === dept.headPersonnelId);
+        if (headPerson && isDeliverableRealEmail(headPerson.email)) {
+          return {
+            id: headPerson.id,
+            name: headPerson.name,
+            email: headPerson.email.trim(),
+            role: `หัวหน้าฝ่าย (${dept.name})`,
+          };
+        }
       }
+    }
+
+    // 3. Check record's departmentHeadEmail
+    if (isDeliverableRealEmail(record.departmentHeadEmail)) {
+      return {
+        id: record.departmentHeadId || '',
+        name: record.departmentHeadName || 'หัวหน้าฝ่าย',
+        email: record.departmentHeadEmail.trim(),
+        role: 'หัวหน้าฝ่าย',
+      };
+    }
+
+    // 4. Configured department head email from config/env
+    if (config.deptHeadEmail && isDeliverableRealEmail(config.deptHeadEmail)) {
+      return {
+        id: record.departmentHeadId || '',
+        name: record.departmentHeadName || 'หัวหน้าฝ่าย',
+        email: config.deptHeadEmail.trim(),
+        role: 'หัวหน้าฝ่าย',
+      };
+    }
+
+    // 5. Active Personnel with position 'หัวหน้าฝ่าย' and real email
+    const headByPosition = allPersonnel.find(
+      (person) =>
+        person.position?.includes('หัวหน้าฝ่าย') &&
+        person.status === 'ปกติ' &&
+        isDeliverableRealEmail(person.email)
     );
+    if (headByPosition) return headByPosition;
+
+    // 6. Safe fallback to ensure real email API delivers
+    return {
+      id: record.departmentHeadId || '',
+      name: record.departmentHeadName || 'หัวหน้าฝ่าย',
+      email: (config.deptHeadEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      role: 'หัวหน้าฝ่าย',
+    };
   }
 
   if (step === 'DEPUTY_APPROVE') {
+    // 1. Try to find the person by deputyDirectorId
     const p = allPersonnel.find((person) => person.id === record.deputyDirectorId);
-    return (
-      p || {
-        name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
-        email: record.deputyDirectorEmail || 'deputy@icit.org',
+    if (p && isDeliverableRealEmail(p.email)) {
+      return {
+        id: p.id,
+        name: p.name,
+        email: p.email.trim(),
         role: 'รองผู้อำนวยการฝ่ายบริหาร',
+      };
+    }
+
+    // 2. Try to find executive for administration from executiveList
+    if (executiveList && executiveList.length > 0) {
+      const deputyExec = executiveList.find(
+        (e) =>
+          (e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')) &&
+          e.position?.includes('รอง')
+      );
+      if (deputyExec) {
+        const deputyPerson = allPersonnel.find((person) => person.id === deputyExec.personnelId);
+        if (deputyPerson && isDeliverableRealEmail(deputyPerson.email)) {
+          return {
+            id: deputyPerson.id,
+            name: deputyPerson.name,
+            email: deputyPerson.email.trim(),
+            role: 'รองผู้อำนวยการฝ่ายบริหาร',
+          };
+        }
       }
-    );
+    }
+
+    // 3. Check record's deputyDirectorEmail
+    if (isDeliverableRealEmail(record.deputyDirectorEmail)) {
+      return {
+        id: record.deputyDirectorId || '',
+        name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
+        email: record.deputyDirectorEmail.trim(),
+        role: 'รองผู้อำนวยการฝ่ายบริหาร',
+      };
+    }
+
+    // 4. Configured deputy email from config/env
+    if (config.deputyDirectorEmail && isDeliverableRealEmail(config.deputyDirectorEmail)) {
+      return {
+        id: record.deputyDirectorId || '',
+        name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
+        email: config.deputyDirectorEmail.trim(),
+        role: 'รองผู้อำนวยการฝ่ายบริหาร',
+      };
+    }
+
+    // 5. Fallback to ensure real email API delivers
+    return {
+      id: record.deputyDirectorId || '',
+      name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
+      email: (config.deputyDirectorEmail || config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      role: 'รองผู้อำนวยการฝ่ายบริหาร',
+    };
   }
 
-  if (step === 'COMPLETED' || step === 'REJECTED') {
+  if (step === 'COMPLETED' || step === 'REJECTED' || step === 'CANCELLED') {
     const p = allPersonnel.find((person) => person.id === record.requesterId);
-    return (
-      p || {
+    if (p && isDeliverableRealEmail(p.email)) {
+      return p;
+    }
+    if (isDeliverableRealEmail(record.requesterEmail)) {
+      return {
+        id: record.requesterId || '',
         name: record.requesterName || 'ผู้ขอลงเวลา',
-        email: record.requesterEmail || 'requester@icit.org',
+        email: record.requesterEmail.trim(),
         role: 'ผู้ขอลงเวลา',
-      }
-    );
+      };
+    }
+    return {
+      id: record.requesterId || '',
+      name: record.requesterName || 'ผู้ขอลงเวลา',
+      email: (config.hrEmail || 'tiawongsombat@gmail.com').trim(),
+      role: 'ผู้ขอลงเวลา',
+    };
   }
 
   return null;
