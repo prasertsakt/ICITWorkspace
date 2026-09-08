@@ -73,10 +73,11 @@ const timeAttendanceSubscribers = new Set();
 let cachedTimeAttendances = null;
 
 function notifyTimeAttendanceSubscribers(list) {
-  cachedTimeAttendances = list;
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedTimeAttendances = cloned;
   timeAttendanceSubscribers.forEach((cb) => {
     try {
-      cb(list);
+      cb(cloned);
     } catch (e) {
       console.error('Time attendance subscriber notification error', e);
     }
@@ -1245,9 +1246,27 @@ export function subscribeTimeAttendanceList(callback, options = {}) {
     }
   }
 
+  // 4. Cross-tab/window real-time synchronization
+  const handleStorageChange = (e) => {
+    if (e.key === LOCAL_KEY_TIME_ATTENDANCES && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        if (Array.isArray(parsed)) {
+          notifyTimeAttendanceSubscribers(parsed);
+        }
+      } catch {}
+    }
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleStorageChange);
+  }
+
   return () => {
     timeAttendanceSubscribers.delete(callback);
     unsubscribeFirestore();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleStorageChange);
+    }
   };
 }
 
@@ -1439,11 +1458,11 @@ export async function updateTimeAttendanceApproval(
   rec.updatedAt = nowIso;
 
   // Optimistic update
-  list[idx] = rec;
+  const updatedList = list.map((item, i) => (i === idx ? rec : item));
   if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(updatedList));
   }
-  notifyTimeAttendanceSubscribers(list);
+  notifyTimeAttendanceSubscribers(updatedList);
 
   // Firestore sync
   if (isFirebaseConfigured && db) {
@@ -1545,11 +1564,11 @@ export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel
   rec.updatedAt = nowIso;
 
   // Optimistic update
-  list[idx] = rec;
+  const updatedList = list.map((item, i) => (i === idx ? rec : item));
   if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(updatedList));
   }
-  notifyTimeAttendanceSubscribers(list);
+  notifyTimeAttendanceSubscribers(updatedList);
 
   // Firestore sync
   if (isFirebaseConfigured && db) {

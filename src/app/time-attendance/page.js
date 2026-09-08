@@ -237,10 +237,19 @@ function TimeAttendanceContent() {
     return { total, pendingHr, pendingWitness, pendingDeptHead, pendingDeputy, completed, rejected };
   }, [visibleAttendances]);
 
-  // Count items pending current user's action
+  // Count items pending current user's action (strictly active pending steps only, excluding cancelled/completed/rejected)
   const pendingMeCount = useMemo(() => {
     if (!currentPersonnel) return 0;
     return visibleAttendances.filter((item) => {
+      // Must be an active pending step, NOT cancelled, completed, or rejected
+      const isPendingStep =
+        item.currentStep === 'HR_REVIEW' ||
+        item.currentStep === 'WITNESS_CONFIRM' ||
+        item.currentStep === 'DEPT_HEAD_APPROVE' ||
+        item.currentStep === 'DEPUTY_APPROVE';
+
+      if (!isPendingStep) return false;
+
       const needsHr = item.currentStep === 'HR_REVIEW' && isHrStaff;
       const needsWitness = item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === currentPersonnel.id;
       const needsDeptHead =
@@ -269,6 +278,16 @@ function TimeAttendanceContent() {
         if (!isHeadForThis) return false;
       } else if (activeTab === 'pending_me') {
         if (!currentPersonnel) return false;
+
+        // Must be an active pending step, CANNOT be CANCELLED, COMPLETED, or REJECTED
+        const isPendingStep =
+          item.currentStep === 'HR_REVIEW' ||
+          item.currentStep === 'WITNESS_CONFIRM' ||
+          item.currentStep === 'DEPT_HEAD_APPROVE' ||
+          item.currentStep === 'DEPUTY_APPROVE';
+
+        if (!isPendingStep) return false;
+
         // Check if item needs action from current user
         const needsHr = item.currentStep === 'HR_REVIEW' && isHrStaff;
         const needsWitness = item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === currentPersonnel.id;
@@ -319,6 +338,7 @@ function TimeAttendanceContent() {
   const handleSaveNew = async (recordData) => {
     try {
       const saved = await saveTimeAttendanceRecord(recordData, currentPersonnel);
+      setAttendances((prevList) => [saved, ...prevList.filter((a) => a.id !== saved.id)]);
       try {
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       } catch { }
@@ -353,6 +373,9 @@ function TimeAttendanceContent() {
   const handleApproveStep = async (recordId, step, decision, comment) => {
     try {
       const updated = await updateTimeAttendanceApproval(recordId, step, decision, comment, currentPersonnel);
+      setAttendances((prevList) =>
+        prevList.map((item) => (item.id === recordId ? updated : item))
+      );
       setViewingRecord(updated);
       try {
         confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
@@ -375,6 +398,9 @@ function TimeAttendanceContent() {
   const handleCancelRequest = async (recordId, reason) => {
     try {
       const updated = await cancelTimeAttendanceRecord(recordId, reason, currentPersonnel);
+      setAttendances((prevList) =>
+        prevList.map((item) => (item.id === recordId ? updated : item))
+      );
       if (viewingRecord && viewingRecord.id === recordId) {
         setViewingRecord(updated);
       }
