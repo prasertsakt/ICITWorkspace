@@ -146,6 +146,7 @@ function TimeAttendanceContent() {
     }
 
     return attendances.filter((item) => {
+      if (!item) return false;
       // 1. ผู้ขอ: เห็นรายการที่ตนเองเป็นผู้ยื่น
       if (item.requesterId === currentPersonnel.id) return true;
 
@@ -246,6 +247,7 @@ function TimeAttendanceContent() {
   // Filtered List based on Active Tab, Search, and Filters
   const filteredAttendances = useMemo(() => {
     return visibleAttendances.filter((item) => {
+      if (!item) return false;
       // Tab filter
       if (activeTab === 'mine') {
         if (currentPersonnel && item.requesterId !== currentPersonnel.id) return false;
@@ -305,25 +307,45 @@ function TimeAttendanceContent() {
 
   // Handle Save New Request
   const handleSaveNew = async (recordData) => {
-    await saveTimeAttendanceRecord(recordData, currentPersonnel);
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    setNotificationBanner({
-      type: 'success',
-      text: 'ยื่นคำขอใบลงเวลาเรียบร้อยแล้ว ระบบได้ส่งแจ้งเตือนไปยังเจ้าหน้าที่ฝ่ายบุคคล',
-    });
-    setTimeout(() => setNotificationBanner(null), 5000);
+    try {
+      await saveTimeAttendanceRecord(recordData, currentPersonnel);
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } catch {}
+      setNotificationBanner({
+        type: 'success',
+        text: 'ยื่นคำขอใบลงเวลาเรียบร้อยแล้ว ระบบได้ส่งแจ้งเตือนไปยังเจ้าหน้าที่ฝ่ายบุคคล',
+      });
+      setTimeout(() => setNotificationBanner(null), 5000);
+    } catch (err) {
+      console.error('Error saving time attendance request:', err);
+      setNotificationBanner({
+        type: 'error',
+        text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลใบลงเวลา',
+      });
+    }
   };
 
   // Handle Approve from Detail Modal
   const handleApproveStep = async (recordId, step, decision, comment) => {
-    const updated = await updateTimeAttendanceApproval(recordId, step, decision, comment, currentPersonnel);
-    setViewingRecord(updated);
-    confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-    setNotificationBanner({
-      type: 'success',
-      text: `บันทึกสถานะการ${decision === 'approve' ? 'อนุมัติ/รับรอง' : 'ไม่อนุมัติ'}เรียบร้อยแล้ว`,
-    });
-    setTimeout(() => setNotificationBanner(null), 5000);
+    try {
+      const updated = await updateTimeAttendanceApproval(recordId, step, decision, comment, currentPersonnel);
+      setViewingRecord(updated);
+      try {
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      } catch {}
+      setNotificationBanner({
+        type: 'success',
+        text: `บันทึกสถานะการ${decision === 'approve' ? 'อนุมัติ/รับรอง' : 'ไม่อนุมัติ'}เรียบร้อยแล้ว`,
+      });
+      setTimeout(() => setNotificationBanner(null), 5000);
+    } catch (err) {
+      console.error('Error updating approval:', err);
+      setNotificationBanner({
+        type: 'error',
+        text: err.message || 'เกิดข้อผิดพลาดในการบันทึกสถานะการอนุมัติ',
+      });
+    }
   };
 
   // 1. Loading State
