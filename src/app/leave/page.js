@@ -69,7 +69,7 @@ export default function LeavePage() {
         setLeaves((list || []).filter((l) => !isDummyLeaveRecord(l)));
         setLastSyncTime(getLastLeaveSyncTime());
       },
-      { year: selectedYear, enableRealtime: isAdmin }
+      { year: selectedYear, enableRealtime: true }
     );
 
     const unsubPersonnel = subscribePersonnelList((list) => {

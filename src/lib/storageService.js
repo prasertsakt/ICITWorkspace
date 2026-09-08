@@ -387,10 +387,22 @@ function mergeLeavesIntoLocalStorage(fetchedDocs, year) {
   initLocalStorage();
   const existing = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]').filter((l) => !isDummyLeaveRecord(l));
   
+  const yStr = year ? year.toString() : null;
   const map = new Map();
-  // Keep all existing leaves from cache
-  existing.forEach((item) => map.set(item.id, item));
-  // Overwrite or insert fetched docs that are not dummy
+
+  // 1. Keep leaves from OTHER years (do not touch them)
+  existing.forEach((item) => {
+    if (yStr) {
+      const inThisYear =
+        (item.startDate && item.startDate.startsWith(yStr)) ||
+        (item.endDate && item.endDate.startsWith(yStr));
+      if (!inThisYear) {
+        map.set(item.id, item);
+      }
+    }
+  });
+
+  // 2. Authoritatively set the fresh fetched docs for the queried year
   fetchedDocs.forEach((item) => {
     if (!isDummyLeaveRecord(item)) {
       map.set(item.id, item);
