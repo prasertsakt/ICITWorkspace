@@ -31,7 +31,8 @@ import {
 const LOCAL_KEY_PERSONNEL = 'icit_org_personnel';
 const LOCAL_KEY_DEPTS = 'icit_org_departments';
 const LOCAL_KEY_EXECS = 'icit_org_executives';
-const LOCAL_KEY_LEAVES = 'icit_leaves_data';
+const LOCAL_KEY_LEAVES = 'icit_org_leaves';
+const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
 const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
 const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 
