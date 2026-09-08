@@ -16,7 +16,6 @@ import {
   syncAllSeedDataToFirestore,
   clearAllPersonnelData,
   clearAllExecutivesData,
-  resetLocalSeedData,
 } from '@/lib/storageService';
 import {
   PREDEFINED_DEPARTMENTS,
@@ -147,13 +146,13 @@ export default function AdminPage() {
   }, []);
 
   const handleSyncToFirestore = async () => {
-    if (!confirm('ต้องการอัปโหลด/ซิงค์ข้อมูลเริ่มต้นทั้งหมด (6 ฝ่าย, บุคลากร, ฝ่ายบริหาร) ขึ้น Cloud Firestore ใช่หรือไม่?')) {
+    if (!confirm('ต้องการตรวจสอบและซิงค์โครงสร้างฝ่ายงาน (6 ฝ่าย) ขึ้น Cloud Firestore ใช่หรือไม่?')) {
       return;
     }
     setIsSyncing(true);
     try {
       await syncAllSeedDataToFirestore();
-      alert('✅ ซิงค์ข้อมูลขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!');
+      alert('✅ ซิงค์โครงสร้างฝ่ายงานขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!');
     } catch (err) {
       console.error('Sync failed', err);
       alert('เกิดข้อผิดพลาดในการซิงค์ข้อมูล กรุณาตรวจสอบการตั้งค่า Firebase');
@@ -275,12 +274,6 @@ export default function AdminPage() {
       return [...prev, data];
     });
     await saveDepartmentRecord(data);
-  };
-
-  const handleResetData = () => {
-    if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นตัวอย่างใช่หรือไม่?')) {
-      resetLocalSeedData();
-    }
   };
 
   const handleClearDummyData = async () => {
@@ -1039,20 +1032,16 @@ export default function AdminPage() {
                     className="btn btn-primary btn-sm"
                   >
                     <CloudUpload size={14} />
-                    <span>{isSyncing ? 'กำลังซิงค์ขึ้น Firestore...' : '☁️ ซิงค์ข้อมูลทั้งหมดขึ้น Firestore'}</span>
+                    <span>{isSyncing ? 'กำลังซิงค์ขึ้น Firestore...' : '☁️ ซิงค์โครงสร้างฝ่ายงานขึ้น Firestore'}</span>
                   </button>
                 )}
-                <button onClick={handleResetData} className="btn btn-secondary btn-sm">
-                  <RotateCcw size={14} />
-                  <span>รีเซ็ตข้อมูลตัวอย่าง</span>
-                </button>
                 <button
                   onClick={handleClearDummyData}
                   className="btn btn-danger btn-sm"
-                  title="ลบเฉพาะข้อมูลบุคลากรตัวอย่าง เพื่อเริ่มกรอกข้อมูลบุคลากรจริง"
+                  title="ลบข้อมูลตัวอย่างที่ตกค้างในระบบ เพื่อเริ่มใช้งานจริง"
                 >
                   <Trash2 size={14} />
-                  <span>ล้างข้อมูลตัวอย่าง (เริ่มใช้งานจริง)</span>
+                  <span>ล้างข้อมูลตัวอย่างที่ตกค้าง (เพื่อใช้งานจริง)</span>
                 </button>
               </div>
             </div>

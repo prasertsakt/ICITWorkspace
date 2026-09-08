@@ -14,7 +14,6 @@ import {
   executeOneClickApproval,
   cancelTimeAttendanceRecord,
   deleteTimeAttendanceRecord,
-  resetTimeAttendanceSeedData,
   isDummyTimeAttendanceRecord,
 } from '@/lib/storageService';
 import {
@@ -764,20 +763,6 @@ function TimeAttendanceContent() {
                 >
                   <Settings size={14} />
                   <span>ตั้งค่าระบบอีเมล</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm('ต้องการรีเซ็ตข้อมูลตัวอย่างขอลงเวลาหรือไม่?')) {
-                      resetTimeAttendanceSeedData();
-                    }
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  title="รีเซ็ตข้อมูลตัวอย่าง"
-                >
-                  <RotateCcw size={14} />
-                  <span>รีเซ็ตตัวอย่าง</span>
                 </button>
               </>
             )}

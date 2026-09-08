@@ -73,23 +73,141 @@ export function isDummyTimeAttendanceRecord(ta) {
   return false;
 }
 
-// Helper: Ensure local storage has seed data
+/**
+ * Helper: Check if a personnel record is dummy / mock data
+ */
+export function isDummyPersonnel(p) {
+  if (!p) return true;
+  const id = String(p.id || '');
+  if (
+    id.startsWith('pers-exec-') ||
+    id.startsWith('pers-sample') ||
+    id === 'pers-1' || id === 'pers-2' || id === 'pers-3' || id === 'pers-4' ||
+    id === 'pers-5' || id === 'pers-6' || id === 'pers-7' || id === 'pers-8' ||
+    id === 'pers-9' || id === 'pers-10' || id === 'pers-11' || id === 'pers-12' ||
+    id === 'pers-13' || id === 'pers-14' || id === 'pers-15' || id === 'pers-16' ||
+    id === 'pers-17'
+  ) {
+    return true;
+  }
+  const email = String(p.email || '').trim().toLowerCase();
+  if (email.endsWith('@icit.org')) return true;
+  const name = String(p.name || '').trim();
+  if (
+    name === 'รศ.ดร.ประสิทธิ์ เจริญสุข' ||
+    name === 'ผศ.ดร.กมลวรรณ ธนสารเจริญ' ||
+    name === 'ดร.ชาญชัย เกียรติวัฒนา' ||
+    name === 'ผศ.ดร.วิชัย ภัทรเดชากุล' ||
+    name === 'นางสาวธัญนันท์ กระดาษ' ||
+    name === 'นายกนก บุญพันธ์จันที' ||
+    name === 'นายวัชระ รุ่งโรจน์' ||
+    name === 'นายศราวุธ มีแก้ว' ||
+    name === 'นางสาวจารุชา เจือทอง' ||
+    name === 'นายณัฐพงษ์ สุขสำราญ'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Helper: Check if an executive record is dummy / mock data
+ */
+export function isDummyExecutive(ex) {
+  if (!ex) return true;
+  const id = String(ex.id || '');
+  const pId = String(ex.personnelId || '');
+  if (id === 'exec-1' || id === 'exec-2' || id === 'exec-3' || id === 'exec-4') {
+    if (pId.startsWith('pers-exec-') || !pId || pId.startsWith('pers-')) {
+      return true;
+    }
+  }
+  if (pId.startsWith('pers-exec-') || pId.startsWith('pers-sample')) {
+    return true;
+  }
+  const name = String(ex.name || '').trim();
+  if (
+    name === 'รศ.ดร.ประสิทธิ์ เจริญสุข' ||
+    name === 'ผศ.ดร.กมลวรรณ ธนสารเจริญ' ||
+    name === 'ดร.ชาญชัย เกียรติวัฒนา' ||
+    name === 'ผศ.ดร.วิชัย ภัทรเดชากุล'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// Helper: Ensure local storage has seed data without any dummy records
 function initLocalStorage() {
   if (typeof window === 'undefined') return;
 
+  // 1. Personnel (Start empty or purge legacy dummy personnel)
   if (!localStorage.getItem(LOCAL_KEY_PERSONNEL)) {
-    localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(INITIAL_PERSONNEL));
+    localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify([]));
+  } else {
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+      const cleaned = Array.isArray(stored) ? stored.filter((p) => !isDummyPersonnel(p)) : [];
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(cleaned));
+      }
+    } catch (e) {
+      console.warn('Error purging dummy personnel from localStorage', e);
+    }
   }
+
+  // 2. Departments (Initialize clean structure and sanitize fake head/executive links)
   if (!localStorage.getItem(LOCAL_KEY_DEPTS)) {
     localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(INITIAL_DEPARTMENTS));
+  } else {
+    try {
+      const storedDepts = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+      let updated = false;
+      const cleanedDepts = (Array.isArray(storedDepts) ? storedDepts : []).map((d) => {
+        let changed = false;
+        let head = d.headPersonnelId || '';
+        let exec = d.supervisingExecutiveId || '';
+        if (head.startsWith('pers-') && (head === 'pers-1' || head === 'pers-3' || head === 'pers-4' || head === 'pers-5' || head === 'pers-6' || head === 'pers-11')) {
+          head = '';
+          changed = true;
+        }
+        if (exec.startsWith('exec-') && (exec === 'exec-1' || exec === 'exec-2' || exec === 'exec-3' || exec === 'exec-4')) {
+          exec = '';
+          changed = true;
+        }
+        if (changed) {
+          updated = true;
+          return { ...d, headPersonnelId: head, supervisingExecutiveId: exec };
+        }
+        return d;
+      });
+      if (updated) {
+        localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(cleanedDepts));
+      }
+    } catch (e) {
+      console.warn('Error sanitizing departments in localStorage', e);
+    }
   }
+
+  // 3. Executives (Start empty or purge legacy dummy executives)
   if (!localStorage.getItem(LOCAL_KEY_EXECS)) {
-    localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(INITIAL_EXECUTIVES));
+    localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
+  } else {
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+      const cleaned = Array.isArray(stored) ? stored.filter((ex) => !isDummyExecutive(ex)) : [];
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(cleaned));
+      }
+    } catch (e) {
+      console.warn('Error purging dummy executives from localStorage', e);
+    }
   }
+
+  // 4. Leaves
   if (!localStorage.getItem(LOCAL_KEY_LEAVES)) {
     localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify([]));
   } else {
-    // Purge any legacy dummy sample leaves from existing local storage
     try {
       const storedLeaves = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
       const cleaned = storedLeaves.filter((l) => !isDummyLeaveRecord(l));
@@ -100,10 +218,11 @@ function initLocalStorage() {
       console.warn('Error purging dummy leaves from localStorage', e);
     }
   }
+
+  // 5. Time Attendances
   if (!localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES)) {
     localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify([]));
   } else {
-    // Purge any legacy dummy sample time attendances from existing local storage
     try {
       const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES) || '[]');
       const cleaned = stored.filter((t) => !isDummyTimeAttendanceRecord(t));
@@ -209,7 +328,14 @@ export function subscribePersonnelList(callback) {
         collection(db, 'personnel'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const list = rawList.filter((p) => !isDummyPersonnel(p));
+            // Asynchronously delete any legacy dummy records from Firestore
+            rawList.forEach((p) => {
+              if (isDummyPersonnel(p) && p.id) {
+                deleteDoc(doc(db, 'personnel', p.id)).catch(() => {});
+              }
+            });
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
             notifyPersonnelSubscribers(list);
           } else {
@@ -220,7 +346,7 @@ export function subscribePersonnelList(callback) {
         (error) => {
           console.warn('Firestore personnel snapshot error, fallback to local', error);
           initLocalStorage();
-          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+          const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
           callback(list);
         }
       );
@@ -231,11 +357,11 @@ export function subscribePersonnelList(callback) {
 
   // Immediate invoke with cached data
   initLocalStorage();
-  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
   callback(cachedList);
 
   const handleStorageChange = () => {
-    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
     callback(list);
   };
   window.addEventListener('storage', handleStorageChange);
@@ -267,7 +393,24 @@ export function subscribeDepartmentList(callback) {
         collection(db, 'departments'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const list = snapshot.docs.map((d) => {
+              const data = { id: d.id, ...d.data() };
+              let head = data.headPersonnelId || '';
+              let exec = data.supervisingExecutiveId || '';
+              let changed = false;
+              if (head.startsWith('pers-') && (head === 'pers-1' || head === 'pers-3' || head === 'pers-4' || head === 'pers-5' || head === 'pers-6' || head === 'pers-11')) {
+                head = '';
+                changed = true;
+              }
+              if (exec.startsWith('exec-') && (exec === 'exec-1' || exec === 'exec-2' || exec === 'exec-3' || exec === 'exec-4')) {
+                exec = '';
+                changed = true;
+              }
+              if (changed && isFirebaseConfigured && db) {
+                setDoc(doc(db, 'departments', d.id), { ...data, headPersonnelId: head, supervisingExecutiveId: exec }, { merge: true }).catch(() => {});
+              }
+              return { ...data, headPersonnelId: head, supervisingExecutiveId: exec };
+            });
             localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
             notifyDepartmentSubscribers(list);
           } else {
@@ -326,7 +469,7 @@ export function sortExecutives(list) {
  */
 export function subscribeExecutiveList(callback) {
   if (typeof window === 'undefined') {
-    callback(sortExecutives(INITIAL_EXECUTIVES));
+    callback([]);
     return () => {};
   }
 
@@ -340,7 +483,13 @@ export function subscribeExecutiveList(callback) {
         (snapshot) => {
           if (!snapshot.empty) {
             const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-            const list = sortExecutives(rawList);
+            const list = sortExecutives(rawList.filter((ex) => !isDummyExecutive(ex)));
+            // Asynchronously delete any legacy dummy executives from Firestore
+            rawList.forEach((ex) => {
+              if (isDummyExecutive(ex) && ex.id) {
+                deleteDoc(doc(db, 'executives', ex.id)).catch(() => {});
+              }
+            });
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
             notifyExecutiveSubscribers(list);
           } else {
@@ -351,7 +500,7 @@ export function subscribeExecutiveList(callback) {
         (error) => {
           console.warn('Firestore executive snapshot error', error);
           initLocalStorage();
-          const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+          const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]').filter((ex) => !isDummyExecutive(ex)));
           callback(list);
         }
       );
@@ -361,7 +510,7 @@ export function subscribeExecutiveList(callback) {
   }
 
   initLocalStorage();
-  const cachedList = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+  const cachedList = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]').filter((ex) => !isDummyExecutive(ex)));
   callback(cachedList);
 
   const handleStorageChange = () => {
@@ -1037,13 +1186,15 @@ export async function archiveOldLeaves(cutoffYear) {
  */
 
 export async function getPersonnelList() {
-  if (typeof window === 'undefined') return INITIAL_PERSONNEL;
+  if (typeof window === 'undefined') return [];
 
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDocs(collection(db, 'personnel'));
       if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        return snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((p) => !isDummyPersonnel(p));
       }
     } catch (e) {
       console.warn('Firestore fetch failed', e);
@@ -1052,7 +1203,8 @@ export async function getPersonnelList() {
 
   initLocalStorage();
   const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
-  return raw ? JSON.parse(raw) : INITIAL_PERSONNEL;
+  const parsed = raw ? JSON.parse(raw) : [];
+  return Array.isArray(parsed) ? parsed.filter((p) => !isDummyPersonnel(p)) : [];
 }
 
 export async function getDepartmentList() {
@@ -1075,13 +1227,17 @@ export async function getDepartmentList() {
 }
 
 export async function getExecutiveList() {
-  if (typeof window === 'undefined') return INITIAL_EXECUTIVES;
+  if (typeof window === 'undefined') return [];
 
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDocs(collection(db, 'executives'));
       if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        return sortExecutives(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((ex) => !isDummyExecutive(ex))
+        );
       }
     } catch (e) {
       console.warn('Firestore getExecutiveList failed', e);
@@ -1090,7 +1246,8 @@ export async function getExecutiveList() {
 
   initLocalStorage();
   const raw = localStorage.getItem(LOCAL_KEY_EXECS);
-  return raw ? JSON.parse(raw) : INITIAL_EXECUTIVES;
+  const parsed = raw ? JSON.parse(raw) : [];
+  return sortExecutives(Array.isArray(parsed) ? parsed.filter((ex) => !isDummyExecutive(ex)) : []);
 }
 
 export async function getLeaveList() {
@@ -1177,19 +1334,9 @@ export async function syncAllSeedDataToFirestore() {
   }
 
   try {
-    // 1. Sync Personnel
-    for (const p of INITIAL_PERSONNEL) {
-      await setDoc(doc(db, 'personnel', p.id), p, { merge: true });
-    }
-
-    // 2. Sync 6 Departments
+    // Sync 6 Clean Departments
     for (const d of INITIAL_DEPARTMENTS) {
       await setDoc(doc(db, 'departments', d.id), d, { merge: true });
-    }
-
-    // 3. Sync Executives
-    for (const ex of INITIAL_EXECUTIVES) {
-      await setDoc(doc(db, 'executives', ex.id), ex, { merge: true });
     }
 
     return true;
@@ -1284,12 +1431,12 @@ export async function clearAllExecutivesData() {
  */
 export function resetLocalSeedData() {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(INITIAL_PERSONNEL));
+  localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify([]));
   localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(INITIAL_DEPARTMENTS));
-  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(INITIAL_EXECUTIVES));
-  notifyPersonnelSubscribers(INITIAL_PERSONNEL);
+  localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify([]));
+  notifyPersonnelSubscribers([]);
   notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
-  notifyExecutiveSubscribers(INITIAL_EXECUTIVES);
+  notifyExecutiveSubscribers([]);
 }
 
 /**
