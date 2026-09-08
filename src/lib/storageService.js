@@ -38,6 +38,23 @@ const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'attendance', 'leave', 'knowledge', 'survey'];
 const LOCAL_KEY_PORTAL_SERVICES = 'icit_portal_services_order';
 
+/**
+ * Helper: Check if a leave record is sample / dummy data
+ */
+export function isDummyLeaveRecord(l) {
+  if (!l) return true;
+  const id = String(l.id || '');
+  if (id.startsWith('leave-sample') || id.startsWith('sample-')) return true;
+  const name = String(l.personnelName || '').trim();
+  if (name === 'สมใจ รักดี' || name === 'เอกชัย พงษ์ศิริ' || name === 'นารีรัตน์ สุวรรณโชติ' || name === 'นางสาวจารุชา เจือทอง') {
+    const pId = String(l.personnelId || '');
+    if (pId.startsWith('pers-2') || pId.startsWith('pers-3') || pId.startsWith('pers-4') || pId.startsWith('pers-8') || pId.startsWith('pers-sample')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Helper: Ensure local storage has seed data
 function initLocalStorage() {
   if (typeof window === 'undefined') return;
@@ -52,7 +69,18 @@ function initLocalStorage() {
     localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(INITIAL_EXECUTIVES));
   }
   if (!localStorage.getItem(LOCAL_KEY_LEAVES)) {
-    localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(INITIAL_LEAVES));
+    localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify([]));
+  } else {
+    // Purge any legacy dummy sample leaves from existing local storage
+    try {
+      const storedLeaves = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+      const cleaned = storedLeaves.filter((l) => !isDummyLeaveRecord(l));
+      if (cleaned.length !== storedLeaves.length) {
+        localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(cleaned));
+      }
+    } catch (e) {
+      console.warn('Error purging dummy leaves from localStorage', e);
+    }
   }
   if (!localStorage.getItem(LOCAL_KEY_TIME_ATTENDANCES)) {
     localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(INITIAL_TIME_ATTENDANCES));
@@ -328,13 +356,20 @@ export function subscribeExecutiveList(callback) {
 function mergeLeavesIntoLocalStorage(fetchedDocs, year) {
   if (typeof window === 'undefined') return [];
   initLocalStorage();
-  const existing = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  const existing = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]').filter((l) => !isDummyLeaveRecord(l));
   
   const map = new Map();
   // Keep all existing leaves from cache
   existing.forEach((item) => map.set(item.id, item));
-  // Overwrite or insert fetched docs
-  fetchedDocs.forEach((item) => map.set(item.id, item));
+  // Overwrite or insert fetched docs that are not dummy
+  fetchedDocs.forEach((item) => {
+    if (!isDummyLeaveRecord(item)) {
+      map.set(item.id, item);
+    } else if (isFirebaseConfigured && db) {
+      // Asynchronously clean dummy sample from Firestore
+      deleteDoc(doc(db, 'leaves', item.id)).catch(() => {});
+    }
+  });
 
   const merged = Array.from(map.values());
   localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(merged));
@@ -346,9 +381,11 @@ function mergeLeavesIntoLocalStorage(fetchedDocs, year) {
  * Helper: Filter a list of leaves by calendar year
  */
 function filterLeavesByYear(list, year) {
-  if (!year) return list;
+  if (!Array.isArray(list)) return [];
+  const cleanList = list.filter((l) => !isDummyLeaveRecord(l));
+  if (!year) return cleanList;
   const yStr = year.toString();
-  return list.filter((l) => {
+  return cleanList.filter((l) => {
     return (l.startDate && l.startDate.startsWith(yStr)) || (l.endDate && l.endDate.startsWith(yStr));
   });
 }
@@ -1147,6 +1184,35 @@ export async function clearAllPersonnelData(keepEmail = '') {
       }
     } catch (e) {
       console.error('Failed to clear personnel in Firestore', e);
+    }
+  }
+
+  // Also clean all dummy leaves
+  await clearAllDummyLeavesData();
+}
+
+/**
+ * Clear all dummy leave records from localStorage and Firestore
+ */
+export async function clearAllDummyLeavesData() {
+  if (typeof window !== 'undefined') {
+    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+    const filtered = list.filter((l) => !isDummyLeaveRecord(l));
+    localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(filtered));
+    notifyLeaveSubscribers(filtered);
+  }
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'leaves'));
+      for (const d of snap.docs) {
+        const data = { id: d.id, ...d.data() };
+        if (isDummyLeaveRecord(data)) {
+          await deleteDoc(doc(db, 'leaves', d.id));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to clear dummy leaves in Firestore', e);
     }
   }
 }

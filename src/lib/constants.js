@@ -52,6 +52,7 @@ export const USER_ROLES = {
 // 7. ตัวเลือกประเภทการลา (Leave Types)
 export const LEAVE_TYPES = [
   'ขาด',
+  'สาย',
   'ลาป่วย',
   'ลากิจ',
   'ลาพักผ่อน',

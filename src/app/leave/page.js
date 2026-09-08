@@ -12,10 +12,12 @@ import {
   refreshLeaveList,
   getLastLeaveSyncTime,
   archiveOldLeaves,
+  isDummyLeaveRecord,
 } from '@/lib/storageService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
 import LeaveCalendar from '@/components/LeaveCalendar';
 import LeaveModal from '@/components/LeaveModal';
+import LeaveReportModal from '@/components/LeaveReportModal';
 import {
   Calendar,
   Clock,
@@ -33,14 +35,25 @@ import {
   RefreshCw,
   CheckCircle2,
   Archive,
+  FileText,
 } from 'lucide-react';
 
 export default function LeavePage() {
   const { currentPersonnel, isAdmin, handleGoogleSignIn, isLoading: isAuthLoading } = useAuth();
 
+  // Role permissions for Leave Report
+  const isHrStaff = currentPersonnel?.position === 'บุคลากร' || isAdmin;
+  const isExecutive =
+    currentPersonnel?.position?.includes('ผู้บริหาร') ||
+    currentPersonnel?.position?.includes('ผู้อำนวยการ') ||
+    currentPersonnel?.position?.includes('รองผู้อำนวยการ') ||
+    isAdmin;
+  const canCreateReport = isExecutive || isHrStaff;
+
   const [leaves, setLeaves] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [editingLeave, setEditingLeave] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -53,7 +66,7 @@ export default function LeavePage() {
   useEffect(() => {
     const unsubLeaves = subscribeLeaveList(
       (list) => {
-        setLeaves(list || []);
+        setLeaves((list || []).filter((l) => !isDummyLeaveRecord(l)));
         setLastSyncTime(getLastLeaveSyncTime());
       },
       { year: selectedYear, enableRealtime: isAdmin }
@@ -149,7 +162,7 @@ export default function LeavePage() {
     setIsRefreshing(true);
     try {
       const fresh = await refreshLeaveList(selectedYear);
-      setLeaves(fresh || []);
+      setLeaves((fresh || []).filter((l) => !isDummyLeaveRecord(l)));
       setLastSyncTime(getLastLeaveSyncTime());
     } finally {
       setIsRefreshing(false);
@@ -299,6 +312,30 @@ export default function LeavePage() {
             <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
             <span>{isRefreshing ? 'กำลังโหลด...' : formattedSyncTime ? `แคช: ${formattedSyncTime}` : 'รีเฟรช'}</span>
           </button>
+
+          {/* Executive & HR Staff: Create Leave Report PDF */}
+          {canCreateReport && (
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              title="ออกรายงานสรุปสถิติและประวัติการลาเป็น PDF (สำหรับผู้บริหารและเจ้าหน้าที่บุคลากร)"
+              style={{
+                padding: '0.6rem 0.95rem',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                color: '#4338CA',
+                borderColor: '#C7D2FE',
+                fontWeight: 700,
+                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.12)',
+              }}
+            >
+              <FileText size={15} color="#4F46E5" />
+              <span>ออกรายงานสรุป (PDF)</span>
+            </button>
+          )}
 
           {isAdmin && (
             <>
@@ -532,6 +569,8 @@ export default function LeavePage() {
       <LeaveCalendar
         leaves={leaves}
         isAdmin={isAdmin}
+        canCreateReport={canCreateReport}
+        onOpenReport={() => setIsReportModalOpen(true)}
         onEditLeave={handleOpenEditModal}
         onDeleteLeave={handleDeleteLeave}
         onYearChange={setSelectedYear}
@@ -545,6 +584,17 @@ export default function LeavePage() {
           onSave={handleSaveLeave}
           leaveToEdit={editingLeave}
           personnelList={personnelList}
+        />
+      )}
+
+      {/* Modal for Generating and Previewing Leave Summary Report PDF */}
+      {isReportModalOpen && (
+        <LeaveReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          leaves={leaves}
+          personnelList={personnelList}
+          currentPersonnel={currentPersonnel}
         />
       )}
     </div>

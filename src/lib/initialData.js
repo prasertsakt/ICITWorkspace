@@ -323,47 +323,8 @@ export const INITIAL_DEPARTMENTS = [
   },
 ];
 
-export const INITIAL_LEAVES = [
-  {
-    id: 'leave-sample-1',
-    personnelId: 'pers-2',
-    personnelName: 'สมใจ รักดี',
-    department: 'ฝ่ายพัฒนาระบบสารสนเทศ',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    leaveType: 'ลาพักผ่อน',
-    startDate: '2026-09-07',
-    endDate: '2026-09-09',
-    totalDays: 3,
-    reason: 'พักผ่อนประจำปีกับครอบครัว',
-    createdAt: '2026-09-01T08:00:00.000Z',
-  },
-  {
-    id: 'leave-sample-2',
-    personnelId: 'pers-3',
-    personnelName: 'เอกชัย พงษ์ศิริ',
-    department: 'ฝ่ายวิศวกรรมระบบเครือข่าย',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    leaveType: 'ลากิจ',
-    startDate: '2026-09-07',
-    endDate: '2026-09-07',
-    totalDays: 1,
-    reason: 'ติดต่อหน่วยงานราชการเพื่อทำธุรกรรม',
-    createdAt: '2026-09-06T09:00:00.000Z',
-  },
-  {
-    id: 'leave-sample-3',
-    personnelId: 'pers-4',
-    personnelName: 'นารีรัตน์ สุวรรณโชติ',
-    department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    leaveType: 'ลาป่วย',
-    startDate: '2026-09-15',
-    endDate: '2026-09-16',
-    totalDays: 2,
-    reason: 'พบแพทย์ตามนัดและพักฟื้น',
-    createdAt: '2026-09-07T08:00:00.000Z',
-  },
-];
+// Initial leaves data is now empty so no dummy leaves are seeded
+export const INITIAL_LEAVES = [];
 
 // Seed data for ระบบใบลงเวลา (Time Attendance Requests)
 export const INITIAL_TIME_ATTENDANCES = [

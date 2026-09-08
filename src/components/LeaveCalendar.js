@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { isDummyLeaveRecord } from '@/lib/storageService';
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,10 @@ import {
   X,
   Sparkles,
   Info,
+  Check,
+  ChevronDown,
+  RotateCcw,
+  FileText,
 } from 'lucide-react';
 
 const THAI_MONTHS = [
@@ -38,13 +43,17 @@ const WEEKDAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
 export default function LeaveCalendar({
   leaves = [],
   isAdmin = false,
+  canCreateReport = false,
+  onOpenReport,
   onEditLeave,
   onDeleteLeave,
   onYearChange,
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filterDept, setFilterDept] = useState('ALL');
-  const [filterType, setFilterType] = useState('ALL');
+  const [selectedTypes, setSelectedTypes] = useState([]); // [] means ALL types
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  const typeDropdownRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected date or leave for detailed inspection
@@ -55,8 +64,19 @@ export default function LeaveCalendar({
   const month = currentDate.getMonth(); // 0 - 11
   const thaiYear = year + 543;
 
+  // Close type dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target)) {
+        setIsTypeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Notify parent component about current active year
-  React.useEffect(() => {
+  useEffect(() => {
     if (onYearChange) {
       onYearChange(year);
     }
@@ -75,11 +95,41 @@ export default function LeaveCalendar({
     setCurrentDate(new Date());
   };
 
+  // Toggle single type in multi-select
+  const handleToggleType = (type) => {
+    setSelectedTypes((prev) => {
+      if (prev.includes(type)) {
+        return prev.filter((t) => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
+
+  // Toggle legend chip
+  const handleToggleChip = (type) => {
+    setSelectedTypes((prev) => {
+      if (prev.length === 0) {
+        // From all to just this type
+        return [type];
+      }
+      if (prev.includes(type)) {
+        const next = prev.filter((t) => t !== type);
+        return next;
+      }
+      return [...prev, type];
+    });
+  };
+
   // Filter leaves based on user selections
   const filteredLeaves = useMemo(() => {
     return leaves.filter((item) => {
+      if (isDummyLeaveRecord(item)) return false;
       const matchDept = filterDept === 'ALL' || item.department === filterDept;
-      const matchType = filterType === 'ALL' || item.leaveType === filterType;
+      const matchType =
+        selectedTypes.length === 0 ||
+        selectedTypes.length === LEAVE_TYPES.length ||
+        selectedTypes.includes(item.leaveType);
       const matchSearch =
         searchQuery === '' ||
         item.personnelName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,7 +137,7 @@ export default function LeaveCalendar({
         item.reason?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchDept && matchType && matchSearch;
     });
-  }, [leaves, filterDept, filterType, searchQuery]);
+  }, [leaves, filterDept, selectedTypes, searchQuery]);
 
   // Calendar Grid Calculation
   const calendarDays = useMemo(() => {
@@ -272,20 +322,190 @@ export default function LeaveCalendar({
             ))}
           </select>
 
-          {/* Leave Type Filter */}
-          <select
-            className="form-input"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            style={{ width: '150px', fontSize: '0.785rem', height: '36px' }}
-          >
-            <option value="ALL">📋 ทุกประเภทการลา</option>
-            {LEAVE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+          {/* Multi-Select Leave Type Filter (Enum-style) */}
+          <div style={{ position: 'relative' }} ref={typeDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+              className="form-input"
+              style={{
+                width: '185px',
+                fontSize: '0.785rem',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 0.65rem',
+                cursor: 'pointer',
+                background: selectedTypes.length > 0 ? 'var(--primary-50)' : 'var(--bg-card)',
+                borderColor: selectedTypes.length > 0 ? 'var(--primary-300)' : 'var(--border-subtle)',
+                color: selectedTypes.length > 0 ? 'var(--primary-700)' : 'var(--text-primary)',
+                fontWeight: selectedTypes.length > 0 ? 600 : 400,
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedTypes.length === 0 || selectedTypes.length === LEAVE_TYPES.length
+                  ? '📋 ทุกประเภทการลา'
+                  : selectedTypes.length === 1
+                  ? `📋 ${selectedTypes[0]}`
+                  : `📋 เลือก ${selectedTypes.length} ประเภท`}
+              </span>
+              <ChevronDown size={14} style={{ flexShrink: 0, marginLeft: '4px', opacity: 0.7 }} />
+            </button>
+
+            {/* Multi-Select Popover Menu */}
+            {isTypeDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '4px',
+                  width: '240px',
+                  background: 'var(--bg-card, #ffffff)',
+                  border: '1px solid var(--border-subtle, #e2e8f0)',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.12)',
+                  zIndex: 50,
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                {/* Popover Header Actions */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '2px 6px 6px',
+                    borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>ประเภทการลา (Enum)</span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTypes([...LEAVE_TYPES])}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary-600)',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        padding: 0,
+                      }}
+                    >
+                      เลือกทั้งหมด
+                    </button>
+                    <span style={{ color: '#cbd5e1' }}>|</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTypes([])}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        fontSize: '0.7rem',
+                        padding: 0,
+                      }}
+                    >
+                      ล้างค่า
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option List */}
+                <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {LEAVE_TYPES.map((type) => {
+                    const conf = LEAVE_TYPE_CONFIG[type] || {};
+                    const isChecked = selectedTypes.includes(type);
+                    return (
+                      <label
+                        key={type}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleToggleType(type);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          background: isChecked ? 'var(--primary-50, #eef2ff)' : 'transparent',
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          style={{ cursor: 'pointer', accentColor: 'var(--primary-600)' }}
+                        />
+                        <span
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: conf.pillBg || '#6366F1',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{ flex: 1, fontWeight: isChecked ? 600 : 400, color: 'var(--text-primary)' }}>
+                          {type}
+                        </span>
+                        {conf.label && (
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: conf.bg,
+                              color: conf.color,
+                            }}
+                          >
+                            {conf.label}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {canCreateReport && onOpenReport && (
+            <button
+              type="button"
+              onClick={onOpenReport}
+              className="btn btn-secondary btn-sm"
+              title="ออกรายงานสรุปสถิติวันลา PDF"
+              style={{
+                height: '36px',
+                padding: '0 0.85rem',
+                fontSize: '0.785rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'var(--primary-700)',
+                background: 'var(--primary-50)',
+                border: '1px solid var(--primary-200)',
+                fontWeight: 600,
+              }}
+            >
+              <FileText size={14} color="var(--primary-600)" />
+              <span>รายงาน PDF</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -295,7 +515,7 @@ export default function LeaveCalendar({
           display: 'flex',
           flexWrap: 'wrap',
           gap: '0.4rem',
-          padding: '0.75rem 1rem',
+          padding: '0.65rem 1rem',
           background: 'var(--bg-card-subtle)',
           borderRadius: 'var(--radius-md)',
           marginBottom: '1rem',
@@ -304,30 +524,37 @@ export default function LeaveCalendar({
         }}
       >
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          สัญลักษณ์สี:
+          สัญลักษณ์สี (คลิกเพื่อกรอง):
         </span>
         {LEAVE_TYPES.map((type) => {
           const conf = LEAVE_TYPE_CONFIG[type] || {};
-          const isFiltering = filterType === type;
+          const isSelected = selectedTypes.includes(type);
+          const hasFilter = selectedTypes.length > 0;
           return (
             <button
               key={type}
-              onClick={() => setFilterType(isFiltering ? 'ALL' : type)}
+              type="button"
+              onClick={() => handleToggleChip(type)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
                 fontSize: '0.725rem',
-                padding: '0.2rem 0.55rem',
+                padding: '0.2rem 0.6rem',
                 borderRadius: '12px',
                 background: conf.bg || '#F1F5F9',
                 color: conf.color || '#334155',
-                border: isFiltering ? `2px solid ${conf.pillBg || '#6366F1'}` : `1px solid ${conf.border || 'transparent'}`,
+                border: isSelected
+                  ? `2px solid ${conf.pillBg || '#6366F1'}`
+                  : `1px solid ${conf.border || 'transparent'}`,
                 cursor: 'pointer',
-                fontWeight: isFiltering ? 700 : 500,
+                fontWeight: isSelected ? 700 : 500,
+                opacity: hasFilter && !isSelected ? 0.45 : 1,
+                transform: isSelected ? 'scale(1.04)' : 'none',
+                boxShadow: isSelected ? '0 2px 6px rgba(0, 0, 0, 0.08)' : 'none',
                 transition: 'all 0.15s ease',
               }}
-              title={`คลิกเพื่อกรองเฉพาะ ${type}`}
+              title={isSelected ? `คลิกเพื่อยกเลิกการเลือก ${type}` : `คลิกเพื่อเลือก ${type}`}
             >
               <span
                 style={{
@@ -338,9 +565,31 @@ export default function LeaveCalendar({
                 }}
               />
               <span>{type}</span>
+              {isSelected && <Check size={11} strokeWidth={3} />}
             </button>
           );
         })}
+
+        {selectedTypes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedTypes([])}
+            className="btn btn-ghost btn-xs"
+            style={{
+              fontSize: '0.7rem',
+              color: 'var(--rose-600, #e11d48)',
+              fontWeight: 600,
+              padding: '0.15rem 0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginLeft: 'auto',
+            }}
+          >
+            <RotateCcw size={11} />
+            <span>แสดงทั้งหมด</span>
+          </button>
+        )}
       </div>
 
       {/* Calendar Grid Table */}
