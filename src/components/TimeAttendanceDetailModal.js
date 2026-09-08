@@ -179,17 +179,6 @@ export default function TimeAttendanceDetailModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => onOpenEmailPreview(record)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
-              title="ดูตัวอย่างอีเมลและลิงก์ 1-Click Action"
-            >
-              <Mail size={15} color="var(--primary-600)" />
-              <span>ตัวอย่างอีเมล</span>
-            </button>
-
             <button onClick={onClose} className="btn btn-ghost btn-icon" type="button">
               <X size={20} />
             </button>
@@ -291,7 +280,7 @@ export default function TimeAttendanceDetailModal({
                     ระบบแจ้งเตือนทางอีเมล: {stepRecipient?.name || 'ผู้มีอำนาจอนุมัติ'} ({stepRecipient?.email || '-'})
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
-                    &check; มีปุ่ม 1-Click Action อนุมัติ/รับรองได้ทันทีผ่านอีเมล
+                    ✓ มีปุ่ม 1-Click Action อนุมัติ/รับรองได้ทันทีผ่านอีเมล
                   </div>
                 </div>
               </div>
