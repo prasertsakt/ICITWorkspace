@@ -7,7 +7,11 @@ import {
   INITIAL_LEAVES,
   INITIAL_TIME_ATTENDANCES,
 } from './initialData';
-import { sendTimeAttendanceNotification, validateApprovalToken } from './emailNotificationService';
+import {
+  sendTimeAttendanceNotification,
+  validateApprovalToken,
+  getNotificationRecipientForStep,
+} from './emailNotificationService';
 import {
   collection,
   doc,
@@ -1256,10 +1260,18 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
   const isNew = !record.id;
   const id = record.id || `ta-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
+  // Automatically detect HR officer: ดึงจาก email ของ เจ้าหน้าที่ตำแหน่งบุคลากร
+  const allPersonnel = await getPersonnelList();
+  const hrOfficer = getNotificationRecipientForStep(record, 'HR_REVIEW', allPersonnel);
+
   const nowIso = new Date().toISOString();
   const fullRecord = {
     ...record,
     id,
+    hrOfficerId: record.hrOfficerId || hrOfficer?.id || '',
+    hrOfficerName: record.hrOfficerName || hrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
+    hrOfficerEmail: record.hrOfficerEmail || hrOfficer?.email || '',
+    hrEmail: record.hrEmail || record.hrOfficerEmail || hrOfficer?.email || '',
     currentStep: record.currentStep || 'HR_REVIEW',
     statusHr: record.statusHr || 'รอตรวจสอบ',
     commentHr: record.commentHr || '',
@@ -1306,20 +1318,19 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
   }
 
   // Trigger initial email notification to HR officer if new request
+  let notifiedRecipient = null;
+  let emailDispatchResult = null;
   if (isNew) {
     try {
-      const allPersonnel = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
-      const hrPerson = allPersonnel.find((p) => p.position === 'บุคลากร' && p.status === 'ปกติ') || {
-        name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-        email: 'hr@icit.org',
-      };
-      await sendTimeAttendanceNotification(fullRecord, 'HR_REVIEW', hrPerson);
+      const allPersonnel = await getPersonnelList();
+      notifiedRecipient = getNotificationRecipientForStep(fullRecord, 'HR_REVIEW', allPersonnel);
+      emailDispatchResult = await sendTimeAttendanceNotification(fullRecord, 'HR_REVIEW', notifiedRecipient);
     } catch (err) {
       console.warn('Initial email dispatch error', err);
     }
   }
 
-  return fullRecord;
+  return { ...fullRecord, _notifiedRecipient: notifiedRecipient, _emailDispatchResult: emailDispatchResult };
 }
 
 /**
@@ -1441,29 +1452,8 @@ export async function updateTimeAttendanceApproval(
 
   // Dispatch Email Notification to next actor
   try {
-    const allPersonnel = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
-    if (nextStep === 'WITNESS_CONFIRM') {
-      nextRecipient = allPersonnel.find((p) => p.id === rec.witnessId) || {
-        name: rec.witnessName,
-        email: rec.witnessEmail,
-      };
-    } else if (nextStep === 'DEPT_HEAD_APPROVE') {
-      nextRecipient = allPersonnel.find((p) => p.id === rec.departmentHeadId) || {
-        name: rec.departmentHeadName,
-        email: rec.departmentHeadEmail,
-      };
-    } else if (nextStep === 'DEPUTY_APPROVE') {
-      nextRecipient = allPersonnel.find((p) => p.id === rec.deputyDirectorId) || {
-        name: rec.deputyDirectorName,
-        email: rec.deputyDirectorEmail,
-      };
-    } else if (nextStep === 'COMPLETED' || nextStep === 'REJECTED') {
-      nextRecipient = allPersonnel.find((p) => p.id === rec.requesterId) || {
-        name: rec.requesterName,
-        email: rec.requesterEmail,
-      };
-    }
-
+    const allPersonnel = await getPersonnelList();
+    const nextRecipient = getNotificationRecipientForStep(rec, nextStep, allPersonnel);
     if (nextRecipient) {
       await sendTimeAttendanceNotification(rec, nextStep, nextRecipient);
     }
@@ -1477,7 +1467,7 @@ export async function updateTimeAttendanceApproval(
 /**
  * 1-Click Action Executor (from Email link)
  */
-export async function executeOneClickApproval(actionId, step, decision, token, actorPersonnel) {
+export async function executeOneClickApproval(actionId, step, decision, token, actorPersonnel, comment = '') {
   if (!validateApprovalToken(token, actionId, step)) {
     throw new Error('รหัสยืนยัน (Token) ในลิงก์ไม่ถูกต้องหรือหมดอายุ');
   }
@@ -1489,13 +1479,82 @@ export async function executeOneClickApproval(actionId, step, decision, token, a
     throw new Error(`คำขอนี้ไม่อยู่ในขั้นตอนที่ระบุแล้ว (สถานะปัจจุบัน: ${record.currentStep})`);
   }
 
+  const finalComment = comment && comment.trim()
+    ? comment.trim()
+    : 'ดำเนินการผ่านลิงก์ยืนยันในอีเมล (1-Click Action)';
+
   return await updateTimeAttendanceApproval(
     actionId,
     step,
     decision,
-    'ดำเนินการผ่านลิงก์ยืนยันในอีเมล (1-Click Action)',
+    finalComment,
     actorPersonnel || { name: 'ผู้ดำเนินการผ่านอีเมล' }
   );
+}
+
+/**
+ * Cancel Time Attendance Request (by requester before finished by Deputy Director)
+ */
+export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel) {
+  initLocalStorage();
+  const list = getTimeAttendanceList();
+  const idx = list.findIndex((item) => item.id === id);
+  if (idx === -1) {
+    throw new Error('ไม่พบข้อมูลคำขอใบลงเวลาในระบบ');
+  }
+
+  const rec = { ...list[idx] };
+
+  // Rule: can be cancelled by requester but only if it has not yet been finished สมบูรณ์ by รองผู้อำนวยการฝ่ายบริหาร
+  if (rec.currentStep === 'COMPLETED' || rec.statusDeputy === 'อนุมัติ') {
+    throw new Error('ไม่สามารถยกเลิกคำขอนี้ได้ เนื่องจากได้รับการอนุมัติสมบูรณ์โดยรองผู้อำนวยการฝ่ายบริหารแล้ว');
+  }
+
+  if (rec.currentStep === 'CANCELLED') {
+    throw new Error('คำขอนี้ถูกยกเลิกไปแล้ว');
+  }
+
+  const nowIso = new Date().toISOString();
+  const actorName = actorPersonnel?.name || 'ผู้ยื่นคำขอ';
+  const actorEmail = actorPersonnel?.email || '';
+
+  rec.currentStep = 'CANCELLED';
+  rec.finalStatus = 'ยกเลิกโดยผู้ยื่นคำขอ';
+  rec.cancelledAt = nowIso;
+  rec.cancelledByName = actorName;
+  rec.cancelledByEmail = actorEmail;
+  rec.cancelReason = reason || 'ผู้ยื่นขอยกเลิกคำขอ';
+
+  // Activity Log
+  const activityItem = {
+    step: 'CANCELLED',
+    actorName,
+    actorEmail,
+    action: 'ยกเลิกคำขอลงเวลา',
+    comment: reason || 'ผู้ยื่นขอยกเลิกคำขอ',
+    timestamp: nowIso,
+  };
+
+  rec.activityLog = [...(rec.activityLog || []), activityItem];
+  rec.updatedAt = nowIso;
+
+  // Optimistic update
+  list[idx] = rec;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
+  }
+  notifyTimeAttendanceSubscribers(list);
+
+  // Firestore sync
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'time_attendances', id), rec, { merge: true });
+    } catch (e) {
+      console.error('Failed to update cancelled time attendance in Firestore', e);
+    }
+  }
+
+  return rec;
 }
 
 /**

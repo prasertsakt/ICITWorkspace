@@ -559,9 +559,11 @@ export default function AdminPage() {
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                           {person.position}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--primary-600)' }}>
-                          {person.level}
-                        </div>
+                        {person.level && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--primary-600)' }}>
+                            {person.level}
+                          </div>
+                        )}
                       </td>
 
                       {/* Personnel Type */}

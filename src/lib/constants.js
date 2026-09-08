@@ -126,6 +126,7 @@ export const TIME_ATTENDANCE_STEPS = {
   DEPUTY_APPROVE: 'DEPUTY_APPROVE',       // 4. รอรอง ผอ.ฝ่ายบริหาร อนุมัติ
   COMPLETED: 'COMPLETED',                 // อนุมัติสมบูรณ์ (จบกระบวนการ)
   REJECTED: 'REJECTED',                   // ไม่อนุมัติ / ไม่ผ่านการตรวจสอบ
+  CANCELLED: 'CANCELLED',                 // ยกเลิกคำขอ (โดยผู้ยื่นคำขอ)
 };
 
 export const TIME_ATTENDANCE_STEP_CONFIG = {
@@ -175,6 +176,14 @@ export const TIME_ATTENDANCE_STEP_CONFIG = {
     bg: '#FEE2E2',
     color: '#B91C1C',
     badgeClass: 'badge-danger',
+    roleRequired: null,
+  },
+  CANCELLED: {
+    label: 'ยกเลิกคำขอ',
+    stepNumber: -1,
+    bg: '#F1F5F9',
+    color: '#64748B',
+    badgeClass: 'badge-resigned',
     roleRequired: null,
   },
 };

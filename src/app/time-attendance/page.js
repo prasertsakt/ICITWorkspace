@@ -12,6 +12,7 @@ import {
   saveTimeAttendanceRecord,
   updateTimeAttendanceApproval,
   executeOneClickApproval,
+  cancelTimeAttendanceRecord,
   deleteTimeAttendanceRecord,
   resetTimeAttendanceSeedData,
 } from '@/lib/storageService';
@@ -51,6 +52,9 @@ import {
   Send,
   SlidersHorizontal,
   LogIn,
+  X,
+  Trash2,
+  Settings,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getNotificationRecipientForStep } from '@/lib/emailNotificationService';
@@ -88,6 +92,7 @@ function TimeAttendanceContent() {
 
   // 1-Click Action modal confirmation
   const [oneClickData, setOneClickData] = useState(null);
+  const [oneClickComment, setOneClickComment] = useState('');
   const [oneClickProcessing, setOneClickProcessing] = useState(false);
   const [notificationBanner, setNotificationBanner] = useState(null);
 
@@ -171,6 +176,7 @@ function TimeAttendanceContent() {
     const decision = searchParams.get('decision');
     const token = searchParams.get('token');
     const viewId = searchParams.get('viewId');
+    const commentFromUrl = searchParams.get('comment') || '';
 
     if (viewId && visibleAttendances.length > 0) {
       const rec = visibleAttendances.find((r) => r.id === viewId);
@@ -178,7 +184,8 @@ function TimeAttendanceContent() {
     }
 
     if (actionId && step && decision && token) {
-      setOneClickData({ actionId, step, decision, token });
+      setOneClickData({ actionId, step, decision, token, comment: commentFromUrl });
+      setOneClickComment(commentFromUrl);
     }
   }, [searchParams, visibleAttendances]);
 
@@ -192,7 +199,8 @@ function TimeAttendanceContent() {
         oneClickData.step,
         oneClickData.decision,
         oneClickData.token,
-        currentPersonnel || { name: 'ผู้ลงนามผ่านอีเมล' }
+        currentPersonnel || { name: 'ผู้ลงนามผ่านอีเมล' },
+        oneClickComment
       );
 
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
@@ -308,15 +316,28 @@ function TimeAttendanceContent() {
   // Handle Save New Request
   const handleSaveNew = async (recordData) => {
     try {
-      await saveTimeAttendanceRecord(recordData, currentPersonnel);
+      const saved = await saveTimeAttendanceRecord(recordData, currentPersonnel);
       try {
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-      } catch {}
+      } catch { }
+
+      const hrEmail = saved?._notifiedRecipient?.email;
+      const dispatchOk = saved?._emailDispatchResult?.success;
+
+      let msg = 'ยื่นคำขอใบลงเวลาเรียบร้อยแล้ว';
+      if (dispatchOk && hrEmail) {
+        msg += ` ส่งอีเมลแจ้งเตือนถึงฝ่ายบุคคล (${hrEmail}) สำเร็จ`;
+      } else if (hrEmail) {
+        msg += ` ส่งแจ้งเตือนถึงฝ่ายบุคคล (${hrEmail})`;
+      } else {
+        msg += ' ส่งแจ้งเตือนไปยังเจ้าหน้าที่ฝ่ายบุคคลเรียบร้อยแล้ว';
+      }
+
       setNotificationBanner({
         type: 'success',
-        text: 'ยื่นคำขอใบลงเวลาเรียบร้อยแล้ว ระบบได้ส่งแจ้งเตือนไปยังเจ้าหน้าที่ฝ่ายบุคคล',
+        text: msg,
       });
-      setTimeout(() => setNotificationBanner(null), 5000);
+      setTimeout(() => setNotificationBanner(null), 6000);
     } catch (err) {
       console.error('Error saving time attendance request:', err);
       setNotificationBanner({
@@ -333,7 +354,7 @@ function TimeAttendanceContent() {
       setViewingRecord(updated);
       try {
         confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-      } catch {}
+      } catch { }
       setNotificationBanner({
         type: 'success',
         text: `บันทึกสถานะการ${decision === 'approve' ? 'อนุมัติ/รับรอง' : 'ไม่อนุมัติ'}เรียบร้อยแล้ว`,
@@ -344,6 +365,27 @@ function TimeAttendanceContent() {
       setNotificationBanner({
         type: 'error',
         text: err.message || 'เกิดข้อผิดพลาดในการบันทึกสถานะการอนุมัติ',
+      });
+    }
+  };
+
+  // Handle Cancel Request by Requester (before finished by Deputy Director)
+  const handleCancelRequest = async (recordId, reason) => {
+    try {
+      const updated = await cancelTimeAttendanceRecord(recordId, reason, currentPersonnel);
+      if (viewingRecord && viewingRecord.id === recordId) {
+        setViewingRecord(updated);
+      }
+      setNotificationBanner({
+        type: 'success',
+        text: 'ยกเลิกคำขอลงเวลาเรียบร้อยแล้ว',
+      });
+      setTimeout(() => setNotificationBanner(null), 5000);
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+      setNotificationBanner({
+        type: 'error',
+        text: err.message || 'เกิดข้อผิดพลาดในการยกเลิกคำขอ',
       });
     }
   };
@@ -410,7 +452,7 @@ function TimeAttendanceContent() {
           </div>
 
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-            ระบบใบลงเวลา
+            ระบบขอลงเวลา
           </h2>
 
           <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>
@@ -524,13 +566,27 @@ function TimeAttendanceContent() {
               ยืนยันการ{oneClickData.decision === 'approve' ? 'อนุมัติ / รับรอง' : 'ไม่อนุมัติ'} ผ่านอีเมล
             </h3>
 
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
               ท่านต้องการยืนยันการ{' '}
               <strong style={{ color: oneClickData.decision === 'approve' ? '#16A34A' : '#DC2626' }}>
                 {oneClickData.decision === 'approve' ? 'อนุมัติ / รับรอง' : 'ไม่อนุมัติ'}
               </strong>{' '}
               สำหรับคำขอนี้หรือไม่?
             </p>
+
+            <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                ความเห็นเพิ่มเติม / บันทึกการตรวจสอบ:
+              </label>
+              <textarea
+                rows={3}
+                className="form-input"
+                placeholder="ระบุความเห็นเพิ่มเติม (ถ้ามี)..."
+                value={oneClickComment}
+                onChange={(e) => setOneClickComment(e.target.value)}
+                style={{ width: '100%', resize: 'vertical', fontSize: '0.9rem' }}
+              />
+            </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button
@@ -655,19 +711,43 @@ function TimeAttendanceContent() {
             )}
 
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('ต้องการรีเซ็ตข้อมูลตัวอย่างใบลงเวลาหรือไม่?')) {
-                    resetTimeAttendanceSeedData();
-                  }
-                }}
-                className="btn btn-secondary btn-sm"
-                title="รีเซ็ตข้อมูลตัวอย่าง"
-              >
-                <RotateCcw size={14} />
-                <span>รีเซ็ตตัวอย่าง</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleRecord = attendances[0] || {
+                      id: 'new-config',
+                      requestType: 'ลงเวลาปฏิบัติราชการ',
+                      requesterName: currentPersonnel?.name || 'ผู้ดูแลระบบ',
+                      requesterEmail: currentPersonnel?.email || 'admin@icit.kmutnb.ac.th',
+                      actionDate: '9/8/2026',
+                      attendanceDate: '9/8/2026',
+                      attendanceTime: '08:30:00 AM',
+                    };
+                    setEmailModalRecord(sampleRecord);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  title="ตั้งค่าระบบอีเมลและการเชื่อมต่อ Google Apps Script"
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                >
+                  <Settings size={14} />
+                  <span>ตั้งค่าระบบอีเมล</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('ต้องการรีเซ็ตข้อมูลตัวอย่างใบลงเวลาหรือไม่?')) {
+                      resetTimeAttendanceSeedData();
+                    }
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  title="รีเซ็ตข้อมูลตัวอย่าง"
+                >
+                  <RotateCcw size={14} />
+                  <span>รีเซ็ตตัวอย่าง</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1187,14 +1267,46 @@ function TimeAttendanceContent() {
                               <span>ดูฟอร์มและกิจกรรม</span>
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => setEmailModalRecord(item)}
-                              className="btn btn-ghost btn-sm btn-icon"
-                              title="ดูตัวอย่างอีเมลและลิงก์ 1-Click"
-                            >
-                              <Mail size={16} color="var(--primary-600)" />
-                            </button>
+                            {/* ปุ่มยกเลิกคำขอ (เฉพาะผู้ยื่น หรือ Admin ก่อนที่รอง ผอ. จะอนุมัติสมบูรณ์) */}
+                            {(() => {
+                              const isItemRequester =
+                                currentPersonnel &&
+                                (currentPersonnel.id === item.requesterId ||
+                                  currentPersonnel.email?.toLowerCase() === item.requesterEmail?.toLowerCase() ||
+                                  isAdmin);
+                              const isFinished = item.currentStep === 'COMPLETED' || item.statusDeputy === 'อนุมัติ';
+                              const isCancelled = item.currentStep === 'CANCELLED';
+
+                              if (isItemRequester && !isFinished && !isCancelled) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const reason = prompt('กรุณาระบุเหตุผลในการยกเลิกคำขอลงเวลา (ถ้ามี):', 'ขอยกเลิกคำขอ');
+                                      if (reason !== null) {
+                                        handleCancelRequest(item.id, reason);
+                                      }
+                                    }}
+                                    className="btn btn-ghost btn-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '0.78rem',
+                                      color: '#DC2626',
+                                      border: '1px solid #FECACA',
+                                      background: '#FEF2F2',
+                                      padding: '0.35rem 0.6rem',
+                                    }}
+                                    title="ยกเลิกคำขอลงเวลานี้ (เฉพาะผู้ยื่นคำขอก่อนรอง ผอ. อนุมัติสมบูรณ์)"
+                                  >
+                                    <XCircle size={13} />
+                                    <span>ยกเลิก</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
 
                             {isAdmin && (
                               <button
@@ -1208,7 +1320,7 @@ function TimeAttendanceContent() {
                                 title="ลบรายการ (Admin)"
                                 style={{ color: '#DC2626' }}
                               >
-                                <X size={16} />
+                                <Trash2 size={16} />
                               </button>
                             )}
                           </div>
@@ -1325,6 +1437,7 @@ function TimeAttendanceContent() {
         personnelList={personnelList}
         isAdmin={isAdmin}
         onApproveStep={handleApproveStep}
+        onCancelRequest={handleCancelRequest}
         onOpenEmailPreview={(rec) => setEmailModalRecord(rec)}
       />
 

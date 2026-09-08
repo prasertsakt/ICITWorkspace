@@ -236,7 +236,7 @@ export default function ProfilePage() {
                   {currentPersonnel.name}
                 </h3>
                 <div style={{ fontSize: '0.95rem', color: '#E0E7FF', fontWeight: 500, margin: '0.25rem 0' }}>
-                  {currentPersonnel.position} ({currentPersonnel.level})
+                  {currentPersonnel.position}{currentPersonnel.level ? ` (${currentPersonnel.level})` : ''}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                   <span
@@ -433,7 +433,7 @@ export default function ProfilePage() {
                 {deptHead ? deptHead.name : 'ยังไม่ได้ระบุ'}
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                {deptHead ? `${deptHead.position} (${deptHead.level})` : '-'}
+                {deptHead ? `${deptHead.position}${deptHead.level ? ` (${deptHead.level})` : ''}` : '-'}
               </p>
             </div>
 
@@ -488,7 +488,7 @@ export default function ProfilePage() {
             <div>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ระดับตำแหน่ง</span>
               <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                {currentPersonnel.level}
+                {currentPersonnel.level || '-'}
               </div>
             </div>
 
@@ -604,7 +604,7 @@ export default function ProfilePage() {
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      {mate.position} ({mate.level})
+                      {mate.position}{mate.level ? ` (${mate.level})` : ''}
                     </p>
                   </div>
                 </div>

@@ -828,7 +828,7 @@ export default function OrganizationPage() {
                       )}
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--primary-600)', fontWeight: 500, margin: 0 }}>
-                      {person.position} ({person.level})
+                      {person.position}{person.level ? ` (${person.level})` : ''}
                     </p>
                   </div>
                 </div>
@@ -943,7 +943,7 @@ export default function OrganizationPage() {
                     {selectedPersonnelDetail.name}
                   </h4>
                   <p style={{ color: 'var(--primary-600)', fontWeight: 600, fontSize: '0.875rem', margin: '0.2rem 0' }}>
-                    {selectedPersonnelDetail.position} ({selectedPersonnelDetail.level})
+                    {selectedPersonnelDetail.position}{selectedPersonnelDetail.level ? ` (${selectedPersonnelDetail.level})` : ''}
                   </p>
                   <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
                     <span

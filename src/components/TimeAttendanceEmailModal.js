@@ -544,6 +544,22 @@ export default function TimeAttendanceEmailModal({
               />
             </div>
 
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                อีเมลฝ่ายบุคคลรับแจ้งเตือน (HR Notification Email)
+              </label>
+              <input
+                type="email"
+                placeholder="tiawongsombat@gmail.com"
+                value={emailConfig.hrEmail || ''}
+                onChange={(e) => setEmailConfig({ ...emailConfig, hrEmail: e.target.value })}
+                className="form-input"
+              />
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>
+                อีเมลเจ้าหน้าที่ฝ่ายบุคคลสำหรับรับแจ้งเตือนใบลงเวลาใหม่และลิงก์ตรวจสอบ 1-Click
+              </small>
+            </div>
+
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <input

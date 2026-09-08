@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { TIME_ATTENDANCE_TYPES } from '@/lib/constants';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
+import { getNotificationRecipientForStep } from '@/lib/emailNotificationService';
 
 export default function TimeAttendanceModal({
   isOpen,
@@ -96,6 +97,24 @@ export default function TimeAttendanceModal({
     return executiveList[1] || personnelList[0] || null;
   }, [executiveList, personnelList]);
 
+  // Auto-find HR Officer: ดึงจาก email ของ เจ้าหน้าที่ตำแหน่งบุคลากร
+  const detectedHrOfficer = useMemo(() => {
+    // 1. Exact match position 'บุคลากร' and status 'ปกติ'
+    const hrPerson = personnelList.find(
+      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ'
+    );
+    if (hrPerson) return hrPerson;
+
+    // 2. Position containing 'บุคลากร'
+    const hrByPos = personnelList.find(
+      (p) => p.position && p.position.includes('บุคลากร') && p.status === 'ปกติ'
+    );
+    if (hrByPos) return hrByPos;
+
+    // 3. Fallback to getNotificationRecipientForStep
+    return getNotificationRecipientForStep({}, 'HR_REVIEW', personnelList);
+  }, [personnelList]);
+
   // List of candidate witnesses (excluding requester)
   const candidateWitnesses = useMemo(() => {
     return personnelList.filter((p) => p.id !== requesterId && p.status === 'ปกติ');
@@ -157,6 +176,10 @@ export default function TimeAttendanceModal({
       actionDate: actionDate || '9/8/2026',
       attendanceDate: displayAttendanceDate,
       attendanceTime: displayTime,
+      hrOfficerId: detectedHrOfficer?.id || '',
+      hrOfficerName: detectedHrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
+      hrOfficerEmail: detectedHrOfficer?.email || '',
+      hrEmail: detectedHrOfficer?.email || '',
       witnessId: witnessPerson?.id || '',
       witnessName: witnessPerson?.name || '',
       witnessEmail: witnessPerson?.email || '',
@@ -523,12 +546,31 @@ export default function TimeAttendanceModal({
               marginBottom: '1.5rem',
               fontSize: '0.8rem',
               color: 'var(--text-secondary)',
+              lineHeight: 1.5,
             }}
           >
             <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-              ℹ️ ขั้นตอนการอนุมัติใบลงเวลา (4 ขั้นตอน):
+              ℹ️ ขั้นตอนการอนุมัติและผู้รับแจ้งเตือน (4 ขั้นตอน):
             </strong>
-            1. เจ้าหน้าที่ฝ่ายบุคคลตรวจสอบและลงความเห็น &rarr; 2. พยานรับรอง &rarr; 3. หัวหน้าฝ่ายอนุมัติ &rarr; 4. รองผู้อำนวยการฝ่ายบริหารอนุมัติ (เสร็จสิ้น)
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div>
+                1. <strong>ฝ่ายบุคคล:</strong> {detectedHrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล'}{' '}
+                <span style={{ color: 'var(--primary-600)' }}>
+                  ({detectedHrOfficer?.email || 'รอระบุอีเมล'})
+                </span>
+              </div>
+              <div>
+                2. <strong>พยานรับรอง:</strong> {witnessPerson?.name || 'พยานที่ระบุ'}{' '}
+                {witnessPerson?.email && <span style={{ color: 'var(--text-muted)' }}>({witnessPerson.email})</span>}
+              </div>
+              <div>
+                3. <strong>หัวหน้าฝ่าย:</strong> {detectedDeptHead?.name || 'หัวหน้าฝ่าย'}{' '}
+                {detectedDeptHead?.email && <span style={{ color: 'var(--text-muted)' }}>({detectedDeptHead.email})</span>}
+              </div>
+              <div>
+                4. <strong>รองผู้อำนวยการฝ่ายบริหาร:</strong> {detectedDeputyDirector?.name || 'รองผู้อำนวยการฝ่ายบริหาร'}
+              </div>
+            </div>
           </div>
 
           {/* Actions */}

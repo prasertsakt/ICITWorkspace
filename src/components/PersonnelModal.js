@@ -50,7 +50,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
     personnelType: PERSONNEL_TYPES[0],
     department: PREDEFINED_DEPARTMENTS[0],
     position: POSITIONS[0],
-    level: POSITION_LEVELS[0],
+    level: '',
     appointmentDate: '',
     retirementDate: '',
     status: PERSONNEL_STATUS.ACTIVE,
@@ -69,7 +69,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
         personnelType: personnelToEdit.personnelType || PERSONNEL_TYPES[0],
         department: personnelToEdit.department || PREDEFINED_DEPARTMENTS[0],
         position: personnelToEdit.position || POSITIONS[0],
-        level: personnelToEdit.level || POSITION_LEVELS[0],
+        level: personnelToEdit.level || '',
         appointmentDate: personnelToEdit.appointmentDate || '',
         retirementDate: personnelToEdit.retirementDate || '',
         status: personnelToEdit.status || PERSONNEL_STATUS.ACTIVE,
@@ -84,7 +84,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
         personnelType: PERSONNEL_TYPES[0],
         department: PREDEFINED_DEPARTMENTS[0],
         position: POSITIONS[0],
-        level: POSITION_LEVELS[0],
+        level: '',
         appointmentDate: '',
         retirementDate: '',
         status: PERSONNEL_STATUS.ACTIVE,
@@ -278,13 +278,14 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
 
               <div className="input-group">
                 <label className="input-label">
-                  ระดับตำแหน่ง <span className="required">*</span>
+                  ระดับตำแหน่ง <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(ไม่บังคับ)</span>
                 </label>
                 <select
                   className="form-select"
-                  value={formData.level}
+                  value={formData.level || ''}
                   onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                 >
+                  <option value="">-- ไม่ระบุระดับตำแหน่ง --</option>
                   {POSITION_LEVELS.map((lvl) => (
                     <option key={lvl} value={lvl}>
                       {lvl}

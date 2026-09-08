@@ -12,7 +12,10 @@ export async function POST(request) {
       );
     }
 
-    const scriptUrl = webhookUrl || process.env.GOOGLE_SCRIPT_EMAIL_URL;
+    const scriptUrl =
+      webhookUrl ||
+      process.env.GOOGLE_SCRIPT_EMAIL_URL ||
+      process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL;
 
     if (scriptUrl) {
       const resp = await fetch(scriptUrl, {
@@ -21,7 +24,13 @@ export async function POST(request) {
         body: JSON.stringify({ to, subject, htmlBody, recordId, step }),
       });
       const data = await resp.json().catch(() => ({ status: 'forwarded' }));
-      return NextResponse.json({ success: true, via: 'google_script', data });
+      const isOk = resp.ok && data.status !== 'error';
+      return NextResponse.json({
+        success: isOk,
+        via: 'google_script',
+        data,
+        message: data.message || (isOk ? 'Email sent successfully' : 'Failed sending email'),
+      });
     }
 
     // Default simulation response when no webhook configured

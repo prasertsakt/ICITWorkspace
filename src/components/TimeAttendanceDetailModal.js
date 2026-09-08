@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Clock,
@@ -37,6 +37,7 @@ export default function TimeAttendanceDetailModal({
   personnelList = [],
   isAdmin = false,
   onApproveStep,
+  onCancelRequest,
   onOpenEmailPreview,
 }) {
   const [activeTab, setActiveTab] = useState('form'); // 'form' | 'activity'
@@ -45,6 +46,19 @@ export default function TimeAttendanceDetailModal({
   const [actionError, setActionError] = useState('');
   const [isResendingMail, setIsResendingMail] = useState(false);
   const [mailSentNotice, setMailSentNotice] = useState('');
+
+  // Cancellation State
+  const [showCancelBox, setShowCancelBox] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+
+  // Reset cancellation box on record change
+  useEffect(() => {
+    setShowCancelBox(false);
+    setCancelReason('');
+    setCancelError('');
+  }, [record?.id]);
 
   const previewImgSrc = useMemo(() => {
     return formatImageDisplayUrl(record?.imageProofUrl);
@@ -86,6 +100,33 @@ export default function TimeAttendanceDetailModal({
     currentPersonnel?.id === record.deputyDirectorId ||
     currentPersonnel?.position?.includes('ผู้บริหาร') ||
     isAdmin;
+
+  // Eligibility to cancel: Requester (or Admin) can cancel only if it has NOT yet been finished สมบูรณ์ by รองผู้อำนวยการฝ่ายบริหาร
+  const isRequester =
+    currentPersonnel &&
+    (currentPersonnel.id === record.requesterId ||
+      currentPersonnel.email?.toLowerCase() === record.requesterEmail?.toLowerCase() ||
+      isAdmin);
+
+  const isFinishedByDeputy = record.currentStep === 'COMPLETED' || record.statusDeputy === 'อนุมัติ';
+  const isAlreadyCancelled = record.currentStep === 'CANCELLED' || record.finalStatus?.includes('ยกเลิก');
+  const canCancel = isRequester && !isFinishedByDeputy && !isAlreadyCancelled;
+
+  const handleConfirmCancel = async () => {
+    setCancelError('');
+    setIsCancelling(true);
+    try {
+      if (onCancelRequest) {
+        await onCancelRequest(record.id, cancelReason.trim());
+      }
+      setShowCancelBox(false);
+      setCancelReason('');
+    } catch (err) {
+      setCancelError(err.message || 'เกิดข้อผิดพลาดในการยกเลิกคำขอ');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   let canTakeAction = false;
   let actionTitle = '';
@@ -368,6 +409,19 @@ export default function TimeAttendanceDetailModal({
                 </span>
               </div>
 
+              {/* เจ้าหน้าที่ฝ่ายบุคคล */}
+              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', alignItems: 'baseline' }}>
+                <span style={{ fontSize: '0.95rem', color: '#475569' }}>เจ้าหน้าที่ฝ่ายบุคคล</span>
+                <span style={{ fontSize: '1rem', color: '#1E293B' }}>
+                  {record.hrOfficerName || 'เจ้าหน้าที่ฝ่ายบุคคล'}
+                  {(record.hrEmail || record.hrOfficerEmail) && (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                      ({record.hrEmail || record.hrOfficerEmail})
+                    </span>
+                  )}
+                </span>
+              </div>
+
               {/* แนบไฟล์ภาพกล้องวงจรปิด (กรณีไม่มีพยาน) */}
               <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '0.95rem', color: '#475569', paddingTop: '4px' }}>
@@ -641,6 +695,146 @@ export default function TimeAttendanceDetailModal({
                     <span>{isProcessing ? 'กำลังบันทึก...' : approveLabel}</span>
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Cancellation info if already CANCELLED */}
+            {record.currentStep === 'CANCELLED' && (
+              <div
+                style={{
+                  padding: '1rem 1.25rem',
+                  background: '#F8FAFC',
+                  border: '1.5px solid #CBD5E1',
+                  borderRadius: 'var(--radius-md)',
+                  marginTop: '1.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', fontWeight: 700 }}>
+                  <XCircle size={18} color="#64748B" />
+                  <span>คำขอนี้ถูกยกเลิกแล้ว</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#64748B', marginTop: '0.35rem' }}>
+                  ยกเลิกโดย: <strong>{record.cancelledByName || record.requesterName}</strong>
+                  {record.cancelledAt && ` เมื่อ ${new Date(record.cancelledAt).toLocaleString('th-TH')}`}
+                </div>
+                {record.cancelReason && (
+                  <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '0.35rem', background: '#F1F5F9', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
+                    <strong>เหตุผลการยกเลิก:</strong> {record.cancelReason}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notice if completed by Deputy Director */}
+            {isFinishedByDeputy && isRequester && (
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '0.85rem 1.25rem',
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.85rem',
+                  color: '#166534',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <CheckCircle2 size={16} color="#16A34A" />
+                <span>คำขอนี้ได้รับการอนุมัติสมบูรณ์โดยรองผู้อำนวยการฝ่ายบริหารแล้ว (สิ้นสุดกระบวนการ ไม่สามารถยกเลิกได้)</span>
+              </div>
+            )}
+
+            {/* Requester Cancellation Action Box */}
+            {canCancel && (
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '1.25rem',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                {!showCancelBox ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <XCircle size={16} />
+                        <span>ยกเลิกคำขอลงเวลา (โดยผู้ยื่นคำขอ)</span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#B91C1C', marginTop: '2px' }}>
+                        สามารถยกเลิกคำขอได้ก่อนที่รองผู้อำนวยการฝ่ายบริหารจะอนุมัติสมบูรณ์
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelBox(true)}
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        color: '#DC2626',
+                        borderColor: '#FCA5A5',
+                        background: '#FFFFFF',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ขอยกเลิกคำขอ
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991B1B', marginBottom: '0.5rem' }}>
+                      ยืนยันการยกเลิกคำขอลงเวลา
+                    </div>
+                    <p style={{ fontSize: '0.82rem', color: '#7F1D1D', marginBottom: '0.75rem' }}>
+                      เมื่อยกเลิกแล้ว กระบวนการพิจารณาอนุมัติจะยุติลงทันที และสถานะคำขอจะเปลี่ยนเป็น <strong>"ยกเลิกคำขอ"</strong>
+                    </p>
+
+                    {cancelError && (
+                      <div style={{ padding: '0.5rem 0.75rem', background: '#FEE2E2', color: '#B91C1C', borderRadius: '6px', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+                        {cancelError}
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
+                        เหตุผลในการยกเลิกคำขอ (ถ้ามี)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="เช่น ระบุเวลาผิดพลาด, ได้รับการแก้ไขแล้ว, ขอยื่นใหม่..."
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        style={{ fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCancelBox(false);
+                          setCancelError('');
+                        }}
+                        disabled={isCancelling}
+                        className="btn btn-secondary btn-sm"
+                      >
+                        ปิด / ไม่ยกเลิก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmCancel}
+                        disabled={isCancelling}
+                        className="btn btn-primary btn-sm"
+                        style={{ background: '#DC2626', borderColor: '#DC2626' }}
+                      >
+                        {isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกคำขอนี้'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

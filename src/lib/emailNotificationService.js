@@ -8,26 +8,48 @@ export const LOCAL_KEY_SENT_EMAILS = 'icit_sent_email_logs';
  * Get configured email webhook or endpoint settings
  */
 export function getEmailConfig() {
+  const envUrl =
+    process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL ||
+    process.env.GOOGLE_SCRIPT_EMAIL_URL ||
+    '';
+  const envHrEmail =
+    process.env.NEXT_PUBLIC_HR_EMAIL ||
+    process.env.HR_EMAIL ||
+    'tiawongsombat@gmail.com';
+
+  const defaults = {
+    googleAppsScriptUrl: envUrl,
+    senderName: 'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)',
+    senderEmail: 'noreply-icit@icit.kmutnb.ac.th',
+    hrEmail: envHrEmail,
+    enableLiveSending: Boolean(envUrl),
+  };
+
   if (typeof window === 'undefined') {
-    return {
-      googleAppsScriptUrl: process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL || '',
-      senderName: 'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)',
-      senderEmail: 'noreply-icit@icit.kmutnb.ac.th',
-      enableLiveSending: false,
-    };
+    return defaults;
   }
+
   try {
     const raw = localStorage.getItem(LOCAL_KEY_EMAIL_CONFIG);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const effectiveScriptUrl = parsed.googleAppsScriptUrl || envUrl;
+      return {
+        googleAppsScriptUrl: effectiveScriptUrl,
+        senderName: parsed.senderName || defaults.senderName,
+        senderEmail: parsed.senderEmail || defaults.senderEmail,
+        hrEmail: parsed.hrEmail || envHrEmail,
+        enableLiveSending:
+          parsed.enableLiveSending !== undefined && parsed.googleAppsScriptUrl
+            ? parsed.enableLiveSending
+            : Boolean(effectiveScriptUrl),
+      };
+    }
   } catch (e) {
     console.error('Failed reading email config', e);
   }
-  return {
-    googleAppsScriptUrl: '',
-    senderName: 'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)',
-    senderEmail: 'noreply-icit@icit.kmutnb.ac.th',
-    enableLiveSending: false,
-  };
+
+  return defaults;
 }
 
 /**
@@ -245,21 +267,62 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       </div>
 
       ${showActionButtons ? `
-      <!-- 1-Click Action Buttons for Immediate Approval in Email -->
-      <div style="background: #FFFFFF; border: 2px dashed #CBD5E1; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
-        <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">
-          ดำเนินการทันทีผ่านอีเมล (1-Click Action)
+      <!-- 1-Click Action with Comment Textbox in Email -->
+      <div style="background: #FFFFFF; border: 2px dashed #CBD5E1; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 4px; text-align: center;">
+          ดำเนินการตรวจสอบและลงความเห็นผ่านอีเมล (1-Click Action)
         </div>
-        <p style="font-size: 12.5px; color: #64748B; margin: 0 0 16px 0;">
-          คลิกปุ่มด้านล่างเพื่ออนุมัติหรือไม่อนุมัติคำขอนี้ทันทีโดยไม่ต้องกรอกรหัสผ่านซ้ำ:
+        <p style="font-size: 12.5px; color: #64748B; margin: 0 0 16px 0; text-align: center;">
+          สามารถพิมพ์ความเห็นในกล่องข้อความ และกดปุ่มเพื่อดำเนินการบันทึกผลได้ทันที:
         </p>
 
-        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-          <a href="${approveUrl}" target="_blank" style="display: inline-block; background-color: #10B981; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
-            &check; ${approveBtnText}
+        <!-- Direct Form with Comment Textbox -->
+        <form action="${baseUrl}/time-attendance" method="GET" target="_blank" style="margin: 0; padding: 0;">
+          <input type="hidden" name="actionId" value="${record.id}" />
+          <input type="hidden" name="step" value="${targetStep}" />
+          <input type="hidden" name="token" value="${token}" />
+
+          <div style="margin-bottom: 14px; text-align: left;">
+            <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">
+              ความเห็นการตรวจสอบ / บันทึกเพิ่มเติม:
+            </label>
+            <textarea
+              name="comment"
+              rows="3"
+              placeholder="พิมพ์ความเห็นการตรวจสอบ เช่น เวลามา-กลับถูกต้อง, ตรวจสอบภาพจากกล้องวงจรปิดแล้ว (ถ้ามี)..."
+              style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 13.5px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-family: inherit; line-height: 1.5; color: #1E293B; background: #F8FAFC;"
+            ></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <button
+              type="submit"
+              name="decision"
+              value="approve"
+              style="cursor: pointer; border: none; background-color: #10B981; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); text-decoration: none;"
+            >
+              &check; ${approveBtnText}
+            </button>
+            <button
+              type="submit"
+              name="decision"
+              value="reject"
+              style="cursor: pointer; border: none; background-color: #EF4444; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); text-decoration: none;"
+            >
+              &cross; ${rejectBtnText}
+            </button>
+          </div>
+        </form>
+
+        <!-- Direct Link Fallback (for email clients restricting HTML forms) -->
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #E2E8F0; text-align: center; font-size: 12px; color: #64748B;">
+          <span>หรือกดดำเนินการแบบด่วน (Quick Links): </span>
+          <a href="${approveUrl}" target="_blank" style="color: #059669; font-weight: 700; text-decoration: underline; margin: 0 4px;">
+            [คลิก ${approveBtnText}]
           </a>
-          <a href="${rejectUrl}" target="_blank" style="display: inline-block; background-color: #EF4444; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">
-            &cross; ${rejectBtnText}
+          <span>&bull;</span>
+          <a href="${rejectUrl}" target="_blank" style="color: #DC2626; font-weight: 700; text-decoration: underline; margin: 0 4px;">
+            [คลิก ${rejectBtnText}]
           </a>
         </div>
       </div>` : ''}
@@ -297,12 +360,43 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
  */
 export function getNotificationRecipientForStep(record, step, allPersonnel = []) {
   if (!record || !step) return null;
+  const config = getEmailConfig();
 
   if (step === 'HR_REVIEW') {
+    // 1. If explicit HR email configured in config or env
+    if (config.hrEmail) {
+      return {
+        name: config.hrName || 'เจ้าหน้าที่ฝ่ายบุคคล',
+        email: config.hrEmail,
+        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+      };
+    }
+
+    // 2. Personnel with position 'บุคลากร' whose email is not a dummy mock domain
+    const hrReal = allPersonnel.find(
+      (p) => p.position === 'บุคลากร' && p.status === 'ปกติ' && p.email && !p.email.endsWith('@icit.org')
+    );
+    if (hrReal) return hrReal;
+
+    // 3. Any active Admin with a real email
+    const adminReal = allPersonnel.find(
+      (p) => p.role === 'Admin' && p.status === 'ปกติ' && p.email && !p.email.endsWith('@icit.org')
+    );
+    if (adminReal) {
+      return {
+        id: adminReal.id,
+        name: `${adminReal.name} (ฝ่ายบุคคล/ผู้ดูแลระบบ)`,
+        email: adminReal.email,
+        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+      };
+    }
+
+    // 4. Default fallback
+    const hrFallback = allPersonnel.find((p) => p.position === 'บุคลากร' && p.status === 'ปกติ');
     return (
-      allPersonnel.find((p) => p.position === 'บุคลากร' && p.status === 'ปกติ') || {
+      hrFallback || {
         name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-        email: 'hr@icit.org',
+        email: 'tiawongsombat@gmail.com',
         role: 'เจ้าหน้าที่ฝ่ายบุคคล',
       }
     );
@@ -362,65 +456,68 @@ export async function sendTimeAttendanceNotification(record, targetStep, recipie
   const content = generateEmailContent(record, targetStep, recipient, appBaseUrl);
   const config = getEmailConfig();
 
+  const toEmail = recipient?.email;
   const logEntry = {
     id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    recordId: record.id,
+    recordId: record?.id || '',
     targetStep,
-    recipientEmail: recipient?.email || 'unknown',
+    recipientEmail: toEmail || 'unknown',
     recipientName: recipient?.name || 'ผู้เกี่ยวข้อง',
     recipientRole: recipient?.role || targetStep,
     subject: content.subject,
     sentAt: new Date().toISOString(),
-    status: 'SENT',
+    status: 'PENDING',
     approveUrl: content.approveUrl,
     rejectUrl: content.rejectUrl,
     deliveryMethod: 'Local System Sandbox',
   };
 
-  // Attempt live delivery via Google Apps Script Webhook or Next.js internal API
-  const scriptUrl = config.googleAppsScriptUrl || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL;
+  const scriptUrl =
+    config.googleAppsScriptUrl ||
+    process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL ||
+    process.env.GOOGLE_SCRIPT_EMAIL_URL;
 
-  if (scriptUrl && config.enableLiveSending) {
+  let isDelivered = false;
+  let deliveryError = null;
+
+  if (toEmail && config.enableLiveSending && scriptUrl) {
     try {
-      // 1. Direct Webhook Call
-      await fetch(scriptUrl, {
+      // Route via Next.js server-side /api/attendance/notify relay.
+      // This eliminates browser CORS preflight issues, header stripping, and opaque 302 redirects with Google Apps Script.
+      const resp = await fetch('/api/attendance/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
         body: JSON.stringify({
-          to: recipient?.email,
+          to: toEmail,
           subject: content.subject,
           htmlBody: content.html,
-          recordId: record.id,
+          recordId: record?.id || '',
           step: targetStep,
+          webhookUrl: scriptUrl,
         }),
       });
-      logEntry.deliveryMethod = 'Google Apps Script (Gmail API)';
-      logEntry.status = 'DELIVERED';
-    } catch (err) {
-      console.warn('Google Script email notification failed, trying internal API route', err);
-      // 2. Fallback to /api/attendance/notify
-      try {
-        await fetch('/api/attendance/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: recipient?.email,
-            subject: content.subject,
-            htmlBody: content.html,
-            recordId: record.id,
-            step: targetStep,
-            webhookUrl: scriptUrl,
-          }),
-        });
-        logEntry.deliveryMethod = 'Next.js API Relay';
+
+      const resData = await resp.json().catch(() => ({}));
+      if (resp.ok && resData.success) {
+        logEntry.deliveryMethod = 'Google Apps Script (Gmail API Relay)';
         logEntry.status = 'DELIVERED';
-      } catch (e2) {
-        logEntry.deliveryMethod = 'Local Simulation (API error)';
+        isDelivered = true;
+      } else {
+        deliveryError = resData.message || resData.error || `HTTP ${resp.status} relay failed`;
+        logEntry.deliveryMethod = 'Next.js Relay (Failed)';
+        logEntry.status = 'FAILED';
+        logEntry.error = deliveryError;
       }
+    } catch (err) {
+      console.warn('Email notification relay exception:', err);
+      deliveryError = err.message || 'Network exception during email dispatch';
+      logEntry.deliveryMethod = 'Next.js Relay (Error)';
+      logEntry.status = 'FAILED';
+      logEntry.error = deliveryError;
     }
   } else {
     logEntry.deliveryMethod = 'ระบบจำลองการส่งอีเมล (Simulation Sandbox)';
+    logEntry.status = 'SANDBOX';
   }
 
   // Save to sent log in localStorage
@@ -435,7 +532,13 @@ export async function sendTimeAttendanceNotification(record, targetStep, recipie
     }
   }
 
-  return { success: true, logEntry, content };
+  return {
+    success: isDelivered,
+    isSandbox: !isDelivered && !deliveryError,
+    error: deliveryError,
+    logEntry,
+    content,
+  };
 }
 
 /**

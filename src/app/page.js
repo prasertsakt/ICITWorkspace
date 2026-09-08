@@ -193,7 +193,7 @@ export default function PortalLandingPage() {
               <>
                 สังกัด <strong>{currentPersonnel.department}</strong> &bull; ตำแหน่ง{' '}
                 <strong>
-                  {currentPersonnel.position} ({currentPersonnel.level})
+                  {currentPersonnel.position}{currentPersonnel.level ? ` (${currentPersonnel.level})` : ''}
                 </strong>
                 <br />
                 เข้าถึงระบบสารสนเทศ โครงสร้างองค์กร และบริการดิจิทัลทั้งหมดได้จากหน้านี้
@@ -321,7 +321,7 @@ export default function PortalLandingPage() {
               };
             } else if (serviceId === 'attendance') {
               cardData = {
-                title: 'ระบบใบลงเวลา',
+                title: 'ระบบขอลงเวลา',
                 desc: 'ยื่นคำขอลงเวลามา/กลับปฏิบัติราชการ กระบวนการอนุมัติ 4 ขั้นตอน พร้อมระบบแจ้งเตือนทางอีเมล',
                 href: '/time-attendance',
                 isExternal: false,
