@@ -6,8 +6,10 @@ import {
   Printer,
   FileText,
   Layers,
+  Calendar,
 } from 'lucide-react';
 import { LEAVE_TYPES, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { getQuarterRange, getFiscalYear, getFiscalYearRange } from '@/lib/dateUtils';
 
 // Format Date Thai: e.g. 15 ก.ย. 2569
 function formatThaiDate(dateStr) {
@@ -70,10 +72,12 @@ export default function LeaveReportModal({
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [activePreset, setActivePreset] = useState('this_month');
+  const [quarterMode, setQuarterMode] = useState('fiscal'); // 'fiscal' = ปีงบประมาณ, 'calendar' = ปีปฏิทิน
 
   // Quick Range Presets
-  const applyPreset = (presetKey) => {
+  const applyPreset = (presetKey, overrideMode = null) => {
     setActivePreset(presetKey);
+    const mode = overrideMode || quarterMode;
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
@@ -88,26 +92,26 @@ export default function LeaveReportModal({
       const end = new Date(y, m, 0);
       setStartDate(start.toISOString().split('T')[0]);
       setEndDate(end.toISOString().split('T')[0]);
-    } else if (presetKey === 'q1') {
-      setStartDate(`${y}-01-01`);
-      setEndDate(`${y}-03-31`);
-    } else if (presetKey === 'q2') {
-      setStartDate(`${y}-04-01`);
-      setEndDate(`${y}-06-30`);
-    } else if (presetKey === 'q3') {
-      setStartDate(`${y}-07-01`);
-      setEndDate(`${y}-09-30`);
-    } else if (presetKey === 'q4') {
-      setStartDate(`${y}-10-01`);
-      setEndDate(`${y}-12-31`);
+    } else if (presetKey === 'q1' || presetKey === 'q2' || presetKey === 'q3' || presetKey === 'q4') {
+      const qNum = parseInt(presetKey.replace('q', ''), 10);
+      const range = getQuarterRange(qNum, { isFiscal: mode === 'fiscal' });
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
     } else if (presetKey === 'fiscal_year') {
-      // Thai Fiscal Year: 1 Oct (year - 1) to 30 Sep (year)
-      const fiscalYear = m >= 9 ? y + 1 : y;
-      setStartDate(`${fiscalYear - 1}-10-01`);
-      setEndDate(`${fiscalYear}-09-30`);
+      const range = getFiscalYearRange();
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
     } else if (presetKey === 'this_year') {
       setStartDate(`${y}-01-01`);
       setEndDate(`${y}-12-31`);
+    }
+  };
+
+  // Toggle quarter mode and reapply if currently on a quarter preset
+  const handleToggleQuarterMode = (newMode) => {
+    setQuarterMode(newMode);
+    if (['q1', 'q2', 'q3', 'q4'].includes(activePreset)) {
+      applyPreset(activePreset, newMode);
     }
   };
 
@@ -294,10 +298,6 @@ export default function LeaveReportModal({
             {[
               { key: 'this_month', label: 'เดือนนี้' },
               { key: 'last_month', label: 'เดือนที่แล้ว' },
-              { key: 'q1', label: 'ไตรมาส 1' },
-              { key: 'q2', label: 'ไตรมาส 2' },
-              { key: 'q3', label: 'ไตรมาส 3' },
-              { key: 'q4', label: 'ไตรมาส 4' },
               { key: 'fiscal_year', label: 'ปีงบประมาณนี้' },
               { key: 'this_year', label: 'ทั้งปีนี้' },
             ].map((p) => {
@@ -320,6 +320,104 @@ export default function LeaveReportModal({
                   }}
                 >
                   {p.label}
+                </button>
+              );
+            })}
+
+            <span style={{ color: '#CBD5E1', margin: '0 2px' }}>|</span>
+            <span style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748B' }}>ไตรมาส:</span>
+
+            {/* Quarter Mode Toggle (ปีงบประมาณราชการ vs ปีปฏิทิน) */}
+            <div
+              style={{
+                display: 'inline-flex',
+                borderRadius: '6px',
+                padding: '2px',
+                background: '#E2E8F0',
+                marginRight: '2px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleQuarterMode('fiscal')}
+                style={{
+                  border: 'none',
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  fontSize: '0.675rem',
+                  fontWeight: quarterMode === 'fiscal' ? 700 : 500,
+                  background: quarterMode === 'fiscal' ? '#FFFFFF' : 'transparent',
+                  color: quarterMode === 'fiscal' ? '#4F46E5' : '#64748B',
+                  cursor: 'pointer',
+                  boxShadow: quarterMode === 'fiscal' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+                title="ไตรมาสตามปีงบประมาณราชการ (ต.ค. - ก.ย.)"
+              >
+                🏛️ ปีงบประมาณ
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleQuarterMode('calendar')}
+                style={{
+                  border: 'none',
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  fontSize: '0.675rem',
+                  fontWeight: quarterMode === 'calendar' ? 700 : 500,
+                  background: quarterMode === 'calendar' ? '#FFFFFF' : 'transparent',
+                  color: quarterMode === 'calendar' ? '#4F46E5' : '#64748B',
+                  cursor: 'pointer',
+                  boxShadow: quarterMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+                title="ไตรมาสตามปีปฏิทิน (ม.ค. - ธ.ค.)"
+              >
+                📅 ปีปฏิทิน
+              </button>
+            </div>
+
+            {/* Quarter Buttons Q1 - Q4 */}
+            {[
+              {
+                key: 'q1',
+                label: quarterMode === 'fiscal' ? 'Q1 (ต.ค.-ธ.ค.)' : 'Q1 (ม.ค.-มี.ค.)',
+                title: quarterMode === 'fiscal' ? 'ไตรมาส 1 ปีงบประมาณ: 1 ต.ค. - 31 ธ.ค.' : 'ไตรมาส 1 ปีปฏิทิน: 1 ม.ค. - 31 มี.ค.',
+              },
+              {
+                key: 'q2',
+                label: quarterMode === 'fiscal' ? 'Q2 (ม.ค.-มี.ค.)' : 'Q2 (เม.ย.-มิ.ย.)',
+                title: quarterMode === 'fiscal' ? 'ไตรมาส 2 ปีงบประมาณ: 1 ม.ค. - 31 มี.ค.' : 'ไตรมาส 2 ปีปฏิทิน: 1 เม.ย. - 30 มิ.ย.',
+              },
+              {
+                key: 'q3',
+                label: quarterMode === 'fiscal' ? 'Q3 (เม.ย.-มิ.ย.)' : 'Q3 (ก.ค.-ก.ย.)',
+                title: quarterMode === 'fiscal' ? 'ไตรมาส 3 ปีงบประมาณ: 1 เม.ย. - 30 มิ.ย.' : 'ไตรมาส 3 ปีปฏิทิน: 1 ก.ค. - 30 ก.ย.',
+              },
+              {
+                key: 'q4',
+                label: quarterMode === 'fiscal' ? 'Q4 (ก.ค.-ก.ย.)' : 'Q4 (ต.ค.-ธ.ค.)',
+                title: quarterMode === 'fiscal' ? 'ไตรมาส 4 ปีงบประมาณ: 1 ก.ค. - 30 ก.ย.' : 'ไตรมาส 4 ปีปฏิทิน: 1 ต.ค. - 31 ธ.ค.',
+              },
+            ].map((q) => {
+              const isActive = activePreset === q.key;
+              return (
+                <button
+                  key={q.key}
+                  type="button"
+                  onClick={() => applyPreset(q.key)}
+                  title={q.title}
+                  style={{
+                    fontSize: '0.725rem',
+                    fontWeight: isActive ? 700 : 500,
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: '20px',
+                    border: isActive ? '1px solid #4F46E5' : '1px solid #CBD5E1',
+                    background: isActive ? '#4F46E5' : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#334155',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {q.label}
                 </button>
               );
             })}

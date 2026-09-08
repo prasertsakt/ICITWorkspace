@@ -22,6 +22,7 @@ import {
   RotateCcw,
   FileText,
 } from 'lucide-react';
+import LeaveDeleteModal from '@/components/LeaveDeleteModal';
 
 const THAI_MONTHS = [
   'มกราคม',
@@ -59,6 +60,16 @@ export default function LeaveCalendar({
   // Selected date or leave for detailed inspection
   const [selectedDayDetail, setSelectedDayDetail] = useState(null); // { dateString, leaves: [] }
   const [selectedLeaveItem, setSelectedLeaveItem] = useState(null);
+  const [leaveToDelete, setLeaveToDelete] = useState(null);
+
+  const handleConfirmDelete = async (id, personnelName) => {
+    if (onDeleteLeave) {
+      await onDeleteLeave(id, personnelName);
+    }
+    setLeaveToDelete(null);
+    setSelectedDayDetail(null);
+    setSelectedLeaveItem(null);
+  };
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0 - 11
@@ -890,14 +901,10 @@ export default function LeaveCalendar({
                             <span>แก้ไข</span>
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`คุณต้องการลบรายการลาของ "${item.personnelName}" ใช่หรือไม่?`)) {
-                                onDeleteLeave(item.id, item.personnelName);
-                                setSelectedDayDetail(null);
-                              }
-                            }}
+                            onClick={() => setLeaveToDelete(item)}
                             className="btn btn-ghost btn-sm"
                             style={{ color: 'var(--rose-500)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            title="ลบรายการนี้"
                           >
                             <Trash2 size={13} />
                             <span>ลบ</span>
@@ -1054,14 +1061,10 @@ export default function LeaveCalendar({
                     <span>แก้ไข</span>
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`คุณต้องการลบรายการลาของ "${selectedLeaveItem.personnelName}" ใช่หรือไม่?`)) {
-                        onDeleteLeave(selectedLeaveItem.id, selectedLeaveItem.personnelName);
-                        setSelectedLeaveItem(null);
-                      }
-                    }}
+                    onClick={() => setLeaveToDelete(selectedLeaveItem)}
                     className="btn btn-ghost btn-sm"
                     style={{ color: 'var(--rose-500)' }}
+                    title="ลบรายการนี้"
                   >
                     <Trash2 size={14} />
                     <span>ลบรายการนี้</span>
@@ -1071,6 +1074,16 @@ export default function LeaveCalendar({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal for Confirming Leave Deletion */}
+      {leaveToDelete && (
+        <LeaveDeleteModal
+          isOpen={Boolean(leaveToDelete)}
+          onClose={() => setLeaveToDelete(null)}
+          leaveRecord={leaveToDelete}
+          onConfirmDelete={handleConfirmDelete}
+        />
       )}
     </div>
   );
