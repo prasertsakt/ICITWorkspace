@@ -54,6 +54,7 @@ import {
   RotateCcw,
   ChevronRight,
   UserCheck,
+  X,
 } from 'lucide-react';
 
 function ProfileContent() {
@@ -72,7 +73,10 @@ function ProfileContent() {
   const [attendances, setAttendances] = useState([]);
   const [selectedLeaveYear, setSelectedLeaveYear] = useState(() => new Date().getFullYear());
 
-  // Subscribe to Personnel, Departments, Executives
+  // Search box state for admin personnel switcher
+  const [personSearchQuery, setPersonSearchQuery] = useState('');
+
+  // 1. Subscriptions (Must be top-level & unconditional)
   useEffect(() => {
     setLoading(true);
     const unsubPersonnel = subscribePersonnelList((list) => {
@@ -93,7 +97,6 @@ function ProfileContent() {
     };
   }, []);
 
-  // Subscribe to Leaves scoped by selectedLeaveYear
   useEffect(() => {
     const unsubLeaves = subscribeLeaveList(
       (list) => {
@@ -104,7 +107,6 @@ function ProfileContent() {
     return () => unsubLeaves();
   }, [selectedLeaveYear]);
 
-  // Subscribe to Time Attendance
   useEffect(() => {
     const unsubAttendances = subscribeTimeAttendanceList((list) => {
       const validRecords = (list || []).filter((r) => !isDummyTimeAttendanceRecord(r));
@@ -113,8 +115,7 @@ function ProfileContent() {
     return () => unsubAttendances();
   }, []);
 
-  // Target Personnel Resolution (Personalization)
-  // Supports: ?id=... or ?personnelId=... or defaults to current logged-in personnel
+  // 2. Target Personnel Resolution
   const paramId = searchParams.get('id') || searchParams.get('personnelId');
   const targetPersonnel = useMemo(() => {
     if (paramId && personnelList.length > 0) {
@@ -128,7 +129,165 @@ function ProfileContent() {
     currentPersonnel && targetPersonnel && currentPersonnel.id === targetPersonnel.id
   );
 
-  // If user is not logged in and no target personnel found
+  // 3. Filtered Personnel for Admin Switcher Search Box
+  const filteredPersonnelList = useMemo(() => {
+    if (!personSearchQuery.trim()) return personnelList;
+    const q = personSearchQuery.trim().toLowerCase();
+    return personnelList.filter((p) => {
+      const matchName = (p.name || '').toLowerCase().includes(q);
+      const matchDept = (p.department || '').toLowerCase().includes(q);
+      const matchPos = (p.position || '').toLowerCase().includes(q);
+      const matchEmail = (p.email || '').toLowerCase().includes(q);
+      return matchName || matchDept || matchPos || matchEmail;
+    });
+  }, [personnelList, personSearchQuery]);
+
+  // 4. Calculations for Target Personnel (All hooks called unconditionally)
+  const tenure = useMemo(() => {
+    if (!targetPersonnel?.appointmentDate) return { years: 0, months: 0, days: 0, text: '-' };
+    return calculateTenure(targetPersonnel.appointmentDate);
+  }, [targetPersonnel?.appointmentDate]);
+
+  const retirement = useMemo(() => {
+    if (!targetPersonnel?.retirementDate) return { years: 0, months: 0, days: 0, text: '-' };
+    return calculateRetirementCountdown(targetPersonnel.retirementDate);
+  }, [targetPersonnel?.retirementDate]);
+
+  const deptInfo = useMemo(() => {
+    return departmentList.find((d) => d.name === targetPersonnel?.department);
+  }, [departmentList, targetPersonnel?.department]);
+
+  const deptHead = useMemo(() => {
+    return personnelList.find((p) => p.id === deptInfo?.headPersonnelId);
+  }, [personnelList, deptInfo?.headPersonnelId]);
+
+  const supervisingExec = useMemo(() => {
+    return executiveList.find((e) => e.id === deptInfo?.supervisingExecutiveId);
+  }, [executiveList, deptInfo?.supervisingExecutiveId]);
+
+  const colleagues = useMemo(() => {
+    if (!targetPersonnel?.department) return [];
+    return personnelList.filter(
+      (p) =>
+        p.department === targetPersonnel.department &&
+        p.id !== targetPersonnel.id &&
+        p.status === PERSONNEL_STATUS.ACTIVE
+    );
+  }, [personnelList, targetPersonnel?.department, targetPersonnel?.id]);
+
+  const headDeptNames = useMemo(() => {
+    if (!targetPersonnel?.id) return [];
+    return departmentList
+      .filter((d) => d.headPersonnelId === targetPersonnel.id)
+      .map((d) => d.name);
+  }, [departmentList, targetPersonnel?.id]);
+
+  // 5. Leave Data Hooks
+  const todayStr = useMemo(() => formatLocalDate(new Date()), []);
+
+  const userLeaves = useMemo(() => {
+    if (!targetPersonnel) return [];
+    return leaves.filter((l) => {
+      const matchId = l.personnelId && l.personnelId === targetPersonnel.id;
+      const matchName = l.personnelName && l.personnelName === targetPersonnel.name;
+      const matchEmail =
+        targetPersonnel.email && l.personnelEmail && l.personnelEmail === targetPersonnel.email;
+      return matchId || matchName || matchEmail;
+    });
+  }, [leaves, targetPersonnel]);
+
+  const totalLeaveDays = useMemo(() => {
+    return userLeaves.reduce((acc, curr) => acc + (Number(curr.totalDays) || 1), 0);
+  }, [userLeaves]);
+
+  const leaveTypeBreakdown = useMemo(() => {
+    const counts = {};
+    LEAVE_TYPES.forEach((t) => (counts[t] = { days: 0, count: 0 }));
+    userLeaves.forEach((l) => {
+      const type = l.leaveType || 'อื่น ๆ';
+      if (!counts[type]) {
+        counts[type] = { days: 0, count: 0 };
+      }
+      counts[type].days += Number(l.totalDays) || 1;
+      counts[type].count += 1;
+    });
+    return counts;
+  }, [userLeaves]);
+
+  const activeLeaveToday = useMemo(() => {
+    return userLeaves.find(
+      (l) => l.startDate && l.endDate && l.startDate <= todayStr && todayStr <= l.endDate
+    );
+  }, [userLeaves, todayStr]);
+
+  const recentLeaves = useMemo(() => {
+    return [...userLeaves]
+      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
+      .slice(0, 5);
+  }, [userLeaves]);
+
+  // 6. Time Attendance Data Hooks
+  const userAttendances = useMemo(() => {
+    if (!targetPersonnel) return [];
+    return attendances.filter((a) => {
+      const matchId = a.requesterId && a.requesterId === targetPersonnel.id;
+      const matchName = a.requesterName && a.requesterName === targetPersonnel.name;
+      const matchEmail =
+        targetPersonnel.email && a.requesterEmail && a.requesterEmail === targetPersonnel.email;
+      return matchId || matchName || matchEmail;
+    });
+  }, [attendances, targetPersonnel]);
+
+  const attendanceMetrics = useMemo(() => {
+    const total = userAttendances.length;
+    const pending = userAttendances.filter((a) =>
+      ['HR_REVIEW', 'WITNESS_CONFIRM', 'DEPT_HEAD_APPROVE', 'DEPUTY_APPROVE'].includes(a.currentStep)
+    ).length;
+    const completed = userAttendances.filter((a) => a.currentStep === 'COMPLETED').length;
+    const rejected = userAttendances.filter((a) =>
+      ['REJECTED', 'CANCELLED'].includes(a.currentStep)
+    ).length;
+
+    return { total, pending, completed, rejected };
+  }, [userAttendances]);
+
+  const pendingForTargetPerson = useMemo(() => {
+    if (!targetPersonnel) return [];
+    return attendances.filter((item) => {
+      const isPendingStep =
+        item.currentStep === 'HR_REVIEW' ||
+        item.currentStep === 'WITNESS_CONFIRM' ||
+        item.currentStep === 'DEPT_HEAD_APPROVE' ||
+        item.currentStep === 'DEPUTY_APPROVE';
+
+      if (!isPendingStep) return false;
+
+      const needsWitness =
+        item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === targetPersonnel.id;
+      const needsDeptHead =
+        item.currentStep === 'DEPT_HEAD_APPROVE' &&
+        (item.departmentHeadId === targetPersonnel.id ||
+          headDeptNames.includes(item.requesterDepartment));
+      const needsDeputy =
+        item.currentStep === 'DEPUTY_APPROVE' && item.deputyDirectorId === targetPersonnel.id;
+
+      return needsWitness || needsDeptHead || needsDeputy;
+    });
+  }, [attendances, targetPersonnel, headDeptNames]);
+
+  const recentAttendances = useMemo(() => {
+    return [...userAttendances]
+      .sort((a, b) => (b.createdAt || b.date || '').localeCompare(a.createdAt || a.date || ''))
+      .slice(0, 5);
+  }, [userAttendances]);
+
+  // Available Thai Years for Leave Selector
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
+
+  // =========================================================================
+  // CONDITIONAL RENDERS (Placed strictly AFTER all hooks to obey Rules of Hooks)
+  // =========================================================================
   if (!currentPersonnel && !targetPersonnel) {
     return (
       <div className="main-container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
@@ -173,142 +332,6 @@ function ProfileContent() {
       </div>
     );
   }
-
-  // Calculations for Target Personnel
-  const tenure = calculateTenure(targetPersonnel?.appointmentDate);
-  const retirement = calculateRetirementCountdown(targetPersonnel?.retirementDate);
-
-  // Department and Executives for Target Personnel
-  const deptInfo = departmentList.find((d) => d.name === targetPersonnel?.department);
-  const deptHead = personnelList.find((p) => p.id === deptInfo?.headPersonnelId);
-  const supervisingExec = executiveList.find((e) => e.id === deptInfo?.supervisingExecutiveId);
-
-  // Colleagues in the same department
-  const colleagues = personnelList.filter(
-    (p) =>
-      p.department === targetPersonnel?.department &&
-      p.id !== targetPersonnel?.id &&
-      p.status === PERSONNEL_STATUS.ACTIVE
-  );
-
-  // Head departments where targetPersonnel is the Department Head
-  const headDeptNames = departmentList
-    .filter((d) => d.headPersonnelId === targetPersonnel?.id)
-    .map((d) => d.name);
-
-  // ----------------------------------------------------
-  // LEAVE DATA (Personalized for Target Personnel)
-  // ----------------------------------------------------
-  const todayStr = formatLocalDate(new Date());
-
-  const userLeaves = useMemo(() => {
-    if (!targetPersonnel) return [];
-    return leaves.filter((l) => {
-      const matchId = l.personnelId && l.personnelId === targetPersonnel.id;
-      const matchName = l.personnelName && l.personnelName === targetPersonnel.name;
-      const matchEmail =
-        targetPersonnel.email && l.personnelEmail && l.personnelEmail === targetPersonnel.email;
-      return matchId || matchName || matchEmail;
-    });
-  }, [leaves, targetPersonnel]);
-
-  // Total leave days and occurrences
-  const totalLeaveDays = useMemo(() => {
-    return userLeaves.reduce((acc, curr) => acc + (Number(curr.totalDays) || 1), 0);
-  }, [userLeaves]);
-
-  // Breakdown by leave type
-  const leaveTypeBreakdown = useMemo(() => {
-    const counts = {};
-    LEAVE_TYPES.forEach((t) => (counts[t] = { days: 0, count: 0 }));
-    userLeaves.forEach((l) => {
-      const type = l.leaveType || 'อื่น ๆ';
-      if (!counts[type]) {
-        counts[type] = { days: 0, count: 0 };
-      }
-      counts[type].days += Number(l.totalDays) || 1;
-      counts[type].count += 1;
-    });
-    return counts;
-  }, [userLeaves]);
-
-  // Active leave today
-  const activeLeaveToday = useMemo(() => {
-    return userLeaves.find(
-      (l) => l.startDate && l.endDate && l.startDate <= todayStr && todayStr <= l.endDate
-    );
-  }, [userLeaves, todayStr]);
-
-  // Recent leaves sorted descending
-  const recentLeaves = useMemo(() => {
-    return [...userLeaves]
-      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
-      .slice(0, 5);
-  }, [userLeaves]);
-
-  // ----------------------------------------------------
-  // TIME ATTENDANCE DATA (Personalized for Target Personnel)
-  // ----------------------------------------------------
-  const userAttendances = useMemo(() => {
-    if (!targetPersonnel) return [];
-    return attendances.filter((a) => {
-      const matchId = a.requesterId && a.requesterId === targetPersonnel.id;
-      const matchName = a.requesterName && a.requesterName === targetPersonnel.name;
-      const matchEmail =
-        targetPersonnel.email && a.requesterEmail && a.requesterEmail === targetPersonnel.email;
-      return matchId || matchName || matchEmail;
-    });
-  }, [attendances, targetPersonnel]);
-
-  // Attendance Metrics
-  const attendanceMetrics = useMemo(() => {
-    const total = userAttendances.length;
-    const pending = userAttendances.filter((a) =>
-      ['HR_REVIEW', 'WITNESS_CONFIRM', 'DEPT_HEAD_APPROVE', 'DEPUTY_APPROVE'].includes(a.currentStep)
-    ).length;
-    const completed = userAttendances.filter((a) => a.currentStep === 'COMPLETED').length;
-    const rejected = userAttendances.filter((a) =>
-      ['REJECTED', 'CANCELLED'].includes(a.currentStep)
-    ).length;
-
-    return { total, pending, completed, rejected };
-  }, [userAttendances]);
-
-  // Requests where targetPersonnel is witness / approver and needs to sign
-  const pendingForTargetPerson = useMemo(() => {
-    if (!targetPersonnel) return [];
-    return attendances.filter((item) => {
-      const isPendingStep =
-        item.currentStep === 'HR_REVIEW' ||
-        item.currentStep === 'WITNESS_CONFIRM' ||
-        item.currentStep === 'DEPT_HEAD_APPROVE' ||
-        item.currentStep === 'DEPUTY_APPROVE';
-
-      if (!isPendingStep) return false;
-
-      const needsWitness =
-        item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === targetPersonnel.id;
-      const needsDeptHead =
-        item.currentStep === 'DEPT_HEAD_APPROVE' &&
-        (item.departmentHeadId === targetPersonnel.id ||
-          headDeptNames.includes(item.requesterDepartment));
-      const needsDeputy =
-        item.currentStep === 'DEPUTY_APPROVE' && item.deputyDirectorId === targetPersonnel.id;
-
-      return needsWitness || needsDeptHead || needsDeputy;
-    });
-  }, [attendances, targetPersonnel, headDeptNames]);
-
-  // Recent attendance requests sorted descending
-  const recentAttendances = useMemo(() => {
-    return [...userAttendances]
-      .sort((a, b) => (b.createdAt || b.date || '').localeCompare(a.createdAt || a.date || ''))
-      .slice(0, 5);
-  }, [userAttendances]);
-
-  // Available Thai Years for Leave Selector
-  const currentYear = new Date().getFullYear();
-  const yearOptions = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
 
   return (
     <div className="main-container">
@@ -394,28 +417,85 @@ function ProfileContent() {
           </p>
         </div>
 
-        {/* Personnel Switcher for Admins */}
+        {/* Personnel Switcher with Search Text Box for Admins */}
         {isAdmin && personnelList.length > 0 && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
+              flexWrap: 'wrap',
               gap: '0.5rem',
               background: 'white',
-              padding: '0.4rem 0.75rem',
+              padding: '0.45rem 0.85rem',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <UserCheck size={16} style={{ color: 'var(--primary-600)' }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              สลับดูบุคลากร:
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <UserCheck size={16} style={{ color: 'var(--primary-600)' }} />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                สลับดูบุคลากร:
+              </span>
+            </div>
+
+            {/* 1. Search text box next to drop down */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search
+                size={14}
+                style={{
+                  position: 'absolute',
+                  left: '0.6rem',
+                  color: 'var(--text-muted)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อ / ฝ่าย..."
+                value={personSearchQuery}
+                onChange={(e) => setPersonSearchQuery(e.target.value)}
+                style={{
+                  padding: '0.35rem 1.8rem 0.35rem 1.85rem',
+                  fontSize: '0.825rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  outline: 'none',
+                  width: '160px',
+                  transition: 'all 0.2s',
+                  background: '#F8FAFC',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--primary-500)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--border-subtle)')}
+              />
+              {personSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setPersonSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '0.4rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0,
+                  }}
+                  title="ล้างคำค้นหา"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* 2. Dropdown listing filtered or all personnel */}
             <select
               value={targetPersonnel?.id || ''}
               onChange={(e) => {
                 const selectedId = e.target.value;
+                if (!selectedId) return;
                 if (selectedId === currentPersonnel?.id) {
                   router.push('/profile');
                 } else {
@@ -428,14 +508,29 @@ function ProfileContent() {
                 padding: '0.35rem 0.65rem',
                 fontWeight: 600,
                 color: 'var(--text-primary)',
-                minWidth: '200px',
+                minWidth: '220px',
+                maxWidth: '320px',
               }}
             >
-              {personnelList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.department || 'ไม่ระบุ'}) {p.id === currentPersonnel?.id ? '★ ตัวฉัน' : ''}
+              {/* If targetPersonnel exists but is not in the filtered query result, keep it visible */}
+              {targetPersonnel &&
+                !filteredPersonnelList.some((p) => p.id === targetPersonnel.id) && (
+                  <option value={targetPersonnel.id}>
+                    {targetPersonnel.name} ({targetPersonnel.department || 'ไม่ระบุ'}) (เลือกอยู่)
+                  </option>
+                )}
+
+              {filteredPersonnelList.length === 0 ? (
+                <option value="" disabled>
+                  ไม่พบบุคลากรที่ค้นหา &quot;{personSearchQuery}&quot;
                 </option>
-              ))}
+              ) : (
+                filteredPersonnelList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.department || 'ไม่ระบุ'}) {p.id === currentPersonnel?.id ? '★ ตัวฉัน' : ''}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         )}
@@ -687,7 +782,9 @@ function ProfileContent() {
             >
               <span>วันที่ได้รับการบรรจุ:</span>
               <strong style={{ color: 'var(--text-primary)' }}>
-                {formatThaiDisplayDate(targetPersonnel?.appointmentDate)} (พ.ศ.)
+                {targetPersonnel?.appointmentDate
+                  ? `${formatThaiDisplayDate(targetPersonnel.appointmentDate)} (พ.ศ.)`
+                  : '-'}
               </strong>
             </div>
           </div>
@@ -746,7 +843,9 @@ function ProfileContent() {
             >
               <span>กำหนดวันเกษียณอายุ:</span>
               <strong style={{ color: 'var(--text-primary)' }}>
-                {formatThaiDisplayDate(targetPersonnel?.retirementDate)} (พ.ศ.)
+                {targetPersonnel?.retirementDate
+                  ? `${formatThaiDisplayDate(targetPersonnel.retirementDate)} (พ.ศ.)`
+                  : '-'}
               </strong>
             </div>
           </div>
