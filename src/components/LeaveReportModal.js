@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   X,
   Printer,
   FileText,
   Layers,
   Calendar,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
-import { LEAVE_TYPES, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import { getQuarterRange, getFiscalYear, getFiscalYearRange } from '@/lib/dateUtils';
 
 // Format Date Thai: e.g. 15 ก.ย. 2569
@@ -70,9 +72,32 @@ export default function LeaveReportModal({
   });
 
   const [filterDept, setFilterDept] = useState('ALL');
-  const [filterType, setFilterType] = useState('ALL');
+  const [selectedTypes, setSelectedTypes] = useState([]); // [] means ALL types
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  const typeDropdownRef = useRef(null);
   const [activePreset, setActivePreset] = useState('this_month');
   const [quarterMode, setQuarterMode] = useState('fiscal'); // 'fiscal' = ปีงบประมาณ, 'calendar' = ปีปฏิทิน
+
+  // Close type dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target)) {
+        setIsTypeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToggleType = (type) => {
+    setSelectedTypes((prev) => {
+      if (prev.includes(type)) {
+        return prev.filter((t) => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
 
   // Quick Range Presets
   const applyPreset = (presetKey, overrideMode = null) => {
@@ -131,14 +156,18 @@ export default function LeaveReportModal({
         return false;
       }
 
-      // Leave type filter
-      if (filterType !== 'ALL' && item.leaveType !== filterType) {
+      // Leave type filter (multi-select)
+      if (
+        selectedTypes.length > 0 &&
+        selectedTypes.length < LEAVE_TYPES.length &&
+        !selectedTypes.includes(item.leaveType)
+      ) {
         return false;
       }
 
       return true;
     }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-  }, [leaves, startDate, endDate, filterDept, filterType]);
+  }, [leaves, startDate, endDate, filterDept, selectedTypes]);
 
   // Aggregate Metrics
   const summaryMetrics = useMemo(() => {
@@ -484,21 +513,169 @@ export default function LeaveReportModal({
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {/* Multi-Select ประเภทการลา */}
+            <div ref={typeDropdownRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>ประเภท:</span>
-              <select
+              <button
+                type="button"
+                onClick={() => setIsTypeDropdownOpen((prev) => !prev)}
                 className="form-input"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', height: '34px', width: '150px' }}
+                style={{
+                  fontSize: '0.8rem',
+                  padding: '0.35rem 0.6rem',
+                  height: '34px',
+                  minWidth: '150px',
+                  maxWidth: '210px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '6px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  background: selectedTypes.length > 0 ? '#EEF2FF' : '#FFFFFF',
+                  borderColor: selectedTypes.length > 0 ? '#A5B4FC' : '#CBD5E1',
+                  color: selectedTypes.length > 0 ? '#4338CA' : '#0F172A',
+                  fontWeight: selectedTypes.length > 0 ? 600 : 400,
+                }}
               >
-                <option value="ALL">📋 ทุกประเภทการลา</option>
-                {LEAVE_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedTypes.length === 0 || selectedTypes.length === LEAVE_TYPES.length
+                    ? '📋 ทุกประเภทการลา'
+                    : selectedTypes.length === 1
+                    ? `📋 ${selectedTypes[0]}`
+                    : `📋 เลือก ${selectedTypes.length} ประเภท`}
+                </span>
+                <ChevronDown size={14} style={{ flexShrink: 0, marginLeft: '4px', opacity: 0.7 }} />
+              </button>
+
+              {/* Multi-Select Popover Menu */}
+              {isTypeDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '4px',
+                    width: '240px',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '10px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                    zIndex: 60,
+                    padding: '0.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                  }}
+                >
+                  {/* Popover Header Actions */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '2px 6px 6px',
+                      borderBottom: '1px solid #F1F5F9',
+                      fontSize: '0.7rem',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: '#475569' }}>ประเภทการลา (Enum)</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTypes([...LEAVE_TYPES])}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#4F46E5',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                          padding: 0,
+                        }}
+                      >
+                        เลือกทั้งหมด
+                      </button>
+                      <span style={{ color: '#CBD5E1' }}>|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTypes([])}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#64748B',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: '0.7rem',
+                          padding: 0,
+                        }}
+                      >
+                        ล้างค่า
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Option List */}
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {LEAVE_TYPES.map((type) => {
+                      const conf = LEAVE_TYPE_CONFIG[type] || {};
+                      const isChecked = selectedTypes.includes(type);
+                      return (
+                        <label
+                          key={type}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleToggleType(type);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            background: isChecked ? '#EEF2FF' : 'transparent',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            style={{ cursor: 'pointer', accentColor: '#4F46E5' }}
+                          />
+                          <span
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: conf.pillBg || '#6366F1',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ flex: 1, fontWeight: isChecked ? 600 : 400, color: '#0F172A' }}>
+                            {type}
+                          </span>
+                          {conf.label && (
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                background: conf.bg,
+                                color: conf.color,
+                              }}
+                            >
+                              {conf.label}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748B' }}>
@@ -516,6 +693,7 @@ export default function LeaveReportModal({
             padding: '1.75rem',
             display: 'flex',
             justifyContent: 'center',
+            alignItems: 'flex-start',
             backgroundColor: '#CBD5E1',
           }}
         >
@@ -526,6 +704,8 @@ export default function LeaveReportModal({
             style={{
               width: '100%',
               maxWidth: '820px',
+              minHeight: 'fit-content',
+              height: 'fit-content',
               backgroundColor: '#FFFFFF',
               color: '#0F172A',
               padding: '28mm 20mm',
@@ -533,6 +713,7 @@ export default function LeaveReportModal({
               borderRadius: '6px',
               fontSize: '13px',
               lineHeight: 1.5,
+              marginBottom: '2.5rem',
               fontFamily: "'Sarabun', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
@@ -598,7 +779,9 @@ export default function LeaveReportModal({
                 ช่วงวันที่ <strong>{formatThaiDateFull(startDate)}</strong> ถึงวันที่{' '}
                 <strong>{formatThaiDateFull(endDate)}</strong>
                 {filterDept !== 'ALL' && <span> • ฝ่ายงาน: <strong>{filterDept}</strong></span>}
-                {filterType !== 'ALL' && <span> • ประเภท: <strong>{filterType}</strong></span>}
+                {selectedTypes.length > 0 && selectedTypes.length < LEAVE_TYPES.length && (
+                  <span> • ประเภท: <strong>{selectedTypes.join(', ')}</strong></span>
+                )}
               </p>
 
               <div
@@ -724,7 +907,13 @@ export default function LeaveReportModal({
                 <tbody>
                   {LEAVE_TYPES.map((type) => {
                     const data = summaryMetrics.typeBreakdown[type] || { count: 0, days: 0 };
-                    if (data.count === 0 && filterType !== 'ALL') return null;
+                    if (
+                      selectedTypes.length > 0 &&
+                      selectedTypes.length < LEAVE_TYPES.length &&
+                      !selectedTypes.includes(type)
+                    ) {
+                      return null;
+                    }
                     const percent = summaryMetrics.totalDays > 0
                       ? ((data.days / summaryMetrics.totalDays) * 100).toFixed(1)
                       : '0.0';

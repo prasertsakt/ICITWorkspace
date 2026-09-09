@@ -15,7 +15,7 @@ export function getEmailConfig() {
   const envHrEmail =
     process.env.NEXT_PUBLIC_HR_EMAIL ||
     process.env.HR_EMAIL ||
-    '';
+    'jarucha.j@icit.kmutnb.ac.th';
   const envDeptHeadEmail =
     process.env.NEXT_PUBLIC_DEPT_HEAD_EMAIL ||
     process.env.DEPT_HEAD_EMAIL ||
@@ -23,7 +23,7 @@ export function getEmailConfig() {
   const envDeputyEmail =
     process.env.NEXT_PUBLIC_DEPUTY_DIRECTOR_EMAIL ||
     process.env.DEPUTY_DIRECTOR_EMAIL ||
-    '';
+    'prasertsak.t@cit.kmutnb.ac.th';
 
   const defaults = {
     googleAppsScriptUrl: envUrl,
@@ -408,13 +408,20 @@ export function resolveRoleEmailsFromDirectory(personnelList = [], departmentLis
   const allExecs = Array.isArray(executiveList) ? executiveList : [];
 
   // 1. HR Officer
-  // Find active staff whose position is 'บุคลากร' or note includes 'บุคคล' / 'งานตรวจสอบเวลา'
+  // Explicitly match jarucha.j@icit.kmutnb.ac.th (นางสาวจารุชา เจือทอง - เจ้าหน้าที่ ตำแหน่งงานบุคลากร)
   let hrPerson = allPersonnel.find(
-    (p) => p.status === 'ปกติ' && (p.position === 'บุคลากร' || p.note?.includes('บุคคล') || p.note?.includes('ตรวจสอบเวลา')) && p.email && !p.email.endsWith('@icit.org')
+    (p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th' && p.status === 'ปกติ'
   );
   if (!hrPerson) {
     hrPerson = allPersonnel.find(
-      (p) => p.status === 'ปกติ' && (p.position === 'บุคลากร' || p.note?.includes('บุคคล') || p.note?.includes('ตรวจสอบเวลา')) && p.email
+      (p) =>
+        p.status === 'ปกติ' &&
+        (p.position?.includes('บุคลากร') ||
+          p.note?.includes('บุคลากร') ||
+          p.note?.includes('บุคคล') ||
+          p.note?.includes('ตรวจสอบเวลา')) &&
+        p.email &&
+        !p.email.endsWith('@icit.org')
     );
   }
   if (!hrPerson) {
@@ -423,50 +430,55 @@ export function resolveRoleEmailsFromDirectory(personnelList = [], departmentLis
     );
   }
 
-  // 2. Department Head
+  // 2. Department Head (หัวหน้าฝ่าย)
   let deptHeadPerson = null;
   let targetDeptName = '';
   if (record) {
+    const targetDept = record.requesterDepartment || '';
     const dept = allDepts.find(
       (d) =>
-        d.name === record.requesterDepartment ||
+        (targetDept && d.name === targetDept) ||
         d.id === record.departmentHeadId ||
         d.id === record.requesterDepartmentId
     );
     if (dept) {
       targetDeptName = dept.name;
-      deptHeadPerson = allPersonnel.find((p) => p.id === dept.headPersonnelId);
+      if (dept.headPersonnelId) {
+        deptHeadPerson = allPersonnel.find((p) => p.id === dept.headPersonnelId);
+      }
     }
     if (!deptHeadPerson && record.departmentHeadId) {
       deptHeadPerson = allPersonnel.find((p) => p.id === record.departmentHeadId);
     }
-  }
-  if (!deptHeadPerson && allDepts.length > 0) {
-    for (const d of allDepts) {
-      const p = allPersonnel.find((pers) => pers.id === d.headPersonnelId);
-      if (p && p.email) {
-        deptHeadPerson = p;
-        targetDeptName = d.name;
-        break;
-      }
+    // Search personnel in target department with position 'หัวหน้า'
+    if (!deptHeadPerson && targetDept) {
+      deptHeadPerson = allPersonnel.find(
+        (p) => p.status === 'ปกติ' && p.department === targetDept && p.position?.includes('หัวหน้า') && p.email
+      );
     }
   }
-  if (!deptHeadPerson) {
-    deptHeadPerson = allPersonnel.find(
-      (p) => p.status === 'ปกติ' && p.position?.includes('หัวหน้าฝ่าย') && p.email
-    );
-  }
 
-  // 3. Deputy Director (Administration)
-  let deputyPerson = null;
-  if (allExecs.length > 0) {
+  // 3. Deputy Director (รองผู้อำนวยการฝ่ายบริหาร)
+  // Explicitly match prasertsak.t@cit.kmutnb.ac.th (รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ)
+  let deputyPerson = allPersonnel.find(
+    (p) => p.email?.toLowerCase() === 'prasertsak.t@cit.kmutnb.ac.th' && p.status === 'ปกติ'
+  );
+  if (!deputyPerson && allExecs.length > 0) {
     const execAdmin = allExecs.find(
-      (e) => (e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')) && e.position?.includes('รอง')
+      (e) =>
+        e.email?.toLowerCase() === 'prasertsak.t@cit.kmutnb.ac.th' ||
+        ((e.position?.includes('ฝ่ายบริหาร') || e.position?.includes('บริหาร')) && e.position?.includes('รอง'))
     );
     if (execAdmin) {
       deputyPerson = allPersonnel.find((p) => p.id === execAdmin.personnelId);
-      if (!deputyPerson && execAdmin.email) {
-        deputyPerson = { id: execAdmin.personnelId || execAdmin.id, name: execAdmin.name, email: execAdmin.email, position: execAdmin.position };
+      if (!deputyPerson) {
+        deputyPerson = {
+          id: execAdmin.personnelId || execAdmin.id,
+          name: execAdmin.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+          email: execAdmin.email || 'prasertsak.t@cit.kmutnb.ac.th',
+          position: execAdmin.position || 'รองผู้อำนวยการฝ่ายบริหาร',
+          department: 'สำนักงานผู้อำนวยการ',
+        };
       }
     }
   }
@@ -475,21 +487,61 @@ export function resolveRoleEmailsFromDirectory(personnelList = [], departmentLis
       (p) =>
         p.status === 'ปกติ' &&
         (p.note?.includes('รองผู้อำนวยการฝ่ายบริหาร') ||
-         (p.position?.includes('ผู้บริหาร') && p.note?.includes('บริหาร')) ||
-         p.position?.includes('รองผู้อำนวยการฝ่ายบริหาร')) &&
+          (p.position?.includes('ผู้บริหาร') && p.note?.includes('บริหาร')) ||
+          p.position?.includes('รองผู้อำนวยการฝ่ายบริหาร')) &&
         p.email
     );
   }
   if (!deputyPerson) {
-    deputyPerson = allPersonnel.find(
-      (p) => p.status === 'ปกติ' && (p.note?.includes('รองผู้อำนวยการ') || p.position?.includes('รองผู้อำนวยการ')) && p.email
-    );
+    deputyPerson = {
+      id: '4SRaJO35tQE1ae4YC16V',
+      name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+      email: 'prasertsak.t@cit.kmutnb.ac.th',
+      position: 'รองผู้อำนวยการฝ่ายบริหาร',
+      department: 'สำนักงานผู้อำนวยการ',
+    };
   }
 
   return {
-    hr: hrPerson ? { id: hrPerson.id, name: hrPerson.name, email: hrPerson.email || '', position: hrPerson.position || 'เจ้าหน้าที่ฝ่ายบุคคล', department: hrPerson.department } : null,
-    deptHead: deptHeadPerson ? { id: deptHeadPerson.id, name: deptHeadPerson.name, email: deptHeadPerson.email || '', position: deptHeadPerson.position || 'หัวหน้าฝ่าย', department: targetDeptName || deptHeadPerson.department } : null,
-    deputyDirector: deputyPerson ? { id: deputyPerson.id, name: deputyPerson.name, email: deputyPerson.email || '', position: deputyPerson.position || 'รองผู้อำนวยการฝ่ายบริหาร', department: deputyPerson.department } : null,
+    hr: hrPerson
+      ? {
+          id: hrPerson.id,
+          name: hrPerson.name,
+          email: hrPerson.email || 'jarucha.j@icit.kmutnb.ac.th',
+          position: hrPerson.position || 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
+          department: hrPerson.department || 'สำนักงานผู้อำนวยการ',
+        }
+      : {
+          id: 'pers-1788794490388',
+          name: 'นางสาวจารุชา เจือทอง',
+          email: 'jarucha.j@icit.kmutnb.ac.th',
+          position: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
+          department: 'สำนักงานผู้อำนวยการ',
+        },
+    deptHead: deptHeadPerson
+      ? {
+          id: deptHeadPerson.id,
+          name: deptHeadPerson.name,
+          email: deptHeadPerson.email || '',
+          position: deptHeadPerson.position || 'หัวหน้าฝ่าย',
+          department: targetDeptName || deptHeadPerson.department || '',
+        }
+      : null,
+    deputyDirector: deputyPerson
+      ? {
+          id: deputyPerson.id,
+          name: deputyPerson.name,
+          email: deputyPerson.email || 'prasertsak.t@cit.kmutnb.ac.th',
+          position: deputyPerson.position || 'รองผู้อำนวยการฝ่ายบริหาร',
+          department: deputyPerson.department || 'สำนักงานผู้อำนวยการ',
+        }
+      : {
+          id: '4SRaJO35tQE1ae4YC16V',
+          name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+          email: 'prasertsak.t@cit.kmutnb.ac.th',
+          position: 'รองผู้อำนวยการฝ่ายบริหาร',
+          department: 'สำนักงานผู้อำนวยการ',
+        },
   };
 }
 
@@ -508,30 +560,42 @@ export function getNotificationRecipientForStep(
   const dir = resolveRoleEmailsFromDirectory(allPersonnel, departmentList, executiveList, record);
 
   if (step === 'HR_REVIEW') {
-    // 1. Directory HR Officer (Real active personnel from directory)
+    // 1. Explicitly recorded HR officer email on the record
+    if (record.hrOfficerEmail && isDeliverableRealEmail(record.hrOfficerEmail)) {
+      return {
+        id: record.hrOfficerId || dir.hr?.id || 'pers-1788794490388',
+        name: record.hrOfficerName || dir.hr?.name || 'นางสาวจารุชา เจือทอง',
+        email: record.hrOfficerEmail.trim(),
+        role: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
+      };
+    }
+
+    // 2. Directory HR Officer (Real active personnel from directory)
     if (dir.hr && dir.hr.email) {
       return {
         id: dir.hr.id,
         name: dir.hr.name,
         email: dir.hr.email.trim(),
-        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+        role: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
       };
     }
 
-    // 2. Explicit HR email configured in config or env
+    // 3. Explicit HR email configured in config or env
     if (config.hrEmail && isDeliverableRealEmail(config.hrEmail)) {
       return {
-        name: config.senderName || 'เจ้าหน้าที่ฝ่ายบุคคล',
+        id: dir.hr?.id || 'pers-1788794490388',
+        name: dir.hr?.name || config.senderName || 'นางสาวจารุชา เจือทอง',
         email: config.hrEmail.trim(),
-        role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+        role: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
       };
     }
 
-    // 3. Fallback
+    // 4. Default Fallback
     return {
-      name: 'เจ้าหน้าที่ฝ่ายบุคคล',
-      email: (config.hrEmail || '').trim(),
-      role: 'เจ้าหน้าที่ฝ่ายบุคคล',
+      id: 'pers-1788794490388',
+      name: 'นางสาวจารุชา เจือทอง',
+      email: 'jarucha.j@icit.kmutnb.ac.th',
+      role: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
     };
   }
 
@@ -649,9 +713,9 @@ export function getNotificationRecipientForStep(
 
     // 5. Fallback
     return {
-      id: record.deputyDirectorId || '',
-      name: record.deputyDirectorName || 'รองผู้อำนวยการฝ่ายบริหาร',
-      email: (config.deputyDirectorEmail || config.hrEmail || '').trim(),
+      id: record.deputyDirectorId || dir.deputyDirector?.id || '4SRaJO35tQE1ae4YC16V',
+      name: record.deputyDirectorName || dir.deputyDirector?.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+      email: (record.deputyDirectorEmail || config.deputyDirectorEmail || 'prasertsak.t@cit.kmutnb.ac.th').trim(),
       role: 'รองผู้อำนวยการฝ่ายบริหาร',
     };
   }

@@ -13,6 +13,9 @@ import {
   AlertCircle,
   FileText,
   CheckCircle2,
+  ShieldCheck,
+  Lock,
+  Mail,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_TYPES } from '@/lib/constants';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
@@ -29,7 +32,7 @@ export default function TimeAttendanceModal({
   isAdmin = false,
 }) {
   const [requestType, setRequestType] = useState('ลงเวลากลับปฏิบัติราชการ');
-  const [requesterId, setRequesterId] = useState(currentPersonnel?.id || '');
+  const [hrOfficerId, setHrOfficerId] = useState('');
   const [actionDate, setActionDate] = useState('');
   const [attendanceDate, setAttendanceDate] = useState('');
   const [attendanceTime, setAttendanceTime] = useState('18:00');
@@ -38,6 +41,94 @@ export default function TimeAttendanceModal({
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // 1. ผู้ขอยื่นลงเวลา: ล็อกอัตโนมัติตาม login user (can not edit)
+  const selectedRequester = useMemo(() => {
+    if (!currentPersonnel) return null;
+    return personnelList.find((p) => p.id === currentPersonnel.id) || currentPersonnel;
+  }, [currentPersonnel, personnelList]);
+
+  // Automatically resolve official roles from directory
+  const directoryRoles = useMemo(() => {
+    return resolveRoleEmailsFromDirectory(
+      personnelList,
+      departmentList,
+      executiveList,
+      selectedRequester ? { requesterDepartment: selectedRequester.department } : null
+    );
+  }, [personnelList, departmentList, executiveList, selectedRequester]);
+
+  // 2. HR Officer: ค้นหาเจ้าหน้าที่ ตำแหน่งงานบุคลากร (ค่าเริ่มต้น jarucha.j@icit.kmutnb.ac.th)
+  const candidateHrStaff = useMemo(() => {
+    const defaultHr = personnelList.find((p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th');
+    const filtered = personnelList.filter(
+      (p) =>
+        p.status === 'ปกติ' &&
+        (p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th' ||
+          p.position?.includes('บุคลากร') ||
+          p.note?.includes('บุคลากร') ||
+          p.note?.includes('บุคคล') ||
+          p.department === 'สำนักงานผู้อำนวยการ')
+    );
+    const list = [];
+    if (defaultHr) list.push(defaultHr);
+    for (const p of filtered) {
+      if (!list.some((item) => item.id === p.id)) {
+        list.push(p);
+      }
+    }
+    return list;
+  }, [personnelList]);
+
+  const selectedHrOfficer = useMemo(() => {
+    if (hrOfficerId) {
+      const found = personnelList.find((p) => p.id === hrOfficerId);
+      if (found) return found;
+    }
+    const jarucha = personnelList.find((p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th');
+    if (jarucha) return jarucha;
+    return (
+      directoryRoles.hr || {
+        id: 'pers-1788794490388',
+        name: 'นางสาวจารุชา เจือทอง',
+        email: 'jarucha.j@icit.kmutnb.ac.th',
+        position: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
+      }
+    );
+  }, [personnelList, hrOfficerId, directoryRoles]);
+
+  // 3. หัวหน้าฝ่าย: ค้นหาและเลือกอัตโนมัติตามฝ่ายสังกัด (can not edit)
+  const detectedDeptHead = useMemo(() => {
+    return directoryRoles.deptHead || null;
+  }, [directoryRoles]);
+
+  // 4. รองผู้อำนวยการฝ่ายบริหาร: รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ (prasertsak.t@cit.kmutnb.ac.th)
+  const detectedDeputyDirector = useMemo(() => {
+    return (
+      directoryRoles.deputyDirector || {
+        id: '4SRaJO35tQE1ae4YC16V',
+        name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+        email: 'prasertsak.t@cit.kmutnb.ac.th',
+        position: 'รองผู้อำนวยการฝ่ายบริหาร',
+      }
+    );
+  }, [directoryRoles]);
+
+  // Selected witness person
+  const witnessPerson = useMemo(() => {
+    return personnelList.find((p) => p.id === witnessId) || null;
+  }, [personnelList, witnessId]);
+
+  // List of candidate witnesses (excluding requester)
+  const candidateWitnesses = useMemo(() => {
+    const reqId = selectedRequester?.id;
+    return personnelList.filter((p) => p.id !== reqId && p.status === 'ปกติ');
+  }, [personnelList, selectedRequester]);
+
+  // Format image preview
+  const previewImgSrc = useMemo(() => {
+    return formatImageDisplayUrl(imageProofUrl);
+  }, [imageProofUrl]);
 
   // Pre-fill defaults on modal open
   useEffect(() => {
@@ -51,57 +142,16 @@ export default function TimeAttendanceModal({
       setAttendanceDate(todayYmd);
       setAttendanceTime(requestType.includes('มา') ? '08:30' : '18:00');
       setErrorMsg('');
-      setRequesterId(currentPersonnel?.id || (personnelList[0]?.id || ''));
+
+      // Auto-select jarucha.j@icit.kmutnb.ac.th as HR officer
+      const jarucha = personnelList.find((p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th');
+      setHrOfficerId(jarucha?.id || 'pers-1788794490388');
+
       setWitnessId('');
       setImageProofUrl('');
       setReason('');
     }
   }, [isOpen, currentPersonnel, personnelList, requestType]);
-
-  // Selected requester object
-  const selectedRequester = useMemo(() => {
-    return personnelList.find((p) => p.id === requesterId) || currentPersonnel || null;
-  }, [personnelList, requesterId, currentPersonnel]);
-
-  // Automatically resolve official roles from directory
-  const directoryRoles = useMemo(() => {
-    return resolveRoleEmailsFromDirectory(
-      personnelList,
-      departmentList,
-      executiveList,
-      selectedRequester ? { requesterDepartment: selectedRequester.department } : null
-    );
-  }, [personnelList, departmentList, executiveList, selectedRequester]);
-
-  // Auto-find department head corresponding to requester's department
-  const detectedDeptHead = useMemo(() => {
-    return directoryRoles.deptHead || null;
-  }, [directoryRoles]);
-
-  // Auto-find Deputy Director of Administration (รองผู้อำนวยการฝ่ายบริหาร)
-  const detectedDeputyDirector = useMemo(() => {
-    return directoryRoles.deputyDirector || null;
-  }, [directoryRoles]);
-
-  // Auto-find HR Officer
-  const detectedHrOfficer = useMemo(() => {
-    return directoryRoles.hr || null;
-  }, [directoryRoles]);
-
-  // Selected witness person
-  const witnessPerson = useMemo(() => {
-    return personnelList.find((p) => p.id === witnessId) || null;
-  }, [personnelList, witnessId]);
-
-  // List of candidate witnesses (excluding requester)
-  const candidateWitnesses = useMemo(() => {
-    return personnelList.filter((p) => p.id !== requesterId && p.status === 'ปกติ');
-  }, [personnelList, requesterId]);
-
-  // Format image preview
-  const previewImgSrc = useMemo(() => {
-    return formatImageDisplayUrl(imageProofUrl);
-  }, [imageProofUrl]);
 
   if (!isOpen) return null;
 
@@ -110,7 +160,7 @@ export default function TimeAttendanceModal({
     setErrorMsg('');
 
     if (!selectedRequester) {
-      setErrorMsg('กรุณาเลือกผู้ขอลงเวลาปฏิบัติราชการ');
+      setErrorMsg('กรุณาเข้าสู่ระบบก่อนยื่นคำขอลงเวลาปฏิบัติราชการ');
       return;
     }
     if (!attendanceDate) {
@@ -142,8 +192,13 @@ export default function TimeAttendanceModal({
       displayTime = `${h12}:${String(min).padStart(2, '0')}:00 ${period}`;
     }
 
+    const hrEmailFinal = (selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th').trim();
+    const deptHeadEmailFinal = (detectedDeptHead?.email || '').trim();
+    const deputyEmailFinal = (detectedDeputyDirector?.email || 'prasertsak.t@cit.kmutnb.ac.th').trim();
+
     const recordData = {
       requestType,
+      // ผู้ขอยื่น: ล็อกอัตโนมัติตาม login user
       requesterId: selectedRequester.id,
       requesterName: selectedRequester.name,
       requesterEmail: selectedRequester.email,
@@ -152,19 +207,23 @@ export default function TimeAttendanceModal({
       actionDate: actionDate || '9/8/2026',
       attendanceDate: displayAttendanceDate,
       attendanceTime: displayTime,
-      hrOfficerId: detectedHrOfficer?.id || '',
-      hrOfficerName: detectedHrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
-      hrOfficerEmail: detectedHrOfficer?.email || '',
-      hrEmail: detectedHrOfficer?.email || '',
+      // HR: เจ้าหน้าที่ ตำแหน่งงานบุคลากร jarucha.j@icit.kmutnb.ac.th
+      hrOfficerId: selectedHrOfficer?.id || 'pers-1788794490388',
+      hrOfficerName: selectedHrOfficer?.name || 'นางสาวจารุชา เจือทอง',
+      hrOfficerEmail: hrEmailFinal,
+      hrEmail: hrEmailFinal,
+      // พยาน
       witnessId: witnessPerson?.id || '',
       witnessName: witnessPerson?.name || '',
       witnessEmail: witnessPerson?.email || '',
+      // หัวหน้าฝ่าย: auto select from the list (can not edit)
       departmentHeadId: detectedDeptHead?.id || '',
       departmentHeadName: detectedDeptHead?.name || 'หัวหน้าฝ่าย',
-      departmentHeadEmail: detectedDeptHead?.email || '',
-      deputyDirectorId: detectedDeputyDirector?.id || detectedDeputyDirector?.personnelId || '',
-      deputyDirectorName: detectedDeputyDirector?.name || 'รองผู้อำนวยการฝ่ายบริหาร',
-      deputyDirectorEmail: detectedDeputyDirector?.email || '',
+      departmentHeadEmail: deptHeadEmailFinal,
+      // รองผู้อำนวยการฝ่ายบริหาร: prasertsak.t@cit.kmutnb.ac.th
+      deputyDirectorId: detectedDeputyDirector?.id || detectedDeputyDirector?.personnelId || '4SRaJO35tQE1ae4YC16V',
+      deputyDirectorName: detectedDeputyDirector?.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+      deputyDirectorEmail: deputyEmailFinal,
       imageProofUrl: imageProofUrl.trim(),
       reason: reason.trim(),
     };
@@ -296,45 +355,73 @@ export default function TimeAttendanceModal({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            {/* 2. ผู้ขอลงเวลาปฏิบัติราชการ */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                ผู้ขอลงเวลาปฏิบัติราชการ <span style={{ color: 'red' }}>*</span>
+          {/* 2. ผู้ขอยื่นลงเวลา (Automatically select login user, CAN NOT EDIT) */}
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
+                ผู้ขอยื่นลงเวลาปฏิบัติราชการ <span style={{ color: 'red' }}>*</span>
               </label>
-              {isAdmin ? (
-                <select
-                  value={requesterId}
-                  onChange={(e) => setRequesterId(e.target.value)}
-                  className="form-input"
-                  required
-                >
-                  {personnelList
-                    .filter((p) => p.status === 'ปกติ')
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.department})
-                      </option>
-                    ))}
-                </select>
-              ) : (
-                <div
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    background: 'var(--bg-main)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-subtle)',
-                    fontSize: '0.95rem',
-                    fontWeight: 700,
-                    color: '#2563EB',
-                  }}
-                >
-                  {selectedRequester?.name || 'ไม่พบข้อมูลบุคลากร'}
-                </div>
-              )}
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#EFF6FF',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  border: '1px solid #BFDBFE',
+                  fontWeight: 600,
+                }}
+              >
+                <Lock size={12} /> เลือกระบุอัตโนมัติตามผู้เข้าสู่ระบบ (แก้ไขไม่ได้)
+              </span>
             </div>
 
-            {/* 3. วันที่ดำเนินการ */}
+            <div
+              style={{
+                padding: '0.85rem 1rem',
+                background: '#F8FAFC',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid #CBD5E1',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: '#DBEAFE',
+                  color: '#1D4ED8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <User size={22} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+                  {selectedRequester?.name || 'ไม่พบข้อมูลผู้เข้าสู่ระบบ'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
+                  <span>สังกัด: <strong>{selectedRequester?.department || '-'}</strong></span>
+                  <span>&bull;</span>
+                  <span>ตำแหน่ง: <strong>{selectedRequester?.position || '-'}</strong></span>
+                  <span>&bull;</span>
+                  <span style={{ color: '#2563EB', fontWeight: 600 }}>{selectedRequester?.email || '-'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+            {/* 3. วันที่ดำเนินการ (วันที่ยื่นคำขอ) */}
             <div className="form-group">
               <label className="form-label" style={{ fontWeight: 600 }}>
                 วันที่ดำเนินการ (วันที่ยื่นคำขอ)
@@ -347,9 +434,7 @@ export default function TimeAttendanceModal({
                 style={{ background: 'var(--bg-main)', color: 'var(--text-secondary)' }}
               />
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             {/* 4. วันที่ขอลงเวลา */}
             <div className="form-group">
               <label className="form-label" style={{ fontWeight: 600 }}>
@@ -364,8 +449,10 @@ export default function TimeAttendanceModal({
                 style={{ fontWeight: 600, color: '#2563EB' }}
               />
             </div>
+          </div>
 
-            {/* 5. เวลา */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+            {/* 5. เวลาที่ปฏิบัติราชการจริง */}
             <div className="form-group">
               <label className="form-label" style={{ fontWeight: 600 }}>
                 เวลาที่ปฏิบัติราชการจริง <span style={{ color: 'red' }}>*</span>
@@ -379,10 +466,82 @@ export default function TimeAttendanceModal({
                 style={{ fontWeight: 600 }}
               />
             </div>
+
+            {/* 6. HR: เจ้าหน้าที่ ตำแหน่งงานบุคลากร jarucha.j@icit.kmutnb.ac.th */}
+            <div className="form-group">
+              <label className="form-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>ฝ่ายบุคคล (งานบุคลากร) <span style={{ color: 'red' }}>*</span></span>
+                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, background: '#ECFDF5', padding: '1px 6px', borderRadius: '8px' }}>
+                  ตรวจสอบลำดับที่ 1
+                </span>
+              </label>
+              <select
+                value={selectedHrOfficer?.id || hrOfficerId}
+                onChange={(e) => setHrOfficerId(e.target.value)}
+                className="form-input"
+                required
+                style={{ fontWeight: 600 }}
+              >
+                {candidateHrStaff.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.email}) - {p.position || 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร'}
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: '#059669', fontSize: '0.75rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+                ✓ เจ้าหน้าที่ ตำแหน่งงานบุคลากร: {selectedHrOfficer?.name || 'นางสาวจารุชา เจือทอง'} ({selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th'})
+              </small>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            {/* 6. ระบุบุคลากร (พยาน) */}
+            {/* 7. หัวหน้าฝ่าย: auto select from the list (can not edit) */}
+            <div className="form-group">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                  หัวหน้าฝ่าย <span style={{ color: 'red' }}>*</span>
+                </label>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    background: '#F1F5F9',
+                    padding: '1px 6px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <Lock size={11} /> ค้นหาอัตโนมัติ (แก้ไขไม่ได้)
+                </span>
+              </div>
+              <div
+                style={{
+                  padding: '0.65rem 0.85rem',
+                  background: '#F8FAFC',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.9rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1E293B' }}>
+                  <Building2 size={16} color="var(--primary-600)" />
+                  <span>{detectedDeptHead ? detectedDeptHead.name : 'หัวหน้าฝ่ายประจำสังกัด'}</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+                  {detectedDeptHead?.email && (
+                    <span style={{ color: '#2563EB', fontWeight: 600 }}>{detectedDeptHead.email}</span>
+                  )}
+                  {detectedDeptHead?.position && <span> &bull; {detectedDeptHead.position}</span>}
+                </div>
+              </div>
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                สังกัด: {selectedRequester?.department || '-'}
+              </small>
+            </div>
+
+            {/* 8. ระบุบุคลากร (พยาน) */}
             <div className="form-group">
               <label className="form-label" style={{ fontWeight: 600 }}>
                 ระบุบุคลากร (พยาน)
@@ -403,36 +562,9 @@ export default function TimeAttendanceModal({
                 เลือกบุคลากรที่ปฏิบัติงานร่วมกับท่านในเวลาดังกล่าว
               </small>
             </div>
-
-            {/* 7. หัวหน้าฝ่าย_ (Auto-filled) */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                หัวหน้าฝ่าย_ <span style={{ color: 'var(--mint-600)', fontSize: '0.8rem' }}>(ค้นหาอัตโนมัติ)</span>
-              </label>
-              <div
-                style={{
-                  padding: '0.65rem 0.85rem',
-                  background: 'var(--bg-main)',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Building2 size={16} color="var(--primary-600)" />
-                <span>{detectedDeptHead ? detectedDeptHead.name : 'หัวหน้าฝ่ายประจำสังกัด'}</span>
-              </div>
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                สังกัด: {selectedRequester?.department || '-'}
-              </small>
-            </div>
           </div>
 
-          {/* 8. แนบไฟล์ภาพกล้องวงจรปิด / ลิงก์ Google Drive */}
+          {/* 9. แนบไฟล์ภาพกล้องวงจรปิด / ลิงก์ Google Drive */}
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label className="form-label" style={{ fontWeight: 600 }}>
               แนบไฟล์ภาพกล้องวงจรปิด (กรณีไม่มีพยาน) / แชร์ลิงก์ภาพ Google Drive
@@ -497,8 +629,8 @@ export default function TimeAttendanceModal({
             )}
           </div>
 
-          {/* 9. เหตุผลความจำเป็น */}
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          {/* 10. เหตุผลความจำเป็น */}
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label className="form-label" style={{ fontWeight: 600 }}>
               เหตุผลความจำเป็น / หมายเหตุเพิ่มเติม
             </label>
@@ -512,40 +644,43 @@ export default function TimeAttendanceModal({
             />
           </div>
 
-          {/* Workflow Sequence Alert Box */}
+          {/* Workflow Sequence Alert Box (Sending notification mail according to above information) */}
           <div
             style={{
-              padding: '0.85rem 1rem',
+              padding: '0.9rem 1.1rem',
               borderRadius: 'var(--radius-md)',
               background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
+              border: '1px solid #CBD5E1',
               marginBottom: '1.5rem',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.5,
+              fontSize: '0.82rem',
+              color: '#334155',
+              lineHeight: 1.6,
             }}
           >
-            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-              ℹ️ ขั้นตอนการอนุมัติและผู้รับแจ้งเตือน (4 ขั้นตอน):
-            </strong>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
+              <Mail size={16} color="var(--primary-600)" />
+              <span>ลำดับขั้นตอนการส่งอีเมลแจ้งเตือนและอนุมัติ (4 ขั้นตอน):</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div>
-                1. <strong>ฝ่ายบุคคล:</strong> {detectedHrOfficer?.name || 'เจ้าหน้าที่ฝ่ายบุคคล'}{' '}
-                <span style={{ color: 'var(--primary-600)' }}>
-                  ({detectedHrOfficer?.email || 'รอระบุอีเมล'})
+                1. <strong>ฝ่ายบุคคล (งานบุคลากร):</strong> {selectedHrOfficer?.name || 'นางสาวจารุชา เจือทอง'}{' '}
+                <span style={{ color: '#2563EB', fontWeight: 600 }}>
+                  ({selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th'})
                 </span>
+                <span style={{ color: '#059669', fontSize: '0.75rem', marginLeft: '6px' }}>[ส่งอีเมลแจ้งเตือนตรวจสอบทันทีที่ยื่นคำขอ]</span>
               </div>
               <div>
-                2. <strong>พยานรับรอง:</strong> {witnessPerson?.name || 'พยานที่ระบุ'}{' '}
-                {witnessPerson?.email && <span style={{ color: 'var(--text-muted)' }}>({witnessPerson.email})</span>}
+                2. <strong>พยานรับรอง:</strong> {witnessPerson ? `${witnessPerson.name} (${witnessPerson.email})` : 'ไม่มีพยาน (ใช้ภาพหลักฐานกล้องวงจรปิด)'}
               </div>
               <div>
-                3. <strong>หัวหน้าฝ่าย:</strong> {detectedDeptHead?.name || 'หัวหน้าฝ่าย'}{' '}
-                {detectedDeptHead?.email && <span style={{ color: 'var(--text-muted)' }}>({detectedDeptHead.email})</span>}
+                3. <strong>หัวหน้าฝ่าย:</strong> {detectedDeptHead ? `${detectedDeptHead.name} (${detectedDeptHead.email})` : 'หัวหน้าฝ่ายตามสังกัด'}
               </div>
               <div>
-                4. <strong>รองผู้อำนวยการฝ่ายบริหาร:</strong> {detectedDeputyDirector?.name || 'รองผู้อำนวยการฝ่ายบริหาร'}{' '}
-                {detectedDeputyDirector?.email && <span style={{ color: 'var(--text-muted)' }}>({detectedDeputyDirector.email})</span>}
+                4. <strong>รองผู้อำนวยการฝ่ายบริหาร:</strong> {detectedDeputyDirector?.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ'}{' '}
+                <span style={{ color: '#2563EB', fontWeight: 600 }}>
+                  ({detectedDeputyDirector?.email || 'prasertsak.t@cit.kmutnb.ac.th'})
+                </span>
+                <span style={{ color: '#475569', fontSize: '0.75rem', marginLeft: '6px' }}>[อนุมัติขั้นสุดท้าย]</span>
               </div>
             </div>
           </div>
@@ -564,7 +699,7 @@ export default function TimeAttendanceModal({
               type="submit"
               className="btn btn-primary"
               disabled={isSubmitting}
-              style={{ minWidth: '150px' }}
+              style={{ minWidth: '160px' }}
             >
               {isSubmitting ? (
                 'กำลังบันทึก...'

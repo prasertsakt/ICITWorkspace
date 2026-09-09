@@ -13,6 +13,7 @@ import {
   getNotificationRecipientForStep,
   resolveRoleEmailsFromDirectory,
 } from './emailNotificationService';
+import { DEFAULT_PORTAL_SERVICES } from './constants';
 import {
   collection,
   doc,
@@ -38,6 +39,7 @@ const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 
 export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'attendance', 'leave', 'knowledge', 'survey'];
 const LOCAL_KEY_PORTAL_SERVICES = 'icit_portal_services_order';
+const LOCAL_KEY_PORTAL_CUSTOM_ITEMS = 'icit_portal_custom_service_items';
 
 /**
  * Helper: Check if a leave record is sample / dummy data
@@ -709,11 +711,43 @@ export function subscribeLeaveList(callback, { year = new Date().getFullYear(), 
 }
 
 /**
- * Subscribe to real-time changes of Portal Services Order
+ * Helper: Merge stored services with default template
  */
-export function subscribePortalServicesOrder(callback) {
+function mergePortalServicesWithDefaults(storedServices, storedOrder) {
+  let cards = [];
+  if (Array.isArray(storedServices) && storedServices.length > 0) {
+    cards = [...storedServices];
+    // Ensure all default service IDs exist
+    DEFAULT_PORTAL_SERVICES.forEach((defCard) => {
+      const exists = cards.some((c) => c.id === defCard.id);
+      if (!exists) {
+        cards.push(defCard);
+      }
+    });
+  } else {
+    cards = [...DEFAULT_PORTAL_SERVICES];
+  }
+
+  // Sort by stored order if present
+  if (Array.isArray(storedOrder) && storedOrder.length > 0) {
+    cards.sort((a, b) => {
+      const idxA = storedOrder.indexOf(a.id);
+      const idxB = storedOrder.indexOf(b.id);
+      if (idxA === -1 && idxB === -1) return 0;
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    });
+  }
+  return cards;
+}
+
+/**
+ * Subscribe to real-time changes of Portal Services Cards & Order
+ */
+export function subscribePortalServices(callback) {
   if (typeof window === 'undefined') {
-    callback(DEFAULT_SERVICE_ORDER);
+    callback(DEFAULT_PORTAL_SERVICES);
     return () => {};
   }
 
@@ -727,22 +761,13 @@ export function subscribePortalServicesOrder(callback) {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            if (Array.isArray(data?.order) && data.order.length > 0) {
-              let mergedOrder = [...data.order];
-              if (!mergedOrder.includes('attendance')) {
-                const profileIdx = mergedOrder.indexOf('profile');
-                if (profileIdx !== -1) {
-                  mergedOrder.splice(profileIdx + 1, 0, 'attendance');
-                } else {
-                  mergedOrder.push('attendance');
-                }
-              }
-              DEFAULT_SERVICE_ORDER.forEach((id) => {
-                if (!mergedOrder.includes(id)) mergedOrder.push(id);
-              });
-              localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(mergedOrder));
-              notifyPortalServiceSubscribers(mergedOrder);
-            }
+            const cards = data?.cards;
+            const order = data?.order;
+
+            const resolvedCards = mergePortalServicesWithDefaults(cards, order);
+            localStorage.setItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS, JSON.stringify(resolvedCards));
+            localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(resolvedCards.map((c) => c.id)));
+            notifyPortalServiceSubscribers(resolvedCards);
           }
         },
         (err) => {
@@ -754,39 +779,21 @@ export function subscribePortalServicesOrder(callback) {
     }
   }
 
-  // Initial emit from localStorage or default
-  const cached = localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES);
-  let initialOrder = DEFAULT_SERVICE_ORDER;
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        let merged = [...parsed];
-        if (!merged.includes('attendance')) {
-          const profileIdx = merged.indexOf('profile');
-          if (profileIdx !== -1) {
-            merged.splice(profileIdx + 1, 0, 'attendance');
-          } else {
-            merged.push('attendance');
-          }
-        }
-        DEFAULT_SERVICE_ORDER.forEach((id) => {
-          if (!merged.includes(id)) merged.push(id);
-        });
-        initialOrder = merged;
-      }
-    } catch {}
-  }
-  callback(initialOrder);
+  // Initial emit from localStorage or defaults
+  let initialCards = [...DEFAULT_PORTAL_SERVICES];
+  try {
+    const cachedCards = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
+    const cachedOrder = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES) || '[]');
+    initialCards = mergePortalServicesWithDefaults(cachedCards, cachedOrder);
+  } catch {}
+  callback(initialCards);
 
   const handleStorageChange = (e) => {
-    if (e.key === LOCAL_KEY_PORTAL_SERVICES && e.newValue) {
+    if (e.key === LOCAL_KEY_PORTAL_CUSTOM_ITEMS && e.newValue) {
       try {
         const parsed = JSON.parse(e.newValue);
         if (Array.isArray(parsed)) {
-          let merged = [...parsed];
-          if (!merged.includes('attendance')) merged.push('attendance');
-          callback(merged);
+          callback(parsed);
         }
       } catch {}
     }
@@ -803,32 +810,116 @@ export function subscribePortalServicesOrder(callback) {
 }
 
 /**
- * Save Portal Services Order
+ * Legacy alias for order subscription (still supported)
  */
-export async function savePortalServicesOrder(order) {
-  if (!Array.isArray(order)) return order;
+export function subscribePortalServicesOrder(callback) {
+  return subscribePortalServices((cards) => {
+    callback(cards.map((c) => c.id));
+  });
+}
+
+/**
+ * Save Entire Portal Services List (Cards & Order)
+ */
+export async function savePortalServices(cards) {
+  if (!Array.isArray(cards)) return cards;
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(order));
+    localStorage.setItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS, JSON.stringify(cards));
+    localStorage.setItem(LOCAL_KEY_PORTAL_SERVICES, JSON.stringify(cards.map((c) => c.id)));
   }
-  notifyPortalServiceSubscribers(order);
+  notifyPortalServiceSubscribers(cards);
 
   if (isFirebaseConfigured && db) {
     try {
       await setDoc(
         doc(db, 'settings', 'portal_services'),
         {
-          order,
+          cards,
+          order: cards.map((c) => c.id),
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
-      console.log('✅ Successfully persisted portal services order to Firestore');
+      console.log('✅ Successfully persisted portal services to Firestore');
     } catch (e) {
-      console.error('Failed to persist portal services order to Firestore', e);
+      console.error('Failed to persist portal services to Firestore', e);
     }
   }
 
+  return cards;
+}
+
+/**
+ * Save / Update Single Portal Service Card
+ */
+export async function savePortalServiceCard(card) {
+  if (!card || !card.id) return null;
+  let currentCards = [...DEFAULT_PORTAL_SERVICES];
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
+      const order = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES) || '[]');
+      currentCards = mergePortalServicesWithDefaults(stored, order);
+    } catch {}
+  }
+
+  const existingIdx = currentCards.findIndex((c) => c.id === card.id);
+  let updatedCards;
+  if (existingIdx >= 0) {
+    updatedCards = [...currentCards];
+    updatedCards[existingIdx] = { ...updatedCards[existingIdx], ...card };
+  } else {
+    updatedCards = [...currentCards, card];
+  }
+
+  await savePortalServices(updatedCards);
+  return card;
+}
+
+/**
+ * Delete Single Portal Service Card
+ */
+export async function deletePortalServiceCard(cardId) {
+  if (!cardId) return false;
+  let currentCards = [...DEFAULT_PORTAL_SERVICES];
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
+      const order = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES) || '[]');
+      currentCards = mergePortalServicesWithDefaults(stored, order);
+    } catch {}
+  }
+
+  const filtered = currentCards.filter((c) => c.id !== cardId);
+  await savePortalServices(filtered);
+  return true;
+}
+
+/**
+ * Save Portal Services Order
+ */
+export async function savePortalServicesOrder(order) {
+  if (!Array.isArray(order)) return order;
+  let currentCards = [...DEFAULT_PORTAL_SERVICES];
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
+      currentCards = mergePortalServicesWithDefaults(stored, order);
+    } catch {}
+  }
+
+  // Reorder cards matching the new order
+  const reordered = [...currentCards].sort((a, b) => {
+    const idxA = order.indexOf(a.id);
+    const idxB = order.indexOf(b.id);
+    if (idxA === -1 && idxB === -1) return 0;
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+
+  await savePortalServices(reordered);
   return order;
 }
 
@@ -883,13 +974,28 @@ export const ESSENTIAL_STAFF_RECORDS = [
     role: 'Admin',
     status: 'ปกติ',
     department: 'สำนักงานผู้อำนวยการ',
-    position: 'เจ้าหน้าที่บริหารงานทั่วไป',
+    position: 'เจ้าหน้าที่บริหารงานทั่วไป (งานบุคลากร)',
     level: 'ชำนาญการ',
     personnelType: 'พนักงานมหาวิทยาลัย',
     appointmentDate: '-',
     retirementDate: '',
     avatarUrl: 'https://icit.kmutnb.ac.th/wp-content/uploads/2024/06/jaruchaj.png',
-    note: '',
+    note: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
+  },
+  {
+    id: '4SRaJO35tQE1ae4YC16V',
+    name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+    email: 'prasertsak.t@cit.kmutnb.ac.th',
+    role: 'Admin',
+    status: 'ปกติ',
+    department: 'สำนักงานผู้อำนวยการ',
+    position: 'รองผู้อำนวยการฝ่ายบริหาร',
+    level: 'ผู้บริหาร',
+    personnelType: 'ข้าราชการ/พนักงานมหาวิทยาลัย',
+    appointmentDate: '-',
+    retirementDate: '',
+    avatarUrl: 'https://icit.kmutnb.ac.th/wp-content/uploads/2024/06/prasertsakt.png',
+    note: 'รองผู้อำนวยการฝ่ายบริหาร',
   },
   {
     id: 'pers-1788841102178',
@@ -1645,16 +1751,16 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
   const fullRecord = {
     ...record,
     id,
-    hrOfficerId: record.hrOfficerId || hrOfficer?.id || dirRoles.hr?.id || '',
-    hrOfficerName: record.hrOfficerName || hrOfficer?.name || dirRoles.hr?.name || 'เจ้าหน้าที่ฝ่ายบุคคล',
-    hrOfficerEmail: record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || '',
-    hrEmail: record.hrEmail || record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || '',
+    hrOfficerId: record.hrOfficerId || hrOfficer?.id || dirRoles.hr?.id || 'pers-1788794490388',
+    hrOfficerName: record.hrOfficerName || hrOfficer?.name || dirRoles.hr?.name || 'นางสาวจารุชา เจือทอง',
+    hrOfficerEmail: record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || 'jarucha.j@icit.kmutnb.ac.th',
+    hrEmail: record.hrEmail || record.hrOfficerEmail || hrOfficer?.email || dirRoles.hr?.email || 'jarucha.j@icit.kmutnb.ac.th',
     departmentHeadId: record.departmentHeadId || dirRoles.deptHead?.id || '',
-    departmentHeadName: record.departmentHeadName || dirRoles.deptHead?.name || '',
+    departmentHeadName: record.departmentHeadName || dirRoles.deptHead?.name || 'หัวหน้าฝ่าย',
     departmentHeadEmail: record.departmentHeadEmail || dirRoles.deptHead?.email || '',
-    deputyDirectorId: record.deputyDirectorId || dirRoles.deputyDirector?.id || '',
-    deputyDirectorName: record.deputyDirectorName || dirRoles.deputyDirector?.name || '',
-    deputyDirectorEmail: record.deputyDirectorEmail || dirRoles.deputyDirector?.email || '',
+    deputyDirectorId: record.deputyDirectorId || dirRoles.deputyDirector?.id || '4SRaJO35tQE1ae4YC16V',
+    deputyDirectorName: record.deputyDirectorName || dirRoles.deputyDirector?.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+    deputyDirectorEmail: record.deputyDirectorEmail || dirRoles.deputyDirector?.email || 'prasertsak.t@cit.kmutnb.ac.th',
     currentStep: record.currentStep || 'HR_REVIEW',
     statusHr: record.statusHr || 'รอตรวจสอบ',
     commentHr: record.commentHr || '',

@@ -132,14 +132,23 @@ export default function LeaveCalendar({
     });
   };
 
+  // Leave types visible to the current user (admin sees all, non-admin sees everything except 'สาย')
+  const visibleLeaveTypes = useMemo(() => {
+    if (isAdmin) return LEAVE_TYPES;
+    return LEAVE_TYPES.filter((t) => t !== 'สาย');
+  }, [isAdmin]);
+
   // Filter leaves based on user selections
   const filteredLeaves = useMemo(() => {
     return leaves.filter((item) => {
       if (isDummyLeaveRecord(item)) return false;
+      // Non-admin cannot see 'สาย'
+      if (!isAdmin && item.leaveType === 'สาย') return false;
+
       const matchDept = filterDept === 'ALL' || item.department === filterDept;
       const matchType =
         selectedTypes.length === 0 ||
-        selectedTypes.length === LEAVE_TYPES.length ||
+        selectedTypes.length === visibleLeaveTypes.length ||
         selectedTypes.includes(item.leaveType);
       const matchSearch =
         searchQuery === '' ||
@@ -148,7 +157,7 @@ export default function LeaveCalendar({
         item.reason?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchDept && matchType && matchSearch;
     });
-  }, [leaves, filterDept, selectedTypes, searchQuery]);
+  }, [leaves, isAdmin, filterDept, selectedTypes, visibleLeaveTypes, searchQuery]);
 
   // Calendar Grid Calculation
   const calendarDays = useMemo(() => {
@@ -355,7 +364,7 @@ export default function LeaveCalendar({
               }}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {selectedTypes.length === 0 || selectedTypes.length === LEAVE_TYPES.length
+                {selectedTypes.length === 0 || selectedTypes.length === visibleLeaveTypes.length
                   ? '📋 ทุกประเภทการลา'
                   : selectedTypes.length === 1
                   ? `📋 ${selectedTypes[0]}`
@@ -399,7 +408,7 @@ export default function LeaveCalendar({
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       type="button"
-                      onClick={() => setSelectedTypes([...LEAVE_TYPES])}
+                      onClick={() => setSelectedTypes([...visibleLeaveTypes])}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -433,7 +442,7 @@ export default function LeaveCalendar({
 
                 {/* Option List */}
                 <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {LEAVE_TYPES.map((type) => {
+                  {visibleLeaveTypes.map((type) => {
                     const conf = LEAVE_TYPE_CONFIG[type] || {};
                     const isChecked = selectedTypes.includes(type);
                     return (
@@ -537,7 +546,7 @@ export default function LeaveCalendar({
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
           สัญลักษณ์สี (คลิกเพื่อกรอง):
         </span>
-        {LEAVE_TYPES.map((type) => {
+        {visibleLeaveTypes.map((type) => {
           const conf = LEAVE_TYPE_CONFIG[type] || {};
           const isSelected = selectedTypes.includes(type);
           const hasFilter = selectedTypes.length > 0;
