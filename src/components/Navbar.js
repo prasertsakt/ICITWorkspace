@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  FileText,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -119,6 +120,14 @@ export default function Navbar() {
                 >
                   <Calendar size={16} />
                   <span>ปฏิทินวันลา</span>
+                </Link>
+
+                <Link
+                  href="/jd-hub"
+                  className={`nav-link-item ${pathname === '/jd-hub' ? 'active' : ''}`}
+                >
+                  <FileText size={16} />
+                  <span>JD Hub</span>
                 </Link>
 
                 <Link
@@ -297,6 +306,18 @@ export default function Navbar() {
                       <Calendar size={18} />
                     </div>
                     <span style={{ flex: 1 }}>ปฏิทินวันลา</span>
+                    <ChevronRight size={16} opacity={0.4} />
+                  </Link>
+
+                  <Link
+                    href="/jd-hub"
+                    className={`mobile-drawer-link ${pathname === '/jd-hub' ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="drawer-icon-box">
+                      <FileText size={18} />
+                    </div>
+                    <span style={{ flex: 1 }}>ศูนย์จัดการลักษณะงาน (JD Hub)</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 

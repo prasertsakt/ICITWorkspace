@@ -917,3 +917,52 @@ button, input, select, textarea {
   color: var(--primary-600);
 }
 
+/* =========================================================
+   JD Hub Print Styles (PDF Export Optimization)
+   ========================================================= */
+@media print {
+  /* Hide page header, navbar, modals overlays that are not the JD document */
+  nav,
+  header,
+  footer,
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 11pt !important;
+  }
+
+  /* Target the printable JD container */
+  .jd-print-container {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page break rules */
+  .page-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+}
+
+

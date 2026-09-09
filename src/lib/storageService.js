@@ -37,7 +37,7 @@ const LOCAL_KEY_LEAVES_SYNC_TIME = 'icit_org_leaves_sync_time';
 const LEAVES_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for leave records cache
 const LOCAL_KEY_TIME_ATTENDANCES = 'icit_time_attendances';
 
-export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'attendance', 'leave', 'knowledge', 'survey'];
+export const DEFAULT_SERVICE_ORDER = ['org', 'profile', 'attendance', 'leave', 'jd-hub', 'knowledge', 'survey'];
 const LOCAL_KEY_PORTAL_SERVICES = 'icit_portal_services_order';
 const LOCAL_KEY_PORTAL_CUSTOM_ITEMS = 'icit_portal_custom_service_items';
 

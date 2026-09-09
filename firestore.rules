@@ -65,10 +65,29 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'settings' collection (Portal Configurations, Service Order, etc.)
+    // Rules for 'job_descriptions' collection (JD Hub)
+    match /job_descriptions/{jdId} {
+      // Must be logged in to view JDs
+      allow read: if isAuthenticated();
+
+      // Create: Authenticated users/admins
+      allow create: if isAuthenticated();
+
+      // Update: Admin can update any JD; Owner can update their own JD
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.personnelEmail == userEmail() ||
+        request.resource.data.personnelEmail == userEmail()
+      );
+
+      // Delete: Only Admin can delete (User cannot delete)
+      allow delete: if isAdmin();
+    }
+
+    // Rules for 'settings' collection (Portal Configurations, Service Order, JD Config, etc.)
     match /settings/{settingId} {
-      allow read: if true; // Any visitor can read portal card order
-      allow write: if isAuthenticated(); // Only logged-in users / admins can save order
+      allow read: if true; // Any visitor can read portal card order & public configs
+      allow write: if isAuthenticated(); // Only logged-in users / admins can save
     }
   }
 }
