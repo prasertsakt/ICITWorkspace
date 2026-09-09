@@ -597,7 +597,7 @@ export default function JDPreviewModal({
                 <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>(Approved By)</span>
               </div>
               <div style={{ borderBottom: '1px dotted #64748B', margin: '0 1rem 8px' }}></div>
-              <div style={{ fontWeight: 600 }}>({jd.signatures?.approvedBy?.name || 'รศ.ดร.ชูพันธุ์ รัตนโภคา'})</div>
+              <div style={{ fontWeight: 600 }}>({jd.signatures?.approvedBy?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน'})</div>
               <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>......../......../........</div>
             </div>
           </div>

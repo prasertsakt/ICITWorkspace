@@ -903,7 +903,7 @@ export default function JDHubPage() {
                       <strong style={{ color: 'var(--text-primary)' }}>{respCount} ด้าน</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>สมรรถนะประจำตำแหน่ง (FC):</span>
+                      <span>สมรรถนะประจำตำแหน่ง:</span>
                       <strong style={{ color: 'var(--text-primary)' }}>{fcCount} สมรรถนะ</strong>
                     </div>
                   </div>
@@ -1001,6 +1001,7 @@ export default function JDHubPage() {
           personnelList={personnelList}
           departmentList={departmentList}
           executiveList={executiveList}
+          currentUser={currentUser}
           currentPersonnel={currentPersonnel}
           isAdmin={isAdmin}
           isRevisionOpen={windowStatus.isOpen}

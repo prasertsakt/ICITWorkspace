@@ -182,7 +182,7 @@ export function createBlankJD(personnel = null) {
         date: '',
       },
       approvedBy: {
-        name: 'รศ.ดร.ชูพันธุ์ รัตนโภคา',
+        name: 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
         date: '',
       },
     },
@@ -342,7 +342,7 @@ export const SAMPLE_SEED_JD = {
       date: '',
     },
     approvedBy: {
-      name: 'รศ.ดร.ชูพันธุ์ รัตนโภคา',
+      name: 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
       date: '',
     },
   },
