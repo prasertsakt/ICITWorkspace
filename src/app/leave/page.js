@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   subscribeLeaveList,
@@ -39,8 +40,10 @@ import {
   FileText,
 } from 'lucide-react';
 
-export default function LeavePage() {
+function LeaveContent() {
   const { currentPersonnel, isAdmin, handleGoogleSignIn, isLoading: isAuthLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
 
   // Role permissions for Leave Report
   const isHrStaff = currentPersonnel?.position === 'บุคลากร' || isAdmin;
@@ -84,6 +87,15 @@ export default function LeavePage() {
       unsubPersonnel();
     };
   }, [selectedYear, isAdmin]);
+
+  // Handle URL query parameters for action=new (Admin only)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'new' && isAdmin) {
+      setEditingLeave(null);
+      setIsLeaveModalOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
   // Dashboard Metrics Calculations
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
@@ -575,6 +587,7 @@ export default function LeavePage() {
         onEditLeave={handleOpenEditModal}
         onDeleteLeave={handleDeleteLeave}
         onYearChange={setSelectedYear}
+        initialSearch={initialSearch}
       />
 
       {/* Modal for Adding / Editing Leave */}
@@ -599,5 +612,22 @@ export default function LeavePage() {
         />
       )}
     </div>
+  );
+}
+
+export default function LeavePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="main-container" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+          <div style={{ color: 'var(--primary-600)', marginBottom: '1rem' }}>
+            <Calendar size={36} className="spin" style={{ margin: '0 auto' }} />
+          </div>
+          <p style={{ color: 'var(--text-secondary)' }}>กำลังโหลดปฏิทินวันลา...</p>
+        </div>
+      }
+    >
+      <LeaveContent />
+    </React.Suspense>
   );
 }

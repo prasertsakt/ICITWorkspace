@@ -190,6 +190,16 @@ function TimeAttendanceContent() {
       setOneClickData({ actionId, step, decision, token, comment: commentFromUrl });
       setOneClickComment(commentFromUrl);
     }
+
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['all', 'mine', 'witness', 'dept_head', 'pending_me'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+
+    const actionParam = searchParams.get('action');
+    if (actionParam === 'new') {
+      setIsNewModalOpen(true);
+    }
   }, [searchParams, visibleAttendances]);
 
   // Execute 1-Click Confirmation

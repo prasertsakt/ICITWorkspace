@@ -317,7 +317,7 @@ export default function Navbar() {
                     <div className="drawer-icon-box">
                       <FileText size={18} />
                     </div>
-                    <span style={{ flex: 1 }}>ศูนย์จัดการลักษณะงาน (JD Hub)</span>
+                    <span style={{ flex: 1 }}>JD Hub</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 

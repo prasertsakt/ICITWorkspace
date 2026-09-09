@@ -52,13 +52,20 @@ export default function LeaveCalendar({
   onEditLeave,
   onDeleteLeave,
   onYearChange,
+  initialSearch = '',
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filterDept, setFilterDept] = useState('ALL');
   const [selectedTypes, setSelectedTypes] = useState([]); // [] means ALL types
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
   const typeDropdownRef = useRef(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '');
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   // Selected date or leave for detailed inspection
