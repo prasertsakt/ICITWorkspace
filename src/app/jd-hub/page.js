@@ -30,7 +30,11 @@ import {
   saveJDRecord,
   confirmJDVersion,
 } from '@/lib/jdService';
-import { subscribePersonnelList } from '@/lib/storageService';
+import {
+  subscribePersonnelList,
+  subscribeDepartmentList,
+  subscribeExecutiveList,
+} from '@/lib/storageService';
 import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
@@ -43,6 +47,8 @@ export default function JDHubPage() {
   // Data state
   const [jds, setJds] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
+  const [departmentList, setDepartmentList] = useState([]);
+  const [executiveList, setExecutiveList] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,6 +79,14 @@ export default function JDHubPage() {
       setPersonnelList(pList || []);
     });
 
+    const unsubDepts = subscribeDepartmentList((dList) => {
+      setDepartmentList(dList || []);
+    });
+
+    const unsubExecs = subscribeExecutiveList((eList) => {
+      setExecutiveList(eList || []);
+    });
+
     const unsubConfig = subscribeJDConfig((cfg) => {
       setConfig(cfg);
     });
@@ -80,6 +94,8 @@ export default function JDHubPage() {
     return () => {
       if (unsubJDs) unsubJDs();
       if (unsubPersonnel) unsubPersonnel();
+      if (unsubDepts) unsubDepts();
+      if (unsubExecs) unsubExecs();
       if (unsubConfig) unsubConfig();
     };
   }, []);
@@ -983,6 +999,8 @@ export default function JDHubPage() {
           onClose={() => setEditingJD(null)}
           jdToEdit={editingJD}
           personnelList={personnelList}
+          departmentList={departmentList}
+          executiveList={executiveList}
           currentPersonnel={currentPersonnel}
           isAdmin={isAdmin}
           isRevisionOpen={windowStatus.isOpen}

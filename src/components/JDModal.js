@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import { KMUTNB_CORE_COMPETENCIES, createBlankJD } from '@/lib/jdTemplateData';
 import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
@@ -21,6 +21,8 @@ import {
   Send,
   ExternalLink,
   FileText,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 const TABS = [
@@ -40,6 +42,8 @@ export default function JDModal({
   onConfirm,
   jdToEdit = null,
   personnelList = [],
+  departmentList = [],
+  executiveList = [],
   currentPersonnel = null,
   isAdmin = false,
   isRevisionOpen = true,
@@ -49,21 +53,149 @@ export default function JDModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Reset form on open/change
+  // 1. Auto-detect Head of Department (ผู้บังคับบัญชา)
+  const getDeptHeadInfo = (deptName) => {
+    if (!deptName) return null;
+    const cleanDept = deptName.trim();
+
+    // Try matching with departmentList
+    const matchedDept = departmentList.find((d) =>
+      d.name === cleanDept ||
+      (d.name && (cleanDept.includes(d.name) || d.name.includes(cleanDept)))
+    );
+
+    if (matchedDept?.headPersonnelId) {
+      const headPerson = personnelList.find((p) => p.id === matchedDept.headPersonnelId);
+      if (headPerson) {
+        return {
+          name: headPerson.name,
+          position: headPerson.position || `หัวหน้า${cleanDept}`,
+        };
+      }
+    }
+
+    // Search personnelList for 'หัวหน้า' in that department
+    const headInDept = personnelList.find((p) => {
+      const inSameDept =
+        p.department === cleanDept ||
+        (p.department && (cleanDept.includes(p.department) || p.department.includes(cleanDept)));
+      const isHead = p.position?.includes('หัวหน้า') || p.note?.includes('หัวหน้า');
+      return inSameDept && isHead;
+    });
+
+    if (headInDept) {
+      return {
+        name: headInDept.name,
+        position: headInDept.position,
+      };
+    }
+
+    // Default fallback for Office of the Director
+    if (cleanDept.includes('สำนักงานผู้อำนวยการ')) {
+      return {
+        name: 'นางสาวชาลินทร์ เกรียงสินยศ',
+        position: 'หัวหน้าสำนักงานผู้อำนวยการ (นักวิชาการพัสดุ)',
+      };
+    }
+
+    return null;
+  };
+
+  const autoDeptHead = useMemo(() => {
+    return getDeptHeadInfo(formData.department);
+  }, [formData.department, departmentList, personnelList]);
+
+  // 2. Auto-detect Director (ผู้อนุมัติ : ผู้อำนวยการสำนักคอมพิวเตอร์)
+  const autoDirector = useMemo(() => {
+    // Search executiveList for 'ผู้อำนวยการ' (exclude 'รองผู้อำนวยการ')
+    const execDirector = executiveList.find(
+      (e) =>
+        e.position &&
+        (e.position.includes('ผู้อำนวยการสำนัก') || e.position === 'ผู้อำนวยการ' || e.position.includes('ผู้อำนวยการ')) &&
+        !e.position.includes('รองผู้อำนวยการ')
+    );
+    if (execDirector) {
+      return {
+        name: execDirector.name,
+        position: execDirector.position,
+      };
+    }
+
+    // Search personnelList
+    const persDirector = personnelList.find(
+      (p) =>
+        p.position &&
+        (p.position.includes('ผู้อำนวยการสำนัก') || p.position === 'ผู้อำนวยการ') &&
+        !p.position.includes('รองผู้อำนวยการ')
+    );
+    if (persDirector) {
+      return {
+        name: persDirector.name,
+        position: persDirector.position,
+      };
+    }
+
+    // Standard ICIT Director fallback
+    return {
+      name: 'รศ.ดร.ชูพันธุ์ รัตนโภคา',
+      position: 'ผู้อำนวยการสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
+    };
+  }, [executiveList, personnelList]);
+
+  // 3. Auto-detect Preparer (ผู้จัดทำ from login user)
+  const autoPreparerName = useMemo(() => {
+    return currentPersonnel?.name || formData.personnelName || '';
+  }, [currentPersonnel, formData.personnelName]);
+
+  // Reset form on open/change with auto-selected signatures
   useEffect(() => {
     if (isOpen) {
+      let initialData;
       if (jdToEdit) {
-        setFormData(JSON.parse(JSON.stringify(jdToEdit)));
+        initialData = JSON.parse(JSON.stringify(jdToEdit));
       } else {
-        // Create new: default to current personnel or first in list
         const defaultPerson = isAdmin ? personnelList[0] || null : currentPersonnel;
-        setFormData(createBlankJD(defaultPerson));
+        initialData = createBlankJD(defaultPerson);
       }
+
+      if (!initialData.signatures) initialData.signatures = {};
+
+      // 1. Auto-fill ผู้จัดทำ from login user if empty
+      const loginUserName = currentPersonnel?.name || initialData.personnelName || '';
+      if (!initialData.signatures.preparedBy?.name && loginUserName) {
+        initialData.signatures.preparedBy = {
+          name: loginUserName,
+          date: initialData.signatures.preparedBy?.date || '',
+        };
+      }
+
+      // 2. Auto-fill ผู้บังคับบัญชา from หัวหน้าฝ่าย if empty
+      const head = getDeptHeadInfo(initialData.department);
+      if (head) {
+        if (!initialData.supervisorName) initialData.supervisorName = head.name;
+        if (!initialData.supervisorPosition) initialData.supervisorPosition = head.position;
+        if (!initialData.signatures.reviewedBy?.name) {
+          initialData.signatures.reviewedBy = {
+            name: head.name,
+            date: initialData.signatures.reviewedBy?.date || '',
+          };
+        }
+      }
+
+      // 3. Auto-fill ผู้อนุมัติ from ผู้อำนวยการสำนักคอมพิวเตอร์ if empty
+      if (!initialData.signatures.approvedBy?.name && autoDirector?.name) {
+        initialData.signatures.approvedBy = {
+          name: autoDirector.name,
+          date: initialData.signatures.approvedBy?.date || '',
+        };
+      }
+
+      setFormData(initialData);
       setActiveTab('job_info');
       setErrorMsg('');
       setIsSubmitting(false);
     }
-  }, [isOpen, jdToEdit, currentPersonnel, personnelList, isAdmin]);
+  }, [isOpen, jdToEdit, currentPersonnel, personnelList, isAdmin, autoDirector]);
 
   if (!isOpen) return null;
 
@@ -71,6 +203,7 @@ export default function JDModal({
   const handleSelectPersonnel = (pId) => {
     const selected = personnelList.find((p) => p.id === pId);
     if (!selected) return;
+    const headForSelected = getDeptHeadInfo(selected.department);
     setFormData((prev) => ({
       ...prev,
       personnelId: selected.id,
@@ -81,11 +214,39 @@ export default function JDModal({
       department: selected.department || prev.department,
       positionLevel: selected.positionLevel || prev.positionLevel,
       positionType: selected.personnelType || prev.positionType,
+      supervisorName: headForSelected?.name || prev.supervisorName,
+      supervisorPosition: headForSelected?.position || prev.supervisorPosition,
       signatures: {
         ...prev.signatures,
         preparedBy: {
           name: selected.name,
           date: prev.signatures?.preparedBy?.date || '',
+        },
+        reviewedBy: {
+          name: headForSelected?.name || prev.signatures?.reviewedBy?.name || '',
+          date: prev.signatures?.reviewedBy?.date || '',
+        },
+        approvedBy: {
+          name: prev.signatures?.approvedBy?.name || autoDirector.name,
+          date: prev.signatures?.approvedBy?.date || '',
+        },
+      },
+    }));
+  };
+
+  // Handle department change in Tab 1
+  const handleDepartmentChange = (newDept) => {
+    const newHead = getDeptHeadInfo(newDept);
+    setFormData((prev) => ({
+      ...prev,
+      department: newDept,
+      supervisorName: newHead?.name || prev.supervisorName,
+      supervisorPosition: newHead?.position || prev.supervisorPosition,
+      signatures: {
+        ...prev.signatures,
+        reviewedBy: {
+          name: newHead?.name || prev.signatures?.reviewedBy?.name || '',
+          date: prev.signatures?.reviewedBy?.date || '',
         },
       },
     }));
@@ -323,14 +484,22 @@ export default function JDModal({
           </button>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Fixed Height */}
         <div
+          className="jd-modal-tabs-bar"
           style={{
             display: 'flex',
+            alignItems: 'stretch',
+            height: '46px',
+            minHeight: '46px',
+            maxHeight: '46px',
+            flexShrink: 0,
             overflowX: 'auto',
+            overflowY: 'hidden',
             background: 'var(--bg-card)',
             borderBottom: '1px solid var(--border-subtle)',
             padding: '0 0.5rem',
+            boxSizing: 'border-box',
           }}
         >
           {TABS.map((tab) => {
@@ -344,19 +513,23 @@ export default function JDModal({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '6px',
-                  padding: '0.75rem 1rem',
+                  height: '100%',
+                  padding: '0 0.95rem',
                   fontSize: '0.8rem',
                   fontWeight: isActive ? 700 : 500,
                   color: isActive ? 'var(--primary-600)' : 'var(--text-secondary)',
-                  borderBottom: isActive ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
-                  background: 'transparent',
+                  borderBottom: isActive ? '3px solid var(--primary-600)' : '3px solid transparent',
+                  background: isActive ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
                   borderTop: 'none',
                   borderLeft: 'none',
                   borderRight: 'none',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                  boxSizing: 'border-box',
                 }}
               >
                 <Icon size={14} />
@@ -515,7 +688,7 @@ export default function JDModal({
                   <select
                     className="form-input"
                     value={formData.department}
-                    onChange={(e) => handleChange('department', e.target.value)}
+                    onChange={(e) => handleDepartmentChange(e.target.value)}
                   >
                     {PREDEFINED_DEPARTMENTS.map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -530,7 +703,14 @@ export default function JDModal({
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 <div>
-                  <label className="form-label">ชื่อผู้บังคับบัญชา</label>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>ชื่อผู้บังคับบัญชา</span>
+                    {autoDeptHead?.name && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--primary-600)', fontWeight: 600 }}>
+                        🏢 หัวหน้าฝ่าย: {autoDeptHead.name}
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     className="form-input"
@@ -1182,17 +1362,94 @@ export default function JDModal({
 
               {/* Signatures */}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: 800 }}>
-                  ข้อมูลการลงนามรับรอง
-                </h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      ข้อมูลการลงนามรับรอง (Signatures)
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      ระบบดึงข้อมูลผู้จัดทำ ผู้บังคับบัญชา และผู้อนุมัติให้อัตโนมัติตามสายการบังคับบัญชา
+                    </p>
+                  </div>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-                  <div style={{ background: 'var(--bg-card-subtle)', padding: '1rem', borderRadius: '8px' }}>
-                    <label className="form-label" style={{ fontWeight: 700 }}>ผู้จัดทำ (Position By)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {/* Card 1: ผู้จัดทำ (Position By) -> Auto select from login user */}
+                  <div
+                    style={{
+                      background: 'var(--bg-card-subtle)',
+                      padding: '1.1rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem' }}>
+                      <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
+                        ผู้จัดทำ (Position By)
+                      </label>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.65rem',
+                          background: 'var(--primary-50)',
+                          color: 'var(--primary-600)',
+                          border: '1px solid var(--primary-200)',
+                        }}
+                      >
+                        <Sparkles size={11} />
+                        Auto: ผู้เข้าสู่ระบบ
+                      </span>
+                    </div>
+
+                    {/* Quick select dropdown */}
+                    <select
+                      className="form-select"
+                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                      value={formData.signatures?.preparedBy?.name || ''}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          signatures: {
+                            ...prev.signatures,
+                            preparedBy: { ...(prev.signatures?.preparedBy || {}), name },
+                          },
+                        }));
+                      }}
+                    >
+                      {currentPersonnel?.name && (
+                        <option value={currentPersonnel.name}>
+                          👤 [ผู้เข้าสู่ระบบ] {currentPersonnel.name}
+                        </option>
+                      )}
+                      {formData.personnelName && formData.personnelName !== currentPersonnel?.name && (
+                        <option value={formData.personnelName}>
+                          👤 [ผู้ครองตำแหน่ง JD] {formData.personnelName}
+                        </option>
+                      )}
+                      {isAdmin &&
+                        personnelList.map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name} ({p.department || p.position || 'บุคลากร'})
+                          </option>
+                        ))}
+                      {formData.signatures?.preparedBy?.name &&
+                        formData.signatures.preparedBy.name !== currentPersonnel?.name &&
+                        formData.signatures.preparedBy.name !== formData.personnelName && (
+                          <option value={formData.signatures.preparedBy.name}>
+                            ✍️ {formData.signatures.preparedBy.name}
+                          </option>
+                        )}
+                    </select>
+
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ชื่อผู้จัดทำ"
+                      placeholder="ระบุชื่อผู้จัดทำ (หรือแก้ไข)"
+                      style={{ fontSize: '0.85rem' }}
                       value={formData.signatures?.preparedBy?.name || ''}
                       onChange={(e) => {
                         const name = e.target.value;
@@ -1207,17 +1464,86 @@ export default function JDModal({
                     />
                   </div>
 
-                  <div style={{ background: 'var(--bg-card-subtle)', padding: '1rem', borderRadius: '8px' }}>
-                    <label className="form-label" style={{ fontWeight: 700 }}>ผู้บังคับบัญชา (Reviewed By)</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="ชื่อผู้บังคับบัญชา"
+                  {/* Card 2: ผู้บังคับบัญชา (Reviewed By) -> Auto select from หัวหน้าฝ่าย */}
+                  <div
+                    style={{
+                      background: 'var(--bg-card-subtle)',
+                      padding: '1.1rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem' }}>
+                      <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
+                        ผู้บังคับบัญชา (Reviewed By)
+                      </label>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.65rem',
+                          background: 'var(--mint-50)',
+                          color: 'var(--mint-text)',
+                          border: '1px solid var(--mint-200)',
+                        }}
+                      >
+                        <Building2 size={11} />
+                        Auto: หัวหน้าฝ่าย
+                      </span>
+                    </div>
+
+                    {/* Quick select dropdown */}
+                    <select
+                      className="form-select"
+                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
                       value={formData.signatures?.reviewedBy?.name || ''}
                       onChange={(e) => {
                         const name = e.target.value;
                         setFormData((prev) => ({
                           ...prev,
+                          supervisorName: name,
+                          signatures: {
+                            ...prev.signatures,
+                            reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
+                          },
+                        }));
+                      }}
+                    >
+                      {autoDeptHead?.name ? (
+                        <option value={autoDeptHead.name}>
+                          🏢 [หัวหน้าฝ่าย] {autoDeptHead.name} ({autoDeptHead.position})
+                        </option>
+                      ) : (
+                        <option value="">-- ไม่พบหัวหน้าฝ่ายอัตโนมัติ --</option>
+                      )}
+                      {personnelList
+                        .filter((p) => p.department === formData.department && p.name !== autoDeptHead?.name)
+                        .map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name} ({p.position || 'ในฝ่าย'})
+                          </option>
+                        ))}
+                      {formData.signatures?.reviewedBy?.name &&
+                        formData.signatures.reviewedBy.name !== autoDeptHead?.name && (
+                          <option value={formData.signatures.reviewedBy.name}>
+                            ✍️ {formData.signatures.reviewedBy.name}
+                          </option>
+                        )}
+                    </select>
+
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="ระบุชื่อผู้บังคับบัญชา (หรือแก้ไข)"
+                      style={{ fontSize: '0.85rem' }}
+                      value={formData.signatures?.reviewedBy?.name || ''}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          supervisorName: name,
                           signatures: {
                             ...prev.signatures,
                             reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
@@ -1227,12 +1553,75 @@ export default function JDModal({
                     />
                   </div>
 
-                  <div style={{ background: 'var(--bg-card-subtle)', padding: '1rem', borderRadius: '8px' }}>
-                    <label className="form-label" style={{ fontWeight: 700 }}>ผู้อนุมัติ (Approved By)</label>
+                  {/* Card 3: ผู้อนุมัติ (Approved By) -> Auto select from ผู้บริหาร ผู้อำนวยการสำนักคอมพิวเตอร์ */}
+                  <div
+                    style={{
+                      background: 'var(--bg-card-subtle)',
+                      padding: '1.1rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem' }}>
+                      <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
+                        ผู้อนุมัติ (Approved By)
+                      </label>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.65rem',
+                          background: 'var(--peach-50)',
+                          color: 'var(--peach-text)',
+                          border: '1px solid var(--peach-100)',
+                        }}
+                      >
+                        <ShieldCheck size={11} />
+                        Auto: ผู้อำนวยการ
+                      </span>
+                    </div>
+
+                    {/* Quick select dropdown */}
+                    <select
+                      className="form-select"
+                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                      value={formData.signatures?.approvedBy?.name || ''}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          signatures: {
+                            ...prev.signatures,
+                            approvedBy: { ...(prev.signatures?.approvedBy || {}), name },
+                          },
+                        }));
+                      }}
+                    >
+                      <option value={autoDirector.name}>
+                        🏛️ [ผู้อำนวยการ] {autoDirector.name} ({autoDirector.position})
+                      </option>
+                      {executiveList
+                        .filter((ex) => ex.name !== autoDirector.name)
+                        .map((ex) => (
+                          <option key={ex.id} value={ex.name}>
+                            🏛️ {ex.name} ({ex.position || 'ผู้บริหาร'})
+                          </option>
+                        ))}
+                      {formData.signatures?.approvedBy?.name &&
+                        formData.signatures.approvedBy.name !== autoDirector.name && (
+                          <option value={formData.signatures.approvedBy.name}>
+                            ✍️ {formData.signatures.approvedBy.name}
+                          </option>
+                        )}
+                    </select>
+
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ชื่อผู้อนุมัติ"
+                      placeholder="ระบุชื่อผู้อนุมัติ (หรือแก้ไข)"
+                      style={{ fontSize: '0.85rem' }}
                       value={formData.signatures?.approvedBy?.name || ''}
                       onChange={(e) => {
                         const name = e.target.value;

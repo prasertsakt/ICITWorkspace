@@ -965,4 +965,17 @@ button, input, select, textarea {
   }
 }
 
+/* JD Modal Tab Navigation Bar - Fixed Height & Clean Scroll */
+.jd-modal-tabs-bar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.jd-modal-tabs-bar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+
 
