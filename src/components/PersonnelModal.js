@@ -206,7 +206,7 @@ export default function PersonnelModal({ isOpen, onClose, onSave, personnelToEdi
                 <input
                   type="email"
                   className="form-input"
-                  placeholder="เช่น somchai@kmutnb.ac.th"
+                  placeholder="เช่น somchai@icit.kmutnb.ac.th"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />

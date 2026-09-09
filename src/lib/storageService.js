@@ -46,12 +46,9 @@ export function isDummyLeaveRecord(l) {
   if (!l) return true;
   const id = String(l.id || '');
   if (id.startsWith('leave-sample') || id.startsWith('sample-')) return true;
-  const name = String(l.personnelName || '').trim();
-  if (name === 'สมใจ รักดี' || name === 'เอกชัย พงษ์ศิริ' || name === 'นารีรัตน์ สุวรรณโชติ' || name === 'นางสาวจารุชา เจือทอง') {
-    const pId = String(l.personnelId || '');
-    if (pId.startsWith('pers-2') || pId.startsWith('pers-3') || pId.startsWith('pers-4') || pId.startsWith('pers-8') || pId.startsWith('pers-sample')) {
-      return true;
-    }
+  const pId = String(l.personnelId || '');
+  if (pId.startsWith('pers-sample') || (pId.startsWith('pers-') && pId.length <= 7)) {
+    return true;
   }
   return false;
 }
@@ -66,8 +63,7 @@ export function isDummyTimeAttendanceRecord(ta) {
   if (id === 'ta-sample-1' || id === 'ta-sample-2' || id === 'ta-sample-3') return true;
   const reqEmail = String(ta.requesterEmail || '').trim().toLowerCase();
   if (reqEmail.endsWith('@icit.org')) return true;
-  const reqName = String(ta.requesterName || '').trim();
-  if ((reqName === 'นางสาวธัญนันท์ กระดาษ' || reqName === 'นายประเสริฐ สุขใจ') && id.includes('sample')) {
+  if (id.includes('sample')) {
     return true;
   }
   return false;
@@ -78,35 +74,30 @@ export function isDummyTimeAttendanceRecord(ta) {
  */
 export function isDummyPersonnel(p) {
   if (!p) return true;
+  const email = String(p.email || '').trim().toLowerCase();
+
+  // Official university emails & designated super admins are ALWAYS real personnel
+  if (
+    email.endsWith('@icit.kmutnb.ac.th') ||
+    email.endsWith('@cit.kmutnb.ac.th') ||
+    email.endsWith('@kmutnb.ac.th') ||
+    email === 'tiawongsombat@gmail.com'
+  ) {
+    return false;
+  }
+
   const id = String(p.id || '');
   if (
     id.startsWith('pers-exec-') ||
     id.startsWith('pers-sample') ||
-    id === 'pers-1' || id === 'pers-2' || id === 'pers-3' || id === 'pers-4' ||
-    id === 'pers-5' || id === 'pers-6' || id === 'pers-7' || id === 'pers-8' ||
-    id === 'pers-9' || id === 'pers-10' || id === 'pers-11' || id === 'pers-12' ||
-    id === 'pers-13' || id === 'pers-14' || id === 'pers-15' || id === 'pers-16' ||
-    id === 'pers-17'
+    id.startsWith('sample-') ||
+    (id.startsWith('pers-') && id.length <= 7) // pers-1 through pers-17 (seed data)
   ) {
     return true;
   }
-  const email = String(p.email || '').trim().toLowerCase();
+
   if (email.endsWith('@icit.org')) return true;
-  const name = String(p.name || '').trim();
-  if (
-    name === 'รศ.ดร.ประสิทธิ์ เจริญสุข' ||
-    name === 'ผศ.ดร.กมลวรรณ ธนสารเจริญ' ||
-    name === 'ดร.ชาญชัย เกียรติวัฒนา' ||
-    name === 'ผศ.ดร.วิชัย ภัทรเดชากุล' ||
-    name === 'นางสาวธัญนันท์ กระดาษ' ||
-    name === 'นายกนก บุญพันธ์จันที' ||
-    name === 'นายวัชระ รุ่งโรจน์' ||
-    name === 'นายศราวุธ มีแก้ว' ||
-    name === 'นางสาวจารุชา เจือทอง' ||
-    name === 'นายณัฐพงษ์ สุขสำราญ'
-  ) {
-    return true;
-  }
+
   return false;
 }
 
@@ -148,9 +139,12 @@ function initLocalStorage() {
     try {
       const stored = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
       const cleaned = Array.isArray(stored) ? stored.filter((p) => !isDummyPersonnel(p)) : [];
-      if (cleaned.length !== stored.length) {
-        localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(cleaned));
-      }
+      ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
+        if (!cleaned.some((p) => p.email && p.email.toLowerCase() === esp.email.toLowerCase())) {
+          cleaned.push(esp);
+        }
+      });
+      localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(cleaned));
     } catch (e) {
       console.warn('Error purging dummy personnel from localStorage', e);
     }
@@ -336,11 +330,25 @@ export function subscribePersonnelList(callback) {
                 deleteDoc(doc(db, 'personnel', p.id)).catch(() => {});
               }
             });
+
+            // Self-healing: if any essential personnel is missing, auto-restore
+            ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
+              if (!list.some((p) => p.email && p.email.toLowerCase() === esp.email.toLowerCase())) {
+                list.push(esp);
+                setDoc(doc(db, 'personnel', esp.id), esp, { merge: true }).catch(() => {});
+              }
+            });
+
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
             notifyPersonnelSubscribers(list);
           } else {
-            localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify([]));
-            notifyPersonnelSubscribers([]);
+            // Self-healing fallback if collection is empty
+            const list = [...ESSENTIAL_STAFF_RECORDS];
+            ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
+              setDoc(doc(db, 'personnel', esp.id), esp, { merge: true }).catch(() => {});
+            });
+            localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
+            notifyPersonnelSubscribers(list);
           }
         },
         (error) => {
@@ -865,6 +873,64 @@ export async function savePersonnelRecord(personnel) {
 }
 
 /**
+ * Essential staff records (used to prevent accidental deletion and restore if missing)
+ */
+export const ESSENTIAL_STAFF_RECORDS = [
+  {
+    id: 'pers-1788794490388',
+    name: 'นางสาวจารุชา เจือทอง',
+    email: 'jarucha.j@icit.kmutnb.ac.th',
+    role: 'Admin',
+    status: 'ปกติ',
+    department: 'สำนักงานผู้อำนวยการ',
+    position: 'เจ้าหน้าที่บริหารงานทั่วไป',
+    level: 'ชำนาญการ',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    appointmentDate: '-',
+    retirementDate: '',
+    avatarUrl: 'https://icit.kmutnb.ac.th/wp-content/uploads/2024/06/jaruchaj.png',
+    note: '',
+  },
+  {
+    id: 'pers-1788841102178',
+    name: 'นางสาวธัญนันท์ กระดาษ',
+    email: 'thanyanan.k@icit.kmutnb.ac.th',
+    role: 'USER',
+    status: 'ปกติ',
+    department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
+    position: 'นักวิชาการคอมพิวเตอร์',
+    level: 'ชำนาญการพิเศษ',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    appointmentDate: '-',
+    retirementDate: '',
+    avatarUrl: 'https://icit.kmutnb.ac.th/wp-content/uploads/2024/06/thanyanank.png',
+    note: '',
+  },
+  {
+    id: 'pers-1788841280470',
+    name: 'นายกนก บุญพันธ์จันที',
+    email: 'kanok.b@icit.kmutnb.ac.th',
+    role: 'USER',
+    status: 'ปกติ',
+    department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
+    position: 'นักวิชาการคอมพิวเตอร์',
+    level: 'ปฏิบัติการ',
+    personnelType: 'พนักงานมหาวิทยาลัย',
+    appointmentDate: '-',
+    retirementDate: '',
+    avatarUrl: 'https://icit.kmutnb.ac.th/wp-content/uploads/2024/06/kanokb.png',
+    note: '',
+  },
+];
+
+export async function restoreEssentialPersonnel() {
+  for (const p of ESSENTIAL_STAFF_RECORDS) {
+    await savePersonnelRecord(p);
+  }
+  return true;
+}
+
+/**
  * Delete Personnel
  */
 export async function deletePersonnelRecord(id) {
@@ -1186,15 +1252,21 @@ export async function archiveOldLeaves(cutoffYear) {
  */
 
 export async function getPersonnelList() {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return [...ESSENTIAL_STAFF_RECORDS];
 
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDocs(collection(db, 'personnel'));
       if (!snap.empty) {
-        return snap.docs
+        const list = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           .filter((p) => !isDummyPersonnel(p));
+        ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
+          if (!list.some((p) => p.email && p.email.toLowerCase() === esp.email.toLowerCase())) {
+            list.push(esp);
+          }
+        });
+        return list;
       }
     } catch (e) {
       console.warn('Firestore fetch failed', e);
@@ -1204,7 +1276,13 @@ export async function getPersonnelList() {
   initLocalStorage();
   const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
   const parsed = raw ? JSON.parse(raw) : [];
-  return Array.isArray(parsed) ? parsed.filter((p) => !isDummyPersonnel(p)) : [];
+  const list = Array.isArray(parsed) ? parsed.filter((p) => !isDummyPersonnel(p)) : [];
+  ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
+    if (!list.some((p) => p.email && p.email.toLowerCase() === esp.email.toLowerCase())) {
+      list.push(esp);
+    }
+  });
+  return list;
 }
 
 export async function getDepartmentList() {
@@ -1277,6 +1355,10 @@ export async function findPersonnelByEmail(email) {
   if (!email) return null;
   const cleanEmail = email.trim().toLowerCase();
 
+  const essential = ESSENTIAL_STAFF_RECORDS.find(
+    (esp) => esp.email.toLowerCase() === cleanEmail
+  );
+
   if (isFirebaseConfigured && db) {
     try {
       // Query Firestore directly for the matching email
@@ -1290,6 +1372,8 @@ export async function findPersonnelByEmail(email) {
       console.warn('Firestore email query failed, checking list', e);
     }
   }
+
+  if (essential) return essential;
 
   const list = await getPersonnelList();
   return list.find((p) => p.email && p.email.trim().toLowerCase() === cleanEmail) || null;

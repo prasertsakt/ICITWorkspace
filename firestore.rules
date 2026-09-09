@@ -19,30 +19,31 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/personnel/$(request.auth.uid)) ||
         // Check if any personnel document matches the user email with Admin role
         request.auth.token.email == "prasertsak.t@cit.kmutnb.ac.th" ||
-        request.auth.token.email == "tiawongsombat@gmail.com"
+        request.auth.token.email == "tiawongsombat@gmail.com" ||
+        request.auth.token.email == "jarucha.j@icit.kmutnb.ac.th"
       );
     }
 
     // Rules for 'personnel' collection (Whitelist & Personnel Records)
     match /personnel/{personId} {
-      // Any authenticated user can read personnel records (to display org structure & check whitelist)
-      allow read: if isAuthenticated();
+      // Anyone (including guests) can read personnel directory to view live organization structure
+      allow read: if true;
 
-      // Write (Create, Update, Delete) is strictly restricted:
-      // 1. Existing Admins can create/edit/delete personnel
-      // 2. OR if the collection is empty, the first user can bootstrap themselves
+      // Write (Create, Update, Delete) is strictly restricted to authenticated users / admins:
       allow write: if isAuthenticated();
     }
 
     // Rules for 'departments' collection
     match /departments/{deptId} {
-      allow read: if isAuthenticated();
+      // Anyone can read department structure
+      allow read: if true;
       allow write: if isAuthenticated();
     }
 
     // Rules for 'executives' collection
     match /executives/{execId} {
-      allow read: if isAuthenticated();
+      // Anyone can read executive directory
+      allow read: if true;
       allow write: if isAuthenticated();
     }
 
