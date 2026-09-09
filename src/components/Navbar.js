@@ -189,7 +189,7 @@ export default function Navbar() {
                 className="btn btn-primary btn-sm desktop-only-action"
               >
                 <LogIn size={16} />
-                <span>เข้าสู่ระบบ Google</span>
+                <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
               </button>
             )}
 
@@ -426,7 +426,7 @@ export default function Navbar() {
                   style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}
                 >
                   <LogIn size={18} />
-                  <span>เข้าสู่ระบบ Google</span>
+                  <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
                 </button>
               )}
             </div>

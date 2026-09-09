@@ -87,7 +87,7 @@ export default function ProfilePage() {
           </p>
           <button onClick={handleGoogleSignIn} className="btn btn-primary" style={{ width: '100%' }}>
             <LogIn size={18} />
-            <span>เข้าสู่ระบบ Google</span>
+            <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
           </button>
         </div>
       </div>

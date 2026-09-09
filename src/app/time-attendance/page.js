@@ -508,7 +508,7 @@ function TimeAttendanceContent() {
               }}
             >
               <LogIn size={20} />
-              <span>เข้าสู่ระบบด้วย Google</span>
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
 
             <Link

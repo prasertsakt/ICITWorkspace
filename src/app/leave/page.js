@@ -256,7 +256,7 @@ export default function LeavePage() {
               style={{ width: '100%', padding: '0.65rem', justifyContent: 'center' }}
             >
               <LogIn size={18} />
-              <span>เข้าสู่ระบบด้วย Google</span>
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
             <Link href="/" className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
               กลับหน้าหลัก (Portal)

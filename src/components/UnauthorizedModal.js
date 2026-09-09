@@ -174,7 +174,7 @@ export default function UnauthorizedModal() {
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 <LogIn size={16} />
-                <span>เข้าสู่ระบบใหม่ด้วย Google</span>
+                <span>เข้าสู่ระบบใหม่ด้วยบัญชี Google KMUTNB</span>
               </button>
               <button
                 onClick={clearAuthError}

@@ -244,7 +244,7 @@ export default function JDHubPage() {
               style={{ width: '100%', padding: '0.75rem 1.5rem', fontSize: '0.95rem', justifyContent: 'center' }}
             >
               <LogIn size={18} />
-              <span>เข้าสู่ระบบด้วย Google KMUTNB</span>
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
             <Link
               href="/"
