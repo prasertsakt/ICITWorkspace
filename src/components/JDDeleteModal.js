@@ -14,60 +14,100 @@ export default function JDDeleteModal({ isOpen, onClose, jd, onDeleted }) {
     setIsDeleting(true);
     setError(null);
     try {
-      const res = await deleteJDRecord(jd.id);
-      if (res.success) {
+      const res = await deleteJDRecord(jd.id, null, true);
+      if (res) {
         if (onDeleted) onDeleted(jd.id);
         onClose();
       } else {
-        setError(res.error || 'เกิดข้อผิดพลาดในการลบข้อมูล');
+        setError('เกิดข้อผิดพลาดในการลบข้อมูล');
       }
     } catch (err) {
       console.error(err);
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden flex flex-col animate-scale-up">
-        {/* Header with warning icon */}
-        <div className="p-6 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">ยืนยันการลบแบบบรรยายลักษณะงาน (JD)</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            คุณต้องการลบข้อมูลแบบบรรยายลักษณะงานของ{' '}
-            <span className="font-semibold text-slate-800">
-              {jd.personnelName || jd.positionTitle || 'รายการนี้'}
-            </span>{' '}
-            ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
-          </p>
-
-          {jd.positionTitle && (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left text-xs space-y-1 text-slate-600 mt-3">
-              <div><strong className="text-slate-800">ตำแหน่ง:</strong> {jd.positionTitle}</div>
-              {jd.positionNo && <div><strong className="text-slate-800">เลขที่ตำแหน่ง:</strong> {jd.positionNo}</div>}
-              {jd.department && <div><strong className="text-slate-800">สังกัด:</strong> {jd.department}</div>}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
-              {error}
-            </div>
-          )}
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '440px', textAlign: 'center', padding: '1.75rem 1.5rem' }}
+      >
+        <div
+          style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '50%',
+            background: 'var(--rose-50)',
+            color: 'var(--rose-500)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem',
+          }}
+        >
+          <AlertTriangle size={26} />
         </div>
 
-        {/* Buttons */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.5rem', color: 'var(--text-primary)' }}>
+          ยืนยันการลบ Job Description
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
+          คุณต้องการลบข้อมูลแบบบรรยายลักษณะงานของ{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>
+            {jd.personnelName || jd.positionTitle || 'รายการนี้'}
+          </strong>{' '}
+          ใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้
+        </p>
+
+        {jd.positionTitle && (
+          <div
+            style={{
+              padding: '0.75rem',
+              background: 'var(--bg-card-subtle)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              textAlign: 'left',
+              fontSize: '0.75rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <div>ตำแหน่ง: <strong style={{ color: 'var(--text-primary)' }}>{jd.positionTitle}</strong></div>
+            {jd.positionNo && <div>เลขที่ตำแหน่ง: <strong style={{ color: 'var(--text-primary)' }}>{jd.positionNo}</strong></div>}
+            {jd.department && <div>สังกัด: <strong style={{ color: 'var(--text-primary)' }}>{jd.department}</strong></div>}
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              padding: '0.6rem',
+              background: 'var(--rose-50)',
+              border: '1px solid var(--rose-100)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--rose-500)',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
+            className="btn btn-secondary btn-sm"
+            style={{ flex: 1 }}
           >
             ยกเลิก
           </button>
@@ -75,10 +115,11 @@ export default function JDDeleteModal({ isOpen, onClose, jd, onDeleted }) {
             type="button"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="px-5 py-2 text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="btn btn-danger btn-sm"
+            style={{ flex: 1 }}
           >
-            <Trash2 className="w-4 h-4" />
-            {isDeleting ? 'กำลังลบ...' : 'ยืนยันลบ'}
+            <Trash2 size={14} />
+            <span>{isDeleting ? 'กำลังลบ...' : 'ยืนยันลบ'}</span>
           </button>
         </div>
       </div>

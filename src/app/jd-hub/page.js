@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
   FileText,
   Plus,
   Search,
-  Filter,
   Calendar,
   CheckCircle2,
   Clock,
@@ -18,19 +18,19 @@ import {
   Lock,
   LogIn,
   AlertCircle,
-  Sparkles,
   UserCheck,
-  ShieldAlert,
-  Info,
-  ChevronRight,
   User as UserIcon,
+  ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 import {
-  subscribeToJobDescriptions,
-  subscribeToJDConfig,
+  subscribeJDList,
+  subscribeJDConfig,
   isRevisionWindowOpen,
   saveJDRecord,
+  confirmJDVersion,
 } from '@/lib/jdService';
+import { subscribePersonnelList } from '@/lib/storageService';
 import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
@@ -38,10 +38,11 @@ import JDConfigModal from '@/components/JDConfigModal';
 import JDDeleteModal from '@/components/JDDeleteModal';
 
 export default function JDHubPage() {
-  const { user, currentPersonnel, isAdmin, isAuthLoading, loginWithGoogle } = useAuth();
+  const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
 
   // Data state
   const [jds, setJds] = useState([]);
+  const [personnelList, setPersonnelList] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -59,9 +60,7 @@ export default function JDHubPage() {
 
   // Real-time subscriptions
   useEffect(() => {
-    // JD records subscription
-    const unsubJDs = subscribeToJobDescriptions((data) => {
-      // If empty in fresh DB, initialize with sample seed for demonstration
+    const unsubJDs = subscribeJDList((data) => {
       if (!data || data.length === 0) {
         setJds([SAMPLE_SEED_JD]);
       } else {
@@ -70,13 +69,17 @@ export default function JDHubPage() {
       setLoading(false);
     });
 
-    // JD revision config subscription
-    const unsubConfig = subscribeToJDConfig((cfg) => {
+    const unsubPersonnel = subscribePersonnelList((pList) => {
+      setPersonnelList(pList || []);
+    });
+
+    const unsubConfig = subscribeJDConfig((cfg) => {
       setConfig(cfg);
     });
 
     return () => {
       if (unsubJDs) unsubJDs();
+      if (unsubPersonnel) unsubPersonnel();
       if (unsubConfig) unsubConfig();
     };
   }, []);
@@ -87,36 +90,38 @@ export default function JDHubPage() {
   }, [config]);
 
   // Current logged in user's email
-  const userEmail = (user?.email || currentPersonnel?.email || '').toLowerCase().trim();
+  const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
 
   // Filtered JDs
   const filteredJDs = useMemo(() => {
     return jds.filter((item) => {
-      // Search query
+      const posTitle = item.position || item.positionTitle || '';
+      const posNum = item.positionNumber || item.positionNo || '';
+      const persName = item.personnelName || '';
+      const persDept = item.department || '';
+      const persEmail = item.personnelEmail || '';
+      const isConfirmed = item.userConfirmed || item.status === 'CONFIRMED';
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesName = (item.personnelName || '').toLowerCase().includes(q);
-        const matchesPos = (item.positionTitle || '').toLowerCase().includes(q);
-        const matchesNo = (item.positionNo || '').toLowerCase().includes(q);
-        const matchesDept = (item.department || '').toLowerCase().includes(q);
-        const matchesEmail = (item.personnelEmail || '').toLowerCase().includes(q);
-        if (!matchesName && !matchesPos && !matchesNo && !matchesDept && !matchesEmail) {
-          return false;
-        }
+        const matches =
+          persName.toLowerCase().includes(q) ||
+          posTitle.toLowerCase().includes(q) ||
+          posNum.toLowerCase().includes(q) ||
+          persDept.toLowerCase().includes(q) ||
+          persEmail.toLowerCase().includes(q);
+        if (!matches) return false;
       }
 
-      // Dept filter
-      if (selectedDept !== 'ALL' && item.department !== selectedDept) {
+      if (selectedDept !== 'ALL' && persDept !== selectedDept) {
         return false;
       }
 
-      // Status filter
-      if (statusFilter === 'CONFIRMED' && item.status !== 'CONFIRMED') return false;
-      if (statusFilter === 'DRAFT' && item.status === 'CONFIRMED') return false;
+      if (statusFilter === 'CONFIRMED' && !isConfirmed) return false;
+      if (statusFilter === 'DRAFT' && isConfirmed) return false;
 
-      // My JD only filter
       if (myJdOnly) {
-        const itemEmail = (item.personnelEmail || '').toLowerCase().trim();
+        const itemEmail = persEmail.toLowerCase().trim();
         if (!userEmail || itemEmail !== userEmail) return false;
       }
 
@@ -124,7 +129,7 @@ export default function JDHubPage() {
     });
   }, [jds, searchQuery, selectedDept, statusFilter, myJdOnly, userEmail]);
 
-  // Department list for dropdown
+  // Department list
   const departments = useMemo(() => {
     const list = Array.from(new Set(jds.map((j) => j.department).filter(Boolean)));
     return list.sort();
@@ -133,479 +138,829 @@ export default function JDHubPage() {
   // Minimal dashboard stats
   const stats = useMemo(() => {
     const total = jds.length;
-    const confirmed = jds.filter((j) => j.status === 'CONFIRMED').length;
+    const confirmed = jds.filter((j) => j.userConfirmed || j.status === 'CONFIRMED').length;
     const draft = total - confirmed;
     const percent = total > 0 ? Math.round((confirmed / total) * 100) : 0;
     return { total, confirmed, draft, percent };
   }, [jds]);
 
-  // Check if current user can edit a specific JD
+  // Permission check
   const canUserEdit = (jd) => {
-    if (isAdmin) return true; // Admin can always edit
-    if (!windowStatus.isOpen) return false; // Window is closed
+    if (isAdmin) return true;
+    if (!windowStatus.isOpen) return false;
     const itemEmail = (jd.personnelEmail || '').toLowerCase().trim();
-    return userEmail && itemEmail === userEmail; // User can only edit own JD
+    return userEmail && itemEmail === userEmail;
   };
 
-  // Handle create new JD
   const handleCreateNew = () => {
-    const newJD = createBlankJD(currentPersonnel || { name: '', email: user?.email });
+    const newJD = createBlankJD(currentPersonnel || { name: '', email: currentUser?.email });
     setEditingJD(newJD);
   };
 
-  // ==========================================
-  // AUTH GUARD / LOGIN GATE
-  // ==========================================
+  // 1. Authentication Loading
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-600 font-medium text-sm">กำลังตรวจสอบสิทธิ์การเข้าสู่ระบบ...</p>
-        </div>
+      <div className="main-container" style={{ padding: '6rem 1rem', textAlign: 'center' }}>
+        <div style={{ display: 'inline-block', width: '40px', height: '40px', border: '3px solid var(--primary-100)', borderTopColor: 'var(--primary-600)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+        <p style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>กำลังตรวจสอบข้อมูลผู้ใช้งาน...</p>
+        <style jsx>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
-  if (!user) {
+  // 2. Authentication Gate (Required Login)
+  if (!currentUser && !currentPersonnel) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-orange-950 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl text-center space-y-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <FileText className="w-8 h-8 text-white" />
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight text-white">ระบบจัดการ Job Description (JD Hub)</h1>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)<br />
-              มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
-            </p>
-          </div>
-
-          <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-left text-xs space-y-2 text-slate-300">
-            <div className="flex items-center gap-2 text-orange-400 font-semibold">
-              <Lock className="w-4 h-4" />
-              <span>บริการนี้ต้องเข้าสู่ระบบ</span>
-            </div>
-            <p>กรุณาลงชื่อเข้าใช้ด้วยอีเมลมหาวิทยาลัย (@kmutnb.ac.th) เพื่อดูและจัดการแบบบรรยายลักษณะงานของคุณ</p>
-          </div>
-
-          <button
-            onClick={loginWithGoogle}
-            className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-semibold shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 group"
+      <div className="main-container" style={{ padding: '4rem 1rem', display: 'flex', justifyContent: 'center' }}>
+        <div
+          className="card-glass card-pastel-accent"
+          style={{
+            maxWidth: '520px',
+            width: '100%',
+            padding: '2.5rem 2rem',
+            textAlign: 'center',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <div
+            style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--peach-50)',
+              color: 'var(--peach-500)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.2)',
+            }}
           >
-            <LogIn className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-            เข้าสู่ระบบด้วย Google KMUTNB
-          </button>
+            <FileText size={36} />
+          </div>
+
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+            ระบบจัดการ Job Description (JD Hub)
+          </h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+            <br />
+            มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
+          </p>
+
+          <div
+            style={{
+              padding: '1rem',
+              background: 'var(--bg-card-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: '1.75rem',
+              textAlign: 'left',
+              display: 'flex',
+              gap: '0.75rem',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Lock size={20} style={{ color: 'var(--peach-500)', flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                บริการสารสนเทศภายใน (Required Login)
+              </div>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                โปรดเข้าสู่ระบบด้วยบัญชี Google มหาวิทยาลัย (@kmutnb.ac.th) เพื่อดูและจัดการแบบบรรยายลักษณะงานของคุณ
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              onClick={handleGoogleSignIn}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '0.75rem 1.5rem', fontSize: '0.95rem', justifyContent: 'center' }}
+            >
+              <LogIn size={18} />
+              <span>เข้าสู่ระบบด้วย Google KMUTNB</span>
+            </button>
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+            >
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/80 pb-24">
+    <div className="main-container" style={{ paddingBottom: '3rem' }}>
       {/* Top Banner & Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-orange-950 to-slate-900 text-white border-b border-orange-900/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl shadow-md">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">JD Hub</h1>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                    ICIT Job Description Management System
-                  </span>
-                </div>
+      <div
+        className="card-glass"
+        style={{
+          padding: '1.75rem',
+          borderRadius: 'var(--radius-xl)',
+          marginBottom: '1.5rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          color: '#FFFFFF',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
+                }}
+              >
+                <FileText size={24} color="#FFF" />
               </div>
-              <p className="text-sm text-slate-300 max-w-2xl mt-2 leading-relaxed">
-                ระบบจัดการและทบทวนแบบบรรยายลักษณะงาน (Job Description) ตามมาตรฐาน ICIT-FM-COMMON-006 v2.0
-                ตรวจสอบหน้าที่ความรับผิดชอบ สมรรถนะ และความก้าวหน้าในสายงาน
-              </p>
+              <div>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#FFFFFF', lineHeight: 1.2 }}>
+                  JD Hub
+                </h1>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
+                  }}
+                >
+                  ICIT Job Description Management System • FM-COMMON-006 v2.0
+                </span>
+              </div>
             </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#CBD5E1', maxWidth: '650px', lineHeight: 1.5 }}>
+              ระบบจัดการและทบทวนแบบบรรยายลักษณะงาน (Job Description) ประจำปี สำหรับบุคลากรสำนักคอมพิวเตอร์ฯ
+            </p>
+          </div>
 
-            {/* Quick Actions for Admin */}
-            <div className="flex flex-wrap items-center gap-3">
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => setIsConfigOpen(true)}
-                    className="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-semibold text-white transition-all flex items-center gap-2 backdrop-blur-sm"
-                  >
-                    <Settings className="w-4 h-4 text-orange-400" />
-                    ตั้งค่าช่วงเวลาแก้ไข
-                  </button>
-                  <button
-                    onClick={handleCreateNew}
-                    className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 rounded-xl text-xs font-semibold text-white shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    สร้าง JD ใหม่
-                  </button>
-                </>
-              )}
-            </div>
+          {/* Action buttons */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setIsConfigOpen(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#FFFFFF',
+                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Settings size={15} style={{ color: '#FB923C' }} />
+                  <span>ตั้งค่าช่วงเวลาแก้ไข</span>
+                </button>
+                <button
+                  onClick={handleCreateNew}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>สร้าง JD ใหม่</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        {/* Revisable Period Notification Banner */}
-        <div className="mb-6">
-          {windowStatus.isOpen ? (
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm flex-shrink-0">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-emerald-900 text-sm sm:text-base">
-                      เปิดให้ทบทวนและแก้ไข Job Description ประจำปี
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white">
-                      เปิดใช้งาน
-                    </span>
-                  </div>
-                  <p className="text-xs text-emerald-700 mt-0.5">
-                    {windowStatus.message}
-                    {config?.announcement ? ` — ${config.announcement}` : ''}
-                  </p>
-                </div>
+      {/* Revisable Period Status Banner */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        {windowStatus.isOpen ? (
+          <div
+            className="card-glass"
+            style={{
+              padding: '1.1rem 1.25rem',
+              borderLeft: '4px solid var(--mint-500)',
+              background: 'var(--mint-50)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--mint-500)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Calendar size={18} />
               </div>
-              <div className="text-xs text-emerald-800 bg-white/80 border border-emerald-200 px-3.5 py-2 rounded-xl flex-shrink-0 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-emerald-600" />
-                <span>บุคลากรสามารถแก้ไขและกดยืนยัน JD ของตนเองได้ทันที</span>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50 via-slate-50 to-amber-50 border border-amber-200 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-sm flex-shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-900 text-sm sm:text-base">
-                      ยังไม่เปิดช่วงเวลาแก้ไขสำหรับบุคลากร
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
-                      View Only
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-700 mt-0.5">
-                    {windowStatus.message}
-                    {config?.announcement ? ` — ${config.announcement}` : ' (บุคลากรสามารถดูแบบบรรยายลักษณะงานในรูปแบบ PDF ได้ตามปกติ)'}
-                  </p>
-                </div>
-              </div>
-              {isAdmin && (
-                <button
-                  onClick={() => setIsConfigOpen(true)}
-                  className="text-xs text-amber-900 font-semibold bg-amber-200/80 hover:bg-amber-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors self-start md:self-auto"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  เปิดช่วงเวลาให้บุคลากรแก้ไข
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Minimal Dashboard Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* Card 1: Total JDs */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">JD ทั้งหมด</div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">{stats.total}</div>
-              <div className="text-xs text-slate-400 mt-1">ตำแหน่งในสังกัด</div>
-            </div>
-            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-              <FileText className="w-6 h-6" />
-            </div>
-          </div>
-
-          {/* Card 2: Confirmed JDs */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ยืนยันแล้ว</div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">{stats.confirmed}</div>
-              </div>
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="mt-3">
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${stats.percent}%` }}
-                ></div>
-              </div>
-              <div className="text-[11px] text-slate-400 text-right mt-1 font-medium">{stats.percent}% ยืนยันแล้ว</div>
-            </div>
-          </div>
-
-          {/* Card 3: Drafts / In progress */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ฉบับร่าง / รอทบทวน</div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">{stats.draft}</div>
-              <div className="text-xs text-slate-400 mt-1">ยังไม่ได้รับการยืนยัน</div>
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <Clock className="w-6 h-6" />
-            </div>
-          </div>
-
-          {/* Card 4: Revision Window State */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">สถานะการแก้ไข</div>
-              <div className="text-lg font-bold text-slate-800 mt-1 flex items-center gap-1.5">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    windowStatus.isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
-                  }`}
-                ></span>
-                {windowStatus.isOpen ? 'เปิดให้แก้ไข' : 'ปิดการแก้ไข'}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {isAdmin ? 'Admin แก้ไขได้ตลอดเวลา' : 'เฉพาะช่วงเวลาที่เปิด'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--mint-text)' }}>
+                    เปิดให้ทบทวนและแก้ไข Job Description ประจำปี
+                  </strong>
+                  <span className="badge badge-active">เปิดใช้งาน</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--mint-text)', opacity: 0.9 }}>
+                  {windowStatus.message}
+                  {config?.announcement ? ` — ${config.announcement}` : ''}
+                </p>
               </div>
             </div>
-            <div className="p-3 bg-slate-50 text-slate-600 rounded-xl">
-              <Building2 className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* Filters & Search Toolbar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ค้นหาชื่อผู้ครองตำแหน่ง, ตำแหน่ง, เลขที่ตำแหน่ง..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-800 placeholder-slate-400"
-              />
-            </div>
-
-            {/* Department Filter */}
-            <div className="relative min-w-[200px]">
-              <select
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-700 bg-white"
-              >
-                <option value="ALL">ทุกฝ่าย / กลุ่มงาน</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="relative min-w-[150px]">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-700 bg-white"
-              >
-                <option value="ALL">ทุกสถานะ</option>
-                <option value="CONFIRMED">ยืนยันแล้ว</option>
-                <option value="DRAFT">ฉบับร่าง</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Toggle: My JD Only */}
-          <div className="flex items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-            <button
-              onClick={() => setMyJdOnly(!myJdOnly)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                myJdOnly
-                  ? 'bg-orange-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+            <div
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--mint-text)',
+                background: 'rgba(255, 255, 255, 0.7)',
+                padding: '0.35rem 0.75rem',
+                borderRadius: 'var(--radius-full)',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
             >
-              <UserCheck className="w-3.5 h-3.5" />
-              เฉพาะ JD ของฉัน
-            </button>
-          </div>
-        </div>
-
-        {/* JD Cards Grid */}
-        {loading ? (
-          <div className="py-20 text-center">
-            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-slate-500 text-sm">กำลังโหลดข้อมูล Job Description...</p>
-          </div>
-        ) : filteredJDs.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-sm">
-            <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-2xl mx-auto flex items-center justify-center mb-4">
-              <FileText className="w-8 h-8" />
+              <Clock size={14} />
+              <span>บุคลากรสามารถเปิดแก้ไขและกดยืนยันฉบับใหม่ได้</span>
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">ไม่พบแบบบรรยายลักษณะงาน</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              {myJdOnly
-                ? 'ยังไม่มี JD ที่ผูกกับอีเมลของคุณในระบบ หรือยังไม่ได้รับการสร้าง'
-                : 'ไม่พบรายการที่ตรงตามคำค้นหาและตัวกรองที่เลือก'}
-            </p>
+          </div>
+        ) : (
+          <div
+            className="card-glass"
+            style={{
+              padding: '1.1rem 1.25rem',
+              borderLeft: '4px solid var(--peach-500)',
+              background: 'var(--peach-50)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--peach-500)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Clock size={18} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--peach-text)' }}>
+                    ยังไม่เปิดช่วงเวลาแก้ไขสำหรับบุคลากร (โหมดดูเอกสาร PDF เท่านั้น)
+                  </strong>
+                  <span className="badge badge-type">View Only</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--peach-text)', opacity: 0.9 }}>
+                  {windowStatus.message}
+                  {config?.announcement ? ` — ${config.announcement}` : ''}
+                </p>
+              </div>
+            </div>
             {isAdmin && (
               <button
-                onClick={handleCreateNew}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-2"
+                onClick={() => setIsConfigOpen(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.75rem' }}
               >
-                <Plus className="w-4 h-4" />
-                สร้าง JD รายการแรก
+                <Settings size={14} />
+                <span>เปิดช่วงเวลาให้บุคลากร</span>
               </button>
             )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredJDs.map((jd) => {
-              const isOwner = userEmail && (jd.personnelEmail || '').toLowerCase().trim() === userEmail;
-              const editable = canUserEdit(jd);
+        )}
+      </div>
 
-              return (
-                <div
-                  key={jd.id}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-orange-300 hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col justify-between group"
-                >
-                  {/* Card Header & Profile info */}
-                  <div className="p-5">
-                    {/* Top Row: Department & Status badge */}
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg truncate max-w-[200px]">
-                        {jd.department || 'ไม่ระบุฝ่าย'}
+      {/* Minimal Dashboard 4 Stat Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+        }}
+      >
+        {/* Card 1: Total JDs */}
+        <div className="card-glass" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              JD ทั้งหมดในระบบ
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+              {stats.total}{' '}
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>ตำแหน่ง</span>
+            </div>
+          </div>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--peach-50)',
+              color: 'var(--peach-500)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <FileText size={22} />
+          </div>
+        </div>
+
+        {/* Card 2: Confirmed Count */}
+        <div className="card-glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                ยืนยันฉบับสมบูรณ์
+              </div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--mint-600)', marginTop: '0.2rem' }}>
+                {stats.confirmed}{' '}
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>รายการ</span>
+              </div>
+            </div>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--mint-50)',
+                color: 'var(--mint-600)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CheckCircle2 size={22} />
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ width: '100%', height: '6px', background: 'var(--border-subtle)', borderRadius: '99px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${stats.percent}%`,
+                  height: '100%',
+                  background: 'var(--mint-500)',
+                  borderRadius: '99px',
+                  transition: 'width 0.4s ease',
+                }}
+              ></div>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.25rem' }}>
+              {stats.percent}% ยืนยันแล้ว
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Drafts / In progress */}
+        <div className="card-glass" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              ฉบับร่าง / รอทบทวน
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--peach-text)', marginTop: '0.2rem' }}>
+              {stats.draft}{' '}
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>รายการ</span>
+            </div>
+          </div>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--peach-50)',
+              color: 'var(--peach-500)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Clock size={22} />
+          </div>
+        </div>
+
+        {/* Card 4: Revision Period Status */}
+        <div className="card-glass" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              สถานะการแก้ไข
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: windowStatus.isOpen ? 'var(--mint-500)' : 'var(--text-muted)',
+                }}
+              ></span>
+              {windowStatus.isOpen ? 'เปิดให้แก้ไข' : 'ปิดการแก้ไข'}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              {isAdmin ? 'Admin แก้ไขได้ตลอดเวลา' : 'บุคลากรแก้ไขได้ตามช่วงเวลา'}
+            </div>
+          </div>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--primary-50)',
+              color: 'var(--primary-600)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Building2 size={22} />
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar: Search, Filters & "My JD Only" */}
+      <div
+        className="card-glass"
+        style={{
+          padding: '1rem 1.25rem',
+          borderRadius: 'var(--radius-lg)',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: '280px' }}>
+          {/* Search box */}
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+            <Search
+              size={16}
+              style={{
+                position: 'absolute',
+                left: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-muted)',
+              }}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหาชื่อผู้ครองตำแหน่ง, ตำแหน่ง, เลขที่ตำแหน่ง..."
+              className="form-input"
+              style={{ paddingLeft: '2.2rem', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          {/* Department Filter */}
+          <select
+            value={selectedDept}
+            onChange={(e) => setSelectedDept(e.target.value)}
+            className="form-select"
+            style={{ width: 'auto', minWidth: '160px', fontSize: '0.85rem' }}
+          >
+            <option value="ALL">ทุกฝ่าย / กลุ่มงาน</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="form-select"
+            style={{ width: 'auto', minWidth: '130px', fontSize: '0.85rem' }}
+          >
+            <option value="ALL">ทุกสถานะ</option>
+            <option value="CONFIRMED">ยืนยันแล้ว</option>
+            <option value="DRAFT">ฉบับร่าง</option>
+          </select>
+        </div>
+
+        {/* Toggle: My JD only */}
+        <div>
+          <button
+            onClick={() => setMyJdOnly(!myJdOnly)}
+            className={`btn btn-sm ${myJdOnly ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '0.8rem' }}
+          >
+            <UserCheck size={14} />
+            <span>เฉพาะ JD ของฉัน</span>
+          </button>
+        </div>
+      </div>
+
+      {/* JD Cards Grid */}
+      {loading ? (
+        <div style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+          <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid var(--primary-100)', borderTopColor: 'var(--primary-600)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+          <p style={{ marginTop: '0.85rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>กำลังโหลดข้อมูล Job Description...</p>
+        </div>
+      ) : filteredJDs.length === 0 ? (
+        <div
+          className="card-glass"
+          style={{
+            padding: '3rem 1.5rem',
+            textAlign: 'center',
+            maxWidth: '500px',
+            margin: '2rem auto',
+            borderRadius: 'var(--radius-lg)',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--peach-50)',
+              color: 'var(--peach-500)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem',
+            }}
+          >
+            <FileText size={28} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>
+            ไม่พบแบบบรรยายลักษณะงาน
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+            {myJdOnly
+              ? 'ยังไม่มี JD ที่ผูกกับอีเมลของคุณในระบบ'
+              : 'ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา'}
+          </p>
+          {isAdmin && (
+            <button onClick={handleCreateNew} className="btn btn-primary btn-sm">
+              <Plus size={14} />
+              <span>สร้าง JD รายการแรก</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
+            gap: '1.25rem',
+          }}
+        >
+          {filteredJDs.map((jd) => {
+            const isOwner = userEmail && (jd.personnelEmail || '').toLowerCase().trim() === userEmail;
+            const editable = canUserEdit(jd);
+            const posTitle = jd.position || jd.positionTitle || 'ไม่ระบุชื่อตำแหน่ง';
+            const posNum = jd.positionNumber || jd.positionNo || '-';
+            const posLvl = jd.positionLevel || jd.jobLevel || '';
+            const isConfirmed = jd.userConfirmed || jd.status === 'CONFIRMED';
+            const respCount = (jd.mainResponsibilities || jd.responsibilities || []).length;
+            const fcCount = (jd.functionalCompetencies || []).length;
+
+            return (
+              <div
+                key={jd.id}
+                className="card-glass card-pastel-accent"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  borderRadius: 'var(--radius-lg)',
+                }}
+              >
+                <div style={{ padding: '1.25rem' }}>
+                  {/* Top: Dept & Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.725rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-card-subtle)',
+                        color: 'var(--text-secondary)',
+                        border: '1px solid var(--border-subtle)',
+                        maxWidth: '180px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {jd.department || 'ไม่ระบุฝ่าย'}
+                    </span>
+                    {isConfirmed ? (
+                      <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>
+                        <CheckCircle2 size={11} />
+                        ยืนยันแล้ว v{jd.version || '2.0'}
                       </span>
-                      {jd.status === 'CONFIRMED' ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1 flex-shrink-0">
-                          <CheckCircle2 className="w-3 h-3" />
-                          ยืนยันแล้ว v{jd.version || '2.0'}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 flex items-center gap-1 flex-shrink-0">
-                          <Clock className="w-3 h-3" />
-                          ฉบับร่าง v{jd.version || '1.0'}
-                        </span>
-                      )}
-                    </div>
+                    ) : (
+                      <span className="badge badge-type" style={{ fontSize: '0.7rem' }}>
+                        <Clock size={11} />
+                        ฉบับร่าง v{jd.version || '1.0'}
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Position Title & Position No */}
-                    <h3 className="font-bold text-slate-900 text-base group-hover:text-orange-600 transition-colors line-clamp-1 mb-1">
-                      {jd.positionTitle || 'ไม่ระบุชื่อตำแหน่ง'}
-                    </h3>
-                    <div className="text-xs text-slate-500 flex items-center gap-2 mb-4">
-                      <span>เลขที่ตำแหน่ง: <strong className="text-slate-700">{jd.positionNo || '-'}</strong></span>
-                      {jd.jobLevel && (
-                        <>
-                          <span>•</span>
-                          <span>ระดับ: <strong className="text-slate-700">{jd.jobLevel}</strong></span>
-                        </>
-                      )}
-                    </div>
+                  {/* Position Title & Position No */}
+                  <h3
+                    style={{
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      margin: '0 0 0.35rem',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {posTitle}
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span>เลขที่: <strong style={{ color: 'var(--text-secondary)' }}>{posNum}</strong></span>
+                    {posLvl && (
+                      <>
+                        <span>•</span>
+                        <span>ระดับ: <strong style={{ color: 'var(--text-secondary)' }}>{posLvl}</strong></span>
+                      </>
+                    )}
+                  </div>
 
-                    {/* Personnel holder badge */}
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
-                        {jd.personnelName ? jd.personnelName.charAt(0) : <UserIcon className="w-5 h-5" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-800 truncate">
-                            {jd.personnelName || 'ตำแหน่งว่าง'}
+                  {/* Personnel info box */}
+                  <div
+                    style={{
+                      padding: '0.75rem',
+                      background: 'var(--bg-card-subtle)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                        color: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {jd.personnelName ? jd.personnelName.charAt(0) : <UserIcon size={18} />}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {jd.personnelName || 'ตำแหน่งว่าง'}
+                        </span>
+                        {isOwner && (
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              background: 'var(--peach-50)',
+                              color: 'var(--peach-text)',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            คุณ
                           </span>
-                          {isOwner && (
-                            <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-md flex-shrink-0">
-                              คุณ
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {jd.personnelEmail || 'ยังไม่ได้ระบุอีเมล'}
-                        </p>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Quick highlights */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-500">
-                      <div className="flex items-center justify-between">
-                        <span>หน้าที่ความรับผิดชอบหลัก:</span>
-                        <span className="font-semibold text-slate-700">
-                          {jd.responsibilities?.length || 0} ด้าน
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>สมรรถนะประจำตำแหน่ง (FC):</span>
-                        <span className="font-semibold text-slate-700">
-                          {jd.functionalCompetencies?.length || 0} สมรรถนะ
-                        </span>
-                      </div>
+                      <p style={{ margin: 0, fontSize: '0.725rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {jd.personnelEmail || 'ยังไม่ได้ระบุอีเมล'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Card Actions Footer */}
-                  <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
-                    {/* Left: Preview PDF Button */}
-                    <button
-                      onClick={() => setPreviewJD(jd)}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-orange-600" />
-                      ดูเอกสาร (PDF)
-                    </button>
-
-                    {/* Right: Edit & Delete buttons */}
-                    <div className="flex items-center gap-1.5">
-                      {editable ? (
-                        <button
-                          onClick={() => setEditingJD(jd)}
-                          className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-all shadow-sm flex items-center gap-1"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          แก้ไข
-                        </button>
-                      ) : isOwner && !windowStatus.isOpen ? (
-                        <span
-                          title="ยังไม่เปิดช่วงเวลาให้แก้ไข JD (ดูได้เฉพาะ PDF)"
-                          className="px-2.5 py-1 text-[11px] font-medium text-slate-400 bg-slate-200/70 rounded-xl flex items-center gap-1 cursor-not-allowed"
-                        >
-                          <Lock className="w-3 h-3" />
-                          ปิดการแก้ไข
-                        </span>
-                      ) : null}
-
-                      {isAdmin && (
-                        <button
-                          onClick={() => setDeletingJD(jd)}
-                          title="ลบแบบบรรยายลักษณะงาน"
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                  {/* Highlights */}
+                  <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>หน้าที่ความรับผิดชอบหลัก:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{respCount} ด้าน</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>สมรรถนะประจำตำแหน่ง (FC):</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{fcCount} สมรรถนะ</strong>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                {/* Footer Buttons */}
+                <div
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    borderTop: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-card-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <button
+                    onClick={() => setPreviewJD(jd)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.75rem' }}
+                  >
+                    <Eye size={13} style={{ color: 'var(--peach-500)' }} />
+                    <span>ดูเอกสาร (PDF)</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {editable ? (
+                      <button
+                        onClick={() => setEditingJD(jd)}
+                        className="btn btn-primary btn-sm"
+                        style={{ fontSize: '0.75rem', background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' }}
+                      >
+                        <Edit3 size={13} />
+                        <span>แก้ไข</span>
+                      </button>
+                    ) : isOwner && !windowStatus.isOpen ? (
+                      <span
+                        title="ยังไม่เปิดช่วงเวลาให้แก้ไข JD (ดูได้เฉพาะ PDF)"
+                        style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-muted)',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: 'var(--border-subtle)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          cursor: 'not-allowed',
+                        }}
+                      >
+                        <Lock size={12} />
+                        ปิดการแก้ไข
+                      </span>
+                    ) : null}
+
+                    {isAdmin && (
+                      <button
+                        onClick={() => setDeletingJD(jd)}
+                        title="ลบแบบบรรยายลักษณะงาน"
+                        className="btn btn-danger btn-sm btn-icon"
+                        style={{ width: '28px', height: '28px' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modals */}
       {previewJD && (
@@ -613,7 +968,7 @@ export default function JDHubPage() {
           isOpen={!!previewJD}
           onClose={() => setPreviewJD(null)}
           jd={previewJD}
-          onEditClick={() => {
+          onEdit={() => {
             const toEdit = previewJD;
             setPreviewJD(null);
             setEditingJD(toEdit);
@@ -626,11 +981,18 @@ export default function JDHubPage() {
         <JDModal
           isOpen={!!editingJD}
           onClose={() => setEditingJD(null)}
-          jd={editingJD}
-          currentUser={user}
+          jdToEdit={editingJD}
+          personnelList={personnelList}
+          currentPersonnel={currentPersonnel}
           isAdmin={isAdmin}
-          onSaved={(savedJD) => {
-            // Updated in firestore subscriber
+          isRevisionOpen={windowStatus.isOpen}
+          onSave={async (saved) => {
+            await saveJDRecord(saved, currentPersonnel, isAdmin);
+            setEditingJD(null);
+          }}
+          onConfirm={async (confirmed) => {
+            await confirmJDVersion(confirmed.id, currentPersonnel, isAdmin);
+            setEditingJD(null);
           }}
         />
       )}

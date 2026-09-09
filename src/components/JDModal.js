@@ -20,6 +20,7 @@ import {
   BookOpen,
   Send,
   ExternalLink,
+  FileText,
 } from 'lucide-react';
 
 const TABS = [
