@@ -23,6 +23,7 @@ import {
   FileText,
   Sparkles,
   ShieldCheck,
+  Lock,
 } from 'lucide-react';
 
 const TABS = [
@@ -160,34 +161,52 @@ export default function JDModal({
 
       if (!initialData.signatures) initialData.signatures = {};
 
-      // 1. Auto-fill ผู้จัดทำ from login user if empty
       const loginUserName = currentPersonnel?.name || initialData.personnelName || '';
-      if (!initialData.signatures.preparedBy?.name && loginUserName) {
+      const head = getDeptHeadInfo(initialData.department);
+      const director = autoDirector?.name || 'รศ.ดร.ชูพันธุ์ รัตนโภคา';
+
+      if (!isAdmin) {
+        // Enforce auto-selected locked values for standard users (cannot be edited)
         initialData.signatures.preparedBy = {
           name: loginUserName,
           date: initialData.signatures.preparedBy?.date || '',
         };
-      }
-
-      // 2. Auto-fill ผู้บังคับบัญชา from หัวหน้าฝ่าย if empty
-      const head = getDeptHeadInfo(initialData.department);
-      if (head) {
-        if (!initialData.supervisorName) initialData.supervisorName = head.name;
-        if (!initialData.supervisorPosition) initialData.supervisorPosition = head.position;
-        if (!initialData.signatures.reviewedBy?.name) {
+        if (head) {
+          initialData.supervisorName = head.name;
+          initialData.supervisorPosition = head.position;
           initialData.signatures.reviewedBy = {
             name: head.name,
             date: initialData.signatures.reviewedBy?.date || '',
           };
         }
-      }
-
-      // 3. Auto-fill ผู้อนุมัติ from ผู้อำนวยการสำนักคอมพิวเตอร์ if empty
-      if (!initialData.signatures.approvedBy?.name && autoDirector?.name) {
         initialData.signatures.approvedBy = {
-          name: autoDirector.name,
+          name: director,
           date: initialData.signatures.approvedBy?.date || '',
         };
+      } else {
+        // Admin: auto-fill if empty
+        if (!initialData.signatures.preparedBy?.name && loginUserName) {
+          initialData.signatures.preparedBy = {
+            name: loginUserName,
+            date: initialData.signatures.preparedBy?.date || '',
+          };
+        }
+        if (head) {
+          if (!initialData.supervisorName) initialData.supervisorName = head.name;
+          if (!initialData.supervisorPosition) initialData.supervisorPosition = head.position;
+          if (!initialData.signatures.reviewedBy?.name) {
+            initialData.signatures.reviewedBy = {
+              name: head.name,
+              date: initialData.signatures.reviewedBy?.date || '',
+            };
+          }
+        }
+        if (!initialData.signatures.approvedBy?.name && director) {
+          initialData.signatures.approvedBy = {
+            name: director,
+            date: initialData.signatures.approvedBy?.date || '',
+          };
+        }
       }
 
       setFormData(initialData);
@@ -371,6 +390,31 @@ export default function JDModal({
     }));
   };
 
+  // Helper to enforce locked auto-selected signer data for non-admins
+  const enforceLockedData = (data) => {
+    if (isAdmin) return data;
+    return {
+      ...data,
+      supervisorName: autoDeptHead?.name || data.supervisorName || '',
+      supervisorPosition: autoDeptHead?.position || data.supervisorPosition || '',
+      signatures: {
+        ...data.signatures,
+        preparedBy: {
+          name: autoPreparerName || data.personnelName || currentPersonnel?.name || '',
+          date: data.signatures?.preparedBy?.date || '',
+        },
+        reviewedBy: {
+          name: autoDeptHead?.name || data.supervisorName || '',
+          date: data.signatures?.reviewedBy?.date || '',
+        },
+        approvedBy: {
+          name: autoDirector?.name || 'รศ.ดร.ชูพันธุ์ รัตนโภคา',
+          date: data.signatures?.approvedBy?.date || '',
+        },
+      },
+    };
+  };
+
   // Submit Draft
   const handleSaveDraft = async () => {
     try {
@@ -379,7 +423,8 @@ export default function JDModal({
       if (!formData.personnelName) {
         throw new Error('กรุณาระบุชื่อ-นามสกุล บุคลากรเจ้าของตำแหน่ง');
       }
-      await onSave(formData);
+      const dataToSave = enforceLockedData(formData);
+      await onSave(dataToSave);
       onClose();
     } catch (err) {
       setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -396,8 +441,9 @@ export default function JDModal({
       if (!formData.personnelName) {
         throw new Error('กรุณาระบุชื่อ-นามสกุล บุคลากรเจ้าของตำแหน่ง');
       }
+      const dataToConfirm = enforceLockedData(formData);
       const updated = {
-        ...formData,
+        ...dataToConfirm,
         userConfirmed: true,
         confirmedAt: new Date().toISOString(),
         confirmedByEmail: currentPersonnel?.email || '',
@@ -705,29 +751,48 @@ export default function JDModal({
                 <div>
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>ชื่อผู้บังคับบัญชา</span>
-                    {autoDeptHead?.name && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--primary-600)', fontWeight: 600 }}>
-                        🏢 หัวหน้าฝ่าย: {autoDeptHead.name}
-                      </span>
-                    )}
+                    <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <Lock size={11} /> กำหนดอัตโนมัติตามฝ่าย (แก้ไขไม่ได้)
+                    </span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="เช่น นางสาวชาลินทร์ เกรียงสินยศ"
-                    value={formData.supervisorName}
-                    onChange={(e) => handleChange('supervisorName', e.target.value)}
+                    value={formData.supervisorName || autoDeptHead?.name || ''}
+                    readOnly={!isAdmin}
+                    style={{
+                      background: !isAdmin ? '#F8FAFC' : 'var(--bg-card)',
+                      color: !isAdmin ? '#475569' : 'var(--text-primary)',
+                      cursor: !isAdmin ? 'not-allowed' : 'text',
+                      borderColor: '#E2E8F0',
+                      fontWeight: 500,
+                    }}
+                    onChange={isAdmin ? (e) => handleChange('supervisorName', e.target.value) : undefined}
                   />
                 </div>
 
                 <div>
-                  <label className="form-label">ตำแหน่งผู้บังคับบัญชาโดยตรง</label>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>ตำแหน่งผู้บังคับบัญชาโดยตรง</span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <Lock size={11} /> กำหนดอัตโนมัติ (แก้ไขไม่ได้)
+                    </span>
+                  </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="เช่น หัวหน้าสำนักงานผู้อำนวยการ (นักวิชาการพัสดุ)"
-                    value={formData.supervisorPosition}
-                    onChange={(e) => handleChange('supervisorPosition', e.target.value)}
+                    value={formData.supervisorPosition || autoDeptHead?.position || ''}
+                    readOnly={!isAdmin}
+                    style={{
+                      background: !isAdmin ? '#F8FAFC' : 'var(--bg-card)',
+                      color: !isAdmin ? '#475569' : 'var(--text-primary)',
+                      cursor: !isAdmin ? 'not-allowed' : 'text',
+                      borderColor: '#E2E8F0',
+                      fontWeight: 500,
+                    }}
+                    onChange={isAdmin ? (e) => handleChange('supervisorPosition', e.target.value) : undefined}
                   />
                 </div>
 
@@ -1394,74 +1459,86 @@ export default function JDModal({
                         className="badge"
                         style={{
                           fontSize: '0.65rem',
-                          background: 'var(--primary-50)',
-                          color: 'var(--primary-600)',
-                          border: '1px solid var(--primary-200)',
+                          background: '#F1F5F9',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
                         }}
                       >
-                        <Sparkles size={11} />
-                        Auto: ผู้เข้าสู่ระบบ
+                        <Lock size={11} />
+                        อัตโนมัติ (แก้ไขไม่ได้)
                       </span>
                     </div>
 
-                    {/* Quick select dropdown */}
-                    <select
-                      className="form-select"
-                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
-                      value={formData.signatures?.preparedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          signatures: {
-                            ...prev.signatures,
-                            preparedBy: { ...(prev.signatures?.preparedBy || {}), name },
-                          },
-                        }));
-                      }}
-                    >
-                      {currentPersonnel?.name && (
-                        <option value={currentPersonnel.name}>
-                          👤 [ผู้เข้าสู่ระบบ] {currentPersonnel.name}
-                        </option>
-                      )}
-                      {formData.personnelName && formData.personnelName !== currentPersonnel?.name && (
-                        <option value={formData.personnelName}>
-                          👤 [ผู้ครองตำแหน่ง JD] {formData.personnelName}
-                        </option>
-                      )}
-                      {isAdmin &&
-                        personnelList.map((p) => (
+                    {/* Admin Override Dropdown */}
+                    {isAdmin && (
+                      <select
+                        className="form-select"
+                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                        value={formData.signatures?.preparedBy?.name || ''}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            signatures: {
+                              ...prev.signatures,
+                              preparedBy: { ...(prev.signatures?.preparedBy || {}), name },
+                            },
+                          }));
+                        }}
+                      >
+                        {currentPersonnel?.name && (
+                          <option value={currentPersonnel.name}>
+                            👤 [ผู้เข้าสู่ระบบ] {currentPersonnel.name}
+                          </option>
+                        )}
+                        {formData.personnelName && formData.personnelName !== currentPersonnel?.name && (
+                          <option value={formData.personnelName}>
+                            👤 [ผู้ครองตำแหน่ง JD] {formData.personnelName}
+                          </option>
+                        )}
+                        {personnelList.map((p) => (
                           <option key={p.id} value={p.name}>
                             {p.name} ({p.department || p.position || 'บุคลากร'})
                           </option>
                         ))}
-                      {formData.signatures?.preparedBy?.name &&
-                        formData.signatures.preparedBy.name !== currentPersonnel?.name &&
-                        formData.signatures.preparedBy.name !== formData.personnelName && (
-                          <option value={formData.signatures.preparedBy.name}>
-                            ✍️ {formData.signatures.preparedBy.name}
-                          </option>
-                        )}
-                    </select>
+                      </select>
+                    )}
 
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ระบุชื่อผู้จัดทำ (หรือแก้ไข)"
-                      style={{ fontSize: '0.85rem' }}
-                      value={formData.signatures?.preparedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          signatures: {
-                            ...prev.signatures,
-                            preparedBy: { ...(prev.signatures?.preparedBy || {}), name },
-                          },
-                        }));
+                      readOnly={!isAdmin}
+                      style={{
+                        fontSize: '0.85rem',
+                        background: !isAdmin ? '#F8FAFC' : 'var(--bg-card)',
+                        color: !isAdmin ? '#334155' : 'var(--text-primary)',
+                        cursor: !isAdmin ? 'not-allowed' : 'text',
+                        borderColor: '#CBD5E1',
+                        fontWeight: 600,
                       }}
+                      value={formData.signatures?.preparedBy?.name || autoPreparerName || ''}
+                      onChange={
+                        isAdmin
+                          ? (e) => {
+                              const name = e.target.value;
+                              setFormData((prev) => ({
+                                ...prev,
+                                signatures: {
+                                  ...prev.signatures,
+                                  preparedBy: { ...(prev.signatures?.preparedBy || {}), name },
+                                },
+                              }));
+                            }
+                          : undefined
+                      }
                     />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
+                      <Lock size={10} />
+                      <span>ระบบล็อกชื่อตามผู้เข้าสู่ระบบ (ไม่สามารถแก้ไขได้)</span>
+                    </div>
                   </div>
 
                   {/* Card 2: ผู้บังคับบัญชา (Reviewed By) -> Auto select from หัวหน้าฝ่าย */}
@@ -1484,73 +1561,87 @@ export default function JDModal({
                         className="badge"
                         style={{
                           fontSize: '0.65rem',
-                          background: 'var(--mint-50)',
-                          color: 'var(--mint-text)',
-                          border: '1px solid var(--mint-200)',
+                          background: '#F1F5F9',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
                         }}
                       >
-                        <Building2 size={11} />
-                        Auto: หัวหน้าฝ่าย
+                        <Lock size={11} />
+                        อัตโนมัติ (แก้ไขไม่ได้)
                       </span>
                     </div>
 
-                    {/* Quick select dropdown */}
-                    <select
-                      className="form-select"
-                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
-                      value={formData.signatures?.reviewedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          supervisorName: name,
-                          signatures: {
-                            ...prev.signatures,
-                            reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
-                          },
-                        }));
-                      }}
-                    >
-                      {autoDeptHead?.name ? (
-                        <option value={autoDeptHead.name}>
-                          🏢 [หัวหน้าฝ่าย] {autoDeptHead.name} ({autoDeptHead.position})
-                        </option>
-                      ) : (
-                        <option value="">-- ไม่พบหัวหน้าฝ่ายอัตโนมัติ --</option>
-                      )}
-                      {personnelList
-                        .filter((p) => p.department === formData.department && p.name !== autoDeptHead?.name)
-                        .map((p) => (
-                          <option key={p.id} value={p.name}>
-                            {p.name} ({p.position || 'ในฝ่าย'})
+                    {/* Admin Override Dropdown */}
+                    {isAdmin && (
+                      <select
+                        className="form-select"
+                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                        value={formData.signatures?.reviewedBy?.name || ''}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            supervisorName: name,
+                            signatures: {
+                              ...prev.signatures,
+                              reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
+                            },
+                          }));
+                        }}
+                      >
+                        {autoDeptHead?.name ? (
+                          <option value={autoDeptHead.name}>
+                            🏢 [หัวหน้าฝ่าย] {autoDeptHead.name} ({autoDeptHead.position})
                           </option>
-                        ))}
-                      {formData.signatures?.reviewedBy?.name &&
-                        formData.signatures.reviewedBy.name !== autoDeptHead?.name && (
-                          <option value={formData.signatures.reviewedBy.name}>
-                            ✍️ {formData.signatures.reviewedBy.name}
-                          </option>
+                        ) : (
+                          <option value="">-- ไม่พบหัวหน้าฝ่ายอัตโนมัติ --</option>
                         )}
-                    </select>
+                        {personnelList
+                          .filter((p) => p.department === formData.department && p.name !== autoDeptHead?.name)
+                          .map((p) => (
+                            <option key={p.id} value={p.name}>
+                              {p.name} ({p.position || 'ในฝ่าย'})
+                            </option>
+                          ))}
+                      </select>
+                    )}
 
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ระบุชื่อผู้บังคับบัญชา (หรือแก้ไข)"
-                      style={{ fontSize: '0.85rem' }}
-                      value={formData.signatures?.reviewedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          supervisorName: name,
-                          signatures: {
-                            ...prev.signatures,
-                            reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
-                          },
-                        }));
+                      readOnly={!isAdmin}
+                      style={{
+                        fontSize: '0.85rem',
+                        background: !isAdmin ? '#F8FAFC' : 'var(--bg-card)',
+                        color: !isAdmin ? '#334155' : 'var(--text-primary)',
+                        cursor: !isAdmin ? 'not-allowed' : 'text',
+                        borderColor: '#CBD5E1',
+                        fontWeight: 600,
                       }}
+                      value={formData.signatures?.reviewedBy?.name || autoDeptHead?.name || ''}
+                      onChange={
+                        isAdmin
+                          ? (e) => {
+                              const name = e.target.value;
+                              setFormData((prev) => ({
+                                ...prev,
+                                supervisorName: name,
+                                signatures: {
+                                  ...prev.signatures,
+                                  reviewedBy: { ...(prev.signatures?.reviewedBy || {}), name },
+                                },
+                              }));
+                            }
+                          : undefined
+                      }
                     />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
+                      <Lock size={10} />
+                      <span>ระบบล็อกชื่อตามหัวหน้าฝ่ายของตำแหน่ง (ไม่สามารถแก้ไขได้)</span>
+                    </div>
                   </div>
 
                   {/* Card 3: ผู้อนุมัติ (Approved By) -> Auto select from ผู้บริหาร ผู้อำนวยการสำนักคอมพิวเตอร์ */}
@@ -1573,67 +1664,81 @@ export default function JDModal({
                         className="badge"
                         style={{
                           fontSize: '0.65rem',
-                          background: 'var(--peach-50)',
-                          color: 'var(--peach-text)',
-                          border: '1px solid var(--peach-100)',
+                          background: '#F1F5F9',
+                          color: '#475569',
+                          border: '1px solid #CBD5E1',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
                         }}
                       >
-                        <ShieldCheck size={11} />
-                        Auto: ผู้อำนวยการ
+                        <Lock size={11} />
+                        อัตโนมัติ (แก้ไขไม่ได้)
                       </span>
                     </div>
 
-                    {/* Quick select dropdown */}
-                    <select
-                      className="form-select"
-                      style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
-                      value={formData.signatures?.approvedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          signatures: {
-                            ...prev.signatures,
-                            approvedBy: { ...(prev.signatures?.approvedBy || {}), name },
-                          },
-                        }));
-                      }}
-                    >
-                      <option value={autoDirector.name}>
-                        🏛️ [ผู้อำนวยการ] {autoDirector.name} ({autoDirector.position})
-                      </option>
-                      {executiveList
-                        .filter((ex) => ex.name !== autoDirector.name)
-                        .map((ex) => (
-                          <option key={ex.id} value={ex.name}>
-                            🏛️ {ex.name} ({ex.position || 'ผู้บริหาร'})
-                          </option>
-                        ))}
-                      {formData.signatures?.approvedBy?.name &&
-                        formData.signatures.approvedBy.name !== autoDirector.name && (
-                          <option value={formData.signatures.approvedBy.name}>
-                            ✍️ {formData.signatures.approvedBy.name}
-                          </option>
-                        )}
-                    </select>
+                    {/* Admin Override Dropdown */}
+                    {isAdmin && (
+                      <select
+                        className="form-select"
+                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                        value={formData.signatures?.approvedBy?.name || ''}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            signatures: {
+                              ...prev.signatures,
+                              approvedBy: { ...(prev.signatures?.approvedBy || {}), name },
+                            },
+                          }));
+                        }}
+                      >
+                        <option value={autoDirector.name}>
+                          🏛️ [ผู้อำนวยการ] {autoDirector.name} ({autoDirector.position})
+                        </option>
+                        {executiveList
+                          .filter((ex) => ex.name !== autoDirector.name)
+                          .map((ex) => (
+                            <option key={ex.id} value={ex.name}>
+                              🏛️ {ex.name} ({ex.position || 'ผู้บริหาร'})
+                            </option>
+                          ))}
+                      </select>
+                    )}
 
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ระบุชื่อผู้อนุมัติ (หรือแก้ไข)"
-                      style={{ fontSize: '0.85rem' }}
-                      value={formData.signatures?.approvedBy?.name || ''}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          signatures: {
-                            ...prev.signatures,
-                            approvedBy: { ...(prev.signatures?.approvedBy || {}), name },
-                          },
-                        }));
+                      readOnly={!isAdmin}
+                      style={{
+                        fontSize: '0.85rem',
+                        background: !isAdmin ? '#F8FAFC' : 'var(--bg-card)',
+                        color: !isAdmin ? '#334155' : 'var(--text-primary)',
+                        cursor: !isAdmin ? 'not-allowed' : 'text',
+                        borderColor: '#CBD5E1',
+                        fontWeight: 600,
                       }}
+                      value={formData.signatures?.approvedBy?.name || autoDirector.name}
+                      onChange={
+                        isAdmin
+                          ? (e) => {
+                              const name = e.target.value;
+                              setFormData((prev) => ({
+                                ...prev,
+                                signatures: {
+                                  ...prev.signatures,
+                                  approvedBy: { ...(prev.signatures?.approvedBy || {}), name },
+                                },
+                              }));
+                            }
+                          : undefined
+                      }
                     />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
+                      <Lock size={10} />
+                      <span>ระบบล็อกชื่อตามผู้อำนวยการสำนักคอมพิวเตอร์ (ไม่สามารถแก้ไขได้)</span>
+                    </div>
                   </div>
                 </div>
               </div>
