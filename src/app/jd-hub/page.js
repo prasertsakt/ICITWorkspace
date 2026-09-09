@@ -232,7 +232,7 @@ export default function JDHubPage() {
                 บริการสารสนเทศภายใน (Required Login)
               </div>
               <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                โปรดเข้าสู่ระบบด้วยบัญชี Google มหาวิทยาลัย (@kmutnb.ac.th) เพื่อดูและจัดการแบบบรรยายลักษณะงานของคุณ
+                โปรดเข้าสู่ระบบด้วยบัญชี Google KMUTNB เพื่อดูและจัดการแบบบรรยายลักษณะงานของคุณ
               </p>
             </div>
           </div>
