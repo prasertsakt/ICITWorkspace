@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -45,6 +45,8 @@ import {
   Plus,
   Edit2,
   Trash2,
+  Search,
+  X,
 } from 'lucide-react';
 
 export default function PortalLandingPage() {
@@ -55,9 +57,24 @@ export default function PortalLandingPage() {
 
   // Portal Service Cards & Rearrange State
   const [services, setServices] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isRearranging, setIsRearranging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // Filtered Services based on Search Query
+  const filteredServices = useMemo(() => {
+    if (!searchQuery.trim()) return services;
+    const q = searchQuery.toLowerCase().trim();
+    return services.filter((item) => {
+      const matchTitle = item.title?.toLowerCase().includes(q);
+      const matchDesc = item.desc?.toLowerCase().includes(q);
+      const matchHref = item.href?.toLowerCase().includes(q);
+      const matchBadge = item.badgeText?.toLowerCase().includes(q);
+      const matchFooter = item.footerLeft?.toLowerCase().includes(q);
+      return matchTitle || matchDesc || matchHref || matchBadge || matchFooter;
+    });
+  }, [services, searchQuery]);
 
   // Modal State for Add / Edit Service Card
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -269,71 +286,200 @@ export default function PortalLandingPage() {
             </p>
           </div>
 
-          {isAdmin && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={handleOpenAddModal}
-                className="btn btn-primary btn-sm"
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {/* Search Bar */}
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search
+                size={15}
                 style={{
-                  padding: '0.45rem 0.85rem',
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                  pointerEvents: 'none',
                 }}
-                title="คลิกเพื่อเพิ่มการ์ดระบบงานหรือบริการใหม่"
-              >
-                <Plus size={14} />
-                <span>เพิ่มการ์ดบริการ</span>
-              </button>
-
-              {isRearranging ? (
-                <>
-                  <button
-                    onClick={handleResetOrder}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    title="คืนค่าการจัดเรียงกลับเป็นค่าเริ่มต้น"
-                  >
-                    <RotateCcw size={13} />
-                    <span>คืนค่าเริ่มต้น</span>
-                  </button>
-                  <button
-                    onClick={() => setIsRearranging(false)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', borderColor: 'var(--primary-300)', color: 'var(--primary-700)' }}
-                  >
-                    <CheckCircle2 size={14} />
-                    <span>เสร็จสิ้นการจัดเรียง</span>
-                  </button>
-                </>
-              ) : (
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ค้นหาระบบงานหรือบริการ..."
+                className="form-input"
+                style={{
+                  paddingLeft: '2rem',
+                  paddingRight: searchQuery ? '2rem' : '0.75rem',
+                  fontSize: '0.8rem',
+                  height: '36px',
+                  borderRadius: '20px',
+                  background: 'var(--bg-card)',
+                  borderColor: searchQuery ? 'var(--primary-400)' : 'var(--border-subtle)',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              />
+              {searchQuery && (
                 <button
-                  onClick={() => setIsRearranging(true)}
-                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  onClick={() => setSearchQuery('')}
                   style={{
-                    padding: '0.45rem 0.85rem',
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="ล้างคำค้นหา"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {isAdmin && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleOpenAddModal}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    height: '36px',
+                    padding: '0 0.85rem',
                     fontSize: '0.78rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    borderColor: 'var(--primary-300)',
-                    color: 'var(--primary-700)',
-                    background: 'var(--primary-50)',
+                    boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
+                    borderRadius: '20px',
                   }}
-                  title="คลิกเพื่อสลับและจัดลำดับการ์ดบริการ"
+                  title="คลิกเพื่อเพิ่มการ์ดระบบงานหรือบริการใหม่"
                 >
-                  <MoveHorizontal size={14} />
-                  <span>จัดเรียงการ์ดบริการ</span>
+                  <Plus size={14} />
+                  <span>เพิ่มการ์ดบริการ</span>
                 </button>
-              )}
-            </div>
-          )}
+
+                {isRearranging ? (
+                  <>
+                    <button
+                      onClick={handleResetOrder}
+                      className="btn btn-secondary btn-sm"
+                      style={{ height: '36px', padding: '0 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '20px' }}
+                      title="คืนค่าการจัดเรียงกลับเป็นค่าเริ่มต้น"
+                    >
+                      <RotateCcw size={13} />
+                      <span>คืนค่าเริ่มต้น</span>
+                    </button>
+                    <button
+                      onClick={() => setIsRearranging(false)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ height: '36px', padding: '0 0.85rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', borderColor: 'var(--primary-300)', color: 'var(--primary-700)', borderRadius: '20px' }}
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>เสร็จสิ้นการจัดเรียง</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsRearranging(true);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      height: '36px',
+                      padding: '0 0.85rem',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderColor: 'var(--primary-300)',
+                      color: 'var(--primary-700)',
+                      background: 'var(--primary-50)',
+                      borderRadius: '20px',
+                    }}
+                    title="คลิกเพื่อสลับและจัดลำดับการ์ดบริการ"
+                  >
+                    <MoveHorizontal size={14} />
+                    <span>จัดเรียงการ์ด</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="grid-3" style={{ gap: '1.25rem' }}>
-          {services.map((item, index) => {
+        {/* Search Results Count Bar when Searching */}
+        {searchQuery.trim() && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1rem',
+              padding: '0.45rem 0.85rem',
+              background: 'var(--primary-50)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--primary-200)',
+              fontSize: '0.8rem',
+              color: 'var(--primary-700)',
+            }}
+          >
+            <span>
+              ผลการค้นหาสำหรับ &ldquo;<strong>{searchQuery}</strong>&rdquo; : พบ <strong>{filteredServices.length}</strong> ระบบ
+            </span>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary-700)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                textDecoration: 'underline',
+              }}
+            >
+              แสดงทั้งหมด
+            </button>
+          </div>
+        )}
+
+        {filteredServices.length === 0 ? (
+          <div
+            className="card-glass"
+            style={{
+              padding: '3rem 1.5rem',
+              textAlign: 'center',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px dashed var(--border-subtle)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <Search size={36} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4 }} />
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              ไม่พบระบบงานหรือบริการที่ตรงกับ &ldquo;{searchQuery}&rdquo;
+            </h4>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem' }}>
+              ลองตรวจสอบการสะกดคำ หรือล้างคำค้นหาเพื่อดูระบบงานทั้งหมด
+            </p>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="btn btn-secondary btn-sm"
+              style={{ borderRadius: '20px', padding: '0.4rem 1rem' }}
+            >
+              ล้างการค้นหา
+            </button>
+          </div>
+        ) : (
+          <div className="grid-3" style={{ gap: '1.25rem' }}>
+            {filteredServices.map((item, index) => {
             const theme = PORTAL_COLOR_THEMES[item.colorTheme] || PORTAL_COLOR_THEMES.primary;
             const IconComponent = PORTAL_ICON_COMPONENTS[item.iconName] || Laptop;
             const isExternal = Boolean(
@@ -596,6 +742,7 @@ export default function PortalLandingPage() {
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Service Card Modal for Add / Edit */}

@@ -58,33 +58,8 @@ export default function TimeAttendanceModal({
     );
   }, [personnelList, departmentList, executiveList, selectedRequester]);
 
-  // 2. HR Officer: ค้นหาเจ้าหน้าที่ ตำแหน่งงานบุคลากร (ค่าเริ่มต้น jarucha.j@icit.kmutnb.ac.th)
-  const candidateHrStaff = useMemo(() => {
-    const defaultHr = personnelList.find((p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th');
-    const filtered = personnelList.filter(
-      (p) =>
-        p.status === 'ปกติ' &&
-        (p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th' ||
-          p.position?.includes('บุคลากร') ||
-          p.note?.includes('บุคลากร') ||
-          p.note?.includes('บุคคล') ||
-          p.department === 'สำนักงานผู้อำนวยการ')
-    );
-    const list = [];
-    if (defaultHr) list.push(defaultHr);
-    for (const p of filtered) {
-      if (!list.some((item) => item.id === p.id)) {
-        list.push(p);
-      }
-    }
-    return list;
-  }, [personnelList]);
-
+  // 2. HR Officer (งานบุคคล): ค้นหาและเลือกระบุอัตโนมัติ (แก้ไขไม่ได้)
   const selectedHrOfficer = useMemo(() => {
-    if (hrOfficerId) {
-      const found = personnelList.find((p) => p.id === hrOfficerId);
-      if (found) return found;
-    }
     const jarucha = personnelList.find((p) => p.email?.toLowerCase() === 'jarucha.j@icit.kmutnb.ac.th');
     if (jarucha) return jarucha;
     return (
@@ -95,7 +70,7 @@ export default function TimeAttendanceModal({
         position: 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร',
       }
     );
-  }, [personnelList, hrOfficerId, directoryRoles]);
+  }, [personnelList, directoryRoles]);
 
   // 3. หัวหน้าฝ่าย: ค้นหาและเลือกอัตโนมัติตามฝ่ายสังกัด (can not edit)
   const detectedDeptHead = useMemo(() => {
@@ -467,30 +442,49 @@ export default function TimeAttendanceModal({
               />
             </div>
 
-            {/* 6. HR: เจ้าหน้าที่ ตำแหน่งงานบุคลากร jarucha.j@icit.kmutnb.ac.th */}
+            {/* 6. HR: เจ้าหน้าที่ ตำแหน่งงานบุคลากร (auto select, can not edit) */}
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>ฝ่ายบุคคล (งานบุคลากร) <span style={{ color: 'red' }}>*</span></span>
-                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, background: '#ECFDF5', padding: '1px 6px', borderRadius: '8px' }}>
-                  ตรวจสอบลำดับที่ 1
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <label className="form-label" style={{ fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>ฝ่ายบุคคล (งานบุคลากร) <span style={{ color: 'red' }}>*</span></span>
+                  <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, background: '#ECFDF5', padding: '1px 6px', borderRadius: '8px' }}>
+                    ตรวจสอบลำดับที่ 1
+                  </span>
+                </label>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    background: '#F1F5F9',
+                    padding: '1px 6px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <Lock size={11} /> กำหนดอัตโนมัติ (แก้ไขไม่ได้)
                 </span>
-              </label>
-              <select
-                value={selectedHrOfficer?.id || hrOfficerId}
-                onChange={(e) => setHrOfficerId(e.target.value)}
-                className="form-input"
-                required
-                style={{ fontWeight: 600 }}
+              </div>
+              <div
+                style={{
+                  padding: '0.65rem 0.85rem',
+                  background: '#F8FAFC',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.9rem',
+                }}
               >
-                {candidateHrStaff.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.email}) - {p.position || 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร'}
-                  </option>
-                ))}
-              </select>
-              <small style={{ color: '#059669', fontSize: '0.75rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
-                ✓ เจ้าหน้าที่ ตำแหน่งงานบุคลากร: {selectedHrOfficer?.name || 'นางสาวจารุชา เจือทอง'} ({selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th'})
-              </small>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1E293B' }}>
+                  <ShieldCheck size={16} color="#059669" />
+                  <span>{selectedHrOfficer?.name || 'นางสาวจารุชา เจือทอง'}</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span>{selectedHrOfficer?.position || 'เจ้าหน้าที่ ตำแหน่งงานบุคลากร'}</span>
+                  <span>&bull;</span>
+                  <span style={{ color: '#059669', fontWeight: 600 }}>{selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th'}</span>
+                </div>
+              </div>
             </div>
           </div>
 
