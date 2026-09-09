@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
 import { sanitizeText } from '@/lib/securityUtils';
+import { formatLocalDate, parseLocalDate } from '@/lib/dateUtils';
 import {
   X,
   Check,
@@ -45,7 +46,7 @@ export default function LeaveModal({
         reason: leaveToEdit.reason || '',
       });
     } else {
-      const today = new Date().toISOString().split('T')[0];
+      const today = formatLocalDate(new Date());
       setFormData({
         personnelId: personnelList[0]?.id || '',
         leaveType: LEAVE_TYPES[1],
@@ -77,11 +78,11 @@ export default function LeaveModal({
   // Calculate total days
   const calculateDays = () => {
     if (!formData.startDate || !formData.endDate) return 1;
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    if (end < start) return 1;
+    const start = parseLocalDate(formData.startDate);
+    const end = parseLocalDate(formData.endDate);
+    if (!start || !end || end < start) return 1;
     const diffTime = Math.abs(end - start);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const handleStartDateChange = (val) => {

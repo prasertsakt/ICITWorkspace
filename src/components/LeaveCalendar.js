@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import { isDummyLeaveRecord } from '@/lib/storageService';
+import { formatLocalDate, parseLocalDate } from '@/lib/dateUtils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -171,7 +172,7 @@ export default function LeaveCalendar({
     for (let i = firstDayIndex - 1; i >= 0; i--) {
       const d = prevMonthTotalDays - i;
       const prevDate = new Date(year, month - 1, d);
-      const dateStr = prevDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(prevDate);
       days.push({
         dayNumber: d,
         dateString: dateStr,
@@ -182,14 +183,10 @@ export default function LeaveCalendar({
     }
 
     // 2. Current month days
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatLocalDate(new Date());
     for (let d = 1; d <= totalDaysInMonth; d++) {
       const currDate = new Date(year, month, d);
-      // Format YYYY-MM-DD
-      const yStr = year;
-      const mStr = String(month + 1).padStart(2, '0');
-      const dStr = String(d).padStart(2, '0');
-      const dateStr = `${yStr}-${mStr}-${dStr}`;
+      const dateStr = formatLocalDate(currDate);
       days.push({
         dayNumber: d,
         dateString: dateStr,
@@ -203,7 +200,7 @@ export default function LeaveCalendar({
     const remainingDays = 42 - days.length;
     for (let d = 1; d <= remainingDays; d++) {
       const nextDate = new Date(year, month + 1, d);
-      const dateStr = nextDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(nextDate);
       days.push({
         dayNumber: d,
         dateString: dateStr,
@@ -222,13 +219,14 @@ export default function LeaveCalendar({
     filteredLeaves.forEach((leave) => {
       if (!leave.startDate || !leave.endDate) return;
 
-      const cur = new Date(leave.startDate);
-      const end = new Date(leave.endDate);
+      const cur = parseLocalDate(leave.startDate);
+      const end = parseLocalDate(leave.endDate);
+      if (!cur || !end) return;
 
       // Guard against infinite loop
       let count = 0;
       while (cur <= end && count < 366) {
-        const dateStr = cur.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(cur);
         if (!map[dateStr]) map[dateStr] = [];
         map[dateStr].push(leave);
         cur.setDate(cur.getDate() + 1);

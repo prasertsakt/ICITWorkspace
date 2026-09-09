@@ -311,3 +311,31 @@ export function getFiscalYearRange(fiscalYear = null) {
     label: `ปีงบประมาณ ${fy + 543} (1 ต.ค. ${fy - 1 + 543} - 30 ก.ย. ${fy + 543})`,
   };
 }
+
+/**
+ * Format a Date object to YYYY-MM-DD in local time
+ * (Prevents UTC timezone offset day-shift bugs caused by d.toISOString().split('T')[0])
+ */
+export function formatLocalDate(date = new Date()) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Parse YYYY-MM-DD string into a local Date object at 00:00:00 local time
+ * (Avoids UTC midnight parsing of new Date('YYYY-MM-DD') which causes timezone shifts)
+ */
+export function parseLocalDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m - 1, d);
+}
+

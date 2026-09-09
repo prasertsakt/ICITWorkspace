@@ -11,7 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
-import { getQuarterRange, getFiscalYear, getFiscalYearRange } from '@/lib/dateUtils';
+import { getQuarterRange, getFiscalYear, getFiscalYearRange, formatLocalDate } from '@/lib/dateUtils';
 
 // Format Date Thai: e.g. 15 ก.ย. 2569
 function formatThaiDate(dateStr) {
@@ -64,11 +64,11 @@ export default function LeaveReportModal({
   // Default range: First day of current month to last day of current month
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(currentYear, currentMonth, 1);
-    return d.toISOString().split('T')[0];
+    return formatLocalDate(d);
   });
   const [endDate, setEndDate] = useState(() => {
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    return lastDay.toISOString().split('T')[0];
+    return formatLocalDate(lastDay);
   });
 
   const [filterDept, setFilterDept] = useState('ALL');
@@ -110,13 +110,13 @@ export default function LeaveReportModal({
     if (presetKey === 'this_month') {
       const start = new Date(y, m, 1);
       const end = new Date(y, m + 1, 0);
-      setStartDate(start.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
+      setStartDate(formatLocalDate(start));
+      setEndDate(formatLocalDate(end));
     } else if (presetKey === 'last_month') {
       const start = new Date(y, m - 1, 1);
       const end = new Date(y, m, 0);
-      setStartDate(start.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
+      setStartDate(formatLocalDate(start));
+      setEndDate(formatLocalDate(end));
     } else if (presetKey === 'q1' || presetKey === 'q2' || presetKey === 'q3' || presetKey === 'q4') {
       const qNum = parseInt(presetKey.replace('q', ''), 10);
       const range = getQuarterRange(qNum, { isFiscal: mode === 'fiscal' });
@@ -797,7 +797,7 @@ export default function LeaveReportModal({
                 }}
               >
                 <span>
-                  วันที่จัดพิมพ์: {formatThaiDateFull(today.toISOString().split('T')[0])} เวลา{' '}
+                  วันที่จัดพิมพ์: {formatThaiDateFull(formatLocalDate(today))} เวลา{' '}
                   {String(today.getHours()).padStart(2, '0')}:{String(today.getMinutes()).padStart(2, '0')} น.
                 </span>
                 <span>

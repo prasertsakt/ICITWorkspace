@@ -15,6 +15,7 @@ import {
   isDummyLeaveRecord,
 } from '@/lib/storageService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
+import { formatLocalDate } from '@/lib/dateUtils';
 import LeaveCalendar from '@/components/LeaveCalendar';
 import LeaveModal from '@/components/LeaveModal';
 import LeaveReportModal from '@/components/LeaveReportModal';
@@ -85,7 +86,7 @@ export default function LeavePage() {
   }, [selectedYear, isAdmin]);
 
   // Dashboard Metrics Calculations
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => formatLocalDate(new Date()), []);
 
   // People on leave today
   const leavesToday = useMemo(() => {
