@@ -183,8 +183,17 @@ export default function JDModal({
     };
   }, [executiveList, personnelList]);
 
-  // 3. Auto-detect Preparer (ผู้จัดทำ from login user)
+  // 3. Auto-detect Preparer (ผู้จัดทำ)
   const autoPreparerName = useMemo(() => {
+    // If admin is editing an existing JD, do NOT auto-select Admin; keep the JD owner/preparer
+    if (isAdmin && jdToEdit) {
+      return formData.signatures?.preparedBy?.name || formData.personnelName || '';
+    }
+    // If admin is creating a new JD, use the selected personnel's name
+    if (isAdmin && !jdToEdit) {
+      return formData.personnelName || formData.signatures?.preparedBy?.name || '';
+    }
+    // For standard user: auto select from login user
     return (
       currentPersonnel?.name ||
       currentUser?.displayName ||
@@ -192,7 +201,7 @@ export default function JDModal({
       formData.personnelName ||
       ''
     );
-  }, [currentPersonnel, currentUser, formData.personnelName]);
+  }, [isAdmin, jdToEdit, currentPersonnel, currentUser, formData.signatures?.preparedBy?.name, formData.personnelName]);
 
   // Reset form on open/change with auto-selected signatures
   useEffect(() => {
@@ -216,9 +225,21 @@ export default function JDModal({
       const head = getDeptHeadInfo(initialData.department);
       const director = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
 
-      // Always auto-select and lock the 3 signers
+      // ผู้จัดทำ (Position By):
+      // - If Admin is editing an existing JD: do NOT auto-select Admin; keep the existing preparedBy name or JD owner
+      // - If Admin is creating a new JD: use the personnelName
+      // - If regular user: auto select from login user
+      let preparerName;
+      if (isAdmin && jdToEdit) {
+        preparerName = initialData.signatures.preparedBy?.name || initialData.personnelName || '';
+      } else if (isAdmin && !jdToEdit) {
+        preparerName = initialData.personnelName || '';
+      } else {
+        preparerName = loginUserName;
+      }
+
       initialData.signatures.preparedBy = {
-        name: loginUserName,
+        name: preparerName,
         date: initialData.signatures.preparedBy?.date || '',
       };
       if (head) {
@@ -252,7 +273,7 @@ export default function JDModal({
       ...prev,
       personnelId: selected.id,
       personnelName: selected.name,
-      personnelEmail: selected.email,
+      personnelEmail: selected.email || prev.personnelEmail,
       positionNumber: selected.positionNumber || prev.positionNumber,
       position: selected.position || prev.position,
       department: selected.department || prev.department,
@@ -271,7 +292,41 @@ export default function JDModal({
           date: prev.signatures?.reviewedBy?.date || '',
         },
         approvedBy: {
-          name: prev.signatures?.approvedBy?.name || autoDirector.name,
+          name: autoDirector.name,
+          date: prev.signatures?.approvedBy?.date || '',
+        },
+      },
+    }));
+  };
+
+  // Handle manual typing/editing of preparer name by Admin
+  const handlePreparerTextChange = (nameVal) => {
+    const matchedPerson = personnelList.find(
+      (p) => p.name && (p.name.trim().toLowerCase() === nameVal.trim().toLowerCase() || p.name.includes(nameVal.trim()))
+    );
+    const deptToUse = matchedPerson?.department || formData.department;
+    const headForDept = getDeptHeadInfo(deptToUse);
+
+    setFormData((prev) => ({
+      ...prev,
+      personnelName: nameVal,
+      personnelId: matchedPerson ? matchedPerson.id : prev.personnelId,
+      personnelEmail: matchedPerson ? (matchedPerson.email || prev.personnelEmail) : prev.personnelEmail,
+      department: deptToUse || prev.department,
+      supervisorName: headForDept?.name || prev.supervisorName,
+      supervisorPosition: headForDept?.position || prev.supervisorPosition,
+      signatures: {
+        ...prev.signatures,
+        preparedBy: {
+          name: nameVal,
+          date: prev.signatures?.preparedBy?.date || '',
+        },
+        reviewedBy: {
+          name: headForDept?.name || prev.signatures?.reviewedBy?.name || '',
+          date: prev.signatures?.reviewedBy?.date || '',
+        },
+        approvedBy: {
+          name: autoDirector.name,
           date: prev.signatures?.approvedBy?.date || '',
         },
       },
@@ -426,6 +481,11 @@ export default function JDModal({
     const deptHead = getDeptHeadInfo(data.department);
     const directorName = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
 
+    // If admin is editing, do NOT auto-select Admin; keep the JD owner/preparer
+    const preparerName = isAdmin
+      ? (data.signatures?.preparedBy?.name || data.personnelName || '')
+      : loginUserName;
+
     return {
       ...data,
       supervisorName: deptHead?.name || data.supervisorName || '',
@@ -433,7 +493,7 @@ export default function JDModal({
       signatures: {
         ...data.signatures,
         preparedBy: {
-          name: loginUserName,
+          name: preparerName,
           date: data.signatures?.preparedBy?.date || '',
         },
         reviewedBy: {
@@ -722,7 +782,13 @@ export default function JDModal({
                     className="form-input"
                     placeholder="เช่น นางสาวจารุชา เจือทอง"
                     value={formData.personnelName}
-                    onChange={(e) => handleChange('personnelName', e.target.value)}
+                    onChange={(e) => {
+                      if (isAdmin) {
+                        handlePreparerTextChange(e.target.value);
+                      } else {
+                        handleChange('personnelName', e.target.value);
+                      }
+                    }}
                   />
                 </div>
 
@@ -1472,7 +1538,7 @@ export default function JDModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {/* Card 1: ผู้จัดทำ (Position By) -> Auto select from login user */}
+                  {/* Card 1: ผู้จัดทำ (Position By) */}
                   <div
                     style={{
                       background: 'var(--bg-card-subtle)',
@@ -1488,42 +1554,100 @@ export default function JDModal({
                       <label className="form-label" style={{ fontWeight: 700, margin: 0 }}>
                         ผู้จัดทำ (Position By)
                       </label>
-                      <span
-                        className="badge"
-                        style={{
-                          fontSize: '0.65rem',
-                          background: '#F1F5F9',
-                          color: '#475569',
-                          border: '1px solid #CBD5E1',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                        }}
-                      >
-                        <Lock size={11} />
-                        อัตโนมัติ (แก้ไขไม่ได้)
-                      </span>
+                      {isAdmin ? (
+                        <span
+                          className="badge"
+                          style={{
+                            fontSize: '0.65rem',
+                            background: '#EFF6FF',
+                            color: '#1D4ED8',
+                            border: '1px solid #BFDBFE',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <ShieldCheck size={11} />
+                          Admin แก้ไขได้
+                        </span>
+                      ) : (
+                        <span
+                          className="badge"
+                          style={{
+                            fontSize: '0.65rem',
+                            background: '#F1F5F9',
+                            color: '#475569',
+                            border: '1px solid #CBD5E1',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <Lock size={11} />
+                          อัตโนมัติ (แก้ไขไม่ได้)
+                        </span>
+                      )}
                     </div>
 
-                    <input
-                      type="text"
-                      className="form-input"
-                      readOnly
-                      disabled
-                      style={{
-                        fontSize: '0.875rem',
-                        background: '#F1F5F9',
-                        color: '#1E293B',
-                        cursor: 'not-allowed',
-                        borderColor: '#CBD5E1',
-                        fontWeight: 600,
-                      }}
-                      value={autoPreparerName || formData.signatures?.preparedBy?.name || ''}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
-                      <Lock size={10} />
-                      <span>ดึงชื่ออัตโนมัติจากบัญชีผู้เข้าสู่ระบบ (ไม่สามารถแก้ไขได้)</span>
-                    </div>
+                    {isAdmin ? (
+                      <>
+                        {personnelList && personnelList.length > 0 && (
+                          <select
+                            className="form-input"
+                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', background: '#FFFFFF' }}
+                            value={formData.personnelId || ''}
+                            onChange={(e) => handleSelectPersonnel(e.target.value)}
+                          >
+                            <option value="">-- เลือกผู้จัดทำจากรายชื่อบุคลากร --</option>
+                            {personnelList.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} ({p.department || 'ไม่ระบุฝ่าย'} - {p.position || '-'})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="ระบุชื่อ-นามสกุล ผู้จัดทำ..."
+                          value={formData.signatures?.preparedBy?.name ?? formData.personnelName ?? ''}
+                          onChange={(e) => handlePreparerTextChange(e.target.value)}
+                          style={{
+                            fontSize: '0.875rem',
+                            background: '#FFFFFF',
+                            color: '#1E293B',
+                            borderColor: 'var(--primary-300, #93C5FD)',
+                            fontWeight: 600,
+                          }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#2563EB' }}>
+                          <ShieldCheck size={10} />
+                          <span>Admin สามารถแก้ไขหรือเลือกผู้จัดทำได้ (ผู้บังคับบัญชาจะเปลี่ยนตามหัวหน้าฝ่ายอัตโนมัติ)</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          className="form-input"
+                          readOnly
+                          disabled
+                          style={{
+                            fontSize: '0.875rem',
+                            background: '#F1F5F9',
+                            color: '#1E293B',
+                            cursor: 'not-allowed',
+                            borderColor: '#CBD5E1',
+                            fontWeight: 600,
+                          }}
+                          value={formData.signatures?.preparedBy?.name || autoPreparerName || ''}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
+                          <Lock size={10} />
+                          <span>ดึงชื่ออัตโนมัติจากบัญชีผู้เข้าสู่ระบบ (ไม่สามารถแก้ไขได้)</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Card 2: ผู้บังคับบัญชา (Reviewed By) -> Auto select from หัวหน้าฝ่าย */}
@@ -1555,7 +1679,7 @@ export default function JDModal({
                         }}
                       >
                         <Lock size={11} />
-                        อัตโนมัติ (แก้ไขไม่ได้)
+                        อัตโนมัติตามหัวหน้าฝ่าย (แก้ไขไม่ได้)
                       </span>
                     </div>
 
@@ -1576,7 +1700,7 @@ export default function JDModal({
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
                       <Lock size={10} />
-                      <span>{autoDeptHead?.position ? `${autoDeptHead.position} (ไม่สามารถแก้ไขได้)` : 'ดึงชื่ออัตโนมัติตามหัวหน้าฝ่าย (ไม่สามารถแก้ไขได้)'}</span>
+                      <span>{autoDeptHead?.position ? `${autoDeptHead.position} (ไม่สามารถแก้ไขได้)` : 'ดึงชื่ออัตโนมัติตามหัวหน้าฝ่ายของผู้จัดทำ (ไม่สามารถแก้ไขได้)'}</span>
                     </div>
                   </div>
 
