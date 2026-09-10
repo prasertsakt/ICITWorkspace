@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Save,
@@ -24,6 +24,7 @@ import {
   IMS_RESULT_TYPES,
   IMS_AUDIT_STATUSES,
 } from '@/lib/constants';
+import { subscribeYearlyAuditors } from '@/lib/imsService';
 
 export default function ImsAuditModal({
   isOpen,
@@ -32,6 +33,7 @@ export default function ImsAuditModal({
   auditData = null,
   personnelList = [],
   currentYear = '2569',
+  yearlyConfig = null,
   isLeadAuditor = false,
   isAdmin = false,
 }) {
@@ -39,13 +41,7 @@ export default function ImsAuditModal({
     auditYear: currentYear,
     isoStandard: 'IMS 9001/27001',
     auditDate: new Date().toISOString().split('T')[0],
-    auditor1Id: '',
-    auditor1Name: '',
-    auditor1Email: '',
-    hasSecondAuditor: false,
-    auditor2Id: '',
-    auditor2Name: '',
-    auditor2Email: '',
+    auditors: [{ id: '', name: '', email: '', department: '' }],
     auditees: [{ id: '', name: '', department: '' }],
     topic: IMS_AUDIT_TOPICS[0] || '',
     item: '',
@@ -57,11 +53,58 @@ export default function ImsAuditModal({
     status: 'PENDING_LEAD_APPROVAL',
   });
 
+  const [activeYearConfig, setActiveYearConfig] = useState(yearlyConfig || null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Subscribe to yearly assigned auditors config whenever auditYear changes
+  useEffect(() => {
+    if (isOpen) {
+      const targetYr = formData.auditYear || currentYear;
+      const unsub = subscribeYearlyAuditors(targetYr, (cfg) => {
+        if (cfg) setActiveYearConfig(cfg);
+      });
+      return () => unsub && unsub();
+    }
+  }, [formData.auditYear, currentYear, isOpen]);
+
+  // Predefined list of committee auditors for this fiscal year
+  const committeeList = useMemo(() => {
+    const list = [];
+    const cfg = activeYearConfig || yearlyConfig;
+
+    // 1. Lead Internal Auditor
+    if (cfg?.leadAuditorName) {
+      list.push({
+        id: cfg.leadAuditorId || `lead_${cfg.leadAuditorName}`,
+        name: cfg.leadAuditorName,
+        email: cfg.leadAuditorEmail || '',
+        department: '',
+        role: 'Lead Internal Auditor',
+      });
+    }
+
+    // 2. Appointed Committee Auditors
+    if (Array.isArray(cfg?.auditors)) {
+      cfg.auditors.forEach((aud) => {
+        if (aud.name && !list.some((x) => x.name === aud.name || (aud.id && x.id === aud.id))) {
+          list.push({
+            id: aud.id || aud.name,
+            name: aud.name,
+            email: aud.email || '',
+            department: aud.department || '',
+            role: 'ผู้ตรวจติดตาม',
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [activeYearConfig, yearlyConfig]);
+
   useEffect(() => {
     if (auditData) {
+      // 1. Parse Auditees
       const existingAuditees =
         Array.isArray(auditData.auditees) && auditData.auditees.length > 0
           ? auditData.auditees
@@ -75,17 +118,43 @@ export default function ImsAuditModal({
             ]
           : [{ id: '', name: '', department: '' }];
 
+      // 2. Parse Auditors (supports both new array and legacy auditor1 / auditor2 fields)
+      let existingAuditors = [];
+      if (Array.isArray(auditData.auditors) && auditData.auditors.length > 0) {
+        existingAuditors = auditData.auditors.map((a) => ({
+          id: a.id || '',
+          name: a.name || '',
+          email: a.email || '',
+          department: a.department || '',
+        }));
+      } else {
+        existingAuditors = [];
+        if (auditData.auditor1Name || auditData.auditor1Id) {
+          existingAuditors.push({
+            id: auditData.auditor1Id || '',
+            name: auditData.auditor1Name || '',
+            email: auditData.auditor1Email || '',
+            department: auditData.auditor1Department || '',
+          });
+        }
+        if (auditData.hasSecondAuditor && (auditData.auditor2Name || auditData.auditor2Id)) {
+          existingAuditors.push({
+            id: auditData.auditor2Id || '',
+            name: auditData.auditor2Name || '',
+            email: auditData.auditor2Email || '',
+            department: auditData.auditor2Department || '',
+          });
+        }
+        if (existingAuditors.length === 0) {
+          existingAuditors = [{ id: '', name: '', email: '', department: '' }];
+        }
+      }
+
       setFormData({
         auditYear: auditData.auditYear || currentYear,
         isoStandard: auditData.isoStandard || 'IMS 9001/27001',
         auditDate: auditData.auditDate || new Date().toISOString().split('T')[0],
-        auditor1Id: auditData.auditor1Id || '',
-        auditor1Name: auditData.auditor1Name || '',
-        auditor1Email: auditData.auditor1Email || '',
-        hasSecondAuditor: !!auditData.hasSecondAuditor,
-        auditor2Id: auditData.auditor2Id || '',
-        auditor2Name: auditData.auditor2Name || '',
-        auditor2Email: auditData.auditor2Email || '',
+        auditors: existingAuditors,
         auditees: existingAuditees,
         topic: auditData.topic || IMS_AUDIT_TOPICS[0],
         item: auditData.item || '',
@@ -102,13 +171,7 @@ export default function ImsAuditModal({
         auditYear: currentYear,
         isoStandard: 'IMS 9001/27001',
         auditDate: new Date().toISOString().split('T')[0],
-        auditor1Id: '',
-        auditor1Name: '',
-        auditor1Email: '',
-        hasSecondAuditor: false,
-        auditor2Id: '',
-        auditor2Name: '',
-        auditor2Email: '',
+        auditors: [{ id: '', name: '', email: '', department: '' }],
         auditees: [{ id: '', name: '', department: '' }],
         topic: IMS_AUDIT_TOPICS[0] || '',
         item: '',
@@ -125,28 +188,50 @@ export default function ImsAuditModal({
 
   if (!isOpen) return null;
 
-  const handleAuditor1Change = (e) => {
-    const personId = e.target.value;
-    const person = personnelList.find((p) => p.id === personId);
+  // Auditor handlers
+  const handleAddAuditor = () => {
     setFormData((prev) => ({
       ...prev,
-      auditor1Id: personId,
-      auditor1Name: person ? person.name : '',
-      auditor1Email: person ? person.email : '',
+      auditors: [...(prev.auditors || []), { id: '', name: '', email: '', department: '' }],
     }));
   };
 
-  const handleAuditor2Change = (e) => {
-    const personId = e.target.value;
-    const person = personnelList.find((p) => p.id === personId);
-    setFormData((prev) => ({
-      ...prev,
-      auditor2Id: personId,
-      auditor2Name: person ? person.name : '',
-      auditor2Email: person ? person.email : '',
-    }));
+  const handleRemoveAuditor = (idx) => {
+    setFormData((prev) => {
+      const next = (prev.auditors || []).filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        auditors: next.length > 0 ? next : [{ id: '', name: '', email: '', department: '' }],
+      };
+    });
   };
 
+  const handleAuditorSelect = (idx, selectedKey) => {
+    if (!selectedKey) {
+      setFormData((prev) => {
+        const next = [...(prev.auditors || [])];
+        next[idx] = { id: '', name: '', email: '', department: '' };
+        return { ...prev, auditors: next };
+      });
+      return;
+    }
+
+    const pool = committeeList.length > 0 ? committeeList : personnelList;
+    const person = pool.find((p) => p.id === selectedKey || p.name === selectedKey);
+
+    setFormData((prev) => {
+      const next = [...(prev.auditors || [])];
+      next[idx] = {
+        id: person?.id || '',
+        name: person?.name || selectedKey,
+        email: person?.email || '',
+        department: person?.department || '',
+      };
+      return { ...prev, auditors: next };
+    });
+  };
+
+  // Auditee handlers
   const handleAddAuditee = () => {
     setFormData((prev) => ({
       ...prev,
@@ -203,12 +288,10 @@ export default function ImsAuditModal({
       setErrorMsg('กรุณาระบุวันที่ทำการตรวจติดตาม');
       return;
     }
-    if (!formData.auditor1Name && !formData.auditor1Id) {
-      setErrorMsg('กรุณาเลือกผู้ตรวจติดตามภายใน 1');
-      return;
-    }
-    if (formData.hasSecondAuditor && !formData.auditor2Name && !formData.auditor2Id) {
-      setErrorMsg('กรุณาเลือกผู้ตรวจติดตามภายใน 2');
+
+    const validAuditors = (formData.auditors || []).filter((a) => a.name && a.name.trim());
+    if (validAuditors.length === 0) {
+      setErrorMsg('กรุณาเลือกผู้ตรวจติดตามภายในอย่างน้อย 1 ท่าน จากคณะผู้ตรวจฯ');
       return;
     }
 
@@ -244,6 +327,16 @@ export default function ImsAuditModal({
       await onSave({
         ...(auditData || {}),
         ...formData,
+        auditors: validAuditors,
+        auditor1Id: validAuditors[0]?.id || '',
+        auditor1Name: validAuditors[0]?.name || '',
+        auditor1Email: validAuditors[0]?.email || '',
+        auditor1Department: validAuditors[0]?.department || '',
+        hasSecondAuditor: validAuditors.length > 1,
+        auditor2Id: validAuditors[1]?.id || '',
+        auditor2Name: validAuditors[1]?.name || '',
+        auditor2Email: validAuditors[1]?.email || '',
+        auditor2Department: validAuditors[1]?.department || '',
         auditees: validAuditees,
         auditee1Id: validAuditees[0]?.id || '',
         auditee1Name: validAuditees[0]?.name || '',
@@ -517,7 +610,7 @@ export default function ImsAuditModal({
             </div>
           </div>
 
-          {/* Section 2: รายชื่อผู้ตรวจติดตาม (Internal Auditors) */}
+          {/* Section 2: รายชื่อผู้ตรวจติดตาม (Internal Auditors - เพิ่มได้เหมือน Auditees) */}
           <div
             style={{
               background: '#FFFFFF',
@@ -527,169 +620,166 @@ export default function ImsAuditModal({
               border: '1px solid #E2E8F0',
             }}
           >
-            <h3
+            <div
               style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: '#0284C7',
-                margin: '0 0 1rem 0',
-                textDecoration: 'underline',
-                textUnderlineOffset: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
               }}
             >
-              รายชื่อผู้ตรวจติดตาม
-            </h3>
-
-            {/* ผู้ตรวจติดตามภายใน 1 */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '0.35rem',
-                }}
-              >
-                ผู้ตรวจติดตามภายใน 1 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <select
-                value={formData.auditor1Id}
-                onChange={handleAuditor1Change}
-                style={{
-                  width: '100%',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '0.925rem',
-                  background: '#FFFFFF',
-                }}
-                required
-              >
-                <option value="">-- เลือกผู้ตรวจติดตาม --</option>
-                {personnelList.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    🔴 {p.name} {p.department ? `(${p.department})` : ''}
-                  </option>
-                ))}
-              </select>
-              {!formData.auditor1Id && formData.auditor1Name && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                  กำหนดไว้: {formData.auditor1Name}
+              <div>
+                <h3
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    color: '#0284C7',
+                    margin: 0,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '4px',
+                  }}
+                >
+                  รายชื่อผู้ตรวจติดตาม
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#64748B' }}>
+                  {committeeList.length > 0
+                    ? `เลือกได้เฉพาะรายชื่อจากคณะผู้ตรวจติดตามประจำปีงบประมาณ ${formData.auditYear} (${committeeList.length} ท่าน)`
+                    : `คณะผู้ตรวจติดตามประจำปีงบประมาณ ${formData.auditYear}`}
                 </p>
-              )}
-            </div>
+              </div>
 
-            {/* Toggle เพิ่มผู้ตรวจ [NO] [YES] */}
-            <div style={{ marginBottom: formData.hasSecondAuditor ? '1rem' : '0.25rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                เพิ่มผู้ตรวจ <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <div
+              <button
+                type="button"
+                onClick={handleAddAuditor}
                 style={{
                   display: 'inline-flex',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  overflow: 'hidden',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  color: '#0284C7',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      hasSecondAuditor: false,
-                      auditor2Id: '',
-                      auditor2Name: '',
-                      auditor2Email: '',
-                    })
-                  }
-                  style={{
-                    padding: '0.5rem 1.75rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: 'none',
-                    background: !formData.hasSecondAuditor ? '#0284C7' : '#FFFFFF',
-                    color: !formData.hasSecondAuditor ? '#FFFFFF' : '#64748B',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  NO
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, hasSecondAuditor: true })}
-                  style={{
-                    padding: '0.5rem 1.75rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: 'none',
-                    borderLeft: '1px solid #CBD5E1',
-                    background: formData.hasSecondAuditor ? '#0284C7' : '#FFFFFF',
-                    color: formData.hasSecondAuditor ? '#FFFFFF' : '#64748B',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  YES
-                </button>
-              </div>
+                <Plus size={14} />
+                <span>เพิ่มผู้ตรวจติดตาม</span>
+              </button>
             </div>
 
-            {/* ผู้ตรวจติดตามภายใน 2 (conditionally displayed) */}
-            {formData.hasSecondAuditor && (
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.75rem',
-                  background: '#F0F9FF',
-                  borderRadius: '8px',
-                  border: '1px dashed #BAE6FD',
-                  animation: 'fadeIn 0.2s ease-out',
-                }}
-              >
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#0369A1',
-                    marginBottom: '0.35rem',
-                  }}
-                >
-                  ผู้ตรวจติดตามภายใน 2 <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.auditor2Id}
-                  onChange={handleAuditor2Change}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.925rem',
-                    background: '#FFFFFF',
-                  }}
-                  required={formData.hasSecondAuditor}
-                >
-                  <option value="">-- เลือกผู้ตรวจคนที่ 2 --</option>
-                  {personnelList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      🔴 {p.name} {p.department ? `(${p.department})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {(formData.auditors || []).map((auditor, idx) => {
+                // Ensure previously saved auditor is selectable even if not in current config
+                const pool = committeeList.length > 0 ? committeeList : personnelList;
+                const options = [...pool];
+                if (auditor.name && !options.some((o) => o.name === auditor.name)) {
+                  options.unshift({
+                    id: auditor.id || auditor.name,
+                    name: auditor.name,
+                    email: auditor.email || '',
+                    department: auditor.department || '',
+                    role: 'ที่บันทึกไว้เดิม',
+                  });
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '0.85rem',
+                      background: '#F8FAFC',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      position: 'relative',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
+                        ผู้ตรวจติดตามภายในคนที่ {idx + 1} {idx === 0 && <span style={{ color: '#EF4444' }}>*</span>}
+                      </span>
+                      {formData.auditors.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAuditor(idx)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            border: 'none',
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <Trash2 size={12} />
+                          <span>ลบ</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div>
+                      <select
+                        value={auditor.id || auditor.name}
+                        onChange={(e) => handleAuditorSelect(idx, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.925rem',
+                          background: '#FFFFFF',
+                          color: auditor.name ? '#0F172A' : '#64748B',
+                          fontWeight: auditor.name ? 600 : 400,
+                        }}
+                        required={idx === 0}
+                      >
+                        <option value="">-- เลือกผู้ตรวจติดตาม --</option>
+                        {options.map((opt) => (
+                          <option key={opt.id || opt.name} value={opt.id || opt.name}>
+                            🔴 {opt.role ? `[${opt.role}] ` : ''}{opt.name} {opt.department ? `(${opt.department})` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      {auditor.name && (
+                        <div
+                          style={{
+                            marginTop: '6px',
+                            fontSize: '0.75rem',
+                            color: '#0369A1',
+                            display: 'flex',
+                            gap: '12px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span>👤 <strong>{auditor.name}</strong></span>
+                          {auditor.department && <span>🏢 สังกัด: {auditor.department}</span>}
+                          {auditor.email && <span>✉️ {auditor.email}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Section 3: รายชื่อผู้รับการตรวจ (Auditees - มีได้มากกว่า 1 คน) */}

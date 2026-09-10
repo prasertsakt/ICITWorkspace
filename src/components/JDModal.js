@@ -89,8 +89,7 @@ export default function JDModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Tab navigation refs & navigation helpers
-  const tabsContainerRef = useRef(null);
+  // Navigation helpers & modal scroll ref
   const modalBodyRef = useRef(null);
 
   const currentTabIndex = useMemo(() => {
@@ -115,25 +114,6 @@ export default function JDModal({
   const handleNextTab = () => {
     if (nextTab) goToTab(nextTab.id);
   };
-
-  const scrollTabsHeader = (direction) => {
-    if (tabsContainerRef.current) {
-      tabsContainerRef.current.scrollBy({
-        left: direction === 'left' ? -220 : 220,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  // Auto scroll active tab into view in the top tabs bar
-  useEffect(() => {
-    if (tabsContainerRef.current) {
-      const activeBtn = tabsContainerRef.current.querySelector(`[data-tab-id="${activeTab}"]`);
-      if (activeBtn) {
-        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
-    }
-  }, [activeTab]);
 
   // 1. Auto-detect Head of Department (ผู้บังคับบัญชา)
   const getDeptHeadInfo = (deptName) => {
@@ -675,156 +655,7 @@ export default function JDModal({
           </button>
         </div>
 
-        {/* Tab Navigation with Left/Right Scroll Arrows */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            background: 'var(--bg-card)',
-            borderBottom: '1px solid var(--border-subtle)',
-            position: 'relative',
-            flexShrink: 0,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Left scroll arrow button */}
-          <button
-            type="button"
-            onClick={() => scrollTabsHeader('left')}
-            title="เลื่อนแท็บไปทางซ้าย"
-            style={{
-              width: '32px',
-              height: '46px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#FFFFFF',
-              border: 'none',
-              borderRight: '1px solid var(--border-subtle)',
-              color: '#64748B',
-              cursor: 'pointer',
-              flexShrink: 0,
-              zIndex: 2,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#0D9488';
-              e.currentTarget.style.background = '#F0FDFA';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#64748B';
-              e.currentTarget.style.background = '#FFFFFF';
-            }}
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          {/* Scrollable Tab Navigation List */}
-          <div
-            ref={tabsContainerRef}
-            className="jd-modal-tabs-bar"
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              height: '46px',
-              flex: 1,
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              padding: '0 0.25rem',
-              boxSizing: 'border-box',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-            }}
-          >
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  data-tab-id={tab.id}
-                  type="button"
-                  onClick={() => goToTab(tab.id)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '7px',
-                    height: '100%',
-                    padding: '0 0.95rem',
-                    fontSize: '0.8rem',
-                    fontWeight: isActive ? 700 : 500,
-                    color: isActive ? '#0D9488' : 'var(--text-secondary)',
-                    borderBottom: isActive ? '3px solid #0D9488' : '3px solid transparent',
-                    background: isActive ? '#F0FDFA' : 'transparent',
-                    borderTop: 'none',
-                    borderLeft: 'none',
-                    borderRight: 'none',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0,
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      background: isActive ? '#0D9488' : '#E2E8F0',
-                      color: isActive ? '#FFFFFF' : '#64748B',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {tab.num}
-                  </span>
-                  <Icon size={14} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right scroll arrow button */}
-          <button
-            type="button"
-            onClick={() => scrollTabsHeader('right')}
-            title="เลื่อนแท็บไปทางขวา"
-            style={{
-              width: '32px',
-              height: '46px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#FFFFFF',
-              border: 'none',
-              borderLeft: '1px solid var(--border-subtle)',
-              color: '#64748B',
-              cursor: 'pointer',
-              flexShrink: 0,
-              zIndex: 2,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#0D9488';
-              e.currentTarget.style.background = '#F0FDFA';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#64748B';
-              e.currentTarget.style.background = '#FFFFFF';
-            }}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* Smart Tab Navigator & Quick-Jump Helper Strip */}
+        {/* Smart Step Navigator & Quick-Jump Helper Strip */}
         <div
           style={{
             display: 'flex',

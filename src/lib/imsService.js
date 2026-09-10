@@ -1275,6 +1275,11 @@ export function isAssignedAuditorOnAudit(audit, user, personnel) {
   const userEmail = (user?.email || personnel?.email || '').toLowerCase();
   const personId = personnel?.id;
 
+  if (Array.isArray(audit.auditors)) {
+    if (personId && audit.auditors.some((a) => a.id === personId)) return true;
+    if (userEmail && audit.auditors.some((a) => a.email && a.email.toLowerCase() === userEmail)) return true;
+  }
+
   if (personId && (audit.auditor1Id === personId || audit.auditor2Id === personId)) {
     return true;
   }

@@ -244,17 +244,32 @@ export default function ImsAuditDetailModal({
                 fontSize: '0.925rem',
               }}
             >
-              <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้ตรวจติดตามภายใน 1</div>
-              <div style={{ color: '#0284C7', fontWeight: 600 }}>
-                {audit.auditor1Name || '-'}
-              </div>
-
-              {audit.hasSecondAuditor && audit.auditor2Name && (
+              {Array.isArray(audit.auditors) && audit.auditors.length > 0 ? (
+                audit.auditors.map((aud, i) => (
+                  <React.Fragment key={i}>
+                    <div style={{ color: '#64748B', fontWeight: 500 }}>
+                      ผู้ตรวจติดตามภายใน {audit.auditors.length > 1 ? i + 1 : ''}
+                    </div>
+                    <div style={{ color: '#0284C7', fontWeight: 600 }}>
+                      {aud.name || '-'} {aud.department ? `(${aud.department})` : ''}
+                    </div>
+                  </React.Fragment>
+                ))
+              ) : (
                 <>
-                  <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้ตรวจติดตามภายใน 2</div>
+                  <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้ตรวจติดตามภายใน 1</div>
                   <div style={{ color: '#0284C7', fontWeight: 600 }}>
-                    {audit.auditor2Name}
+                    {audit.auditor1Name || '-'}
                   </div>
+
+                  {audit.hasSecondAuditor && audit.auditor2Name && (
+                    <>
+                      <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้ตรวจติดตามภายใน 2</div>
+                      <div style={{ color: '#0284C7', fontWeight: 600 }}>
+                        {audit.auditor2Name}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>

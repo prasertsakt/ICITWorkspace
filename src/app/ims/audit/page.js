@@ -172,7 +172,9 @@ export default function ImsAuditPage() {
         const matchClauses = audit.clauses?.toLowerCase().includes(q);
         const matchAuditor1 = audit.auditor1Name?.toLowerCase().includes(q);
         const matchAuditor2 = audit.auditor2Name?.toLowerCase().includes(q);
+        const matchAuditors = Array.isArray(audit.auditors) && audit.auditors.some((a) => a.name?.toLowerCase().includes(q));
         const matchAuditee = audit.auditee1Name?.toLowerCase().includes(q);
+        const matchAuditees = Array.isArray(audit.auditees) && audit.auditees.some((a) => a.name?.toLowerCase().includes(q));
         const matchFindings = audit.findings?.toLowerCase().includes(q);
         if (
           !matchTopic &&
@@ -180,7 +182,9 @@ export default function ImsAuditPage() {
           !matchClauses &&
           !matchAuditor1 &&
           !matchAuditor2 &&
+          !matchAuditors &&
           !matchAuditee &&
+          !matchAuditees &&
           !matchFindings
         ) {
           return false;
@@ -1220,13 +1224,25 @@ export default function ImsAuditPage() {
 
                         {/* ผู้ตรวจติดตาม */}
                         <td style={{ padding: '1rem', verticalAlign: 'top' }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0369A1' }}>
-                            1. {audit.auditor1Name || '-'}
-                          </div>
-                          {audit.hasSecondAuditor && audit.auditor2Name && (
-                            <div style={{ fontSize: '0.8rem', color: '#0284C7', marginTop: '2px' }}>
-                              2. {audit.auditor2Name}
+                          {Array.isArray(audit.auditors) && audit.auditors.length > 0 ? (
+                            <div>
+                              {audit.auditors.map((aud, i) => (
+                                <div key={i} style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0369A1', lineHeight: 1.4 }}>
+                                  {audit.auditors.length > 1 ? `${i + 1}. ` : ''}{aud.name || '-'}
+                                </div>
+                              ))}
                             </div>
+                          ) : (
+                            <>
+                              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0369A1' }}>
+                                1. {audit.auditor1Name || '-'}
+                              </div>
+                              {audit.hasSecondAuditor && audit.auditor2Name && (
+                                <div style={{ fontSize: '0.8rem', color: '#0284C7', marginTop: '2px' }}>
+                                  2. {audit.auditor2Name}
+                                </div>
+                              )}
+                            </>
                           )}
                         </td>
 
@@ -1459,6 +1475,7 @@ export default function ImsAuditPage() {
         auditData={editingAudit}
         personnelList={personnelList}
         currentYear={selectedYear === 'ALL' ? '2569' : selectedYear}
+        yearlyConfig={yearlyConfig}
         isLeadAuditor={isLeadAuditor}
         isAdmin={isAdmin}
       />
