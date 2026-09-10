@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import { KMUTNB_CORE_COMPETENCIES, createBlankJD } from '@/lib/jdTemplateData';
 import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
@@ -24,16 +24,22 @@ import {
   Sparkles,
   ShieldCheck,
   Lock,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+  ArrowRight,
+  ListOrdered,
 } from 'lucide-react';
 
 const TABS = [
-  { id: 'job_info', label: '1. ข้อมูลตำแหน่ง & ผังสายงาน', icon: User },
-  { id: 'summary', label: '2. สรุปหน้าที่ (Summary)', icon: Layers },
-  { id: 'responsibilities', label: '3. หน้าที่ความรับผิดชอบหลัก', icon: Award },
-  { id: 'relationships', label: '4. การทำงานร่วมหน่วยงานอื่น', icon: Building2 },
-  { id: 'qualifications', label: '5. คุณสมบัติ & ทักษะ', icon: BookOpen },
-  { id: 'competencies', label: '6-7. สมรรถนะหลัก & ประจำตำแหน่ง', icon: Award },
-  { id: 'training_signatures', label: '8. การฝึกอบรม & ลงนาม', icon: Send },
+  { id: 'job_info', num: 1, label: '1. ข้อมูลตำแหน่ง & ผังสายงาน', shortLabel: '1. ตำแหน่ง & ผังสายงาน', icon: User },
+  { id: 'summary', num: 2, label: '2. สรุปหน้าที่ (Summary)', shortLabel: '2. สรุปหน้าที่ (Summary)', icon: Layers },
+  { id: 'responsibilities', num: 3, label: '3. หน้าที่ความรับผิดชอบหลัก', shortLabel: '3. หน้าที่หลัก & กิจกรรม', icon: Award },
+  { id: 'relationships', num: 4, label: '4. การทำงานร่วมหน่วยงานอื่น', shortLabel: '4. ความสัมพันธ์งาน', icon: Building2 },
+  { id: 'qualifications', num: 5, label: '5. คุณสมบัติ & ทักษะ', shortLabel: '5. คุณสมบัติ & ทักษะ', icon: BookOpen },
+  { id: 'core_competencies', num: 6, label: '6. สมรรถนะหลัก (Core)', shortLabel: '6. สมรรถนะหลัก (Core)', icon: Sparkles },
+  { id: 'functional_competencies', num: 7, label: '7. สมรรถนะประจำตำแหน่ง', shortLabel: '7. สมรรถนะตำแหน่ง', icon: Award },
+  { id: 'training_signatures', num: 8, label: '8. การฝึกอบรม & ลงนาม', shortLabel: '8. การฝึกอบรม & ลงนาม', icon: Send },
 ];
 
 // Verified department head directory for ICIT
@@ -82,6 +88,52 @@ export default function JDModal({
   const [formData, setFormData] = useState(() => createBlankJD());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Tab navigation refs & navigation helpers
+  const tabsContainerRef = useRef(null);
+  const modalBodyRef = useRef(null);
+
+  const currentTabIndex = useMemo(() => {
+    const idx = TABS.findIndex((t) => t.id === activeTab);
+    return idx >= 0 ? idx : 0;
+  }, [activeTab]);
+
+  const prevTab = currentTabIndex > 0 ? TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex < TABS.length - 1 ? TABS[currentTabIndex + 1] : null;
+
+  const goToTab = (tabId) => {
+    setActiveTab(tabId);
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevTab = () => {
+    if (prevTab) goToTab(prevTab.id);
+  };
+
+  const handleNextTab = () => {
+    if (nextTab) goToTab(nextTab.id);
+  };
+
+  const scrollTabsHeader = (direction) => {
+    if (tabsContainerRef.current) {
+      tabsContainerRef.current.scrollBy({
+        left: direction === 'left' ? -220 : 220,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  // Auto scroll active tab into view in the top tabs bar
+  useEffect(() => {
+    if (tabsContainerRef.current) {
+      const activeBtn = tabsContainerRef.current.querySelector(`[data-tab-id="${activeTab}"]`);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [activeTab]);
 
   // 1. Auto-detect Head of Department (ผู้บังคับบัญชา)
   const getDeptHeadInfo = (deptName) => {
@@ -623,64 +675,307 @@ export default function JDModal({
           </button>
         </div>
 
-        {/* Tab Navigation - Fixed Height */}
+        {/* Tab Navigation with Left/Right Scroll Arrows */}
         <div
-          className="jd-modal-tabs-bar"
           style={{
             display: 'flex',
-            alignItems: 'stretch',
-            height: '46px',
-            minHeight: '46px',
-            maxHeight: '46px',
-            flexShrink: 0,
-            overflowX: 'auto',
-            overflowY: 'hidden',
+            alignItems: 'center',
             background: 'var(--bg-card)',
             borderBottom: '1px solid var(--border-subtle)',
-            padding: '0 0.5rem',
-            boxSizing: 'border-box',
+            position: 'relative',
+            flexShrink: 0,
+            overflow: 'hidden',
           }}
         >
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
+          {/* Left scroll arrow button */}
+          <button
+            type="button"
+            onClick={() => scrollTabsHeader('left')}
+            title="เลื่อนแท็บไปทางซ้าย"
+            style={{
+              width: '32px',
+              height: '46px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#FFFFFF',
+              border: 'none',
+              borderRight: '1px solid var(--border-subtle)',
+              color: '#64748B',
+              cursor: 'pointer',
+              flexShrink: 0,
+              zIndex: 2,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#0D9488';
+              e.currentTarget.style.background = '#F0FDFA';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#64748B';
+              e.currentTarget.style.background = '#FFFFFF';
+            }}
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          {/* Scrollable Tab Navigation List */}
+          <div
+            ref={tabsContainerRef}
+            className="jd-modal-tabs-bar"
+            style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              height: '46px',
+              flex: 1,
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              padding: '0 0.25rem',
+              boxSizing: 'border-box',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  data-tab-id={tab.id}
+                  type="button"
+                  onClick={() => goToTab(tab.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '7px',
+                    height: '100%',
+                    padding: '0 0.95rem',
+                    fontSize: '0.8rem',
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? '#0D9488' : 'var(--text-secondary)',
+                    borderBottom: isActive ? '3px solid #0D9488' : '3px solid transparent',
+                    background: isActive ? '#F0FDFA' : 'transparent',
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      background: isActive ? '#0D9488' : '#E2E8F0',
+                      color: isActive ? '#FFFFFF' : '#64748B',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {tab.num}
+                  </span>
+                  <Icon size={14} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right scroll arrow button */}
+          <button
+            type="button"
+            onClick={() => scrollTabsHeader('right')}
+            title="เลื่อนแท็บไปทางขวา"
+            style={{
+              width: '32px',
+              height: '46px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#FFFFFF',
+              border: 'none',
+              borderLeft: '1px solid var(--border-subtle)',
+              color: '#64748B',
+              cursor: 'pointer',
+              flexShrink: 0,
+              zIndex: 2,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#0D9488';
+              e.currentTarget.style.background = '#F0FDFA';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#64748B';
+              e.currentTarget.style.background = '#FFFFFF';
+            }}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        {/* Smart Tab Navigator & Quick-Jump Helper Strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.45rem 1rem',
+            background: '#F8FAFC',
+            borderBottom: '1px solid #E2E8F0',
+            fontSize: '0.8rem',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            flexShrink: 0,
+          }}
+        >
+          {/* Left: Step indicator & interactive 8-step pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  height: '100%',
-                  padding: '0 0.95rem',
-                  fontSize: '0.8rem',
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'var(--primary-600)' : 'var(--text-secondary)',
-                  borderBottom: isActive ? '3px solid var(--primary-600)' : '3px solid transparent',
-                  background: isActive ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
-                  borderTop: 'none',
-                  borderLeft: 'none',
-                  borderRight: 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
-                  flexShrink: 0,
-                  boxSizing: 'border-box',
+                  background: '#0D9488',
+                  color: '#FFFFFF',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.3px',
                 }}
               >
-                <Icon size={14} />
-                <span>{tab.label}</span>
+                แท็บ {currentTabIndex + 1}/8
+              </span>
+              <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '0.82rem' }}>
+                {TABS[currentTabIndex]?.shortLabel || TABS[currentTabIndex]?.label}
+              </span>
+            </div>
+
+            {/* Quick 8 Step Number Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {TABS.map((t, idx) => {
+                const isCurrent = idx === currentTabIndex;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => goToTab(t.id)}
+                    title={`ไปยัง ${t.label}`}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: isCurrent ? '1.5px solid #0D9488' : '1px solid #CBD5E1',
+                      background: isCurrent ? '#0D9488' : '#FFFFFF',
+                      color: isCurrent ? '#FFFFFF' : '#475569',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {t.num}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right: Quick jump dropdown + mini Prev/Next buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>ไปยังส่วนที่:</span>
+              <select
+                value={activeTab}
+                onChange={(e) => goToTab(e.target.value)}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#1E293B',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {TABS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quick Prev / Next Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={handlePrevTab}
+                disabled={!prevTab}
+                title={prevTab ? `ย้อนกลับ: ${prevTab.label}` : 'อยู่ที่แท็บแรกแล้ว'}
+                style={{
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: prevTab ? '#FFFFFF' : '#F1F5F9',
+                  color: prevTab ? '#1E293B' : '#94A3B8',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: prevTab ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <ChevronLeft size={13} />
+                <span>ก่อนหน้า</span>
               </button>
-            );
-          })}
+
+              <button
+                type="button"
+                onClick={handleNextTab}
+                disabled={!nextTab}
+                title={nextTab ? `ถัดไป: ${nextTab.label}` : 'อยู่ที่แท็บสุดท้ายแล้ว'}
+                style={{
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid #0D9488',
+                  background: nextTab ? '#0D9488' : '#F1F5F9',
+                  color: nextTab ? '#FFFFFF' : '#94A3B8',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: nextTab ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <span>ถัดไป</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Modal Body: Scrollable Tab Content */}
         <div
-          className="modal-body"
+          ref={modalBodyRef}
+          className="modal-body jd-modal-body-scroll"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -1351,15 +1646,20 @@ export default function JDModal({
           )}
 
           {/* ============================================================ */}
-          {/* TAB 6: สมรรถนะหลัก & ประจำตำแหน่ง */}
+          {/* TAB 6: ความสามารถหรือสมรรถนะในงาน (Core Competencies) */}
           {/* ============================================================ */}
-          {activeTab === 'competencies' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-              {/* Part 6: Core Competencies */}
+          {activeTab === 'core_competencies' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies ของ มจพ.)
-                </h4>
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies ของ มจพ.)
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    กำหนดระดับความสามารถที่คาดหวังตามเกณฑ์มาตรฐานมหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ระดับ 1 - 5)
+                  </p>
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {(formData.coreCompetencies || []).map((comp, idx) => (
                     <div
@@ -1368,19 +1668,19 @@ export default function JDModal({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '0.65rem 0.85rem',
+                        padding: '0.75rem 1rem',
                         background: 'var(--bg-card-subtle)',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         border: '1px solid var(--border-subtle)',
                       }}
                     >
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{comp.name}</div>
-                        {comp.desc && <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>{comp.desc}</div>}
+                        {comp.desc && <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{comp.desc}</div>}
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ระดับที่ต้องการ:</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>ระดับที่ต้องการ:</span>
                         <select
                           className="form-input"
                           style={{ width: '64px', textAlign: 'center', fontWeight: 800 }}
@@ -1403,13 +1703,24 @@ export default function JDModal({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Part 7: Functional Competencies */}
+          {/* ============================================================ */}
+          {/* TAB 7: คุณสมบัติประจำตำแหน่ง (Functional Competencies) */}
+          {/* ============================================================ */}
+          {activeTab === 'functional_competencies' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    ส่วนที่ 7 คุณสมบัติประจำตำแหน่ง (Functional Competencies)
-                  </h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      ส่วนที่ 7 คุณสมบัติประจำตำแหน่ง (Functional Competencies)
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      ระบุสมรรถนะเฉพาะตามลักษณะงานและความเชี่ยวชาญของตำแหน่ง พร้อมระดับที่ต้องการ (1 - 5)
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddFunctionalCompetency}
@@ -1429,8 +1740,9 @@ export default function JDModal({
                         alignItems: 'center',
                         gap: '8px',
                         background: 'var(--bg-card-subtle)',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '6px',
+                        padding: '0.55rem 0.85rem',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-subtle)',
                       }}
                     >
                       <input
@@ -1442,6 +1754,7 @@ export default function JDModal({
                         onChange={(e) => handleUpdateFunctionalCompetency(idx, 'name', e.target.value)}
                       />
 
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>ระดับ:</span>
                       <select
                         className="form-input"
                         style={{ width: '64px', textAlign: 'center', fontWeight: 800 }}
@@ -1458,11 +1771,17 @@ export default function JDModal({
                         onClick={() => handleRemoveFunctionalCompetency(idx)}
                         className="btn btn-ghost btn-icon"
                         style={{ color: 'var(--rose-500)' }}
+                        title="ลบรายการ"
                       >
                         <Trash2 size={15} />
                       </button>
                     </div>
                   ))}
+                  {(!formData.functionalCompetencies || formData.functionalCompetencies.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', border: '1px dashed var(--border-subtle)', borderRadius: '8px' }}>
+                      ยังไม่มีรายการสมรรถนะประจำตำแหน่ง คลิก &quot;เพิ่มสมรรถนะประจำตำแหน่ง&quot; เพื่อระบุความสามารถเฉพาะทาง
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1761,6 +2080,122 @@ export default function JDModal({
               </div>
             </div>
           )}
+
+          {/* ============================================================ */}
+          {/* In-Content Bottom Stepper Navigation between 8 tabs */}
+          {/* ============================================================ */}
+          <div
+            style={{
+              marginTop: '2rem',
+              padding: '1rem 1.25rem',
+              borderRadius: '12px',
+              background: '#F8FAFC',
+              border: '1.5px dashed #CBD5E1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}
+          >
+            {/* Left: Previous Tab Button */}
+            <div>
+              {prevTab ? (
+                <button
+                  type="button"
+                  onClick={handlePrevTab}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <ArrowLeft size={15} />
+                  <span>ย้อนกลับ: {prevTab.shortLabel}</span>
+                </button>
+              ) : (
+                <span style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: 600 }}>
+                  📍 เริ่มต้น: ส่วนที่ 1 จาก 8
+                </span>
+              )}
+            </div>
+
+            {/* Center: Progress indicator */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 700 }}>
+                ความคืบหน้าแบบฟอร์ม: ส่วนที่ {currentTabIndex + 1} จาก 8 ({Math.round(((currentTabIndex + 1) / 8) * 100)}%)
+              </div>
+              <div
+                style={{
+                  width: '150px',
+                  height: '6px',
+                  background: '#E2E8F0',
+                  borderRadius: '3px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${((currentTabIndex + 1) / 8) * 100}%`,
+                    height: '100%',
+                    background: '#0D9488',
+                    borderRadius: '3px',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right: Next Tab Button or Finish Status */}
+            <div>
+              {nextTab ? (
+                <button
+                  type="button"
+                  onClick={handleNextTab}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '0.5rem 1.15rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#0D9488',
+                    color: '#FFFFFF',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(13, 148, 136, 0.25)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>ถัดไป: {nextTab.shortLabel}</span>
+                  <ArrowRight size={15} />
+                </button>
+              ) : (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#0F766E',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    background: '#CCFBF1',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #99F6E4',
+                  }}
+                >
+                  <CheckCircle2 size={16} color="#0D9488" />
+                  <span>ตรวจสอบครบทั้ง 8 ส่วนแล้ว พร้อมบันทึก</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Modal Footer Actions */}
@@ -1790,6 +2225,35 @@ export default function JDModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Modal footer stepper shortcuts */}
+            {prevTab && (
+              <button
+                type="button"
+                onClick={handlePrevTab}
+                disabled={isSubmitting}
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '4px' }}
+                title={`ย้อนกลับไป: ${prevTab.label}`}
+              >
+                <ChevronLeft size={14} />
+                <span>ก่อนหน้า</span>
+              </button>
+            )}
+
+            {nextTab && (
+              <button
+                type="button"
+                onClick={handleNextTab}
+                disabled={isSubmitting}
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '4px', borderColor: '#0D9488', color: '#0F766E' }}
+                title={`ถัดไป: ${nextTab.label}`}
+              >
+                <span>ถัดไป</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}

@@ -446,8 +446,8 @@ export default function ImsAuditModal({
                   }}
                   required
                 >
-                  <option value="2569">ปีงบประมาณ 2569</option>
                   <option value="2570">ปีงบประมาณ 2570</option>
+                  <option value="2569">ปีงบประมาณ 2569</option>
                   <option value="2568">ปีงบประมาณ 2568</option>
                 </select>
               </div>

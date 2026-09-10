@@ -53,6 +53,7 @@ import {
   Lock,
   LogIn,
   History,
+  ChevronDown,
 } from 'lucide-react';
 
 export default function ImsAuditPage() {
@@ -64,6 +65,15 @@ export default function ImsAuditPage() {
   const [selectedYear, setSelectedYear] = useState('2569');
   const [yearlyConfig, setYearlyConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Available fiscal years in descending order (2570, 2569, 2568, ...)
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set(['2570', '2569', '2568']);
+    audits.forEach((a) => {
+      if (a.auditYear) yearsSet.add(a.auditYear);
+    });
+    return Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
+  }, [audits]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -601,39 +611,73 @@ export default function ImsAuditPage() {
             </p>
           </div>
 
-          {/* Year Selector Pills */}
+          {/* Fiscal Year Selector Dropdown */}
           <div
             style={{
               display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.65rem',
               background: '#FFFFFF',
-              borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              padding: '3px',
+              padding: '0.4rem 0.75rem 0.4rem 0.85rem',
+              borderRadius: '12px',
+              border: '1.5px solid #CCFBF1',
+              boxShadow: '0 2px 5px rgba(13, 148, 136, 0.08)',
             }}
           >
-            {['2569', '2570', '2568', 'ALL'].map((yr) => {
-              const isSel = selectedYear === yr;
-              return (
-                <button
-                  key={yr}
-                  type="button"
-                  onClick={() => setSelectedYear(yr)}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: isSel ? '#0D9488' : 'transparent',
-                    color: isSel ? '#FFFFFF' : '#64748B',
-                    fontWeight: isSel ? 700 : 500,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {yr === 'ALL' ? 'ทุกปีงบประมาณ' : `ปีงบประมาณ ${yr}`}
-                </button>
-              );
-            })}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#0F766E',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Calendar size={16} color="#0D9488" />
+              <span>ปีงบประมาณ:</span>
+            </div>
+
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <select
+                id="ims-fiscal-year-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={{
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  padding: '0.45rem 2.25rem 0.45rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid #0D9488',
+                  background: '#F0FDFA',
+                  color: '#0F766E',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minWidth: '175px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    ปีงบประมาณ {yr}
+                  </option>
+                ))}
+                <option value="ALL">ทุกปีงบประมาณ (ทั้งหมด)</option>
+              </select>
+              <ChevronDown
+                size={16}
+                color="#0D9488"
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
           </div>
         </div>
 
