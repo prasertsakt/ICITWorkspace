@@ -90,6 +90,12 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // Rules for 'activity_logs' collection (System Audit & Activity Logs)
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Rules for 'settings' collection (Portal Configurations, Service Order, JD Config, etc.)
     match /settings/{settingId} {
       allow read: if true; // Any visitor can read portal card order & public configs

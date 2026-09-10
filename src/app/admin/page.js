@@ -28,6 +28,8 @@ import PersonnelModal from '@/components/PersonnelModal';
 import ExecutiveModal from '@/components/ExecutiveModal';
 import DepartmentModal from '@/components/DepartmentModal';
 import AdminManualEmailModal from '@/components/AdminManualEmailModal';
+import AdminActivityLogsTab from '@/components/AdminActivityLogsTab';
+import { logActivity, subscribeActivityLogs, ACTIVITY_CATEGORIES } from '@/lib/activityLogService';
 import {
   ShieldCheck,
   Users,
@@ -52,17 +54,19 @@ import {
   ArrowUpDown,
   GripVertical,
   Mail,
+  Activity,
 } from 'lucide-react';
 
 export default function AdminPage() {
   const { currentPersonnel, isAdmin, isFirebaseConfigured } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('personnel'); // 'personnel' | 'departments' | 'executives' | 'settings'
+  const [activeTab, setActiveTab] = useState('personnel'); // 'personnel' | 'departments' | 'executives' | 'logs' | 'settings'
 
   // Data states
   const [personnelList, setPersonnelList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [executiveList, setExecutiveList] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -149,10 +153,15 @@ export default function AdminPage() {
       setExecutiveList(list || []);
     });
 
+    const unsubActivity = subscribeActivityLogs((logs) => {
+      setActivityLogs(logs || []);
+    });
+
     return () => {
       unsubPersonnel();
       unsubDepts();
       unsubExecs();
+      unsubActivity();
     };
   }, []);
 
@@ -163,6 +172,14 @@ export default function AdminPage() {
     setIsSyncing(true);
     try {
       await syncAllSeedDataToFirestore();
+      await logActivity({
+        category: ACTIVITY_CATEGORIES.SYSTEM,
+        action: 'SYNC_FIRESTORE',
+        title: 'ซิงค์โครงสร้างฝ่ายงานขึ้น Cloud Firestore',
+        details: 'ตรวจสอบและซิงค์ข้อมูลฝ่ายงาน 6 ฝ่ายและบุคลากร',
+        actorName: currentPersonnel?.name,
+        actorEmail: currentPersonnel?.email,
+      });
       alert('✅ ซิงค์โครงสร้างฝ่ายงานขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!');
     } catch (err) {
       console.error('Sync failed', err);
@@ -225,12 +242,32 @@ export default function AdminPage() {
       return [data, ...prev];
     });
     await savePersonnelRecord(data);
+    await logActivity({
+      category: ACTIVITY_CATEGORIES.PERSONNEL,
+      action: 'SAVE_PERSONNEL',
+      title: `บันทึกข้อมูลบุคลากร: ${data.name}`,
+      details: `ฝ่าย: ${data.department || '-'} | ตำแหน่ง: ${data.position || '-'}`,
+      actorName: currentPersonnel?.name,
+      actorEmail: currentPersonnel?.email,
+      targetName: data.name,
+      targetId: data.id,
+    });
   };
 
   const handleDeletePersonnel = async (id, name) => {
     if (confirm(`คุณต้องการลบข้อมูล "${name}" ออกจากระบบใช่หรือไม่?`)) {
       setPersonnelList((prev) => prev.filter((p) => p.id !== id));
       await deletePersonnelRecord(id);
+      await logActivity({
+        category: ACTIVITY_CATEGORIES.PERSONNEL,
+        action: 'DELETE_PERSONNEL',
+        title: `ลบข้อมูลบุคลากร: ${name}`,
+        details: `รหัส: ${id}`,
+        actorName: currentPersonnel?.name,
+        actorEmail: currentPersonnel?.email,
+        targetName: name,
+        targetId: id,
+      });
     }
   };
 
@@ -242,6 +279,16 @@ export default function AdminPage() {
     const updated = { ...person, status: newStatus };
     setPersonnelList((prev) => prev.map((p) => (p.id === person.id ? updated : p)));
     await savePersonnelRecord(updated);
+    await logActivity({
+      category: ACTIVITY_CATEGORIES.PERSONNEL,
+      action: 'TOGGLE_STATUS',
+      title: `เปลี่ยนสถานะ ${person.name} เป็น "${newStatus}"`,
+      details: `ฝ่าย: ${person.department || '-'}`,
+      actorName: currentPersonnel?.name,
+      actorEmail: currentPersonnel?.email,
+      targetName: person.name,
+      targetId: person.id,
+    });
   };
 
   const handleTogglePersonnelRole = async (person) => {
@@ -250,6 +297,16 @@ export default function AdminPage() {
     const updated = { ...person, role: newRole };
     setPersonnelList((prev) => prev.map((p) => (p.id === person.id ? updated : p)));
     await savePersonnelRecord(updated);
+    await logActivity({
+      category: ACTIVITY_CATEGORIES.PERSONNEL,
+      action: 'TOGGLE_ROLE',
+      title: `เปลี่ยนสิทธิ์ ${person.name} เป็น "${newRole}"`,
+      details: `อีเมล: ${person.email}`,
+      actorName: currentPersonnel?.name,
+      actorEmail: currentPersonnel?.email,
+      targetName: person.name,
+      targetId: person.id,
+    });
   };
 
   // Handle Executive Actions with Immediate State Update
@@ -264,12 +321,32 @@ export default function AdminPage() {
       return [...prev, data];
     });
     await saveExecutiveRecord(data);
+    await logActivity({
+      category: ACTIVITY_CATEGORIES.EXECUTIVE,
+      action: 'SAVE_EXECUTIVE',
+      title: `บันทึกข้อมูลฝ่ายบริหาร: ${data.name}`,
+      details: `ตำแหน่ง: ${data.position || '-'}`,
+      actorName: currentPersonnel?.name,
+      actorEmail: currentPersonnel?.email,
+      targetName: data.name,
+      targetId: data.id,
+    });
   };
 
   const handleDeleteExecutive = async (id, name) => {
     if (confirm(`คุณต้องการลบผู้บริหาร "${name}" ใช่หรือไม่?`)) {
       setExecutiveList((prev) => prev.filter((e) => e.id !== id));
       await deleteExecutiveRecord(id);
+      await logActivity({
+        category: ACTIVITY_CATEGORIES.EXECUTIVE,
+        action: 'DELETE_EXECUTIVE',
+        title: `ลบข้อมูลผู้บริหาร: ${name}`,
+        details: `รหัส: ${id}`,
+        actorName: currentPersonnel?.name,
+        actorEmail: currentPersonnel?.email,
+        targetName: name,
+        targetId: id,
+      });
     }
   };
 
@@ -285,6 +362,16 @@ export default function AdminPage() {
       return [...prev, data];
     });
     await saveDepartmentRecord(data);
+    await logActivity({
+      category: ACTIVITY_CATEGORIES.DEPARTMENT,
+      action: 'SAVE_DEPARTMENT',
+      title: `กำหนดข้อมูลฝ่าย: ${data.name}`,
+      details: `คำอธิบาย / ผู้บริหารกำกับดูแล`,
+      actorName: currentPersonnel?.name,
+      actorEmail: currentPersonnel?.email,
+      targetName: data.name,
+      targetId: data.id,
+    });
   };
 
   const handleClearDummyData = async () => {
@@ -374,6 +461,15 @@ export default function AdminPage() {
           >
             <Award size={15} />
             <span>ฝ่ายบริหาร ({executiveList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`btn btn-sm ${activeTab === 'logs' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+          >
+            <Activity size={15} />
+            <span>ประวัติกิจกรรม ({activityLogs.length})</span>
           </button>
 
           <button
@@ -1122,6 +1218,11 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===================== TAB 5: SYSTEM AUDIT & ACTIVITY LOGS ===================== */}
+      {activeTab === 'logs' && (
+        <AdminActivityLogsTab logs={activityLogs} currentAdmin={currentPersonnel} />
       )}
 
       {/* MODALS */}
