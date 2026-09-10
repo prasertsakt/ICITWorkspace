@@ -14,6 +14,9 @@ import {
   Clock,
   Sparkles,
   Info,
+  Plus,
+  Trash2,
+  Lock,
 } from 'lucide-react';
 import {
   IMS_AUDIT_TOPICS,
@@ -43,9 +46,7 @@ export default function ImsAuditModal({
     auditor2Id: '',
     auditor2Name: '',
     auditor2Email: '',
-    auditee1Id: '',
-    auditee1Name: '',
-    auditeeDepartment: '',
+    auditees: [{ id: '', name: '', department: '' }],
     topic: IMS_AUDIT_TOPICS[0] || '',
     item: '',
     clauses: '',
@@ -61,6 +62,19 @@ export default function ImsAuditModal({
 
   useEffect(() => {
     if (auditData) {
+      const existingAuditees =
+        Array.isArray(auditData.auditees) && auditData.auditees.length > 0
+          ? auditData.auditees
+          : auditData.auditee1Name
+          ? [
+              {
+                id: auditData.auditee1Id || '',
+                name: auditData.auditee1Name || '',
+                department: auditData.auditeeDepartment || '',
+              },
+            ]
+          : [{ id: '', name: '', department: '' }];
+
       setFormData({
         auditYear: auditData.auditYear || currentYear,
         isoStandard: auditData.isoStandard || 'IMS 9001/27001',
@@ -72,9 +86,7 @@ export default function ImsAuditModal({
         auditor2Id: auditData.auditor2Id || '',
         auditor2Name: auditData.auditor2Name || '',
         auditor2Email: auditData.auditor2Email || '',
-        auditee1Id: auditData.auditee1Id || '',
-        auditee1Name: auditData.auditee1Name || '',
-        auditeeDepartment: auditData.auditeeDepartment || '',
+        auditees: existingAuditees,
         topic: auditData.topic || IMS_AUDIT_TOPICS[0],
         item: auditData.item || '',
         clauses: auditData.clauses || '',
@@ -97,9 +109,7 @@ export default function ImsAuditModal({
         auditor2Id: '',
         auditor2Name: '',
         auditor2Email: '',
-        auditee1Id: '',
-        auditee1Name: '',
-        auditeeDepartment: '',
+        auditees: [{ id: '', name: '', department: '' }],
         topic: IMS_AUDIT_TOPICS[0] || '',
         item: '',
         clauses: '',
@@ -137,16 +147,49 @@ export default function ImsAuditModal({
     }));
   };
 
-  const handleAuditeeChange = (e) => {
-    const personId = e.target.value;
-    const person = personnelList.find((p) => p.id === personId);
+  const handleAddAuditee = () => {
     setFormData((prev) => ({
       ...prev,
-      auditee1Id: personId,
-      auditee1Name: person ? person.name : '',
-      auditeeDepartment: person ? person.department : prev.auditeeDepartment,
+      auditees: [...prev.auditees, { id: '', name: '', department: '' }],
     }));
   };
+
+  const handleRemoveAuditee = (idx) => {
+    setFormData((prev) => {
+      const next = prev.auditees.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        auditees: next.length > 0 ? next : [{ id: '', name: '', department: '' }],
+      };
+    });
+  };
+
+  const handleAuditeeSelectPersonnel = (idx, personId) => {
+    const person = personnelList.find((p) => p.id === personId);
+    setFormData((prev) => {
+      const next = [...prev.auditees];
+      next[idx] = {
+        ...next[idx],
+        id: personId,
+        name: person ? person.name : '',
+        department: person ? (person.department || next[idx].department) : next[idx].department,
+      };
+      return { ...prev, auditees: next };
+    });
+  };
+
+  const handleAuditeeFieldChange = (idx, field, value) => {
+    setFormData((prev) => {
+      const next = [...prev.auditees];
+      next[idx] = { ...next[idx], [field]: value };
+      return { ...prev, auditees: next };
+    });
+  };
+
+  const isApproved =
+    auditData?.approvedByLeadIA ||
+    auditData?.status === 'READY_FOR_AUDIT' ||
+    auditData?.status === 'COMPLETED';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -168,6 +211,13 @@ export default function ImsAuditModal({
       setErrorMsg('กรุณาเลือกผู้ตรวจติดตามภายใน 2');
       return;
     }
+
+    const validAuditees = (formData.auditees || []).filter((a) => a.name && a.name.trim());
+    if (validAuditees.length === 0) {
+      setErrorMsg('กรุณาระบุผู้รับการตรวจอย่างน้อย 1 ท่าน');
+      return;
+    }
+
     if (!formData.topic) {
       setErrorMsg('กรุณาเลือกหัวข้อที่รับการตรวจ');
       return;
@@ -182,13 +232,26 @@ export default function ImsAuditModal({
     }
 
     const isResubmitting = formData.status === 'RETURNED_FOR_REVISION';
-    const newStatus = isResubmitting ? 'PENDING_LEAD_APPROVAL' : formData.status;
+    let newStatus = isResubmitting ? 'PENDING_LEAD_APPROVAL' : formData.status;
+
+    // If report was approved and auditor entered findings, transition to COMPLETED
+    if (isApproved && (formData.findings.trim() || formData.recommendation.trim())) {
+      newStatus = 'COMPLETED';
+    }
 
     setIsSubmitting(true);
     try {
       await onSave({
         ...(auditData || {}),
         ...formData,
+        auditees: validAuditees,
+        auditee1Id: validAuditees[0]?.id || '',
+        auditee1Name: validAuditees[0]?.name || '',
+        auditeeDepartment: validAuditees[0]?.department || '',
+        // If not yet approved by Lead IA, prevent entering findings into the record
+        findings: isApproved ? formData.findings : '',
+        recommendation: isApproved ? formData.recommendation : '',
+        result: isApproved ? formData.result : '',
         status: newStatus,
         leadRevisionComment: isResubmitting ? '' : (auditData?.leadRevisionComment || ''),
       });
@@ -199,8 +262,6 @@ export default function ImsAuditModal({
       setIsSubmitting(false);
     }
   };
-
-  const isApproved = auditData?.status === 'READY_FOR_AUDIT' || auditData?.status === 'COMPLETED';
 
   return (
     <div
@@ -631,7 +692,7 @@ export default function ImsAuditModal({
             )}
           </div>
 
-          {/* Section 3: รายชื่อผู้รับการตรวจ (Auditee) */}
+          {/* Section 3: รายชื่อผู้รับการตรวจ (Auditees - มีได้มากกว่า 1 คน) */}
           <div
             style={{
               background: '#FFFFFF',
@@ -641,101 +702,181 @@ export default function ImsAuditModal({
               border: '1px solid #E2E8F0',
             }}
           >
-            <h3
-              style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: '#0284C7',
-                margin: '0 0 1rem 0',
-                textDecoration: 'underline',
-                textUnderlineOffset: '4px',
-              }}
-            >
-              รายชื่อผู้รับการตรวจ
-            </h3>
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
               }}
             >
-              <div>
-                <label
+              <h3
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: '#0284C7',
+                  margin: 0,
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '4px',
+                }}
+              >
+                รายชื่อผู้รับการตรวจ (Auditees)
+              </h3>
+              <button
+                type="button"
+                onClick={handleAddAuditee}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  color: '#0284C7',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Plus size={14} />
+                <span>เพิ่มผู้รับการตรวจ</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {(formData.auditees || []).map((auditee, idx) => (
+                <div
+                  key={idx}
                   style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: '0.35rem',
-                  }}
-                >
-                  ผู้รับการตรวจ 1 <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.auditee1Id}
-                  onChange={handleAuditeeChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.925rem',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <option value="">-- เลือกบุคลากรผู้รับการตรวจ --</option>
-                  {personnelList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.department || 'ไม่ระบุฝ่าย'})
-                    </option>
-                  ))}
-                </select>
-                {/* Free-text input fallback if not in list */}
-                <input
-                  type="text"
-                  placeholder="หรือพิมพ์ชื่อผู้รับการตรวจเอง..."
-                  value={formData.auditee1Name}
-                  onChange={(e) => setFormData({ ...formData, auditee1Name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    marginTop: '6px',
-                    padding: '0.5rem 0.75rem',
+                    padding: '0.85rem',
+                    background: '#F8FAFC',
                     borderRadius: '8px',
                     border: '1px solid #E2E8F0',
-                    fontSize: '0.85rem',
-                    background: '#F8FAFC',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: '0.35rem',
+                    position: 'relative',
                   }}
                 >
-                  ฝ่าย / หน่วยงานที่รับการตรวจ
-                </label>
-                <input
-                  type="text"
-                  placeholder="เช่น ฝ่ายวิศวกรรมระบบเครือข่าย"
-                  value={formData.auditeeDepartment}
-                  onChange={(e) => setFormData({ ...formData, auditeeDepartment: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.925rem',
-                    background: '#FFFFFF',
-                  }}
-                />
-              </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
+                      ผู้รับการตรวจคนที่ {idx + 1} {idx === 0 && <span style={{ color: '#EF4444' }}>*</span>}
+                    </span>
+                    {formData.auditees.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAuditee(idx)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          border: 'none',
+                          background: '#FEE2E2',
+                          color: '#DC2626',
+                          borderRadius: '4px',
+                          padding: '3px 7px',
+                          fontSize: '0.725rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        <span>ลบ</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: '#64748B',
+                          marginBottom: '0.25rem',
+                        }}
+                      >
+                        เลือกจากรายชื่อบุคลากร
+                      </label>
+                      <select
+                        value={auditee.id || ''}
+                        onChange={(e) => handleAuditeeSelectPersonnel(idx, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.875rem',
+                          background: '#FFFFFF',
+                        }}
+                      >
+                        <option value="">-- เลือกจากบุคลากร หรือพิมพ์ชื่อด้านล่าง --</option>
+                        {personnelList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.department || 'ไม่ระบุฝ่าย'})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="หรือพิมพ์ชื่อ-นามสกุล..."
+                        value={auditee.name || ''}
+                        onChange={(e) => handleAuditeeFieldChange(idx, 'name', e.target.value)}
+                        style={{
+                          width: '100%',
+                          marginTop: '6px',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.85rem',
+                          background: '#FFFFFF',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: '#64748B',
+                          marginBottom: '0.25rem',
+                        }}
+                      >
+                        ฝ่าย / หน่วยงานที่สังกัด
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="เช่น ฝ่ายวิศวกรรมระบบเครือข่าย"
+                        value={auditee.department || ''}
+                        onChange={(e) => handleAuditeeFieldChange(idx, 'department', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.875rem',
+                          background: '#FFFFFF',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -890,7 +1031,7 @@ export default function ImsAuditModal({
           </div>
 
           {/* Section 5: การประเมินผลการตรวจ (Findings & Recommendation) */}
-          {/* Always editable if the plan is already approved or user is entering findings */}
+          {/* Locked until Lead Internal Auditor approves the audit plan */}
           <div
             style={{
               background: isApproved ? '#F0FDF4' : '#F8FAFC',
@@ -905,14 +1046,14 @@ export default function ImsAuditModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '1rem',
+                marginBottom: isApproved ? '1rem' : '0.5rem',
               }}
             >
               <h3
                 style={{
                   fontSize: '1rem',
                   fontWeight: 700,
-                  color: isApproved ? '#15803D' : '#475569',
+                  color: isApproved ? '#15803D' : '#64748B',
                   margin: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -922,7 +1063,7 @@ export default function ImsAuditModal({
                 <CheckSquare size={18} />
                 <span>บันทึกผลการตรวจติดตาม (Audit Findings & Result)</span>
               </h3>
-              {auditData?.approvedByLeadIA ? (
+              {isApproved ? (
                 <span
                   style={{
                     display: 'inline-flex',
@@ -936,7 +1077,7 @@ export default function ImsAuditModal({
                     fontWeight: 700,
                   }}
                 >
-                  <CheckCircle2 size={13} /> Approved by Lead IA
+                  <CheckCircle2 size={13} /> Approved by Lead IA (เปิดให้บันทึกผลตรวจ)
                 </span>
               ) : (
                 <span
@@ -952,136 +1093,177 @@ export default function ImsAuditModal({
                     fontWeight: 600,
                   }}
                 >
-                  <Clock size={13} /> รอ Lead IA อนุมัติก่อนเริ่มตรวจ
+                  <Lock size={13} /> ล็อกการบันทึก
                 </span>
               )}
             </div>
 
-            {/* Findings */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '0.35rem',
-                }}
-              >
-                Findings (สิ่งที่ตรวจพบ)
-              </label>
-              <textarea
-                rows={3}
-                placeholder="ระบุข้อเท็จจริง สิ่งที่พบในการตรวจติดตาม..."
-                value={formData.findings}
-                onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '0.925rem',
-                  background: '#FFFFFF',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
-            {/* Recommendation */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '0.35rem',
-                }}
-              >
-                Recommendation (ข้อเสนอแนะ)
-              </label>
-              <textarea
-                rows={2}
-                placeholder="ระบุข้อเสนอแนะเพื่อการปรับปรุง..."
-                value={formData.recommendation}
-                onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '0.925rem',
-                  background: '#FFFFFF',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
-            {/* ประเภทความไม่สอดคล้องที่พบ (C, NC, OFI) */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                ประเภทความไม่สอดคล้องที่พบ (Result Output)
-              </label>
+            {!isApproved ? (
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.75rem',
+                  marginTop: '0.75rem',
+                  padding: '1.15rem 1.25rem',
+                  background: '#FFFBEB',
+                  border: '1.5px dashed #FDE68A',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
                 }}
               >
-                {Object.values(IMS_RESULT_TYPES).map((res) => {
-                  const isSelected = formData.result === res.code;
-                  return (
-                    <button
-                      key={res.code}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, result: res.code })}
-                      style={{
-                        padding: '0.75rem 0.5rem',
-                        borderRadius: '10px',
-                        border: `2px solid ${isSelected ? res.color : '#CBD5E1'}`,
-                        background: isSelected ? res.bg : '#FFFFFF',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: '1.15rem',
-                          fontWeight: 800,
-                          color: res.color,
-                        }}
-                      >
-                        {res.code}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          color: isSelected ? res.color : '#64748B',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {res.code === 'C' ? 'Conformity' : res.code === 'NC' ? 'Non-Conformity' : 'OFI (Improvement)'}
-                      </span>
-                    </button>
-                  );
-                })}
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: '#FEF3C7',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Lock size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.925rem', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
+                    ส่วนนี้จะเปิดให้บันทึกได้หลังจาก Lead IA อนุมัติแล้วเท่านั้น
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#B45309', lineHeight: 1.5 }}>
+                    ท่านสามารถบันทึกและส่งแผนการตรวจติดตาม (Scope, หัวข้อ, ข้อตรวจ, ข้อกำหนด) เพื่อให้ Lead Internal Auditor อนุมัติก่อน เมื่อได้รับการอนุมัติแล้ว จึงจะสามารถบันทึกสิ่งที่ตรวจพบ (Findings), ข้อเสนอแนะ (Recommendation) และผลการตรวจ (C / NC / OFI) ได้
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Findings */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Findings (สิ่งที่ตรวจพบ)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="ระบุข้อเท็จจริง สิ่งที่พบในการตรวจติดตาม..."
+                    value={formData.findings}
+                    onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.925rem',
+                      background: '#FFFFFF',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+
+                {/* Recommendation */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Recommendation (ข้อเสนอแนะ)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="ระบุข้อเสนอแนะเพื่อการปรับปรุง..."
+                    value={formData.recommendation}
+                    onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.925rem',
+                      background: '#FFFFFF',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+
+                {/* ประเภทความไม่สอดคล้องที่พบ (C, NC, OFI) */}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    ประเภทความไม่สอดคล้องที่พบ (Result Output)
+                  </label>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    {Object.values(IMS_RESULT_TYPES).map((res) => {
+                      const isSelected = formData.result === res.code;
+                      return (
+                        <button
+                          key={res.code}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, result: res.code })}
+                          style={{
+                            padding: '0.75rem 0.5rem',
+                            borderRadius: '10px',
+                            border: `2px solid ${isSelected ? res.color : '#CBD5E1'}`,
+                            background: isSelected ? res.bg : '#FFFFFF',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '1.15rem',
+                              fontWeight: 800,
+                              color: res.color,
+                            }}
+                          >
+                            {res.code}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: isSelected ? res.color : '#64748B',
+                              textAlign: 'center',
+                            }}
+                          >
+                            {res.code === 'C' ? 'Conformity' : res.code === 'NC' ? 'Non-Conformity' : 'OFI (Improvement)'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer Actions */}

@@ -18,10 +18,14 @@ import {
   ChevronRight,
   Lock,
   Compass,
+  LogIn,
+  ArrowLeft,
 } from 'lucide-react';
 import { subscribeImsAudits } from '@/lib/imsService';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ImsLandingPage() {
+  const { currentUser, isLoading: authLoading, handleGoogleSignIn } = useAuth();
   const [audits, setAudits] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +42,140 @@ export default function ImsLandingPage() {
   const cCount = audits.filter((a) => a.result === 'C').length;
   const ncCount = audits.filter((a) => a.result === 'NC').length;
   const ofiCount = audits.filter((a) => a.result === 'OFI').length;
+
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '80vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#F8FAFC',
+        }}
+      >
+        <div style={{ textAlign: 'center', color: '#0D9488', fontWeight: 600 }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #CCFBF1',
+              borderTopColor: '#0D9488',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1rem',
+            }}
+          />
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          <span>กำลังตรวจสอบสิทธิ์การเข้าใช้งาน...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Authentication Gate: User must log in first to access IMS
+  if (!currentUser) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #F0FDFA 0%, #F8FAFC 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1.5rem',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '500px',
+            width: '100%',
+            background: '#FFFFFF',
+            borderRadius: '1.5rem',
+            border: '1px solid #E2E8F0',
+            padding: '2.5rem 2.25rem',
+            textAlign: 'center',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+          }}
+        >
+          <div
+            style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 10px 15px -3px rgba(13, 148, 136, 0.3)',
+            }}
+          >
+            <ShieldCheck size={40} />
+          </div>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              background: '#CCFBF1',
+              color: '#0F766E',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+            }}
+          >
+            <Lock size={13} />
+            <span>สงวนสิทธิ์เฉพาะผู้ใช้ที่เข้าสู่ระบบ</span>
+          </div>
+
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+            ระบบบริหารงาน IMS
+          </h1>
+          <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+            ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) สำนักคอมพิวเตอร์ฯ มจพ.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1.5rem',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <LogIn size={18} />
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
+            </button>
+
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+                padding: '0.65rem 1rem',
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: '4rem' }}>

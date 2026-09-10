@@ -13,6 +13,9 @@ import {
   subscribeYearlyAuditors,
   saveYearlyAuditors,
   isUserAuthorizedAuditor,
+  isLeadAuditorUser,
+  canUserEditAudit,
+  canUserDeleteAudit,
 } from '@/lib/imsService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import {
@@ -45,10 +48,12 @@ import {
   Sparkles,
   BarChart3,
   Award,
+  Lock,
+  LogIn,
 } from 'lucide-react';
 
 export default function ImsAuditPage() {
-  const { currentUser, currentPersonnel, isAdmin } = useAuth();
+  const { currentUser, currentPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
 
   // Data states
   const [audits, setAudits] = useState([]);
@@ -105,24 +110,18 @@ export default function ImsAuditPage() {
     return () => unsub();
   }, [selectedYear]);
 
-  // Check if current user is authorized to create/edit audits
+  // Check if current user is authorized to create/edit audits for this year
   const isAuthorizedToAudit = useMemo(() => {
     if (isAdmin) return true;
-    if (!currentUser && !currentPersonnel) return true; // Enable testing in development / demo mode
+    if (!currentUser) return false;
     return isUserAuthorizedAuditor(currentUser, currentPersonnel, yearlyConfig, isAdmin);
   }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
 
   // Check if current user is Lead Auditor
   const isLeadAuditor = useMemo(() => {
     if (isAdmin) return true;
-    if (!currentUser && !currentPersonnel) return true; // Enable testing in development / demo mode
-    const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase();
-    const personId = currentPersonnel?.id;
-    return (
-      (yearlyConfig?.leadAuditorEmail &&
-        yearlyConfig.leadAuditorEmail.toLowerCase() === userEmail) ||
-      (yearlyConfig?.leadAuditorId && personId && yearlyConfig.leadAuditorId === personId)
-    );
+    if (!currentUser) return false;
+    return isLeadAuditorUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
   }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
 
   // Filtered Audits
@@ -253,6 +252,140 @@ export default function ImsAuditPage() {
     showFeedback(`บันทึกรายชื่อผู้ตรวจติดตามประจำปี ${year} เรียบร้อยแล้ว`);
   };
 
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '80vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#F8FAFC',
+        }}
+      >
+        <div style={{ textAlign: 'center', color: '#0D9488', fontWeight: 600 }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #CCFBF1',
+              borderTopColor: '#0D9488',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1rem',
+            }}
+          />
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          <span>กำลังตรวจสอบสิทธิ์การเข้าใช้งาน...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Authentication Gate: User must log in first
+  if (!currentUser) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #F0FDFA 0%, #F8FAFC 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1.5rem',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '500px',
+            width: '100%',
+            background: '#FFFFFF',
+            borderRadius: '1.5rem',
+            border: '1px solid #E2E8F0',
+            padding: '2.5rem 2.25rem',
+            textAlign: 'center',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+          }}
+        >
+          <div
+            style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 10px 15px -3px rgba(13, 148, 136, 0.3)',
+            }}
+          >
+            <ShieldCheck size={40} />
+          </div>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              background: '#CCFBF1',
+              color: '#0F766E',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+            }}
+          >
+            <Lock size={13} />
+            <span>สงวนสิทธิ์เฉพาะผู้ใช้ที่เข้าสู่ระบบ</span>
+          </div>
+
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+            รายงานการตรวจติดตามภายใน (IMS)
+          </h1>
+          <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+            กรุณาเข้าสู่ระบบด้วย Google Account ของสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ เพื่อเข้าถึงรายงานและการตรวจติดตาม
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1.5rem',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <LogIn size={18} />
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
+            </button>
+
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+                padding: '0.65rem 1rem',
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: '5rem' }}>
       {/* Feedback Toast */}
@@ -366,7 +499,7 @@ export default function ImsAuditPage() {
               </button>
             ) : (
               <div
-                title="เฉพาะคณะผู้ตรวจติดตามภายในที่ได้รับมอบหมาย หรือ Admin เท่านั้นที่สามารถสร้างรายงานได้"
+                title="โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -374,13 +507,14 @@ export default function ImsAuditPage() {
                   padding: '0.55rem 1rem',
                   borderRadius: '8px',
                   background: '#F1F5F9',
-                  color: '#94A3B8',
+                  color: '#64748B',
                   fontSize: '0.825rem',
-                  cursor: 'not-allowed',
+                  fontWeight: 600,
+                  border: '1px solid #CBD5E1',
                 }}
               >
-                <Clock size={15} />
-                <span>เฉพาะผู้ตรวจที่ได้รับมอบหมาย</span>
+                <Eye size={15} color="#64748B" />
+                <span>โหมดดูข้อมูลอย่างเดียว</span>
               </div>
             )}
           </div>
@@ -987,12 +1121,29 @@ export default function ImsAuditPage() {
 
                         {/* ผู้รับการตรวจ */}
                         <td style={{ padding: '1rem', verticalAlign: 'top' }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1E293B' }}>
-                            {audit.auditee1Name || '-'}
-                          </div>
-                          {audit.auditeeDepartment && (
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                              {audit.auditeeDepartment}
+                          {Array.isArray(audit.auditees) && audit.auditees.length > 0 ? (
+                            <div>
+                              {audit.auditees.map((aud, i) => (
+                                <div key={i} style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B', lineHeight: 1.4 }}>
+                                  {audit.auditees.length > 1 ? `${i + 1}. ` : ''}{aud.name || '-'}
+                                  {aud.department && (
+                                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 400, marginLeft: '4px' }}>
+                                      ({aud.department})
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1E293B' }}>
+                                {audit.auditee1Name || '-'}
+                              </div>
+                              {audit.auditeeDepartment && (
+                                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                  {audit.auditeeDepartment}
+                                </div>
+                              )}
                             </div>
                           )}
                         </td>
@@ -1077,100 +1228,107 @@ export default function ImsAuditPage() {
 
                         {/* Actions */}
                         <td style={{ padding: '1rem', verticalAlign: 'top', textAlign: 'right' }}>
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              justifyContent: 'flex-end',
-                            }}
-                          >
-                            {/* Lead IA Quick Approve */}
-                            {!audit.approvedByLeadIA && (isLeadAuditor || isAdmin) && (
-                              <button
-                                type="button"
-                                title="Lead IA อนุมัติแผนการตรวจ"
-                                onClick={() => handleApproveByLead(audit.id)}
+                          {(() => {
+                            const canEdit = canUserEditAudit(audit, currentUser, currentPersonnel, yearlyConfig, isAdmin);
+                            const canDelete = canUserDeleteAudit(audit, currentUser, currentPersonnel, yearlyConfig, isAdmin);
+
+                            return (
+                              <div
                                 style={{
-                                  padding: '5px 8px',
-                                  borderRadius: '6px',
-                                  border: 'none',
-                                  background: '#16A34A',
-                                  color: '#FFFFFF',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
+                                  display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '4px',
+                                  gap: '6px',
+                                  justifyContent: 'flex-end',
                                 }}
                               >
-                                <CheckCircle2 size={13} />
-                                <span>อนุมัติ</span>
-                              </button>
-                            )}
+                                {/* Lead IA Quick Approve */}
+                                {!audit.approvedByLeadIA && (isLeadAuditor || isAdmin) && (
+                                  <button
+                                    type="button"
+                                    title="Lead IA อนุมัติแผนการตรวจ"
+                                    onClick={() => handleApproveByLead(audit.id)}
+                                    style={{
+                                      padding: '5px 8px',
+                                      borderRadius: '6px',
+                                      border: 'none',
+                                      background: '#16A34A',
+                                      color: '#FFFFFF',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    <CheckCircle2 size={13} />
+                                    <span>อนุมัติ</span>
+                                  </button>
+                                )}
 
-                            {/* View Detail Modal */}
-                            <button
-                              type="button"
-                              title="ดูรายละเอียดการตรวจ"
-                              onClick={() => {
-                                setSelectedAuditForDetail(audit);
-                                setIsDetailModalOpen(true);
-                              }}
-                              style={{
-                                padding: '6px',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                background: '#FFFFFF',
-                                color: '#475569',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Eye size={15} />
-                            </button>
+                                {/* View Detail Modal */}
+                                <button
+                                  type="button"
+                                  title="ดูรายละเอียดการตรวจ"
+                                  onClick={() => {
+                                    setSelectedAuditForDetail(audit);
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  style={{
+                                    padding: '6px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #CBD5E1',
+                                    background: '#FFFFFF',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <Eye size={15} />
+                                </button>
 
-                            {/* Edit / Evaluate (Authorized auditors or Admin) */}
-                            {(isAuthorizedToAudit || isAdmin) && (
-                              <button
-                                type="button"
-                                title={audit.approvedByLeadIA ? 'บันทึกผลการตรวจ' : 'แก้ไขแผนตรวจ'}
-                                onClick={() => {
-                                  setEditingAudit(audit);
-                                  setIsFormModalOpen(true);
-                                }}
-                                style={{
-                                  padding: '6px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #BAE6FD',
-                                  background: '#F0F9FF',
-                                  color: '#0284C7',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Edit size={15} />
-                              </button>
-                            )}
+                                {/* Edit / Evaluate (Authorized auditors for this report, or Lead IA / Admin) */}
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    title={audit.approvedByLeadIA ? 'บันทึกผลการตรวจ' : 'แก้ไขแผนตรวจ'}
+                                    onClick={() => {
+                                      setEditingAudit(audit);
+                                      setIsFormModalOpen(true);
+                                    }}
+                                    style={{
+                                      padding: '6px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #BAE6FD',
+                                      background: '#F0F9FF',
+                                      color: '#0284C7',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <Edit size={15} />
+                                  </button>
+                                )}
 
-                            {/* Delete (Admin only) */}
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                title="ลบรายงาน"
-                                onClick={() => handleDeleteAudit(audit)}
-                                style={{
-                                  padding: '6px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #FECACA',
-                                  background: '#FEF2F2',
-                                  color: '#DC2626',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
-                          </div>
+                                {/* Delete (Lead IA / Admin can delete all; assigned auditor can delete only before approval) */}
+                                {canDelete && (
+                                  <button
+                                    type="button"
+                                    title="ลบรายงาน"
+                                    onClick={() => handleDeleteAudit(audit)}
+                                    style={{
+                                      padding: '6px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #FECACA',
+                                      background: '#FEF2F2',
+                                      color: '#DC2626',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );
@@ -1203,10 +1361,13 @@ export default function ImsAuditPage() {
           setEditingAudit(audit);
           setIsFormModalOpen(true);
         }}
+        onDelete={handleDeleteAudit}
         onApprove={handleApproveByLead}
         onReturn={handleReturnPlan}
         isLeadAuditor={isLeadAuditor}
         isAdmin={isAdmin}
+        canEdit={selectedAuditForDetail ? canUserEditAudit(selectedAuditForDetail, currentUser, currentPersonnel, yearlyConfig, isAdmin) : false}
+        canDelete={selectedAuditForDetail ? canUserDeleteAudit(selectedAuditForDetail, currentUser, currentPersonnel, yearlyConfig, isAdmin) : false}
       />
 
       {/* Admin Yearly Auditor Assignment Modal */}

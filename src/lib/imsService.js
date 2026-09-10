@@ -16,111 +16,8 @@ import {
 const LOCAL_KEY_IMS_AUDITS = 'icit_ims_audits';
 const LOCAL_KEY_IMS_CONFIG_PREFIX = 'icit_ims_config_';
 
-// Initial Seed Audits matching the user's AppSheet screenshots
-export const SEED_IMS_AUDITS = [
-  {
-    id: 'audit-2569-001',
-    auditYear: '2569',
-    isoStandard: 'IMS 9001/27001',
-    auditDate: '2026-01-13',
-    auditor1Id: 'auditor-1',
-    auditor1Name: 'นางสาวไข่มุก สรรพวุธ',
-    auditor1Email: 'kaimook.s@icit.kmutnb.ac.th',
-    hasSecondAuditor: true,
-    auditor2Id: 'auditor-2',
-    auditor2Name: 'นางศรินญา พงศ์สุริยา',
-    auditor2Email: 'sarinya.p@icit.kmutnb.ac.th',
-    auditee1Id: 'auditee-1',
-    auditee1Name: 'นายพีรพันธ์ รุจิพงษ์กุล',
-    auditeeDepartment: 'ฝ่ายวิศวกรรมระบบเครือข่าย',
-    topic: 'Client computer management, Office areas',
-    item: 'ตรวจสอบพื้นที่การทำงานของฝ่ายวิศวกรรมฯ - สอบถามการเข้าใช้งานเครื่องคอมพิวเตอร์ กรณีอยู่นอกสถานที่',
-    clauses: 'IS: A6.7, A7.9',
-    expectedEvidence: '- โปรแกรมที่เข้าใช้งานมีความน่าเชื่อถือ\n- เจ้าของเครื่องควรเข้าถึงจากภายนอกได้เพียงผู้เดียว กรณีใช้เครื่องคนอื่นเข้ามา ต้องไม่มีการ Save Password',
-    status: 'COMPLETED',
-    approvedByLeadIA: true,
-    approvedAt: '2026-01-10T09:30:00.000Z',
-    approvedByName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ (Lead Auditor)',
-    approvedByEmail: 'prasertsak.t@cit.kmutnb.ac.th',
-    findings: 'ได้มีการสอบถามถึงเครื่องคอมพิวเตอร์อีกตัวที่อยู่บนโต๊ะของคุณพีรพันธ์แต่ไม่ได้เปิดใช้งาน ซึ่งเอาไว้ใช้สำหรับอุปกรณ์ 1 ตัวที่ต้องเปิดผ่าน Browser Safari เวอร์ชั่นเก่า โดยการ Remote เข้ามาดำเนินการ และได้ให้ทดสอบการ Remote เข้ามา โดยใช้ Notebook ที่ใช้เป็นประจำในการ Remote ซึ่งต้อง VPN ก่อน จึงจะ Remote ด้วยโปรแกรม Remote Desktop ได้ ซึ่งทั้ง Notebook และเครื่องคอมพิวเตอร์มีการใส่รหัสผ่านไว้',
-    recommendation: 'ควรหมั่นตรวจสอบการอัปเดต Security Patch ของระบบ Remote อย่างต่อเนื่อง',
-    result: 'C',
-    evaluatedAt: '2026-01-13T14:45:00.000Z',
-    evaluatedByName: 'นางสาวไข่มุก สรรพวุธ',
-    createdByEmail: 'kaimook.s@icit.kmutnb.ac.th',
-    createdByName: 'นางสาวไข่มุก สรรพวุธ',
-    createdAt: '2026-01-08T08:00:00.000Z',
-    updatedAt: '2026-01-13T15:00:00.000Z',
-  },
-  {
-    id: 'audit-2569-002',
-    auditYear: '2569',
-    isoStandard: 'IMS 9001/27001',
-    auditDate: '2026-02-18',
-    auditor1Id: 'auditor-1',
-    auditor1Name: 'นางสาวไข่มุก สรรพวุธ',
-    auditor1Email: 'kaimook.s@icit.kmutnb.ac.th',
-    hasSecondAuditor: false,
-    auditor2Id: '',
-    auditor2Name: '',
-    auditor2Email: '',
-    auditee1Id: 'auditee-2',
-    auditee1Name: 'นายสุรชัย ประสิทธิ์โชค',
-    auditeeDepartment: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-    topic: 'Document and record control',
-    item: 'การจัดเก็บและควบคุมการแก้ไขเอกสารสารสนเทศตามกระบวนการคุณภาพ',
-    clauses: '9001: 7.5, IS: A5.37',
-    expectedEvidence: '- บัญชีแม่บทเอกสาร (Master List of Documents) มีสถานะเป็นปัจจุบัน\n- มีการระบุผู้มีอำนาจอนุมัติเอกสารและบันทึกการจัดเก็บตามกำหนด',
-    status: 'READY_FOR_AUDIT',
-    approvedByLeadIA: true,
-    approvedAt: '2026-02-10T11:00:00.000Z',
-    approvedByName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ (Lead Auditor)',
-    approvedByEmail: 'prasertsak.t@cit.kmutnb.ac.th',
-    findings: '',
-    recommendation: '',
-    result: '',
-    evaluatedAt: '',
-    evaluatedByName: '',
-    createdByEmail: 'kaimook.s@icit.kmutnb.ac.th',
-    createdByName: 'นางสาวไข่มุก สรรพวุธ',
-    createdAt: '2026-02-05T10:15:00.000Z',
-    updatedAt: '2026-02-10T11:00:00.000Z',
-  },
-  {
-    id: 'audit-2569-003',
-    auditYear: '2569',
-    isoStandard: 'IMS 9001/27001',
-    auditDate: '2026-09-15',
-    auditor1Id: 'auditor-2',
-    auditor1Name: 'นางศรินญา พงศ์สุริยา',
-    auditor1Email: 'sarinya.p@icit.kmutnb.ac.th',
-    hasSecondAuditor: true,
-    auditor2Id: 'auditor-1',
-    auditor2Name: 'นางสาวไข่มุก สรรพวุธ',
-    auditor2Email: 'kaimook.s@icit.kmutnb.ac.th',
-    auditee1Id: 'auditee-3',
-    auditee1Name: 'นายธนกฤต วิศวกรรม',
-    auditeeDepartment: 'ฝ่ายวิศวกรรมระบบเครือข่าย',
-    topic: 'Facility management and Physical security management (Data center)',
-    item: 'ตรวจความมั่นคงปลอดภัยทางกายภาพของห้อง Data Center การเข้า-ออก และระบบดับเพลิงอัตโนมัติ',
-    clauses: 'IS: A7.1, A7.2, A7.4',
-    expectedEvidence: '- บันทึกการเข้า-ออกห้อง Data Center (Access Log / CCTV)\n- รายงานการบำรุงรักษาระบบปรับอากาศและระบบก๊าซดับเพลิงประจำรอบ',
-    status: 'PENDING_LEAD_APPROVAL',
-    approvedByLeadIA: false,
-    approvedAt: '',
-    approvedByName: '',
-    approvedByEmail: '',
-    findings: '',
-    recommendation: '',
-    result: '',
-    evaluatedAt: '',
-    evaluatedByName: '',
-    createdByEmail: 'sarinya.p@icit.kmutnb.ac.th',
-    createdByName: 'นางศรินญา พงศ์สุริยา',
-    createdAt: '2026-09-08T13:40:00.000Z',
-    updatedAt: '2026-09-08T13:40:00.000Z',
-  },
-];
+// Clean state: No dummy/mock seed data (User starts with empty list for real input)
+export const SEED_IMS_AUDITS = [];
 
 // Local Pub/Sub
 let auditSubscribers = [];
@@ -149,12 +46,25 @@ function notifyConfigSubscribers(year, data) {
 }
 
 /**
- * Initialize local storage with seed data if empty
+ * Initialize local storage without mock seed data and purge legacy demo audits
  */
 function initImsLocalStorage() {
   if (typeof window === 'undefined') return;
-  if (!localStorage.getItem(LOCAL_KEY_IMS_AUDITS)) {
-    localStorage.setItem(LOCAL_KEY_IMS_AUDITS, JSON.stringify(SEED_IMS_AUDITS));
+  const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDITS);
+  if (!raw) {
+    localStorage.setItem(LOCAL_KEY_IMS_AUDITS, '[]');
+    return;
+  }
+  try {
+    const list = JSON.parse(raw);
+    const cleaned = list.filter(
+      (item) => !['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(item.id)
+    );
+    if (cleaned.length !== list.length) {
+      localStorage.setItem(LOCAL_KEY_IMS_AUDITS, JSON.stringify(cleaned));
+    }
+  } catch (e) {
+    localStorage.setItem(LOCAL_KEY_IMS_AUDITS, '[]');
   }
 }
 
@@ -170,12 +80,16 @@ export function subscribeImsAudits(callback) {
     const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDITS);
     if (raw) {
       try {
-        callback(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        const cleaned = parsed.filter(
+          (item) => !['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(item.id)
+        );
+        callback(cleaned);
       } catch (e) {
-        callback(SEED_IMS_AUDITS);
+        callback([]);
       }
     } else {
-      callback(SEED_IMS_AUDITS);
+      callback([]);
     }
   }
 
@@ -190,7 +104,12 @@ export function subscribeImsAudits(callback) {
           if (!snapshot.empty) {
             const list = [];
             snapshot.forEach((docSnap) => {
-              list.push({ id: docSnap.id, ...docSnap.data() });
+              if (['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(docSnap.id)) {
+                // Remove legacy seed data from Firestore
+                deleteDoc(doc(db, 'ims_audits', docSnap.id)).catch(() => {});
+              } else {
+                list.push({ id: docSnap.id, ...docSnap.data() });
+              }
             });
             list.sort((a, b) => new Date(b.auditDate || b.createdAt) - new Date(a.auditDate || a.createdAt));
             if (typeof window !== 'undefined') {
@@ -198,14 +117,7 @@ export function subscribeImsAudits(callback) {
             }
             notifyAuditSubscribers(list);
           } else {
-            // First time collection is empty in Firestore, write seed data
-            SEED_IMS_AUDITS.forEach(async (item) => {
-              try {
-                await setDoc(doc(db, 'ims_audits', item.id), item);
-              } catch (err) {
-                // Ignore seed write errors
-              }
-            });
+            notifyAuditSubscribers([]);
           }
         },
         (error) => {
@@ -648,9 +560,26 @@ export async function saveImsAuditRecord(auditData, actor, options = {}) {
   const now = new Date().toISOString();
   const id = auditData.id || `audit-${auditData.auditYear || '2569'}-${Date.now()}`;
 
+  const auditees =
+    Array.isArray(auditData.auditees) && auditData.auditees.length > 0
+      ? auditData.auditees
+      : auditData.auditee1Name
+      ? [
+          {
+            id: auditData.auditee1Id || '',
+            name: auditData.auditee1Name,
+            department: auditData.auditeeDepartment || '',
+          },
+        ]
+      : [];
+
   const record = {
     ...auditData,
     id,
+    auditees,
+    auditee1Id: auditees[0]?.id || auditData.auditee1Id || '',
+    auditee1Name: auditees[0]?.name || auditData.auditee1Name || '',
+    auditeeDepartment: auditees[0]?.department || auditData.auditeeDepartment || '',
     updatedAt: now,
     createdAt: auditData.createdAt || now,
     createdByEmail: auditData.createdByEmail || actor?.email || '',
@@ -1123,5 +1052,70 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
     if (isMatched) return true;
   }
 
+  return false;
+}
+
+/**
+ * Check if the user is the Lead Auditor for the given year (or Admin)
+ */
+export function isLeadAuditorUser(user, personnel, yearConfig, isAdmin) {
+  if (isAdmin) return true;
+  if (!user && !personnel) return false;
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const personId = personnel?.id;
+  if (yearConfig?.leadAuditorEmail && yearConfig.leadAuditorEmail.toLowerCase() === userEmail) {
+    return true;
+  }
+  if (yearConfig?.leadAuditorId && personId && yearConfig.leadAuditorId === personId) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if the user is an assigned auditor on a specific audit report (Auditor 1 or Auditor 2)
+ */
+export function isAssignedAuditorOnAudit(audit, user, personnel) {
+  if (!audit || (!user && !personnel)) return false;
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const personId = personnel?.id;
+
+  if (personId && (audit.auditor1Id === personId || audit.auditor2Id === personId)) {
+    return true;
+  }
+  if (userEmail && (
+    (audit.auditor1Email && audit.auditor1Email.toLowerCase() === userEmail) ||
+    (audit.auditor2Email && audit.auditor2Email.toLowerCase() === userEmail) ||
+    (audit.createdByEmail && audit.createdByEmail.toLowerCase() === userEmail)
+  )) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if the user can edit a report:
+ * - Admin or Lead Auditor: can edit all reports
+ * - Internal Auditor: can only edit reports where they are an assigned auditor
+ */
+export function canUserEditAudit(audit, user, personnel, yearConfig, isAdmin) {
+  if (isAdmin) return true;
+  if (isLeadAuditorUser(user, personnel, yearConfig, isAdmin)) return true;
+  if (isAssignedAuditorOnAudit(audit, user, personnel)) return true;
+  return false;
+}
+
+/**
+ * Check if the user can delete a report:
+ * - Admin or Lead Auditor: can delete all reports
+ * - Internal Auditor: can delete only reports where they are an assigned auditor AND the report has NOT been approved yet
+ *   (If approved by Lead IA, only Lead IA or Admin can delete)
+ */
+export function canUserDeleteAudit(audit, user, personnel, yearConfig, isAdmin) {
+  if (isAdmin) return true;
+  if (isLeadAuditorUser(user, personnel, yearConfig, isAdmin)) return true;
+  if (isAssignedAuditorOnAudit(audit, user, personnel) && !audit.approvedByLeadIA) {
+    return true;
+  }
   return false;
 }

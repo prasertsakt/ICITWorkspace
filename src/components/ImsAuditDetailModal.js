@@ -14,6 +14,7 @@ import {
   Clock,
   Printer,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { IMS_RESULT_TYPES, IMS_AUDIT_STATUSES } from '@/lib/constants';
 
@@ -22,10 +23,13 @@ export default function ImsAuditDetailModal({
   onClose,
   audit,
   onEdit,
+  onDelete,
   onApprove,
   onReturn,
   isLeadAuditor = false,
   isAdmin = false,
+  canEdit = true,
+  canDelete = false,
 }) {
   const [isReturnBoxOpen, setIsReturnBoxOpen] = React.useState(false);
   const [revisionComment, setRevisionComment] = React.useState('');
@@ -256,7 +260,7 @@ export default function ImsAuditDetailModal({
             </div>
           </div>
 
-          {/* Section: รายชื่อผู้รับการตรวจ */}
+          {/* Section: รายชื่อผู้รับการตรวจ (Auditees) */}
           <div style={{ marginBottom: '1.5rem' }}>
             <h3
               style={{
@@ -279,11 +283,27 @@ export default function ImsAuditDetailModal({
                 fontSize: '0.925rem',
               }}
             >
-              <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้รับการตรวจ 1</div>
-              <div style={{ color: '#1E293B', fontWeight: 600 }}>
-                {audit.auditee1Name || '-'}
-                {audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}
-              </div>
+              {Array.isArray(audit.auditees) && audit.auditees.length > 0 ? (
+                audit.auditees.map((auditee, idx) => (
+                  <React.Fragment key={idx}>
+                    <div style={{ color: '#64748B', fontWeight: 500 }}>
+                      ผู้รับการตรวจ {idx + 1}
+                    </div>
+                    <div style={{ color: '#1E293B', fontWeight: 600 }}>
+                      {auditee.name || '-'}
+                      {auditee.department ? ` (${auditee.department})` : ''}
+                    </div>
+                  </React.Fragment>
+                ))
+              ) : (
+                <>
+                  <div style={{ color: '#64748B', fontWeight: 500 }}>ผู้รับการตรวจ 1</div>
+                  <div style={{ color: '#1E293B', fontWeight: 600 }}>
+                    {audit.auditee1Name || '-'}
+                    {audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -580,29 +600,60 @@ export default function ImsAuditDetailModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                if (onEdit) onEdit(audit);
-              }}
-              style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: '8px',
-                border: '1px solid #0284C7',
-                background: '#F0F9FF',
-                color: '#0284C7',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <Edit size={15} />
-              <span>{audit.approvedByLeadIA ? 'ประเมินผล / แก้ไข' : 'แก้ไขแผนตรวจ'}</span>
-            </button>
+            {/* Delete button (Lead IA or assigned auditor before approval) */}
+            {canDelete && onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onDelete(audit);
+                }}
+                style={{
+                  padding: '0.6rem 1.1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #FECACA',
+                  background: '#FEF2F2',
+                  color: '#DC2626',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Trash2 size={15} />
+                <span>ลบรายงาน</span>
+              </button>
+            )}
+
+            {/* Edit / Evaluate button (Authorized auditor or Lead IA) */}
+            {canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onEdit) onEdit(audit);
+                }}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  border: '1px solid #0284C7',
+                  background: '#F0F9FF',
+                  color: '#0284C7',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Edit size={15} />
+                <span>{audit.approvedByLeadIA ? 'ประเมินผล / แก้ไข' : 'แก้ไขแผนตรวจ'}</span>
+              </button>
+            )}
 
             <button
               type="button"
