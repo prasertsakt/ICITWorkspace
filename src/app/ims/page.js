@@ -457,7 +457,7 @@ export default function ImsLandingPage() {
                 </div>
 
                 <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0D9488', marginBottom: '0.35rem' }}>
-                  บริการที่ 1
+
                 </div>
                 <h3
                   style={{
@@ -483,7 +483,7 @@ export default function ImsLandingPage() {
                   }}
                 >
                   แดชบอร์ดสรุปผลการตรวจติดตามภายในตามรอบปีงบประมาณ กระบวนการเสนอแผนตรวจผ่าน Lead IA อนุมัติ
-                  การประเมินผลข้อค้นพบ (Findings) และสรุปประเภทความไม่สอดคล้อง (C, NC, OFI) ทั้ง 23 หัวข้อตรวจ
+                  การประเมินผลข้อค้นพบ (Findings) และสรุปประเภทความไม่สอดคล้อง (C, NC, OFI)
                 </p>
 
                 {/* Highlights */}
@@ -507,12 +507,9 @@ export default function ImsLandingPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle2 size={16} color="#0D9488" />
-                    <span>กำหนดสิทธิ์คณะผู้ตรวจติดตามและ Lead IA ประจำปี</span>
+                    <span>กำหนดสิทธิ์คณะผู้ตรวจติดตามและ Lead IA ประจำปีงบประมาณ</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#0D9488" />
-                    <span>23 หัวข้อตรวจมาตรฐาน ISO 9001 / ISO 27001</span>
-                  </div>
+
                 </div>
               </div>
 
@@ -592,7 +589,7 @@ export default function ImsLandingPage() {
               </div>
 
               <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#D97706', marginBottom: '0.35rem' }}>
-                บริการที่ 2
+
               </div>
               <h3
                 style={{

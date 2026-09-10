@@ -118,7 +118,7 @@ export default function ImsAuditDetailModal({
                 รายละเอียดการตรวจติดตามภายใน
               </h2>
               <p style={{ fontSize: '0.825rem', color: '#CCFBF1', margin: '2px 0 0 0' }}>
-                ปีที่ตรวจ {audit.auditYear} • {audit.isoStandard || 'IMS 9001/27001'}
+                ปีงบประมาณ {audit.auditYear} • {audit.isoStandard || 'IMS 9001/27001'}
               </p>
             </div>
           </div>

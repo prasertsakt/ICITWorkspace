@@ -14,6 +14,7 @@ import {
   saveYearlyAuditors,
   isUserAuthorizedAuditor,
   isLeadAuditorUser,
+  isDccUser,
   canUserEditAudit,
   canUserDeleteAudit,
 } from '@/lib/imsService';
@@ -26,6 +27,7 @@ import {
 import ImsAuditModal from '@/components/ImsAuditModal';
 import ImsAuditDetailModal from '@/components/ImsAuditDetailModal';
 import ImsAuditorsConfigModal from '@/components/ImsAuditorsConfigModal';
+import ImsActivityLogModal from '@/components/ImsActivityLogModal';
 import {
   ShieldCheck,
   FileCheck,
@@ -50,6 +52,7 @@ import {
   Award,
   Lock,
   LogIn,
+  History,
 } from 'lucide-react';
 
 export default function ImsAuditPage() {
@@ -76,6 +79,7 @@ export default function ImsAuditPage() {
   const [selectedAuditForDetail, setSelectedAuditForDetail] = useState(null);
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isActivityLogModalOpen, setIsActivityLogModalOpen] = useState(false);
 
   // Toast / Status banner
   const [feedbackMessage, setFeedbackMessage] = useState(null);
@@ -122,6 +126,13 @@ export default function ImsAuditPage() {
     if (isAdmin) return true;
     if (!currentUser) return false;
     return isLeadAuditorUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
+  }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
+
+  // Check if current user is DCC (ผู้ควบคุมเอกสาร)
+  const isDcc = useMemo(() => {
+    if (isAdmin) return true;
+    if (!currentUser) return false;
+    return isDccUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
   }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
 
   // Filtered Audits
@@ -249,7 +260,7 @@ export default function ImsAuditPage() {
       email: currentUser?.email || '',
     };
     await saveYearlyAuditors(year, configData, adminActor);
-    showFeedback(`บันทึกรายชื่อผู้ตรวจติดตามประจำปี ${year} เรียบร้อยแล้ว`);
+    showFeedback(`บันทึกรายชื่อผู้ตรวจติดตามประจำปีงบประมาณ ${year} เรียบร้อยแล้ว`);
   };
 
   if (authLoading) {
@@ -447,7 +458,30 @@ export default function ImsAuditPage() {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Button: Activity Log Modal */}
+            <button
+              type="button"
+              onClick={() => setIsActivityLogModalOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.55rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#334155',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <History size={16} color="#0D9488" />
+              <span>ประวัติกิจกรรม (Activity Log)</span>
+            </button>
+
             {isAdmin && (
               <button
                 type="button"
@@ -468,7 +502,7 @@ export default function ImsAuditPage() {
                 }}
               >
                 <Settings size={16} color="#64748B" />
-                <span>จัดการรายชื่อผู้ตรวจประจำปี</span>
+                <span>จัดการรายชื่อผู้ตรวจประจำปีงบประมาณ</span>
               </button>
             )}
 
@@ -563,7 +597,7 @@ export default function ImsAuditPage() {
               <span>Internal Audit Report (การตรวจติดตามภายใน)</span>
             </h1>
             <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-              มาตรฐาน IMS ISO 9001:2015 & ISO/IEC 27001:2022 สำนักคอมพิวเตอร์ฯ มจพ.
+              มาตรฐาน IMS (ISO 9001 & ISO/IEC 27001) สำนักคอมพิวเตอร์ฯ มจพ.
             </p>
           </div>
 
@@ -596,7 +630,7 @@ export default function ImsAuditPage() {
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  {yr === 'ALL' ? 'ทุกปี' : `ปี ${yr}`}
+                  {yr === 'ALL' ? 'ทุกปีงบประมาณ' : `ปีงบประมาณ ${yr}`}
                 </button>
               );
             })}
@@ -623,7 +657,7 @@ export default function ImsAuditPage() {
             }}
           >
             <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#64748B' }}>
-              แผนตรวจทั้งหมด ({selectedYear === 'ALL' ? 'ทุกปี' : `ปี ${selectedYear}`})
+              แผนตรวจทั้งหมด ({selectedYear === 'ALL' ? 'ทุกปีงบประมาณ' : `ปีงบประมาณ ${selectedYear}`})
             </div>
             <div
               style={{
@@ -844,12 +878,17 @@ export default function ImsAuditPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F766E' }}>
             <Users size={17} />
             <span>
-              <strong>คณะผู้ตรวจติดตามปี {selectedYear}:</strong> Lead IA คือ{' '}
+              <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong> Lead IA คือ{' '}
               <strong>{yearlyConfig?.leadAuditorName || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ'}</strong>
+              {yearlyConfig?.dccName && (
+                <>
+                  {' '}• DCC (ผู้ควบคุมเอกสาร): <strong>{yearlyConfig.dccName}</strong>
+                </>
+              )}
               {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
                 ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน (${yearlyConfig.auditors
-                    .map((a) => a.name)
-                    .join(', ')})`
+                  .map((a) => a.name)
+                  .join(', ')})`
                 : ''}
             </span>
           </div>
@@ -997,8 +1036,36 @@ export default function ImsAuditPage() {
               justifyContent: 'space-between',
             }}
           >
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B' }}>
-              รายการตรวจติดตามภายใน ({filteredAudits.length} รายการ)
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B' }}>
+                รายการตรวจติดตามภายใน ({filteredAudits.length} รายการ)
+              </div>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#0D9488',
+                  background: '#F0FDFA',
+                  padding: '2px 9px',
+                  borderRadius: '999px',
+                  border: '1px solid #99F6E4',
+                }}
+                title="ระบบเชื่อมต่อ Firestore Real-Time Listener ซิงค์ข้อมูลอัตโนมัติทันที"
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#0D9488',
+                    boxShadow: '0 0 6px #0D9488',
+                  }}
+                />
+                อัปเดตแบบเรียลไทม์ (Live Sync)
+              </span>
             </div>
           </div>
 
@@ -1070,7 +1137,7 @@ export default function ImsAuditPage() {
                             {audit.auditDate || '-'}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                            ปี {audit.auditYear}
+                            ปีงบประมาณ {audit.auditYear}
                           </div>
                         </td>
 
@@ -1378,6 +1445,13 @@ export default function ImsAuditPage() {
         currentYear={selectedYear === 'ALL' ? '2569' : selectedYear}
         yearlyConfig={yearlyConfig}
         personnelList={personnelList}
+      />
+
+      {/* IMS Activity Log Modal */}
+      <ImsActivityLogModal
+        isOpen={isActivityLogModalOpen}
+        onClose={() => setIsActivityLogModalOpen(false)}
+        currentYear={selectedYear === 'ALL' ? '2569' : selectedYear}
       />
     </div>
   );

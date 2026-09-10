@@ -19,11 +19,17 @@ const LOCAL_KEY_IMS_CONFIG_PREFIX = 'icit_ims_config_';
 // Clean state: No dummy/mock seed data (User starts with empty list for real input)
 export const SEED_IMS_AUDITS = [];
 
-// Local Pub/Sub
+// Local Pub/Sub & Shared Firestore Listeners (Read/Write Optimization)
 let auditSubscribers = [];
+let sharedAuditsUnsubscribe = null;
+let cachedAudits = null;
+
 let configSubscribersMap = {};
+let sharedConfigUnsubMap = {};
+let cachedConfigMap = {};
 
 function notifyAuditSubscribers(data) {
+  cachedAudits = data;
   auditSubscribers.forEach((cb) => {
     try {
       cb(data);
@@ -34,6 +40,7 @@ function notifyAuditSubscribers(data) {
 }
 
 function notifyConfigSubscribers(year, data) {
+  cachedConfigMap[year] = data;
   if (configSubscribersMap[year]) {
     configSubscribersMap[year].forEach((cb) => {
       try {
@@ -70,13 +77,17 @@ function initImsLocalStorage() {
 
 /**
  * Subscribe to all IMS Audits with real-time Firestore sync & local fallback
+ * OPTIMIZATION: Uses a SINGLE shared Firestore onSnapshot listener for the entire app.
+ * Multiple UI components subscribing will NOT generate duplicate Firestore read calls.
  */
 export function subscribeImsAudits(callback) {
   auditSubscribers.push(callback);
   initImsLocalStorage();
 
-  // Send local/cached data immediately
-  if (typeof window !== 'undefined') {
+  // Send in-memory or local/cached data immediately to prevent layout shifts
+  if (cachedAudits) {
+    callback(cachedAudits);
+  } else if (typeof window !== 'undefined') {
     const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDITS);
     if (raw) {
       try {
@@ -84,6 +95,7 @@ export function subscribeImsAudits(callback) {
         const cleaned = parsed.filter(
           (item) => !['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(item.id)
         );
+        cachedAudits = cleaned;
         callback(cleaned);
       } catch (e) {
         callback([]);
@@ -93,21 +105,33 @@ export function subscribeImsAudits(callback) {
     }
   }
 
-  // If Firebase is available, set up Firestore onSnapshot listener
-  let unsubscribeSnapshot = () => {};
-  if (isFirebaseConfigured && db) {
+  // Multi-tab real-time storage event listener
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_IMS_AUDITS) {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDITS);
+        const list = JSON.parse(raw || '[]');
+        cachedAudits = list;
+        callback(list);
+      } catch (err) {}
+    }
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleStorageChange);
+  }
+
+  // If Firebase is available, start the SINGLE shared Firestore listener if not already active
+  if (isFirebaseConfigured && db && !sharedAuditsUnsubscribe) {
     try {
       const auditsRef = collection(db, 'ims_audits');
-      unsubscribeSnapshot = onSnapshot(
+      sharedAuditsUnsubscribe = onSnapshot(
         auditsRef,
         (snapshot) => {
           if (!snapshot.empty) {
             const list = [];
             snapshot.forEach((docSnap) => {
-              if (['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(docSnap.id)) {
-                // Remove legacy seed data from Firestore
-                deleteDoc(doc(db, 'ims_audits', docSnap.id)).catch(() => {});
-              } else {
+              // Ignore legacy demo seed IDs client-side without firing deleteDoc writes
+              if (!['audit-2569-001', 'audit-2569-002', 'audit-2569-003'].includes(docSnap.id)) {
                 list.push({ id: docSnap.id, ...docSnap.data() });
               }
             });
@@ -117,6 +141,9 @@ export function subscribeImsAudits(callback) {
             }
             notifyAuditSubscribers(list);
           } else {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_KEY_IMS_AUDITS, '[]');
+            }
             notifyAuditSubscribers([]);
           }
         },
@@ -131,7 +158,14 @@ export function subscribeImsAudits(callback) {
 
   return () => {
     auditSubscribers = auditSubscribers.filter((cb) => cb !== callback);
-    unsubscribeSnapshot();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleStorageChange);
+    }
+    // Optimization: When all subscribers unmount, teardown the shared Firestore listener
+    if (auditSubscribers.length === 0 && sharedAuditsUnsubscribe) {
+      sharedAuditsUnsubscribe();
+      sharedAuditsUnsubscribe = null;
+    }
   };
 }
 
@@ -311,8 +345,8 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
                   <td style="padding: 8px 0; color: #DC2626; font-weight: 700; vertical-align: top;">${audit.topic || '-'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">ปีที่ตรวจ / มาตรฐาน:</td>
-                  <td style="padding: 8px 0; color: #1E293B; vertical-align: top;">ปี ${audit.auditYear || '2569'} &bull; ${audit.isoStandard || 'IMS 9001/27001'}</td>
+                  <td width="160" style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">ปีงบประมาณ / มาตรฐาน:</td>
+                  <td style="padding: 8px 0; color: #1E293B; vertical-align: top;">ปีงบประมาณ ${audit.auditYear || '2569'} &bull; ${audit.isoStandard || 'IMS 9001/27001'}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">วันที่ทำการตรวจติดตาม:</td>
@@ -1005,6 +1039,9 @@ export const DEFAULT_YEARLY_CONFIG = {
   leadAuditorId: '',
   leadAuditorName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ',
   leadAuditorEmail: 'prasertsak.t@cit.kmutnb.ac.th',
+  dccId: '',
+  dccName: '',
+  dccEmail: '',
   auditorIds: [],
   auditors: [],
   updatedAt: new Date().toISOString(),
@@ -1013,6 +1050,8 @@ export const DEFAULT_YEARLY_CONFIG = {
 
 /**
  * Subscribe to Yearly Assigned Auditors config
+ * OPTIMIZATION: Uses a single shared Firestore onSnapshot listener per year.
+ * Eliminates spurious Firestore writes during read/subscription calls.
  */
 export function subscribeYearlyAuditors(year, callback) {
   const currentYear = year || '2569';
@@ -1023,11 +1062,16 @@ export function subscribeYearlyAuditors(year, callback) {
 
   const localKey = `${LOCAL_KEY_IMS_CONFIG_PREFIX}${currentYear}`;
 
-  if (typeof window !== 'undefined') {
+  // Instant response from memory or localStorage
+  if (cachedConfigMap[currentYear]) {
+    callback(cachedConfigMap[currentYear]);
+  } else if (typeof window !== 'undefined') {
     const raw = localStorage.getItem(localKey);
     if (raw) {
       try {
-        callback(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        cachedConfigMap[currentYear] = parsed;
+        callback(parsed);
       } catch (e) {
         callback({ ...DEFAULT_YEARLY_CONFIG, year: currentYear });
       }
@@ -1036,22 +1080,41 @@ export function subscribeYearlyAuditors(year, callback) {
     }
   }
 
-  let unsubscribeSnapshot = () => {};
-  if (isFirebaseConfigured && db) {
+  // Multi-tab real-time storage event listener
+  const handleConfigStorageChange = (e) => {
+    if (!e || e.key === localKey) {
+      try {
+        const raw = localStorage.getItem(localKey);
+        const data = JSON.parse(raw || '{}');
+        cachedConfigMap[currentYear] = data;
+        callback(data);
+      } catch (err) {}
+    }
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleConfigStorageChange);
+  }
+
+  // Single shared Firestore onSnapshot listener per year
+  if (isFirebaseConfigured && db && !sharedConfigUnsubMap[currentYear]) {
     try {
       const docRef = doc(db, 'ims_config', `year_${currentYear}`);
-      unsubscribeSnapshot = onSnapshot(
+      sharedConfigUnsubMap[currentYear] = onSnapshot(
         docRef,
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+            cachedConfigMap[currentYear] = data;
             if (typeof window !== 'undefined') {
               localStorage.setItem(localKey, JSON.stringify(data));
             }
             notifyConfigSubscribers(currentYear, data);
           } else {
-            // Write default if not yet exists
-            setDoc(docRef, { ...DEFAULT_YEARLY_CONFIG, year: currentYear }).catch(() => {});
+            // Optimization: Serve default in-memory WITHOUT writing to Firestore!
+            // Only explicit Admin action (saveYearlyAuditors) writes to Firestore.
+            const defaultData = { ...DEFAULT_YEARLY_CONFIG, year: currentYear };
+            cachedConfigMap[currentYear] = defaultData;
+            notifyConfigSubscribers(currentYear, defaultData);
           }
         },
         (error) => {
@@ -1068,8 +1131,15 @@ export function subscribeYearlyAuditors(year, callback) {
       configSubscribersMap[currentYear] = configSubscribersMap[currentYear].filter(
         (cb) => cb !== callback
       );
+      // Optimization: Teardown Firestore listener if no more subscribers for this year
+      if (configSubscribersMap[currentYear].length === 0 && sharedConfigUnsubMap[currentYear]) {
+        sharedConfigUnsubMap[currentYear]();
+        delete sharedConfigUnsubMap[currentYear];
+      }
     }
-    unsubscribeSnapshot();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleConfigStorageChange);
+    }
   };
 }
 
@@ -1088,6 +1158,8 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
     updatedBy: adminActor?.name || 'Admin',
   };
 
+  cachedConfigMap[currentYear] = payload;
+
   if (typeof window !== 'undefined') {
     localStorage.setItem(localKey, JSON.stringify(payload));
     notifyConfigSubscribers(currentYear, payload);
@@ -1105,10 +1177,10 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
     logActivity({
       category: 'IMS_AUDIT',
       action: 'CONFIG_AUDITORS',
-      details: `กำหนดรายชื่อผู้ตรวจติดตามภายในประจำปี ${currentYear} (Lead: ${payload.leadAuditorName || '-'}, Auditors: ${payload.auditors?.length || 0} ท่าน)`,
+      details: `กำหนดรายชื่อผู้ตรวจติดตามและ DCC ประจำปีงบประมาณ ${currentYear} (Lead: ${payload.leadAuditorName || '-'}, DCC: ${payload.dccName || '-'}, Auditors: ${payload.auditors?.length || 0} ท่าน)`,
       actorEmail: adminActor?.email,
       actorName: adminActor?.name,
-      metadata: { year: currentYear, auditorsCount: payload.auditors?.length || 0 },
+      metadata: { year: currentYear, lead: payload.leadAuditorName, dcc: payload.dccName, auditorsCount: payload.auditors?.length || 0 },
     });
   } catch (e) {}
 
@@ -1116,9 +1188,27 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
 }
 
 /**
+ * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) for the given year (or Admin)
+ */
+export function isDccUser(user, personnel, yearConfig, isAdmin) {
+  if (isAdmin) return true;
+  if (!user && !personnel) return false;
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const personId = personnel?.id;
+  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase() === userEmail) {
+    return true;
+  }
+  if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Check if the user is authorized to create/edit audits for a given year:
  * - Must be Admin, OR
  * - Assigned as Lead Auditor, OR
+ * - Assigned as DCC (ผู้ควบคุมเอกสาร), OR
  * - Assigned as Internal Auditor for that year
  */
 export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
@@ -1133,6 +1223,14 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
     return true;
   }
   if (yearConfig?.leadAuditorId && personId && yearConfig.leadAuditorId === personId) {
+    return true;
+  }
+
+  // Check if DCC (ผู้ควบคุมเอกสาร)
+  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase() === userEmail) {
+    return true;
+  }
+  if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
     return true;
   }
 
@@ -1193,11 +1291,13 @@ export function isAssignedAuditorOnAudit(audit, user, personnel) {
 /**
  * Check if the user can edit a report:
  * - Admin or Lead Auditor: can edit all reports
+ * - DCC (ผู้ควบคุมเอกสาร): can edit all reports
  * - Internal Auditor: can only edit reports where they are an assigned auditor
  */
 export function canUserEditAudit(audit, user, personnel, yearConfig, isAdmin) {
   if (isAdmin) return true;
   if (isLeadAuditorUser(user, personnel, yearConfig, isAdmin)) return true;
+  if (isDccUser(user, personnel, yearConfig, isAdmin)) return true;
   if (isAssignedAuditorOnAudit(audit, user, personnel)) return true;
   return false;
 }
@@ -1205,12 +1305,14 @@ export function canUserEditAudit(audit, user, personnel, yearConfig, isAdmin) {
 /**
  * Check if the user can delete a report:
  * - Admin or Lead Auditor: can delete all reports
+ * - DCC (ผู้ควบคุมเอกสาร): can delete all reports
  * - Internal Auditor: can delete only reports where they are an assigned auditor AND the report has NOT been approved yet
- *   (If approved by Lead IA, only Lead IA or Admin can delete)
+ *   (If approved by Lead IA, only Lead IA, DCC, or Admin can delete)
  */
 export function canUserDeleteAudit(audit, user, personnel, yearConfig, isAdmin) {
   if (isAdmin) return true;
   if (isLeadAuditorUser(user, personnel, yearConfig, isAdmin)) return true;
+  if (isDccUser(user, personnel, yearConfig, isAdmin)) return true;
   if (isAssignedAuditorOnAudit(audit, user, personnel) && !audit.approvedByLeadIA) {
     return true;
   }

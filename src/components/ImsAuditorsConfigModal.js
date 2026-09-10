@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  FileText,
 } from 'lucide-react';
 
 export default function ImsAuditorsConfigModal({
@@ -26,6 +27,9 @@ export default function ImsAuditorsConfigModal({
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [leadAuditorName, setLeadAuditorName] = useState('');
   const [leadAuditorEmail, setLeadAuditorEmail] = useState('');
+  const [dccId, setDccId] = useState('');
+  const [dccName, setDccName] = useState('');
+  const [dccEmail, setDccEmail] = useState('');
   const [selectedAuditorIds, setSelectedAuditorIds] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +41,9 @@ export default function ImsAuditorsConfigModal({
       setLeadAuditorId(yearlyConfig.leadAuditorId || '');
       setLeadAuditorName(yearlyConfig.leadAuditorName || '');
       setLeadAuditorEmail(yearlyConfig.leadAuditorEmail || '');
+      setDccId(yearlyConfig.dccId || '');
+      setDccName(yearlyConfig.dccName || '');
+      setDccEmail(yearlyConfig.dccEmail || '');
       // Get auditor IDs
       const ids =
         yearlyConfig.auditorIds ||
@@ -47,6 +54,9 @@ export default function ImsAuditorsConfigModal({
       setLeadAuditorId('');
       setLeadAuditorName('');
       setLeadAuditorEmail('');
+      setDccId('');
+      setDccName('');
+      setDccEmail('');
       setSelectedAuditorIds([]);
     }
     setErrorMsg('');
@@ -62,6 +72,14 @@ export default function ImsAuditorsConfigModal({
     setLeadAuditorEmail(person ? person.email : '');
   };
 
+  const handleDccChange = (e) => {
+    const personId = e.target.value;
+    const person = personnelList.find((p) => p.id === personId);
+    setDccId(personId);
+    setDccName(person ? person.name : '');
+    setDccEmail(person ? person.email : '');
+  };
+
   const toggleAuditor = (personId) => {
     setSelectedAuditorIds((prev) =>
       prev.includes(personId) ? prev.filter((id) => id !== personId) : [...prev, personId]
@@ -73,7 +91,7 @@ export default function ImsAuditorsConfigModal({
     setErrorMsg('');
 
     if (!leadAuditorName && !leadAuditorId) {
-      setErrorMsg('กรุณาระบุ Lead Internal Auditor ประจำปี');
+      setErrorMsg('กรุณาระบุ Lead Internal Auditor ประจำปีงบประมาณ');
       return;
     }
 
@@ -95,6 +113,9 @@ export default function ImsAuditorsConfigModal({
         leadAuditorId,
         leadAuditorName,
         leadAuditorEmail,
+        dccId,
+        dccName,
+        dccEmail,
         auditorIds: selectedAuditorIds,
         auditors,
       });
@@ -233,7 +254,7 @@ export default function ImsAuditorsConfigModal({
                 marginBottom: '0.35rem',
               }}
             >
-              ปีที่ตรวจ (Audit Year) <span style={{ color: '#EF4444' }}>*</span>
+              ปีงบประมาณ (Fiscal Year) <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <select
               value={selectedYear}
@@ -248,9 +269,9 @@ export default function ImsAuditorsConfigModal({
                 background: '#F8FAFC',
               }}
             >
-              <option value="2569">ปี 2569</option>
-              <option value="2570">ปี 2570</option>
-              <option value="2568">ปี 2568</option>
+              <option value="2569">ปีงบประมาณ 2569</option>
+              <option value="2570">ปีงบประมาณ 2570</option>
+              <option value="2568">ปีงบประมาณ 2568</option>
             </select>
           </div>
 
@@ -311,6 +332,61 @@ export default function ImsAuditorsConfigModal({
             )}
           </div>
 
+          {/* Row: DCC (ผู้ควบคุมเอกสาร) */}
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: '10px',
+              background: '#F0FDF4',
+              border: '1.5px solid #BBF7D0',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: '#166534',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <FileText size={18} color="#16A34A" />
+              <span>ผู้ควบคุมเอกสาร (DCC - Document Control Center)</span>
+            </label>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#166534' }}>
+              มีสิทธิ์ในการแก้ไขและลบรายการรายงานการตรวจติดตามภายในทุกรายการในระบบ
+            </p>
+            <select
+              value={dccId}
+              onChange={handleDccChange}
+              style={{
+                width: '100%',
+                padding: '0.65rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #16A34A',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                background: '#FFFFFF',
+                color: '#166534',
+              }}
+            >
+              <option value="">-- เลือกผู้ควบคุมเอกสาร (DCC) จากรายชื่อบุคลากร --</option>
+              {personnelList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.department ? `(${p.department})` : ''}
+                </option>
+              ))}
+            </select>
+            {!dccId && dccName && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                กำหนดไว้ปัจจุบัน: {dccName}
+              </p>
+            )}
+          </div>
+
           {/* Row: ทีมผู้ตรวจติดตามภายใน (Internal Auditors) */}
           <div style={{ marginBottom: '1.25rem' }}>
             <div
@@ -332,7 +408,7 @@ export default function ImsAuditorsConfigModal({
                 }}
               >
                 <UserCheck size={18} color="#0D9488" />
-                <span>คณะผู้ตรวจติดตามภายใน (Internal Auditors ประจำปี {selectedYear})</span>
+                <span>คณะผู้ตรวจติดตามภายใน (Internal Auditors ประจำปีงบประมาณ {selectedYear})</span>
               </label>
               <span
                 style={{

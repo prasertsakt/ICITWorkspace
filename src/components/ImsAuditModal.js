@@ -431,7 +431,7 @@ export default function ImsAuditModal({
                     marginBottom: '0.35rem',
                   }}
                 >
-                  ปีที่ตรวจ <span style={{ color: '#EF4444' }}>*</span>
+                  ปีงบประมาณ <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <select
                   value={formData.auditYear}
@@ -446,9 +446,9 @@ export default function ImsAuditModal({
                   }}
                   required
                 >
-                  <option value="2569">2569</option>
-                  <option value="2570">2570</option>
-                  <option value="2568">2568</option>
+                  <option value="2569">ปีงบประมาณ 2569</option>
+                  <option value="2570">ปีงบประมาณ 2570</option>
+                  <option value="2568">ปีงบประมาณ 2568</option>
                 </select>
               </div>
 
