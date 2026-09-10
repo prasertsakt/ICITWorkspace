@@ -101,5 +101,17 @@ service cloud.firestore {
       allow read: if true; // Any visitor can read portal card order & public configs
       allow write: if isAuthenticated(); // Only logged-in users / admins can save
     }
+
+    // Rules for 'ims_audits' collection (Integrated Management System - Internal Audit Reports)
+    match /ims_audits/{auditId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Rules for 'ims_config' collection (Yearly Lead & Internal Auditor Assignments)
+    match /ims_config/{configId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
   }
 }

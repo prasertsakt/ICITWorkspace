@@ -293,6 +293,21 @@ export const DEFAULT_PORTAL_SERVICES = [
     footerRightText: 'เข้าใช้งาน',
   },
   {
+    id: 'ims',
+    title: 'ระบบบริหารงาน IMS',
+    desc: 'ระบบบริหารจัดการมาตรฐานแบบบูรณาการ (ISO 9001 / ISO 27001) รายงานการตรวจติดตามภายใน และ CAR & Incident Hub',
+    href: '/ims',
+    openInNewTab: false,
+    iconType: 'lucide',
+    iconName: 'ShieldCheck',
+    iconImageUrl: '',
+    colorTheme: 'teal',
+    badgeText: 'เปิดให้บริการ',
+    badgeType: 'active',
+    footerLeft: 'ISO 9001 & ISO/IEC 27001',
+    footerRightText: 'เข้าใช้งาน',
+  },
+  {
     id: 'knowledge',
     title: 'ICIT Personal Knowledge Map',
     desc: 'แผนที่องค์ความรู้และทักษะความเชี่ยวชาญเฉพาะบุคคลของบุคลากรภายในสำนัก',
@@ -406,5 +421,105 @@ export const PORTAL_AVAILABLE_ICONS = [
   { name: 'Briefcase', label: 'งาน / ธุรกิจ' },
 ];
 
+// 14. มาตรฐาน IMS (Integrated Management System Standards)
+export const IMS_STANDARDS = [
+  'IMS 9001/27001',
+  'ISO 9001:2015',
+  'ISO/IEC 27001:2022',
+];
 
+// 15. หัวข้อที่รับการตรวจ (Predefined Audit Topics - 23 items)
+export const IMS_AUDIT_TOPICS = [
+  'Management processes',
+  'Document and record control',
+  'Client computer management, Office areas',
+  'Risk and opportunity, Information security risk assessment and treatement, SoA',
+  'Internal and external communication, Internal audit and follow-up, Corrective action and improvement, Compliance management',
+  'Facility management and Physical security management (Data center)',
+  'Network and security management, Outsource control',
+  'Service design and development, Service changes and improvement',
+  'Server management, Outsource control',
+  'HR and training',
+  'Purchasing',
+  'Training',
+  'Data & APIs',
+  'Software license',
+  'IT clinic',
+  'Web hosting, Virtual Private Server',
+  'ICIT account',
+  'Computer lab & rooms มจพ กรุงเทพ',
+  'Computer lab & rooms มจพ.ระยอง',
+  'Computer lab & rooms มจพ.ปราจีนบุรี',
+  'PC maintenance for the Office of President มจพ กรุงเทพ',
+  'PC maintenance for the Office of President มจพ.ระยอง',
+  'PC maintenance for the Office of President มจพ.ปราจีนบุรี',
+];
 
+// 16. ประเภทความไม่สอดคล้อง / ผลการตรวจ (Audit Result Types)
+export const IMS_RESULT_TYPES = {
+  C: {
+    code: 'C',
+    label: 'C - Conformity (สอดคล้องตามข้อกำหนด)',
+    shortLabel: 'C (Conformity)',
+    desc: 'การปฏิบัติงานสอดคล้องตามเกณฑ์และข้อกำหนดมาตรฐาน',
+    bg: '#ECFDF5',
+    color: '#059669',
+    border: '#A7F3D0',
+    badgeBg: '#10B981',
+    badgeText: '#FFFFFF',
+  },
+  NC: {
+    code: 'NC',
+    label: 'NC - Non-Conformity (ไม่สอดคล้องตามข้อกำหนด)',
+    shortLabel: 'NC (Non-Conformity)',
+    desc: 'ไม่สอดคล้องตามข้อกำหนดมาตรฐาน ต้องดำเนินการแก้ไข (CAR)',
+    bg: '#FEF2F2',
+    color: '#DC2626',
+    border: '#FECACA',
+    badgeBg: '#EF4444',
+    badgeText: '#FFFFFF',
+  },
+  OFI: {
+    code: 'OFI',
+    label: 'OFI - Opportunity for Improvement (ข้อสังเกต / โอกาสในการปรับปรุง)',
+    shortLabel: 'OFI (Opportunity for Improvement)',
+    desc: 'ข้อเสนอแนะหรือโอกาสเพื่อพัฒนาและปรับปรุงประสิทธิภาพกระบวนการ',
+    bg: '#FFFBEB',
+    color: '#D97706',
+    border: '#FDE68A',
+    badgeBg: '#F59E0B',
+    badgeText: '#FFFFFF',
+  },
+};
+
+// 17. สถานะรายงานการตรวจติดตาม (IMS Audit Workflow Statuses)
+export const IMS_AUDIT_STATUSES = {
+  PENDING_LEAD_APPROVAL: {
+    key: 'PENDING_LEAD_APPROVAL',
+    label: 'รอ Lead IA อนุมัติแผน',
+    badgeBg: '#FEF3C7',
+    color: '#92400E',
+    border: '#FDE68A',
+  },
+  RETURNED_FOR_REVISION: {
+    key: 'RETURNED_FOR_REVISION',
+    label: 'ส่งกลับเพื่อแก้ไขแผนตรวจ',
+    badgeBg: '#FEE2E2',
+    color: '#B91C1C',
+    border: '#FCA5A5',
+  },
+  READY_FOR_AUDIT: {
+    key: 'READY_FOR_AUDIT',
+    label: 'อนุมัติแล้ว / พร้อมเข้าตรวจ',
+    badgeBg: '#DBEAFE',
+    color: '#1E40AF',
+    border: '#BFDBFE',
+  },
+  COMPLETED: {
+    key: 'COMPLETED',
+    label: 'ตรวจเสร็จสิ้นแล้ว',
+    badgeBg: '#D1FAE5',
+    color: '#065F46',
+    border: '#A7F3D0',
+  },
+};

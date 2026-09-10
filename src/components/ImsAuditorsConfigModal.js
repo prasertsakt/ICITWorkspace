@@ -1,0 +1,497 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  Save,
+  Users,
+  ShieldCheck,
+  UserCheck,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+
+export default function ImsAuditorsConfigModal({
+  isOpen,
+  onClose,
+  onSave,
+  currentYear = '2569',
+  yearlyConfig = null,
+  personnelList = [],
+}) {
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [leadAuditorId, setLeadAuditorId] = useState('');
+  const [leadAuditorName, setLeadAuditorName] = useState('');
+  const [leadAuditorEmail, setLeadAuditorEmail] = useState('');
+  const [selectedAuditorIds, setSelectedAuditorIds] = useState([]);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (yearlyConfig) {
+      setSelectedYear(yearlyConfig.year || currentYear);
+      setLeadAuditorId(yearlyConfig.leadAuditorId || '');
+      setLeadAuditorName(yearlyConfig.leadAuditorName || '');
+      setLeadAuditorEmail(yearlyConfig.leadAuditorEmail || '');
+      // Get auditor IDs
+      const ids =
+        yearlyConfig.auditorIds ||
+        (yearlyConfig.auditors ? yearlyConfig.auditors.map((a) => a.id) : []);
+      setSelectedAuditorIds(ids);
+    } else {
+      setSelectedYear(currentYear);
+      setLeadAuditorId('');
+      setLeadAuditorName('');
+      setLeadAuditorEmail('');
+      setSelectedAuditorIds([]);
+    }
+    setErrorMsg('');
+  }, [yearlyConfig, currentYear, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleLeadChange = (e) => {
+    const personId = e.target.value;
+    const person = personnelList.find((p) => p.id === personId);
+    setLeadAuditorId(personId);
+    setLeadAuditorName(person ? person.name : '');
+    setLeadAuditorEmail(person ? person.email : '');
+  };
+
+  const toggleAuditor = (personId) => {
+    setSelectedAuditorIds((prev) =>
+      prev.includes(personId) ? prev.filter((id) => id !== personId) : [...prev, personId]
+    );
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!leadAuditorName && !leadAuditorId) {
+      setErrorMsg('กรุณาระบุ Lead Internal Auditor ประจำปี');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Map full auditor objects
+      const auditors = personnelList
+        .filter((p) => selectedAuditorIds.includes(p.id))
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          department: p.department || '',
+          position: p.position || '',
+        }));
+
+      await onSave(selectedYear, {
+        year: selectedYear,
+        leadAuditorId,
+        leadAuditorName,
+        leadAuditorEmail,
+        auditorIds: selectedAuditorIds,
+        auditors,
+      });
+      onClose();
+    } catch (err) {
+      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกรายชื่อผู้ตรวจ');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredPersonnel = personnelList.filter((p) => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.department?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        animation: 'fadeIn 0.2s ease-out',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '1.25rem',
+          width: '100%',
+          maxWidth: '680px',
+          maxHeight: '92vh',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          overflow: 'hidden',
+          border: '1px solid #E2E8F0',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '1.25rem 1.75rem',
+            background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Users size={22} color="#FFFFFF" />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+                กำหนดรายชื่อผู้ตรวจติดตามภายใน (Internal Auditors)
+              </h2>
+              <p style={{ fontSize: '0.825rem', color: '#E0F2FE', margin: '2px 0 0 0' }}>
+                กำหนดสิทธิ์เฉพาะบุคลากรที่ได้รับมอบหมายในการสร้างและประเมินรายงาน
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: 'none',
+              color: '#FFFFFF',
+              borderRadius: '8px',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Body Form */}
+        <form onSubmit={handleSave} style={{ overflowY: 'auto', padding: '1.5rem 1.75rem' }}>
+          {errorMsg && (
+            <div
+              style={{
+                marginBottom: '1.25rem',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#DC2626',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+              }}
+            >
+              <AlertCircle size={18} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Row: ปีงบประมาณ / รอบตรวจ */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#334155',
+                marginBottom: '0.35rem',
+              }}
+            >
+              ปีที่ตรวจ (Audit Year) <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.6rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                background: '#F8FAFC',
+              }}
+            >
+              <option value="2569">ปี 2569</option>
+              <option value="2570">ปี 2570</option>
+              <option value="2568">ปี 2568</option>
+            </select>
+          </div>
+
+          {/* Row: Lead Internal Auditor */}
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: '10px',
+              background: '#F0F9FF',
+              border: '1.5px solid #BAE6FD',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: '#0369A1',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <ShieldCheck size={18} color="#0284C7" />
+              <span>หัวหน้าทีมผู้ตรวจติดตาม (Lead Internal Auditor)</span>
+              <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#0369A1' }}>
+              มีอำนาจในการตรวจสอบและกด Approved แผนการตรวจติดตาม ก่อนให้เริ่มการตรวจจริง
+            </p>
+            <select
+              value={leadAuditorId}
+              onChange={handleLeadChange}
+              style={{
+                width: '100%',
+                padding: '0.65rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #0284C7',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                background: '#FFFFFF',
+                color: '#0369A1',
+              }}
+              required
+            >
+              <option value="">-- เลือกหัวหน้าทีมผู้ตรวจ (Lead Auditor) --</option>
+              {personnelList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.department ? `(${p.department})` : ''}
+                </option>
+              ))}
+            </select>
+            {!leadAuditorId && leadAuditorName && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                กำหนดไว้ปัจจุบัน: {leadAuditorName}
+              </p>
+            )}
+          </div>
+
+          {/* Row: ทีมผู้ตรวจติดตามภายใน (Internal Auditors) */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '0.5rem',
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                }}
+              >
+                <UserCheck size={18} color="#0D9488" />
+                <span>คณะผู้ตรวจติดตามภายใน (Internal Auditors ประจำปี {selectedYear})</span>
+              </label>
+              <span
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  background: '#E2E8F0',
+                  color: '#475569',
+                  fontSize: '0.775rem',
+                  fontWeight: 700,
+                }}
+              >
+                เลือกแล้ว {selectedAuditorIds.length} ท่าน
+              </span>
+            </div>
+
+            {/* Quick search input */}
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <Search
+                size={16}
+                color="#94A3B8"
+                style={{ position: 'absolute', left: '10px', top: '10px' }}
+              />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อ หรือฝ่ายเพื่อเลือกผู้ตรวจ..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem 0.5rem 2.25rem',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.85rem',
+                }}
+              />
+            </div>
+
+            {/* Personnel Multi-selection Checklist */}
+            <div
+              style={{
+                maxHeight: '260px',
+                overflowY: 'auto',
+                border: '1px solid #E2E8F0',
+                borderRadius: '8px',
+                padding: '0.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                background: '#FAFAFA',
+              }}
+            >
+              {filteredPersonnel.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1rem', color: '#94A3B8', fontSize: '0.85rem' }}>
+                  ไม่พบบุคลากรที่ค้นหา
+                </div>
+              ) : (
+                filteredPersonnel.map((p) => {
+                  const isChecked = selectedAuditorIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      onClick={() => toggleAuditor(p.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        background: isChecked ? '#F0FDF4' : '#FFFFFF',
+                        border: `1px solid ${isChecked ? '#86EFAC' : '#E2E8F0'}`,
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by label onClick
+                        style={{ width: '16px', height: '16px', accentColor: '#16A34A' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1E293B' }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                          {p.department || 'ไม่ระบุฝ่าย'} • {p.position || 'บุคลากร'}
+                        </div>
+                      </div>
+                      {isChecked && (
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: '#16A34A',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <CheckCircle2 size={14} /> ผู้ตรวจ
+                        </span>
+                      )}
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div
+            style={{
+              marginTop: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '0.75rem',
+            }}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '0.65rem 1.25rem',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#475569',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                padding: '0.65rem 1.75rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                color: '#FFFFFF',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 2px 4px rgba(2, 132, 199, 0.3)',
+              }}
+            >
+              <Save size={16} />
+              <span>{isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการกำหนดผู้ตรวจ'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

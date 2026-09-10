@@ -131,6 +131,14 @@ export default function Navbar() {
                 </Link>
 
                 <Link
+                  href="/ims"
+                  className={`nav-link-item ${pathname.startsWith('/ims') ? 'active' : ''}`}
+                >
+                  <ShieldCheck size={16} />
+                  <span>ระบบ IMS</span>
+                </Link>
+
+                <Link
                   href="/profile"
                   className={`nav-link-item ${pathname === '/profile' ? 'active' : ''}`}
                 >
@@ -318,6 +326,18 @@ export default function Navbar() {
                       <FileText size={18} />
                     </div>
                     <span style={{ flex: 1 }}>JD Hub</span>
+                    <ChevronRight size={16} opacity={0.4} />
+                  </Link>
+
+                  <Link
+                    href="/ims"
+                    className={`mobile-drawer-link ${pathname.startsWith('/ims') ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="drawer-icon-box" style={{ color: '#0D9488' }}>
+                      <ShieldCheck size={18} />
+                    </div>
+                    <span style={{ flex: 1 }}>ระบบบริหารงาน IMS</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 
