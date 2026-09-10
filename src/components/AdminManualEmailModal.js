@@ -33,11 +33,11 @@ import {
 import { sendManualAdminEmail, getEmailConfig } from '@/lib/emailNotificationService';
 
 const QUICK_SUBJECTS = [
-  '📢 แจ้งข้อมูลสำคัญสำหรับบุคลากร สำนักคอมพิวเตอร์ฯ',
-  '⏰ แจ้งเตือนการปฏิบัติงานและบันทึกเวลาปฏิบัติราชการ',
-  '📋 ขอความอนุเคราะห์ข้อมูลการปฏิบัติงาน',
-  '📌 แจ้งกำหนดการประชุม / กิจกรรมองค์กร',
-  '📄 แจ้งเอกสารและภาระงานประจำฝ่าย',
+  '[ประกาศ] แจ้งข้อมูลสำคัญสำหรับบุคลากร สำนักคอมพิวเตอร์ฯ',
+  '[แจ้งเตือน] การปฏิบัติงานและบันทึกเวลาปฏิบัติราชการ',
+  '[ขอความอนุเคราะห์] ข้อมูลการปฏิบัติงาน',
+  '[กำหนดการ] การประชุม / กิจกรรมองค์กร',
+  '[เอกสาร] ภาระงานประจำฝ่ายและคู่มือการปฏิบัติงาน',
 ];
 
 export default function AdminManualEmailModal({
@@ -591,12 +591,6 @@ export default function AdminManualEmailModal({
                     </div>
 
                     <div style={{ padding: '1.5rem', background: '#FFFFFF', fontSize: '0.875rem', lineHeight: 1.7, color: '#334155' }}>
-                      {effectiveRecipientName && (
-                        <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '1rem' }}>
-                          เรียน {effectiveRecipientName}
-                        </div>
-                      )}
-
                       <div dangerouslySetInnerHTML={{ __html: contentHtml || '<em>ไม่มีเนื้อหาข้อความ</em>' }} />
                     </div>
 

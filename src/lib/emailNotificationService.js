@@ -957,29 +957,42 @@ export function generateManualEmailHtml({
 <body style="font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F1F5F9; margin: 0; padding: 24px 12px;">
   <div style="max-width: 620px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
     
-    <!-- Official ICIT Header -->
-    <div style="background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); padding: 24px; text-align: left; color: #FFFFFF;">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <div style="background: #FFFFFF; width: 44px; height: 44px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); flex-shrink: 0;">
-          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" alt="ICIT Logo" width="38" height="38" style="width: 38px; height: 38px; display: block; object-fit: contain; border: 0;" />
-        </div>
-        <div>
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; font-weight: 600;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)</div>
-          <div style="font-size: 15px; font-weight: 700;">มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ</div>
-        </div>
-      </div>
-      <div style="font-size: 18px; font-weight: 800; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">
-        ${subject}
-      </div>
-    </div>
+    <!-- Official ICIT Header (Table-based for universal email client compatibility) -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%); background-color: #1E40AF; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 24px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+            <tr>
+              <td width="52" valign="middle" style="width: 52px; vertical-align: middle; padding-right: 14px;">
+                <table border="0" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 8px; width: 44px; height: 44px; border-collapse: collapse;">
+                  <tr>
+                    <td align="center" valign="middle" style="text-align: center; vertical-align: middle; padding: 4px;">
+                      <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" alt="ICIT" width="36" height="36" style="width: 36px; height: 36px; display: block; border: 0; outline: none;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td valign="middle" style="vertical-align: middle; color: #FFFFFF; text-align: left;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; font-weight: 600; line-height: 1.4; color: #E0E7FF;">
+                  สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+                </div>
+                <div style="font-size: 15px; font-weight: 700; line-height: 1.4; color: #FFFFFF;">
+                  มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <div style="margin-top: 14px; font-size: 18px; font-weight: 800; line-height: 1.4; color: #FFFFFF; border-top: 1px solid rgba(255, 255, 255, 0.25); padding-top: 12px;">
+            ${subject}
+          </div>
+        </td>
+      </tr>
+    </table>
 
     <!-- Body Content -->
-    <div style="padding: 28px 24px;">
-      ${recipientName ? `<div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">เรียน ${recipientName}</div>` : ''}
-
-      <div style="color: #334155; font-size: 14.5px; line-height: 1.7;">
-        ${contentHtml}
-      </div>
+    <div style="padding: 28px 24px; color: #334155; font-size: 14.5px; line-height: 1.7;">
+      ${contentHtml}
     </div>
 
     <!-- Official Footer -->

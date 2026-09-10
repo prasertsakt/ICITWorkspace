@@ -20,7 +20,7 @@ export async function POST(request) {
     if (scriptUrl) {
       const resp = await fetch(scriptUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
           to,
           cc: cc || '',
