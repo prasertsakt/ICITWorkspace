@@ -20,8 +20,11 @@ function doPost(e) {
     var recipient = data.to;
     var subject = data.subject;
     var htmlBody = data.htmlBody;
+    var cc = data.cc || '';
+    var bcc = data.bcc || '';
     var recordId = data.recordId || '';
     var step = data.step || '';
+    var senderName = data.senderName || 'ระบบบริหารจัดการองค์กร ICIT Workspace';
 
     if (!recipient || !subject || !htmlBody) {
       return ContentService.createTextOutput(JSON.stringify({
@@ -30,18 +33,51 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Send email using GmailApp / MailApp
-    GmailApp.sendEmail(recipient, subject, '', {
+    // Process attachments if provided (Array of { name, type, base64Data })
+    var blobs = [];
+    if (data.attachments && Array.isArray(data.attachments)) {
+      for (var i = 0; i < data.attachments.length; i++) {
+        var att = data.attachments[i];
+        if (att && att.base64Data) {
+          try {
+            var decoded = Utilities.base64Decode(att.base64Data);
+            var mimeType = att.type || 'application/octet-stream';
+            var fileName = att.name || ('attachment_' + (i + 1));
+            var blob = Utilities.newBlob(decoded, mimeType, fileName);
+            blobs.push(blob);
+          } catch (blobErr) {
+            console.warn('Error processing attachment ' + i + ': ' + blobErr.toString());
+          }
+        }
+      }
+    }
+
+    // Build email options
+    var emailOptions = {
       htmlBody: htmlBody,
-      name: 'ระบบขอลงเวลา ICIT Workspace',
-      noReply: true
-    });
+      name: senderName,
+      noReply: false
+    };
+
+    if (cc) {
+      emailOptions.cc = cc;
+    }
+    if (bcc) {
+      emailOptions.bcc = bcc;
+    }
+    if (blobs.length > 0) {
+      emailOptions.attachments = blobs;
+    }
+
+    // Send email using GmailApp
+    GmailApp.sendEmail(recipient, subject, '', emailOptions);
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: 'Email successfully sent to ' + recipient,
+      message: 'Email successfully sent to ' + recipient + (blobs.length > 0 ? ' with ' + blobs.length + ' attachment(s)' : ''),
       recordId: recordId,
       step: step,
+      attachmentsCount: blobs.length,
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
 

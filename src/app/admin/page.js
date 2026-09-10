@@ -27,6 +27,7 @@ import { formatThaiDisplayDate } from '@/lib/dateUtils';
 import PersonnelModal from '@/components/PersonnelModal';
 import ExecutiveModal from '@/components/ExecutiveModal';
 import DepartmentModal from '@/components/DepartmentModal';
+import AdminManualEmailModal from '@/components/AdminManualEmailModal';
 import {
   ShieldCheck,
   Users,
@@ -50,6 +51,7 @@ import {
   CloudUpload,
   ArrowUpDown,
   GripVertical,
+  Mail,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -78,6 +80,15 @@ export default function AdminPage() {
 
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
+
+  // Manual Email Modal state
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailTargetPersonnel, setEmailTargetPersonnel] = useState(null);
+
+  const handleOpenEmailModal = (person = null) => {
+    setEmailTargetPersonnel(person);
+    setIsEmailModalOpen(true);
+  };
 
   // Executive rearrange states
   const [isRearrangingExecs, setIsRearrangingExecs] = useState(false);
@@ -449,6 +460,15 @@ export default function AdminPage() {
                 </select>
 
                 <button
+                  onClick={() => handleOpenEmailModal(null)}
+                  className="btn btn-secondary btn-sm"
+                  title="เขียนและส่งอีเมลถึงบุคลากร"
+                >
+                  <Mail size={16} />
+                  <span>เขียนอีเมลถึงบุคลากร</span>
+                </button>
+
+                <button
                   onClick={() => {
                     setEditingPersonnel(null);
                     setIsPersonnelModalOpen(true);
@@ -600,6 +620,14 @@ export default function AdminPage() {
                       {/* Actions */}
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.25rem' }}>
+                          <button
+                            onClick={() => handleOpenEmailModal(person)}
+                            className="btn btn-ghost btn-icon"
+                            style={{ color: 'var(--primary-600)' }}
+                            title={`ส่งอีเมลหา ${person.name}`}
+                          >
+                            <Mail size={16} />
+                          </button>
                           <button
                             onClick={() => {
                               setEditingPersonnel(person);
@@ -1119,6 +1147,15 @@ export default function AdminPage() {
         departmentToEdit={editingDepartment}
         personnelList={personnelList}
         executiveList={executiveList}
+      />
+
+      {/* Manual Email Modal */}
+      <AdminManualEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        targetPersonnel={emailTargetPersonnel}
+        personnelList={personnelList}
+        currentAdmin={currentPersonnel}
       />
     </div>
   );

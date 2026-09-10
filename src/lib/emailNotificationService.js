@@ -860,3 +860,197 @@ export function getSentEmailLogs(recordId = null) {
   }
 }
 
+/**
+ * Generate rich Thai HTML template for Admin Manual Emails
+ */
+export function generateManualEmailHtml({
+  subject,
+  message,
+  recipientName = '',
+  senderName = 'ผู้ดูแลระบบ (Admin) สำนักคอมพิวเตอร์ฯ',
+  attachments = [],
+}) {
+  const formattedParagraphs = (message || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .map((line) => (line ? `<p style="margin: 0 0 12px 0; font-size: 14.5px; line-height: 1.7; color: #334155;">${line}</p>` : '<div style="height: 10px;"></div>'))
+    .join('');
+
+  const attachmentsListHtml =
+    attachments && attachments.length > 0
+      ? `
+      <div style="margin-top: 24px; padding: 14px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;">
+        <div style="font-size: 13px; font-weight: 700; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          📎 เอกสารแนบ (${attachments.length} ไฟล์):
+        </div>
+        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #475569;">
+          ${attachments
+            .map(
+              (att) => `
+            <li style="margin-bottom: 4px;">
+              <strong style="color: #0F172A;">${att.name || 'ไฟล์แนบ'}</strong>
+              ${att.size ? `<span style="color: #94A3B8; font-size: 12px;"> (${(att.size / 1024 < 1024 ? (att.size / 1024).toFixed(1) + ' KB' : (att.size / (1024 * 1024)).toFixed(2) + ' MB')})</span>` : ''}
+            </li>
+          `
+            )
+            .join('')}
+        </ul>
+      </div>
+    `
+      : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+<body style="font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F1F5F9; margin: 0; padding: 24px 12px;">
+  <div style="max-width: 620px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
+    
+    <!-- Official ICIT Header -->
+    <div style="background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); padding: 24px; text-align: left; color: #FFFFFF;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <div style="background: #FFFFFF; width: 44px; height: 44px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">
+          <img src="https://icit.kmutnb.ac.th/main/wp-content/uploads/2021/04/icit-logo.png" alt="ICIT Logo" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; font-weight: 600;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)</div>
+          <div style="font-size: 15px; font-weight: 700;">มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ</div>
+        </div>
+      </div>
+      <div style="font-size: 18px; font-weight: 800; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">
+        ${subject}
+      </div>
+    </div>
+
+    <!-- Body Content -->
+    <div style="padding: 28px 24px;">
+      ${recipientName ? `<div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">เรียน ${recipientName}</div>` : ''}
+
+      <div style="color: #334155; font-size: 14.5px;">
+        ${formattedParagraphs}
+      </div>
+
+      ${attachmentsListHtml}
+    </div>
+
+    <!-- Official Footer -->
+    <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 18px 24px; font-size: 12px; color: #64748B; line-height: 1.6;">
+      <div><strong>ส่งโดย:</strong> ${senderName}</div>
+      <div><strong>ระบบ:</strong> ระบบบริหารจัดการองค์กร ICIT Workspace</div>
+      <div style="margin-top: 6px; font-size: 11.5px; color: #94A3B8;">
+        หากมีข้อสงสัยหรือต้องการสอบถามเพิ่มเติม กรุณาติดต่อผู้ดูแลระบบ สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Send manual email composed by Administrator with attachments support
+ */
+export async function sendManualAdminEmail({
+  to,
+  cc = '',
+  bcc = '',
+  subject,
+  message,
+  attachments = [],
+  recipientName = '',
+  senderName = 'ผู้ดูแลระบบ (Admin) ICIT Workspace',
+  senderEmail = '',
+}) {
+  const config = getEmailConfig();
+  const scriptUrl =
+    config.googleAppsScriptUrl ||
+    process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL ||
+    process.env.GOOGLE_SCRIPT_EMAIL_URL;
+
+  const htmlBody = generateManualEmailHtml({
+    subject,
+    message,
+    recipientName,
+    senderName,
+    attachments,
+  });
+
+  const logEntry = {
+    id: `admin-email-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    recordId: 'ADMIN_MANUAL_COMPOSE',
+    targetStep: 'ADMIN_MANUAL',
+    recipientEmail: to,
+    recipientName: recipientName || to,
+    recipientRole: 'บุคลากร',
+    subject,
+    sentAt: new Date().toISOString(),
+    status: 'PENDING',
+    attachmentsCount: attachments.length,
+    deliveryMethod: 'Local System Sandbox',
+    senderName,
+  };
+
+  let isDelivered = false;
+  let deliveryError = null;
+
+  try {
+    const resp = await fetch('/api/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        cc,
+        bcc,
+        subject,
+        htmlBody,
+        attachments,
+        webhookUrl: scriptUrl,
+        senderName,
+      }),
+    });
+
+    const resData = await resp.json().catch(() => ({}));
+    if (resp.ok && resData.success) {
+      logEntry.deliveryMethod = resData.simulated
+        ? 'ระบบจำลองการส่งอีเมล (Simulation Mode)'
+        : 'Google Apps Script (Gmail Relay)';
+      logEntry.status = resData.simulated ? 'SIMULATED' : 'DELIVERED';
+      isDelivered = true;
+    } else {
+      deliveryError = resData.message || resData.error || `HTTP ${resp.status} relay failed`;
+      logEntry.deliveryMethod = 'Email Send API (Failed)';
+      logEntry.status = 'FAILED';
+      logEntry.error = deliveryError;
+    }
+  } catch (err) {
+    console.warn('Manual email sending error:', err);
+    deliveryError = err.message || 'Network exception during email dispatch';
+    logEntry.deliveryMethod = 'Email Send API (Error)';
+    logEntry.status = 'FAILED';
+    logEntry.error = deliveryError;
+  }
+
+  // Save to sent log in localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const logs = JSON.parse(localStorage.getItem(LOCAL_KEY_SENT_EMAILS) || '[]');
+      logs.unshift(logEntry);
+      if (logs.length > 100) logs.pop();
+      localStorage.setItem(LOCAL_KEY_SENT_EMAILS, JSON.stringify(logs));
+    } catch (e) {
+      console.error('Failed saving sent email log', e);
+    }
+  }
+
+  return {
+    success: isDelivered,
+    error: deliveryError,
+    logEntry,
+  };
+}
+
+
