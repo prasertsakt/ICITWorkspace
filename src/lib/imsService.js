@@ -169,6 +169,14 @@ export async function sendImsAuditEmail({
     senderName,
   };
 
+  let webhookUrl = '';
+  if (typeof window !== 'undefined') {
+    try {
+      const emailConfig = JSON.parse(localStorage.getItem('icit_email_notification_config') || '{}');
+      webhookUrl = emailConfig.googleAppsScriptUrl || '';
+    } catch (e) {}
+  }
+
   try {
     const resp = await fetch('/api/email/send', {
       method: 'POST',
@@ -180,6 +188,7 @@ export async function sendImsAuditEmail({
         subject: subject.trim(),
         htmlBody,
         senderName,
+        webhookUrl,
       }),
     });
 
@@ -224,6 +233,18 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
   const auditUrl = `${baseUrl}/ims/audit`;
 
+  const auditeesText =
+    Array.isArray(audit.auditees) && audit.auditees.length > 0
+      ? audit.auditees
+          .map((a, idx) => `${idx + 1}. ${a.name || '-'}${a.department ? ` (${a.department})` : ''}`)
+          .join('<br/>')
+      : `${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}`;
+
+  const auditorsText =
+    audit.hasSecondAuditor && audit.auditor2Name
+      ? `1. ${audit.auditor1Name || '-'}<br/>2. ${audit.auditor2Name}`
+      : `1. ${audit.auditor1Name || '-'}`;
+
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -238,15 +259,25 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
           <!-- Official ICIT Header -->
           <tr>
-            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 2px solid #0D9488;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 3px solid #0D9488;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
                 <tr>
-                  <td width="52" valign="middle" style="padding-right: 14px;">
-                    <img src="https://icit.kmutnb.ac.th/main/wp-content/uploads/2021/04/icit-logo-web.png" width="48" height="48" alt="ICIT Logo" style="display: block; border-radius: 8px;" />
+                  <td width="48" valign="middle" style="width: 48px; vertical-align: middle; padding-right: 14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 8px; width: 44px; height: 44px; border: 1px solid #E2E8F0; border-collapse: collapse;">
+                      <tr>
+                        <td align="center" valign="middle" style="text-align: center; vertical-align: middle; padding: 4px;">
+                          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" width="36" height="36" alt="ICIT" style="width: 36px; height: 36px; display: block; border: 0; outline: none;" />
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="middle">
-                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.2;">ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)</div>
-                    <div style="font-size: 12px; color: #64748B;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
+                  <td valign="middle" style="vertical-align: middle; text-align: left;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #0D9488; font-weight: 700; line-height: 1.3;">
+                      สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.3; margin-top: 2px;">
+                      ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)
+                    </div>
                   </td>
                 </tr>
               </table>
@@ -255,13 +286,19 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
 
           <!-- Banner -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #FEF3C7; border-bottom: 1px solid #FDE68A;">
-              <div style="font-size: 15px; font-weight: 700; color: #92400E;">
-                📋 แจ้งเตือน: แผนการตรวจติดตามภายในเสนอเพื่อขออนุมัติ
-              </div>
-              <div style="font-size: 13px; color: #78350F; margin-top: 4px;">
-                เรียน ${recipientName} (Lead Internal Auditor) กรุณาตรวจสอบและพิจารณาอนุมัติก่อนเริ่มการตรวจ
-              </div>
+            <td style="padding: 16px 24px; background-color: #FFFBEB; border-bottom: 1px solid #FDE68A;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 15px; font-weight: 700; color: #92400E; line-height: 1.4;">
+                      [แจ้งเตือน] แผนการตรวจติดตามภายในเสนอเพื่อขออนุมัติ
+                    </div>
+                    <div style="font-size: 13px; color: #78350F; margin-top: 5px; line-height: 1.5;">
+                      เรียน ${recipientName} (Lead Internal Auditor) กรุณาตรวจสอบและพิจารณาอนุมัติก่อนเริ่มการตรวจ
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -275,7 +312,7 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">ปีที่ตรวจ / มาตรฐาน:</td>
-                  <td style="padding: 8px 0; color: #1E293B; vertical-align: top;">ปี ${audit.auditYear || '2569'} • ${audit.isoStandard || 'IMS 9001/27001'}</td>
+                  <td style="padding: 8px 0; color: #1E293B; vertical-align: top;">ปี ${audit.auditYear || '2569'} &bull; ${audit.isoStandard || 'IMS 9001/27001'}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">วันที่ทำการตรวจติดตาม:</td>
@@ -284,13 +321,13 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
                 <tr>
                   <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">ผู้ตรวจติดตาม:</td>
                   <td style="padding: 8px 0; color: #0369A1; vertical-align: top;">
-                    1. ${audit.auditor1Name || '-'}${audit.hasSecondAuditor && audit.auditor2Name ? '<br/>2. ' + audit.auditor2Name : ''}
+                    ${auditorsText}
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #64748B; font-weight: 600; vertical-align: top;">ผู้รับการตรวจ:</td>
                   <td style="padding: 8px 0; color: #1E293B; vertical-align: top;">
-                    ${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ' (' + audit.auditeeDepartment + ')' : ''}
+                    ${auditeesText}
                   </td>
                 </tr>
                 <tr>
@@ -341,6 +378,18 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
   const auditUrl = `${baseUrl}/ims/audit`;
 
+  const auditeesText =
+    Array.isArray(audit.auditees) && audit.auditees.length > 0
+      ? audit.auditees
+          .map((a, idx) => `${idx + 1}. ${a.name || '-'}${a.department ? ` (${a.department})` : ''}`)
+          .join('<br/>')
+      : `${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}`;
+
+  const auditorsText =
+    audit.hasSecondAuditor && audit.auditor2Name
+      ? `${audit.auditor1Name || '-'}${audit.auditor2Name ? `, ${audit.auditor2Name}` : ''}`
+      : `${audit.auditor1Name || '-'}`;
+
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -355,15 +404,25 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
           <!-- Official ICIT Header -->
           <tr>
-            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 2px solid #16A34A;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 3px solid #16A34A;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
                 <tr>
-                  <td width="52" valign="middle" style="padding-right: 14px;">
-                    <img src="https://icit.kmutnb.ac.th/main/wp-content/uploads/2021/04/icit-logo-web.png" width="48" height="48" alt="ICIT Logo" style="display: block; border-radius: 8px;" />
+                  <td width="48" valign="middle" style="width: 48px; vertical-align: middle; padding-right: 14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 8px; width: 44px; height: 44px; border: 1px solid #E2E8F0; border-collapse: collapse;">
+                      <tr>
+                        <td align="center" valign="middle" style="text-align: center; vertical-align: middle; padding: 4px;">
+                          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" width="36" height="36" alt="ICIT" style="width: 36px; height: 36px; display: block; border: 0; outline: none;" />
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="middle">
-                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.2;">ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)</div>
-                    <div style="font-size: 12px; color: #64748B;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
+                  <td valign="middle" style="vertical-align: middle; text-align: left;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #16A34A; font-weight: 700; line-height: 1.3;">
+                      สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.3; margin-top: 2px;">
+                      ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)
+                    </div>
                   </td>
                 </tr>
               </table>
@@ -372,13 +431,19 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
 
           <!-- Banner -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #DCFCE7; border-bottom: 1px solid #BBF7D0;">
-              <div style="font-size: 15px; font-weight: 700; color: #15803D;">
-                ✅ แผนการตรวจติดตามภายในได้รับการอนุมัติแล้ว (APPROVED)
-              </div>
-              <div style="font-size: 13px; color: #166534; margin-top: 4px;">
-                อนุมัติโดย: ${leadActorName} (Lead Internal Auditor) • พร้อมเข้าตรวจติดตามตามกำหนดการ
-              </div>
+            <td style="padding: 16px 24px; background-color: #F0FDF4; border-bottom: 1px solid #BBF7D0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 15px; font-weight: 700; color: #15803D; line-height: 1.4;">
+                      [แจ้งผล] แผนการตรวจติดตามภายในได้รับการอนุมัติแล้ว (APPROVED)
+                    </div>
+                    <div style="font-size: 13px; color: #166534; margin-top: 5px; line-height: 1.5;">
+                      อนุมัติโดย: ${leadActorName} (Lead Internal Auditor) &bull; พร้อมเข้าตรวจติดตามตามกำหนดการ
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -386,7 +451,7 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
           <tr>
             <td style="padding: 24px;">
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155; line-height: 1.6;">
-                เรียน คณะผู้ตรวจติดตามภายใน (${audit.auditor1Name}${audit.hasSecondAuditor && audit.auditor2Name ? ', ' + audit.auditor2Name : ''})<br/>
+                เรียน คณะผู้ตรวจติดตามภายใน (${auditorsText})<br/>
                 แผนการตรวจติดตามภายในได้รับการอนุมัติเรียบร้อยแล้ว ท่านสามารถดำเนินการเข้าตรวจติดตามตามวันนัดหมาย และเข้าบันทึกผลการตรวจ (Findings, Recommendation และผลสรุป C / NC / OFI) ได้ในระบบ
               </p>
 
@@ -400,8 +465,8 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
                   <td style="padding: 8px 12px; color: #0284C7; font-weight: 700;">${audit.auditDate || '-'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600;">ผู้รับการตรวจ:</td>
-                  <td style="padding: 8px 12px; color: #1E293B;">${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ' (' + audit.auditeeDepartment + ')' : ''}</td>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">ผู้รับการตรวจ:</td>
+                  <td style="padding: 8px 12px; color: #1E293B; vertical-align: top;">${auditeesText}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 12px; color: #64748B; font-weight: 600;">Item (ข้อตรวจ):</td>
@@ -447,6 +512,18 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
   const auditUrl = `${baseUrl}/ims/audit`;
 
+  const auditeesText =
+    Array.isArray(audit.auditees) && audit.auditees.length > 0
+      ? audit.auditees
+          .map((a, idx) => `${idx + 1}. ${a.name || '-'}${a.department ? ` (${a.department})` : ''}`)
+          .join('<br/>')
+      : `${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}`;
+
+  const auditorsGreeting =
+    audit.hasSecondAuditor && audit.auditor2Name
+      ? `${audit.auditor1Name || '-'}${audit.auditor2Name ? `, ${audit.auditor2Name}` : ''}`
+      : `${audit.auditor1Name || '-'}`;
+
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -461,15 +538,25 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
           <!-- Official ICIT Header -->
           <tr>
-            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 2px solid #DC2626;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 3px solid #DC2626;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
                 <tr>
-                  <td width="52" valign="middle" style="padding-right: 14px;">
-                    <img src="https://icit.kmutnb.ac.th/main/wp-content/uploads/2021/04/icit-logo-web.png" width="48" height="48" alt="ICIT Logo" style="display: block; border-radius: 8px;" />
+                  <td width="48" valign="middle" style="width: 48px; vertical-align: middle; padding-right: 14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 8px; width: 44px; height: 44px; border: 1px solid #E2E8F0; border-collapse: collapse;">
+                      <tr>
+                        <td align="center" valign="middle" style="text-align: center; vertical-align: middle; padding: 4px;">
+                          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" width="36" height="36" alt="ICIT" style="width: 36px; height: 36px; display: block; border: 0; outline: none;" />
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="middle">
-                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.2;">ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)</div>
-                    <div style="font-size: 12px; color: #64748B;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
+                  <td valign="middle" style="vertical-align: middle; text-align: left;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #DC2626; font-weight: 700; line-height: 1.3;">
+                      สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.3; margin-top: 2px;">
+                      ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)
+                    </div>
                   </td>
                 </tr>
               </table>
@@ -479,12 +566,18 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
           <!-- Banner -->
           <tr>
             <td style="padding: 16px 24px; background-color: #FEF2F2; border-bottom: 1px solid #FECACA;">
-              <div style="font-size: 15px; font-weight: 700; color: #DC2626;">
-                ⚠️ แจ้งเตือน: แผนการตรวจติดตามภายในถูกส่งกลับเพื่อแก้ไข (Return to Revision)
-              </div>
-              <div style="font-size: 13px; color: #991B1B; margin-top: 4px;">
-                โดย: ${leadActorName} (Lead Internal Auditor) • กรุณาปรับปรุงข้อมูลและส่งใหม่อีกครั้ง
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 15px; font-weight: 700; color: #DC2626; line-height: 1.4;">
+                      [แจ้งเตือน] แผนการตรวจติดตามภายในถูกส่งกลับเพื่อแก้ไข (Return to Revision)
+                    </div>
+                    <div style="font-size: 13px; color: #991B1B; margin-top: 5px; line-height: 1.5;">
+                      โดย: ${leadActorName} (Lead Internal Auditor) &bull; กรุณาปรับปรุงข้อมูลและส่งใหม่อีกครั้ง
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -492,7 +585,7 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
           <tr>
             <td style="padding: 24px;">
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155; line-height: 1.6;">
-                เรียน คณะผู้ตรวจติดตามภายใน (${audit.auditor1Name}${audit.hasSecondAuditor && audit.auditor2Name ? ', ' + audit.auditor2Name : ''})<br/>
+                เรียน คณะผู้ตรวจติดตามภายใน (${auditorsGreeting})<br/>
                 Lead Internal Auditor ได้พิจารณาแผนการตรวจติดตามหัวข้อ <strong>"${audit.topic}"</strong> และมีความเห็นให้ส่งกลับเพื่อปรับปรุงแก้ไขข้อมูลตามรายละเอียดด้านล่าง:
               </p>
 
@@ -500,10 +593,10 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 20px; background-color: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 8px;">
                 <tr>
                   <td style="padding: 14px 18px;">
-                    <div style="font-size: 13px; font-weight: 700; color: #D97706; margin-bottom: 4px;">
-                      💬 ข้อคิดเห็น / สิ่งที่ต้องแก้ไขจาก Lead IA:
+                    <div style="font-size: 13px; font-weight: 700; color: #D97706; margin-bottom: 6px;">
+                      [ข้อคิดเห็น / สิ่งที่ต้องแก้ไขจาก Lead IA]
                     </div>
-                    <div style="font-size: 14.5px; color: #92400E; line-height: 1.6; font-weight: 500; white-space: pre-line;">
+                    <div style="font-size: 14px; color: #92400E; line-height: 1.6; font-weight: 500; white-space: pre-line;">
                       ${comment || 'กรุณาตรวจสอบและปรับปรุงรายละเอียดแผนการตรวจเพิ่มเติม'}
                     </div>
                   </td>
@@ -518,6 +611,10 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
                 <tr>
                   <td style="padding: 6px 12px; color: #64748B; font-weight: 600;">วันที่ตรวจ:</td>
                   <td style="padding: 6px 12px; color: #0284C7;">${audit.auditDate || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 12px; color: #64748B; font-weight: 600; vertical-align: top;">ผู้รับการตรวจ:</td>
+                  <td style="padding: 6px 12px; color: #1E293B; vertical-align: top;">${auditeesText}</td>
                 </tr>
                 <tr>
                   <td style="padding: 6px 12px; color: #64748B; font-weight: 600;">Item (ข้อตรวจ):</td>

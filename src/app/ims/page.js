@@ -264,24 +264,26 @@ export default function ImsLandingPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '1rem',
-              maxWidth: '780px',
+              maxWidth: '820px',
             }}
           >
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ fontSize: '0.8rem', color: '#CCFBF1', fontWeight: 500 }}>
-                รายการตรวจติดตามทั้งหมด
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
+                <FileText size={16} color="#A7F3D0" />
+                <span>รายการตรวจทั้งหมด</span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '2px' }}>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em' }}>
                 {totalAudits}
               </div>
             </div>
@@ -289,16 +291,18 @@ export default function ImsLandingPage() {
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ fontSize: '0.8rem', color: '#CCFBF1', fontWeight: 500 }}>
-                ตรวจเสร็จสิ้นแล้ว
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
+                <CheckCircle2 size={16} color="#A7F3D0" />
+                <span>ตรวจเสร็จสิ้นแล้ว</span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '2px', color: '#A7F3D0' }}>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#A7F3D0', letterSpacing: '-0.02em' }}>
                 {completedAudits}
               </div>
             </div>
@@ -306,18 +310,20 @@ export default function ImsLandingPage() {
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 0.22)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ fontSize: '0.8rem', color: '#CCFBF1', fontWeight: 500 }}>
-                ผลการตรวจ (C / NC / OFI)
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
+                <BarChart3 size={16} color="#A7F3D0" />
+                <span>ผลการตรวจ (C / NC / OFI)</span>
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '4px' }}>
-                <span style={{ color: '#A7F3D0' }}>{cCount} C</span> •{' '}
-                <span style={{ color: '#FECACA' }}>{ncCount} NC</span> •{' '}
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '8px', letterSpacing: '-0.01em' }}>
+                <span style={{ color: '#A7F3D0' }}>{cCount} C</span> &bull;{' '}
+                <span style={{ color: '#FECACA' }}>{ncCount} NC</span> &bull;{' '}
                 <span style={{ color: '#FDE68A' }}>{ofiCount} OFI</span>
               </div>
             </div>
@@ -329,25 +335,42 @@ export default function ImsLandingPage() {
       <div
         style={{
           maxWidth: '1100px',
-          margin: '-2.5rem auto 0',
+          margin: '2.5rem auto 0',
           padding: '0 1.5rem',
           position: 'relative',
           zIndex: 2,
         }}
       >
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.75rem' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: '#0D9488',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: '0.35rem',
+            }}
+          >
+            <Layers size={15} />
+            <span>IMS SERVICES & MODULES</span>
+          </div>
           <h2
             style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              color: '#1E293B',
-              margin: '0 0 0.5rem 0',
+              fontSize: '1.5rem',
+              fontWeight: 800,
+              color: '#0F172A',
+              margin: '0 0 0.35rem 0',
+              lineHeight: 1.3,
             }}
           >
             บริการย่อยภายใต้ระบบบริหารงาน IMS
           </h2>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748B' }}>
-            เลือกบริการที่ต้องการเข้าใช้งาน
+          <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748B' }}>
+            เลือกบริการที่ต้องการเข้าใช้งานและกำกับดูแลมาตรฐานคุณภาพ
           </p>
         </div>
 
