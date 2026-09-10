@@ -1,27 +1,26 @@
 /**
  * Google Apps Script Web App for ICIT Workspace Email Relay
  *
- * วิธีติดตั้ง (Deploy):
+ * วิธีติดตั้ง / อัปเดต (Deploy):
  * 1. เข้าไปที่ https://script.google.com/
- * 2. กดปุ่ม "New project" (โครงการใหม่)
+ * 2. เปิดโปรเจกต์เดิม หรือสร้าง "New project"
  * 3. วางโค้ดนี้ทั้งหมดลงในไฟล์ Code.gs
- * 4. กดปุ่ม "Deploy" (การทำให้ใช้งานได้) > "New deployment" (การทำให้ใช้งานได้ใหม่)
- * 5. เลือกประเภท: "Web app" (เว็บแอปพลิเคชัน)
- *    - Description: ICIT Time Attendance Mail Relay
- *    - Execute as: "Me" (ฉัน - บัญชี Google ของท่าน)
- *    - Who has access: "Anyone" (ทุกคน)
- * 6. กด "Deploy" และคัดลอก "Web app URL" (ลงท้ายด้วย /exec)
- * 7. นำ URL ที่ได้ไปวางในช่อง Google Apps Script Webhook URL ในระบบขอลงเวลา
+ * 4. ***สำคัญมาก*** สำหรับการอัปเดต:
+ *    - กดปุ่ม "Deploy" (การทำให้ใช้งานได้) > "Manage deployments" (จัดการการทำให้ใช้งานได้)
+ *    - กดที่ไอคอนดินสอ (Edit)
+ *    - ในช่อง "Version" (เวอร์ชัน) เลือก "New version" (เวอร์ชันใหม่)
+ *    - กด "Deploy"
+ *    (หากไม่อัปเดตเป็น New version ระบบของ Google จะยังคงรันโค้ดเก่า ทำให้ CC/BCC ไม่ทำงาน)
  */
 
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var recipient = data.to;
-    var subject = data.subject;
-    var htmlBody = data.htmlBody;
-    var cc = data.cc || '';
-    var bcc = data.bcc || '';
+    var recipient = data.to ? String(data.to).trim() : '';
+    var subject = data.subject ? String(data.subject).trim() : '';
+    var htmlBody = data.htmlBody || '';
+    var cc = data.cc ? String(data.cc).trim() : '';
+    var bcc = data.bcc ? String(data.bcc).trim() : '';
     var recordId = data.recordId || '';
     var step = data.step || '';
     var senderName = data.senderName || 'ระบบบริหารจัดการองค์กร ICIT Workspace';
@@ -33,25 +32,6 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Process attachments if provided (Array of { name, type, base64Data })
-    var blobs = [];
-    if (data.attachments && Array.isArray(data.attachments)) {
-      for (var i = 0; i < data.attachments.length; i++) {
-        var att = data.attachments[i];
-        if (att && att.base64Data) {
-          try {
-            var decoded = Utilities.base64Decode(att.base64Data);
-            var mimeType = att.type || 'application/octet-stream';
-            var fileName = att.name || ('attachment_' + (i + 1));
-            var blob = Utilities.newBlob(decoded, mimeType, fileName);
-            blobs.push(blob);
-          } catch (blobErr) {
-            console.warn('Error processing attachment ' + i + ': ' + blobErr.toString());
-          }
-        }
-      }
-    }
-
     // Build email options
     var emailOptions = {
       htmlBody: htmlBody,
@@ -59,14 +39,14 @@ function doPost(e) {
       noReply: false
     };
 
-    if (cc) {
+    // Add CC if specified
+    if (cc && cc.length > 0) {
       emailOptions.cc = cc;
     }
-    if (bcc) {
+
+    // Add BCC if specified
+    if (bcc && bcc.length > 0) {
       emailOptions.bcc = bcc;
-    }
-    if (blobs.length > 0) {
-      emailOptions.attachments = blobs;
     }
 
     // Send email using GmailApp
@@ -74,10 +54,11 @@ function doPost(e) {
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: 'Email successfully sent to ' + recipient + (blobs.length > 0 ? ' with ' + blobs.length + ' attachment(s)' : ''),
+      message: 'Email successfully sent to ' + recipient + (cc ? ' (CC: ' + cc + ')' : '') + (bcc ? ' (BCC: ' + bcc + ')' : ''),
       recordId: recordId,
       step: step,
-      attachmentsCount: blobs.length,
+      cc: cc,
+      bcc: bcc,
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
 

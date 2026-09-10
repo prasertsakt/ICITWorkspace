@@ -5,22 +5,30 @@ import {
   X,
   Mail,
   Send,
-  Paperclip,
-  Trash2,
   CheckCircle2,
   AlertCircle,
-  FileText,
-  Image as ImageIcon,
-  File,
   Eye,
   Edit3,
   Users,
   Search,
   ChevronDown,
-  Sparkles,
   Info,
-  Building2,
   Check,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link2,
+  Minus,
+  RotateCcw,
+  Palette,
+  Heading2,
+  Heading3,
 } from 'lucide-react';
 import { sendManualAdminEmail, getEmailConfig } from '@/lib/emailNotificationService';
 
@@ -39,7 +47,7 @@ export default function AdminManualEmailModal({
   personnelList = [],
   currentAdmin = null,
 }) {
-  const fileInputRef = useRef(null);
+  const editorRef = useRef(null);
   const emailConfig = useMemo(() => getEmailConfig(), [isOpen]);
 
   // Form states
@@ -50,8 +58,7 @@ export default function AdminManualEmailModal({
   const [bccEmail, setBccEmail] = useState('');
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [attachments, setAttachments] = useState([]); // [{ name, size, type, base64Data }]
+  const [contentHtml, setContentHtml] = useState('');
 
   // UI states
   const [activeTab, setActiveTab] = useState('compose'); // 'compose' | 'preview'
@@ -61,29 +68,33 @@ export default function AdminManualEmailModal({
   const [sendSuccess, setSendSuccess] = useState(false);
   const [lastSentResult, setLastSentResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isDragOver, setIsDragOver] = useState(false);
 
-  // Initialize or reset form when modal opens or targetPersonnel changes
+  // Initialize or reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setSendSuccess(false);
       setLastSentResult(null);
       setErrorMessage('');
       setActiveTab('compose');
-      setAttachments([]);
       setIsDropdownOpen(false);
       setSearchTerm('');
 
+      let initialHtml = '';
       if (targetPersonnel) {
         setRecipientMode('single');
         setSelectedPersonnelId(targetPersonnel.id || '');
         setCustomToEmail(targetPersonnel.email || '');
-        setMessage(`เรียน ${targetPersonnel.name || ''}\n\n`);
+        initialHtml = `<p>เรียน ${targetPersonnel.name || ''}</p><p><br></p><p></p>`;
       } else {
         setRecipientMode('single');
         setSelectedPersonnelId('');
         setCustomToEmail('');
-        setMessage('เรียน บุคลากรทุกท่าน\n\n');
+        initialHtml = '<p>เรียน บุคลากรทุกท่าน</p><p><br></p><p></p>';
+      }
+
+      setContentHtml(initialHtml);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = initialHtml;
       }
 
       setSubject('');
@@ -92,6 +103,15 @@ export default function AdminManualEmailModal({
       setShowCcBcc(false);
     }
   }, [isOpen, targetPersonnel]);
+
+  // Keep editorRef innerHTML synced when switching back to compose tab
+  useEffect(() => {
+    if (activeTab === 'compose' && editorRef.current) {
+      if (editorRef.current.innerHTML !== contentHtml) {
+        editorRef.current.innerHTML = contentHtml;
+      }
+    }
+  }, [activeTab]);
 
   if (!isOpen) return null;
 
@@ -128,89 +148,67 @@ export default function AdminManualEmailModal({
     effectiveRecipientName = customToEmail;
   }
 
-  // Handle file uploads (Convert to base64)
-  const handleFilesSelected = (files) => {
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
-      // 15MB file size limit check
-      if (file.size > 15 * 1024 * 1024) {
-        alert(`ไฟล์ "${file.name}" มีขนาดเกิน 15 MB ไม่สามารถแนบผ่านอีเมลได้`);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        // Strip data:mime/type;base64, prefix
-        const base64Data = result.includes(',') ? result.split(',')[1] : result;
-
-        setAttachments((prev) => [
-          ...prev,
-          {
-            id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            name: file.name,
-            size: file.size,
-            type: file.type || 'application/octet-stream',
-            base64Data,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleRemoveAttachment = (id) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '0 B';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  const getFileIcon = (fileName, type) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (type?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-      return <ImageIcon size={16} style={{ color: 'var(--mint-600)' }} />;
+  // WYSIWYG Command Executor
+  const executeCommand = (command, value = null) => {
+    if (editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand(command, false, value);
+      setContentHtml(editorRef.current.innerHTML);
     }
-    if (['pdf', 'doc', 'docx', 'txt'].includes(ext)) {
-      return <FileText size={16} style={{ color: 'var(--primary-600)' }} />;
-    }
-    return <File size={16} style={{ color: 'var(--peach-600)' }} />;
   };
 
-  // Drag and drop handlers
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files) {
-      handleFilesSelected(e.dataTransfer.files);
+  const handleEditorInput = () => {
+    if (editorRef.current) {
+      setContentHtml(editorRef.current.innerHTML);
     }
   };
 
   // Quick insertion helpers for email body
   const handleInsertGreeting = () => {
     const name = selectedPersonnel?.name ? ` ${selectedPersonnel.name}` : '';
-    setMessage((prev) => `เรียน${name}\n\n` + prev);
+    const greetingHtml = `<p><strong>เรียน${name}</strong></p><p><br></p>`;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = greetingHtml + editorRef.current.innerHTML;
+      setContentHtml(editorRef.current.innerHTML);
+    }
   };
 
   const handleInsertSignature = () => {
     const adminName = currentAdmin?.name || 'ฝ่ายบริหารงานทั่วไป / ผู้ดูแลระบบ';
-    const sig = `\n\nขอแสดงความนับถือ,\n${adminName}\nสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.\nโทร. 02-555-2000 ต่อ 2200`;
-    setMessage((prev) => prev + sig);
+    const sigHtml = `
+      <p><br></p>
+      <div style="margin-top: 16px; border-top: 1px dashed #CBD5E1; padding-top: 12px; font-size: 13.5px; color: #475569;">
+        <p style="margin: 0 0 4px 0;">ขอแสดงความนับถือ,</p>
+        <p style="margin: 0 0 4px 0; font-weight: 700; color: #1E293B;">${adminName}</p>
+        <p style="margin: 0 0 4px 0; color: #64748B;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</p>
+        <p style="margin: 0; font-size: 12.5px; color: #94A3B8;">โทรศัพท์ 02-555-2000 ต่อ 2200 | เว็บไซต์: icit.kmutnb.ac.th</p>
+      </div>
+    `;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = editorRef.current.innerHTML + sigHtml;
+      setContentHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleInsertCallout = () => {
+    const calloutHtml = `
+      <div style="margin: 12px 0; padding: 12px 16px; background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 6px; color: #1E40AF;">
+        <strong>📌 ข้อความเน้นย้ำ / ข้อมูลสำคัญ:</strong> พิมพ์ข้อความสำคัญที่ต้องการแจ้งเตือนที่นี่
+      </div>
+      <p></p>
+    `;
+    if (editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand('insertHTML', false, calloutHtml);
+      setContentHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleAddLink = () => {
+    const url = prompt('ระบุ URL ลิงก์ที่ต้องการแทรก (เช่น https://...):');
+    if (url) {
+      executeCommand('createLink', url);
+    }
   };
 
   // Handle Send Email
@@ -219,16 +217,18 @@ export default function AdminManualEmailModal({
     setErrorMessage('');
 
     if (!effectiveToEmail.trim()) {
-      setErrorMessage('กรุณาระบุอีเมลผู้รับ');
+      setErrorMessage('กรุณาระบุอีเมลผู้รับ (To)');
       return;
     }
 
     if (!subject.trim()) {
-      setErrorMessage('กรุณาระบุหัวข้ออีเมล');
+      setErrorMessage('กรุณาระบุหัวข้ออีเมล (Subject)');
       return;
     }
 
-    if (!message.trim()) {
+    // Strip tags to check if there is actual content
+    const textOnly = (contentHtml || '').replace(/<[^>]*>/g, '').trim();
+    if (!textOnly) {
       setErrorMessage('กรุณาพิมพ์ข้อความเนื้อหาอีเมล');
       return;
     }
@@ -245,13 +245,7 @@ export default function AdminManualEmailModal({
         cc: ccEmail.trim(),
         bcc: bccEmail.trim(),
         subject: subject.trim(),
-        message: message.trim(),
-        attachments: attachments.map(({ name, size, type, base64Data }) => ({
-          name,
-          size,
-          type,
-          base64Data,
-        })),
+        message: contentHtml, // WYSIWYG HTML content
         recipientName: effectiveRecipientName,
         senderName,
         senderEmail: currentAdmin?.email || '',
@@ -277,9 +271,9 @@ export default function AdminManualEmailModal({
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '780px',
+          maxWidth: '820px',
           width: '95%',
-          maxHeight: '92vh',
+          maxHeight: '94vh',
           display: 'flex',
           flexDirection: 'column',
           padding: 0,
@@ -355,9 +349,11 @@ export default function AdminManualEmailModal({
             <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               ส่งอีเมลสำเร็จเรียบร้อยแล้ว!
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
               ระบบได้ส่งอีเมลเรื่อง <strong>&ldquo;{subject}&rdquo;</strong> ไปยังผู้รับ (<strong>{effectiveToEmail}</strong>)
-              {attachments.length > 0 && ` พร้อมแนบเอกสาร ${attachments.length} ไฟล์`} เรียบร้อยแล้ว
+              {ccEmail && <span> พร้อมสำเนาถึง (<strong>{ccEmail}</strong>)</span>}
+              {bccEmail && <span> และสำเนาลับถึง (<strong>{bccEmail}</strong>)</span>}
+              {' '}และได้บันทึกประวัติลงในระบบ Firebase Firestore เรียบร้อยแล้ว
             </p>
 
             <div
@@ -383,8 +379,8 @@ export default function AdminManualEmailModal({
                 <span>{new Date().toLocaleTimeString('th-TH')} น.</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>จำนวนไฟล์แนบ:</span>
-                <span>{attachments.length} ไฟล์</span>
+                <span style={{ color: 'var(--text-muted)' }}>การบันทึกประวัติ:</span>
+                <span style={{ color: 'var(--mint-700)', fontWeight: 600 }}>☁️ บันทึกลง Firebase Firestore (email_logs)</span>
               </div>
             </div>
 
@@ -394,8 +390,10 @@ export default function AdminManualEmailModal({
                 onClick={() => {
                   setSendSuccess(false);
                   setSubject('');
-                  setMessage('');
-                  setAttachments([]);
+                  setContentHtml('<p>เรียน บุคลากรทุกท่าน</p><p><br></p>');
+                  if (editorRef.current) {
+                    editorRef.current.innerHTML = '<p>เรียน บุคลากรทุกท่าน</p><p><br></p>';
+                  }
                 }}
                 className="btn btn-secondary btn-sm"
               >
@@ -428,7 +426,7 @@ export default function AdminManualEmailModal({
                   style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
                 >
                   <Edit3 size={14} />
-                  <span>เขียนข้อความ</span>
+                  <span>เขียนข้อความ (WYSIWYG)</span>
                 </button>
                 <button
                   type="button"
@@ -437,11 +435,11 @@ export default function AdminManualEmailModal({
                   style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
                 >
                   <Eye size={14} />
-                  <span>ดูตัวอย่างอีเมลจริง (Preview)</span>
+                  <span>ดูตัวอย่างอีเมลจริง (Live Preview)</span>
                 </button>
               </div>
 
-              {/* Mode Toggle Buttons */}
+              {/* Recipient Mode Buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <button
                   type="button"
@@ -507,7 +505,7 @@ export default function AdminManualEmailModal({
               )}
 
               {activeTab === 'preview' ? (
-                /* Email Preview View */
+                /* Live Preview View */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div
                     style={{
@@ -531,16 +529,16 @@ export default function AdminManualEmailModal({
                         <span>{ccEmail}</span>
                       </div>
                     )}
+                    {bccEmail && (
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>สำเนาลับ (BCC): </span>
+                        <span>{bccEmail}</span>
+                      </div>
+                    )}
                     <div>
                       <span style={{ color: 'var(--text-muted)' }}>หัวข้อ (Subject): </span>
                       <strong>{subject || '(ไม่มีหัวข้อ)'}</strong>
                     </div>
-                    {attachments.length > 0 && (
-                      <div>
-                        <span style={{ color: 'var(--text-muted)' }}>ไฟล์แนบ: </span>
-                        <span>{attachments.length} ไฟล์ ({attachments.map((a) => a.name).join(', ')})</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Rendered HTML Container */}
@@ -573,7 +571,7 @@ export default function AdminManualEmailModal({
                           }}
                         >
                           <img
-                            src="/icit-logo.png"
+                            src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png"
                             alt="ICIT Logo"
                             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                           />
@@ -599,33 +597,7 @@ export default function AdminManualEmailModal({
                         </div>
                       )}
 
-                      <div style={{ whiteSpace: 'pre-wrap' }}>
-                        {message || 'เนื้อหาข้อความจะแสดงที่นี่...'}
-                      </div>
-
-                      {attachments.length > 0 && (
-                        <div
-                          style={{
-                            marginTop: '1.5rem',
-                            padding: '0.85rem 1rem',
-                            background: '#F8FAFC',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                          }}
-                        >
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Paperclip size={14} />
-                            <span>เอกสารแนบ ({attachments.length} ไฟล์):</span>
-                          </div>
-                          <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#475569' }}>
-                            {attachments.map((att) => (
-                              <li key={att.id}>
-                                <strong>{att.name}</strong> ({formatFileSize(att.size)})
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      <div dangerouslySetInnerHTML={{ __html: contentHtml || '<em>ไม่มีเนื้อหาข้อความ</em>' }} />
                     </div>
 
                     <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748B' }}>
@@ -635,13 +607,13 @@ export default function AdminManualEmailModal({
                   </div>
                 </div>
               ) : (
-                /* Compose Form View */
+                /* Compose View with WYSIWYG */
                 <>
                   {/* Recipient Row */}
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                       <label className="input-label" style={{ margin: 0 }}>
-                        ถึง (Recipient) <span className="required">*</span>
+                        ถึง (To) <span className="required">*</span>
                       </label>
                       <button
                         type="button"
@@ -842,11 +814,14 @@ export default function AdminManualEmailModal({
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="เช่น hr@icit.kmutnb.ac.th"
+                          placeholder="เช่น hr@icit.kmutnb.ac.th, user@gmail.com"
                           value={ccEmail}
                           onChange={(e) => setCcEmail(e.target.value)}
                           style={{ fontSize: '0.825rem' }}
                         />
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          คั่นหลายอีเมลด้วยเครื่องหมายจุลภาค (,)
+                        </span>
                       </div>
                       <div className="input-group" style={{ marginBottom: 0 }}>
                         <label className="input-label" style={{ fontSize: '0.75rem' }}>
@@ -860,6 +835,9 @@ export default function AdminManualEmailModal({
                           onChange={(e) => setBccEmail(e.target.value)}
                           style={{ fontSize: '0.825rem' }}
                         />
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          ผู้รับจะไม่เห็นรายชื่ออีเมลใน BCC
+                        </span>
                       </div>
                     </div>
                   )}
@@ -904,11 +882,11 @@ export default function AdminManualEmailModal({
                     </div>
                   </div>
 
-                  {/* Message Body */}
+                  {/* WYSIWYG Message Editor */}
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                       <label className="input-label" style={{ margin: 0 }}>
-                        เนื้อหาอีเมล (Message Body) <span className="required">*</span>
+                        เนื้อหาอีเมล (Message Content) <span className="required">*</span>
                       </label>
                       <div style={{ display: 'flex', gap: '0.3rem' }}>
                         <button
@@ -922,6 +900,15 @@ export default function AdminManualEmailModal({
                         </button>
                         <button
                           type="button"
+                          onClick={handleInsertCallout}
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.725rem', padding: '0.15rem 0.4rem', height: 'auto' }}
+                          title="แทรกกล่องข้อความเน้นย้ำ"
+                        >
+                          + กล่องเน้นย้ำ
+                        </button>
+                        <button
+                          type="button"
                           onClick={handleInsertSignature}
                           className="btn btn-ghost btn-sm"
                           style={{ fontSize: '0.725rem', padding: '0.15rem 0.4rem', height: 'auto' }}
@@ -931,115 +918,240 @@ export default function AdminManualEmailModal({
                         </button>
                       </div>
                     </div>
-                    <textarea
-                      className="form-textarea"
-                      rows={7}
-                      placeholder="พิมพ์ข้อความเนื้อหาอีเมลที่ต้องการส่งถึงบุคลากร..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      required
-                      style={{ fontSize: '0.875rem', lineHeight: 1.6 }}
-                    />
-                  </div>
 
-                  {/* File Attachments Area */}
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <label className="input-label" style={{ margin: 0 }}>
-                        แนบไฟล์เอกสาร (Attachments)
-                      </label>
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-                        รองรับ PDF, รูปภาพ, เอกสาร Word/Excel (สูงสุด 15MB/ไฟล์)
-                      </span>
-                    </div>
-
-                    {/* Drag and Drop Zone */}
+                    {/* WYSIWYG Container */}
                     <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
                       style={{
-                        border: `2px dashed ${isDragOver ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                        background: isDragOver ? 'var(--primary-50)' : '#F8FAFC',
+                        border: '1px solid var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
-                        padding: '1rem',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        transition: 'var(--transition)',
+                        overflow: 'hidden',
+                        background: '#FFFFFF',
                       }}
                     >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={(e) => handleFilesSelected(e.target.files)}
-                        multiple
-                        style={{ display: 'none' }}
-                      />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--primary-600)' }}>
-                        <Paperclip size={18} />
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                          คลิกเพื่อเลือกไฟล์แนบ หรือลากไฟล์มาวางที่นี่
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Attached Files List */}
-                    {attachments.length > 0 && (
+                      {/* WYSIWYG Toolbar */}
                       <div
                         style={{
                           display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.4rem',
-                          marginTop: '0.6rem',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          flexWrap: 'wrap',
+                          padding: '0.4rem 0.6rem',
+                          background: '#F8FAFC',
+                          borderBottom: '1px solid var(--border-subtle)',
                         }}
                       >
-                        {attachments.map((att) => (
-                          <div
-                            key={att.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '0.45rem 0.75rem',
-                              background: '#FFFFFF',
-                              borderRadius: 'var(--radius-md)',
-                              border: '1px solid var(--border-subtle)',
-                              fontSize: '0.8rem',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                              {getFileIcon(att.name, att.type)}
-                              <span
-                                style={{
-                                  fontWeight: 500,
-                                  color: 'var(--text-primary)',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  maxWidth: '360px',
-                                }}
-                              >
-                                {att.name}
-                              </span>
-                              <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-                                ({formatFileSize(att.size)})
-                              </span>
-                            </div>
+                        {/* Heading Formats */}
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('formatBlock', '<h2>')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="หัวข้อขนาดใหญ่ (H2)"
+                        >
+                          <Heading2 size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('formatBlock', '<h3>')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="หัวข้อขนาดย่อย (H3)"
+                        >
+                          <Heading3 size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('formatBlock', '<p>')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto', fontSize: '0.75rem', fontWeight: 600 }}
+                          title="ย่อหน้าปกติ (Paragraph)"
+                        >
+                          Normal
+                        </button>
 
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveAttachment(att.id)}
-                              className="btn btn-ghost btn-icon"
-                              style={{ color: 'var(--rose-500)', padding: '2px', height: 'auto' }}
-                              title="ลบไฟล์แนบ"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))}
+                        <div style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 3px' }} />
+
+                        {/* Basic Formatting */}
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('bold')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ตัวหนา (Bold)"
+                        >
+                          <Bold size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('italic')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ตัวเอียง (Italic)"
+                        >
+                          <Italic size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('underline')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ขีดเส้นใต้ (Underline)"
+                        >
+                          <Underline size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('strikeThrough')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ขีดฆ่า (Strikethrough)"
+                        >
+                          <Strikethrough size={15} />
+                        </button>
+
+                        <div style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 3px' }} />
+
+                        {/* Colors */}
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('foreColor', '#1E40AF')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto', color: '#1E40AF', fontWeight: 700 }}
+                          title="สีน้ำเงิน (ICIT Blue)"
+                        >
+                          A
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('foreColor', '#E11D48')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto', color: '#E11D48', fontWeight: 700 }}
+                          title="สีแดง (Warning Red)"
+                        >
+                          A
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('foreColor', '#059669')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto', color: '#059669', fontWeight: 700 }}
+                          title="สีเขียว (Success Green)"
+                        >
+                          A
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('foreColor', '#334155')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto', color: '#334155', fontWeight: 700 }}
+                          title="สีข้อความปกติ (Default Slate)"
+                        >
+                          A
+                        </button>
+
+                        <div style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 3px' }} />
+
+                        {/* Alignment */}
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('justifyLeft')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ชิดซ้าย"
+                        >
+                          <AlignLeft size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('justifyCenter')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="กึ่งกลาง"
+                        >
+                          <AlignCenter size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('justifyRight')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ชิดขวา"
+                        >
+                          <AlignRight size={15} />
+                        </button>
+
+                        <div style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 3px' }} />
+
+                        {/* Lists */}
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('insertUnorderedList')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="รายการสัญลักษณ์ (Bullet List)"
+                        >
+                          <List size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('insertOrderedList')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="รายการลำดับตัวเลข (Numbered List)"
+                        >
+                          <ListOrdered size={15} />
+                        </button>
+
+                        <div style={{ width: '1px', height: '18px', background: 'var(--border-subtle)', margin: '0 3px' }} />
+
+                        {/* Inserts & Utility */}
+                        <button
+                          type="button"
+                          onClick={handleAddLink}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="แทรกลิงก์ (Link)"
+                        >
+                          <Link2 size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('insertHorizontalRule')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="เส้นคั่นแนวนอน (Horizontal Divider)"
+                        >
+                          <Minus size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => executeCommand('removeFormat')}
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '0.2rem 0.4rem', height: 'auto' }}
+                          title="ล้างการจัดรูปแบบ (Clear Formatting)"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
                       </div>
-                    )}
+
+                      {/* Content Editable Area */}
+                      <div
+                        ref={editorRef}
+                        contentEditable
+                        onInput={handleEditorInput}
+                        style={{
+                          minHeight: '220px',
+                          maxHeight: '340px',
+                          overflowY: 'auto',
+                          padding: '1rem',
+                          outline: 'none',
+                          fontSize: '0.9rem',
+                          lineHeight: 1.7,
+                          color: '#334155',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
                   </div>
                 </>
               )}
@@ -1060,8 +1172,8 @@ export default function AdminManualEmailModal({
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Info size={13} />
                 <span>
-                  {attachments.length > 0 ? `แนบ ${attachments.length} ไฟล์ • ` : ''}
                   ผู้ส่ง: {currentAdmin?.name || 'ผู้ดูแลระบบ (Admin)'}
+                  {ccEmail ? ` • CC: ${ccEmail}` : ''}
                 </span>
               </div>
 

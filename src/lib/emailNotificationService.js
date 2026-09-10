@@ -1,5 +1,16 @@
 // Thai Email Notification System with 1-Click Approval Actions
 import { formatImageDisplayUrl } from './driveUtils';
+import { db, isFirebaseConfigured } from './firebase';
+import {
+  collection,
+  doc,
+  setDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 export const LOCAL_KEY_EMAIL_CONFIG = 'icit_email_notification_config';
 export const LOCAL_KEY_SENT_EMAILS = 'icit_sent_email_logs';
@@ -827,6 +838,11 @@ export async function sendTimeAttendanceNotification(record, targetStep, recipie
     }
   }
 
+  // Also sync directly to Firebase Firestore 'email_logs' collection
+  logEmailToFirestore(logEntry).catch((err) =>
+    console.warn('Background firestore email logging error:', err)
+  );
+
   return {
     success: isDelivered,
     isSandbox: !isDelivered && !deliveryError,
@@ -844,7 +860,7 @@ export async function resendNotificationEmail(record, step, recipient, appBaseUr
 }
 
 /**
- * Get recent sent email logs
+ * Get recent sent email logs (Local fallback)
  */
 export function getSentEmailLogs(recordId = null) {
   if (typeof window === 'undefined') return [];
@@ -861,6 +877,53 @@ export function getSentEmailLogs(recordId = null) {
 }
 
 /**
+ * Save email log directly to Firebase Firestore 'email_logs' collection
+ */
+export async function logEmailToFirestore(logEntry) {
+  if (typeof window === 'undefined' || !isFirebaseConfigured || !db) return false;
+  try {
+    const docId = logEntry.id || `email-${Date.now()}`;
+    const cleanLog = {
+      ...logEntry,
+      timestamp: serverTimestamp(),
+      loggedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'email_logs', docId), cleanLog);
+    return true;
+  } catch (err) {
+    console.warn('Failed to log email to Firestore email_logs collection:', err);
+    return false;
+  }
+}
+
+/**
+ * Subscribe to live email logs from Firebase Firestore (with fallback to localStorage)
+ */
+export function subscribeEmailLogs(callback) {
+  if (typeof window === 'undefined') return () => {};
+  if (isFirebaseConfigured && db) {
+    try {
+      const q = query(collection(db, 'email_logs'), orderBy('loggedAt', 'desc'), limit(100));
+      return onSnapshot(
+        q,
+        (snap) => {
+          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          callback(docs);
+        },
+        (err) => {
+          console.warn('Firestore email_logs onSnapshot error, falling back to local storage:', err);
+          callback(getSentEmailLogs());
+        }
+      );
+    } catch (e) {
+      console.warn('subscribeEmailLogs init error', e);
+    }
+  }
+  callback(getSentEmailLogs());
+  return () => {};
+}
+
+/**
  * Generate rich Thai HTML template for Admin Manual Emails
  */
 export function generateManualEmailHtml({
@@ -868,36 +931,20 @@ export function generateManualEmailHtml({
   message,
   recipientName = '',
   senderName = 'ผู้ดูแลระบบ (Admin) สำนักคอมพิวเตอร์ฯ',
-  attachments = [],
 }) {
-  const formattedParagraphs = (message || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .map((line) => (line ? `<p style="margin: 0 0 12px 0; font-size: 14.5px; line-height: 1.7; color: #334155;">${line}</p>` : '<div style="height: 10px;"></div>'))
-    .join('');
-
-  const attachmentsListHtml =
-    attachments && attachments.length > 0
-      ? `
-      <div style="margin-top: 24px; padding: 14px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;">
-        <div style="font-size: 13px; font-weight: 700; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          📎 เอกสารแนบ (${attachments.length} ไฟล์):
-        </div>
-        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #475569;">
-          ${attachments
-            .map(
-              (att) => `
-            <li style="margin-bottom: 4px;">
-              <strong style="color: #0F172A;">${att.name || 'ไฟล์แนบ'}</strong>
-              ${att.size ? `<span style="color: #94A3B8; font-size: 12px;"> (${(att.size / 1024 < 1024 ? (att.size / 1024).toFixed(1) + ' KB' : (att.size / (1024 * 1024)).toFixed(2) + ' MB')})</span>` : ''}
-            </li>
-          `
-            )
-            .join('')}
-        </ul>
-      </div>
-    `
-      : '';
+  // Check if message is already HTML from WYSIWYG editor
+  const isHtml = /<[a-z][\s\S]*>/i.test(message || '');
+  const contentHtml = isHtml
+    ? message
+    : (message || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .map((line) =>
+          line
+            ? `<p style="margin: 0 0 12px 0; font-size: 14.5px; line-height: 1.7; color: #334155;">${line}</p>`
+            : '<div style="height: 10px;"></div>'
+        )
+        .join('');
 
   return `
 <!DOCTYPE html>
@@ -913,8 +960,8 @@ export function generateManualEmailHtml({
     <!-- Official ICIT Header -->
     <div style="background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); padding: 24px; text-align: left; color: #FFFFFF;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <div style="background: #FFFFFF; width: 44px; height: 44px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">
-          <img src="https://icit.kmutnb.ac.th/main/wp-content/uploads/2021/04/icit-logo.png" alt="ICIT Logo" style="width: 100%; height: 100%; object-fit: contain;" />
+        <div style="background: #FFFFFF; width: 44px; height: 44px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); flex-shrink: 0;">
+          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" alt="ICIT Logo" width="38" height="38" style="width: 38px; height: 38px; display: block; object-fit: contain; border: 0;" />
         </div>
         <div>
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; font-weight: 600;">สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)</div>
@@ -930,11 +977,9 @@ export function generateManualEmailHtml({
     <div style="padding: 28px 24px;">
       ${recipientName ? `<div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 16px;">เรียน ${recipientName}</div>` : ''}
 
-      <div style="color: #334155; font-size: 14.5px;">
-        ${formattedParagraphs}
+      <div style="color: #334155; font-size: 14.5px; line-height: 1.7;">
+        ${contentHtml}
       </div>
-
-      ${attachmentsListHtml}
     </div>
 
     <!-- Official Footer -->
@@ -952,7 +997,7 @@ export function generateManualEmailHtml({
 }
 
 /**
- * Send manual email composed by Administrator with attachments support
+ * Send manual email composed by Administrator
  */
 export async function sendManualAdminEmail({
   to,
@@ -960,7 +1005,6 @@ export async function sendManualAdminEmail({
   bcc = '',
   subject,
   message,
-  attachments = [],
   recipientName = '',
   senderName = 'ผู้ดูแลระบบ (Admin) ICIT Workspace',
   senderEmail = '',
@@ -976,7 +1020,6 @@ export async function sendManualAdminEmail({
     message,
     recipientName,
     senderName,
-    attachments,
   });
 
   const logEntry = {
@@ -986,10 +1029,11 @@ export async function sendManualAdminEmail({
     recipientEmail: to,
     recipientName: recipientName || to,
     recipientRole: 'บุคลากร',
+    cc: cc || '',
+    bcc: bcc || '',
     subject,
     sentAt: new Date().toISOString(),
     status: 'PENDING',
-    attachmentsCount: attachments.length,
     deliveryMethod: 'Local System Sandbox',
     senderName,
   };
@@ -1002,12 +1046,11 @@ export async function sendManualAdminEmail({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to,
-        cc,
-        bcc,
-        subject,
+        to: (to || '').trim(),
+        cc: (cc || '').trim(),
+        bcc: (bcc || '').trim(),
+        subject: (subject || '').trim(),
         htmlBody,
-        attachments,
         webhookUrl: scriptUrl,
         senderName,
       }),
@@ -1045,6 +1088,11 @@ export async function sendManualAdminEmail({
       console.error('Failed saving sent email log', e);
     }
   }
+
+  // Save to Firebase Firestore 'email_logs' collection
+  logEmailToFirestore(logEntry).catch((err) =>
+    console.warn('Background firestore email logging error:', err)
+  );
 
   return {
     success: isDelivered,

@@ -27,7 +27,6 @@ export async function POST(request) {
           bcc: bcc || '',
           subject,
           htmlBody,
-          attachments: attachments || [],
           senderName: senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)',
         }),
       });
@@ -41,7 +40,8 @@ export async function POST(request) {
         data,
         message: data.message || (isOk ? 'ส่งอีเมลสำเร็จเรียบร้อยแล้ว' : 'ไม่สามารถส่งอีเมลผ่าน Webhook ได้'),
         recipient: to,
-        attachmentsCount: attachments?.length || 0,
+        cc: cc || '',
+        bcc: bcc || '',
       });
     }
 
