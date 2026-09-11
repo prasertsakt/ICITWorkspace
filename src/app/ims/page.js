@@ -22,19 +22,27 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { subscribeImsAudits } from '@/lib/imsService';
+import { subscribeCarIncidents } from '@/lib/carIncidentService';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ImsLandingPage() {
   const { currentUser, isLoading: authLoading, handleGoogleSignIn } = useAuth();
   const [audits, setAudits] = useState([]);
+  const [carIncidents, setCarIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = subscribeImsAudits((data) => {
+    const unsubAudits = subscribeImsAudits((data) => {
       setAudits(data);
       setLoading(false);
     });
-    return () => unsub();
+    const unsubCars = subscribeCarIncidents((data) => {
+      setCarIncidents(data);
+    });
+    return () => {
+      unsubAudits();
+      unsubCars();
+    };
   }, []);
 
   const totalAudits = audits.length;
@@ -42,6 +50,8 @@ export default function ImsLandingPage() {
   const cCount = audits.filter((a) => a.result === 'C').length;
   const ncCount = audits.filter((a) => a.result === 'NC').length;
   const ofiCount = audits.filter((a) => a.result === 'OFI').length;
+  const totalCars = carIncidents.length;
+  const activeCars = carIncidents.filter((c) => c.status === 'ON_PROGRESS').length;
 
   if (authLoading) {
     return (
@@ -532,139 +542,155 @@ export default function ImsLandingPage() {
             </div>
           </Link>
 
-          {/* Sub-Service 2: CAR & Incident Hub (Coming Soon) */}
-          <div
+          {/* Sub-Service 2: CAR & Incident Hub (Active) */}
+          <Link
+            href="/ims/car-incident"
             style={{
-              background: '#FFFFFF',
-              borderRadius: '1.25rem',
-              border: '1.5px solid #E2E8F0',
-              padding: '2rem',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-              position: 'relative',
-              opacity: 0.92,
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'block',
             }}
           >
-            {/* Coming Soon Badge */}
             <div
               style={{
-                position: 'absolute',
-                top: '1.5rem',
-                right: '1.5rem',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                background: '#FEF3C7',
-                color: '#92400E',
-                border: '1px solid #FDE68A',
-                fontSize: '0.75rem',
-                fontWeight: 700,
+                background: '#FFFFFF',
+                borderRadius: '1.25rem',
+                border: '1.5px solid #F59E0B',
+                padding: '2rem',
+                height: '100%',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 10px 25px -5px rgba(245, 158, 11, 0.1)',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(245, 158, 11, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(245, 158, 11, 0.1)';
               }}
             >
-              <Clock size={13} />
-              <span>Coming Soon</span>
-            </div>
-
-            <div>
+              {/* Active Badge */}
               <div
                 style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '1rem',
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                  color: '#FFFFFF',
+                  position: 'absolute',
+                  top: '1.5rem',
+                  right: '1.5rem',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  border: '1px solid #A7F3D0',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '1.5rem',
-                  boxShadow: '0 8px 16px -4px rgba(245, 158, 11, 0.3)',
+                  gap: '4px',
                 }}
               >
-                <AlertOctagon size={28} />
+                <CheckCircle2 size={13} />
+                <span>พร้อมใช้งาน</span>
               </div>
 
-              <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#D97706', marginBottom: '0.35rem' }}>
-
-              </div>
-              <h3
-                style={{
-                  fontSize: '1.35rem',
-                  fontWeight: 800,
-                  color: '#0F172A',
-                  margin: '0 0 0.75rem 0',
-                  lineHeight: 1.3,
-                }}
-              >
-                CAR & Incident Hub
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#475569', marginTop: '4px' }}>
-                  ศูนย์จัดการข้อบกพร่องและอุบัติการณ์
+              <div>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '1rem',
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1.5rem',
+                    boxShadow: '0 8px 16px -4px rgba(245, 158, 11, 0.3)',
+                  }}
+                >
+                  <AlertOctagon size={28} />
                 </div>
-              </h3>
 
-              <p
-                style={{
-                  fontSize: '0.925rem',
-                  color: '#64748B',
-                  lineHeight: 1.6,
-                  margin: '0 0 1.5rem 0',
-                }}
-              >
-                ระบบติดตามและบริหารจัดการใบแจ้งการแก้ไขและป้องกัน (Corrective Action Request: CAR)
-                พร้อมศูนย์รับแจ้งและตอบสนองอุบัติการณ์ด้านความมั่นคงปลอดภัยสารสนเทศ (Security Incident)
-              </p>
+                <h3
+                  style={{
+                    fontSize: '1.35rem',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    margin: '0 0 0.75rem 0',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  CAR & Incident Hub
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#475569', marginTop: '4px' }}>
+                    ศูนย์จัดการข้อบกพร่องและอุบัติการณ์
+                  </div>
+                </h3>
 
-              {/* Feature Preview List */}
+                <p
+                  style={{
+                    fontSize: '0.925rem',
+                    color: '#64748B',
+                    lineHeight: 1.6,
+                    margin: '0 0 1.5rem 0',
+                  }}
+                >
+                  ระบบติดตามและบริหารจัดการใบแจ้งการแก้ไขและป้องกัน (Corrective Action Request: CAR) ตามแบบฟอร์ม
+                  ICIT-FM-COMMON-013 Version 5.0 เชื่อมโยงข้อบกพร่องจากรายงานตรวจติดตามภายใน (NC)
+                </p>
+
+                {/* Feature Highlights */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    background: '#FFFBEB',
+                    padding: '1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #FEF3C7',
+                    marginBottom: '1.5rem',
+                    fontSize: '0.85rem',
+                    color: '#92400E',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#D97706" />
+                    <span>แบบฟอร์ม ICIT-FM-COMMON-013 พร้อมพิมพ์เอกสาร</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#D97706" />
+                    <span>ดึงข้อบกพร่อง (NC) จากรายงานการตรวจติดตามได้ทันที</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#D97706" />
+                    <span>ติดตามแผน Corrective Actions และแจ้งเตือน DCC Reminder</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Link Button */}
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  background: '#FFFBEB',
-                  padding: '1rem',
-                  borderRadius: '10px',
-                  border: '1px solid #FEF3C7',
-                  marginBottom: '1.5rem',
-                  fontSize: '0.85rem',
-                  color: '#92400E',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #F1F5F9',
+                  color: '#D97706',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={16} />
-                  <span>ออกใบ CAR อัตโนมัติเมื่อพบผลตรวจเป็น NC</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={16} />
-                  <span>แบบฟอร์มวิเคราะห์ Root Cause และแผนแก้ไขปรับปรุง</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={16} />
-                  <span>การรับแจ้งเหตุการณ์ Incident และการสืบสวนตามมาตรฐาน</span>
-                </div>
+                <span>เข้าสู่ศูนย์ CAR & Incident ({totalCars} รายการ)</span>
+                <ArrowRight size={18} />
               </div>
             </div>
-
-            {/* In Development Button */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '1rem',
-                borderTop: '1px solid #F1F5F9',
-                color: '#94A3B8',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              <span>กำลังอยู่ระหว่างการพัฒนา</span>
-              <Lock size={16} />
-            </div>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

@@ -113,5 +113,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'ims_car_incidents' collection (CAR & Incident Hub - ICIT-FM-COMMON-013)
+    match /ims_car_incidents/{carId} {
+      // All visitors and staff can view CAR & Incident records
+      allow read: if true;
+
+      // Authenticated users can create new CAR/Incident drafts
+      allow create: if isAuthenticated();
+
+      // Authenticated users (Requesters, Requestees, DCC, Admin) can update
+      allow update: if isAuthenticated();
+
+      // Deletion rule: Must be authenticated AND status must NOT be 'CLOSED'
+      // Closed records are permanently locked against deletion at the database level
+      allow delete: if isAuthenticated() && (
+        resource.data.status != "CLOSED"
+      );
+    }
   }
 }

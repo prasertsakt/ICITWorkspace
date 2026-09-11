@@ -53,6 +53,27 @@ function notifyConfigSubscribers(year, data) {
 }
 
 /**
+ * Recursively removes undefined fields so Firestore writes never fail with invalid data
+ * and ensures minimal payload size
+ */
+export function cleanForFirestore(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj === undefined ? null : obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanForFirestore(item));
+  }
+  const cleaned = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      cleaned[key] = cleanForFirestore(val);
+    }
+  });
+  return cleaned;
+}
+
+/**
  * Initialize local storage without mock seed data and purge legacy demo audits
  */
 function initImsLocalStorage() {
@@ -738,7 +759,7 @@ export async function saveImsAuditRecord(auditData, actor, options = {}) {
   // Update Firestore
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'ims_audits', id), record, { merge: true });
+      await setDoc(doc(db, 'ims_audits', id), cleanForFirestore(record), { merge: true });
     } catch (err) {
       console.warn('Failed to save ims_audit to Firestore:', err);
     }
@@ -865,7 +886,20 @@ export async function approveAuditPlanByLead(auditId, leadActor) {
 
   if (isFirebaseConfigured && db && target) {
     try {
-      await setDoc(doc(db, 'ims_audits', auditId), target, { merge: true });
+      // Optimized delta write: only persist approval fields
+      await setDoc(
+        doc(db, 'ims_audits', auditId),
+        cleanForFirestore({
+          status: 'READY_FOR_AUDIT',
+          approvedByLeadIA: true,
+          approvedAt: now,
+          approvedByName: leadActor?.name || 'Lead Internal Auditor',
+          approvedByEmail: leadActor?.email || '',
+          leadRevisionComment: '',
+          updatedAt: now,
+        }),
+        { merge: true }
+      );
     } catch (err) {
       console.warn('Firestore error in approveAuditPlanByLead:', err);
     }
@@ -936,7 +970,20 @@ export async function returnAuditPlanForRevision(auditId, comment, leadActor) {
 
   if (isFirebaseConfigured && db && target) {
     try {
-      await setDoc(doc(db, 'ims_audits', auditId), target, { merge: true });
+      // Optimized delta write: only persist return status and comment
+      await setDoc(
+        doc(db, 'ims_audits', auditId),
+        cleanForFirestore({
+          status: 'RETURNED_FOR_REVISION',
+          approvedByLeadIA: false,
+          leadRevisionComment: comment || '',
+          returnedAt: now,
+          returnedByName: leadActor?.name || 'Lead Internal Auditor',
+          returnedByEmail: leadActor?.email || '',
+          updatedAt: now,
+        }),
+        { merge: true }
+      );
     } catch (err) {
       console.warn('Firestore error in returnAuditPlanForRevision:', err);
     }
@@ -1010,7 +1057,20 @@ export async function completeAuditEvaluation(auditId, evaluationData, auditorAc
 
   if (isFirebaseConfigured && db && target) {
     try {
-      await setDoc(doc(db, 'ims_audits', auditId), target, { merge: true });
+      // Optimized delta write: only persist findings, recommendations and result
+      await setDoc(
+        doc(db, 'ims_audits', auditId),
+        cleanForFirestore({
+          findings: evaluationData.findings || '',
+          recommendation: evaluationData.recommendation || '',
+          result: evaluationData.result || 'C',
+          status: 'COMPLETED',
+          evaluatedAt: now,
+          evaluatedByName: auditorActor?.name || target.auditor1Name,
+          updatedAt: now,
+        }),
+        { merge: true }
+      );
     } catch (err) {
       console.warn('Firestore error in completeAuditEvaluation:', err);
     }
@@ -1167,7 +1227,7 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
 
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'ims_config', `year_${currentYear}`), payload, { merge: true });
+      await setDoc(doc(db, 'ims_config', `year_${currentYear}`), cleanForFirestore(payload), { merge: true });
     } catch (err) {
       console.warn('Failed to save ims_config to Firestore:', err);
     }
