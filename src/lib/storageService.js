@@ -13,7 +13,7 @@ import {
   getNotificationRecipientForStep,
   resolveRoleEmailsFromDirectory,
 } from './emailNotificationService';
-import { DEFAULT_PORTAL_SERVICES } from './constants';
+import { DEFAULT_PORTAL_SERVICES, USER_ROLES, PERSONNEL_STATUS } from './constants';
 import {
   collection,
   doc,

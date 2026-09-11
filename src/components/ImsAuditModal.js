@@ -84,7 +84,20 @@ export default function ImsAuditModal({
       });
     }
 
-    // 2. Appointed Committee Auditors
+    // 2. DCC (ผู้ควบคุมเอกสาร)
+    if (cfg?.dccName) {
+      if (!list.some((x) => x.name === cfg.dccName || (cfg.dccId && x.id === cfg.dccId))) {
+        list.push({
+          id: cfg.dccId || `dcc_${cfg.dccName}`,
+          name: cfg.dccName,
+          email: cfg.dccEmail || '',
+          department: '',
+          role: 'DCC (ผู้ควบคุมเอกสาร)',
+        });
+      }
+    }
+
+    // 3. Appointed Committee Auditors
     if (Array.isArray(cfg?.auditors)) {
       cfg.auditors.forEach((aud) => {
         if (aud.name && !list.some((x) => x.name === aud.name || (aud.id && x.id === aud.id))) {

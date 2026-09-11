@@ -1166,11 +1166,21 @@ export function subscribeYearlyAuditors(year, callback) {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            cachedConfigMap[currentYear] = data;
+            const isConfigured =
+              data._isConfigured === true ||
+              Boolean(
+                data.leadAuditorId ||
+                data.leadAuditorName ||
+                (data.auditors && data.auditors.length > 0) ||
+                data.dccId ||
+                data.dccName
+              );
+            const fullData = { ...data, _isConfigured: isConfigured };
+            cachedConfigMap[currentYear] = fullData;
             if (typeof window !== 'undefined') {
-              localStorage.setItem(localKey, JSON.stringify(data));
+              localStorage.setItem(localKey, JSON.stringify(fullData));
             }
-            notifyConfigSubscribers(currentYear, data);
+            notifyConfigSubscribers(currentYear, fullData);
           } else {
             // Optimization: Serve default in-memory WITHOUT writing to Firestore!
             // Only explicit Admin action (saveYearlyAuditors) writes to Firestore.
@@ -1251,14 +1261,13 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
 }
 
 /**
- * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) for the given year (or Admin)
+ * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) for the given year
  */
-export function isDccUser(user, personnel, yearConfig, isAdmin) {
-  if (isAdmin) return true;
+export function isDccUser(user, personnel, yearConfig) {
   if (!user && !personnel) return false;
-  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
-  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase() === userEmail) {
+  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
@@ -1270,13 +1279,11 @@ export function isDccUser(user, personnel, yearConfig, isAdmin) {
 /**
  * Check if the user is authorized to create/edit audits for a given year:
  * - The yearly config must be explicitly configured by admin (_isConfigured === true)
- * - Must be Admin, OR
- * - Assigned as Lead Auditor, OR
+ * - Must be assigned as Lead Auditor, OR
  * - Assigned as DCC (ผู้ควบคุมเอกสาร), OR
  * - Assigned as Internal Auditor for that year
  */
-export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
-  if (isAdmin) return true;
+export function isUserAuthorizedAuditor(user, personnel, yearConfig) {
   if (!user && !personnel) return false;
 
   // If the yearly config has not been explicitly configured by admin, no one is authorized
@@ -1284,11 +1291,11 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
     return false;
   }
 
-  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
 
   // Check if lead auditor
-  if (yearConfig?.leadAuditorEmail && yearConfig.leadAuditorEmail.toLowerCase() === userEmail) {
+  if (yearConfig?.leadAuditorEmail && yearConfig.leadAuditorEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.leadAuditorId && personId && yearConfig.leadAuditorId === personId) {
@@ -1296,7 +1303,7 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
   }
 
   // Check if DCC (ผู้ควบคุมเอกสาร)
-  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase() === userEmail) {
+  if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
@@ -1311,7 +1318,7 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
     const isMatched = yearConfig.auditors.some(
       (a) =>
         (a.id && a.id === personId) ||
-        (a.email && a.email.toLowerCase() === userEmail)
+        (a.email && a.email.toLowerCase().trim() === userEmail)
     );
     if (isMatched) return true;
   }
@@ -1320,14 +1327,13 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
 }
 
 /**
- * Check if the user is the Lead Auditor for the given year (or Admin)
+ * Check if the user is the Lead Auditor for the given year
  */
-export function isLeadAuditorUser(user, personnel, yearConfig, isAdmin) {
-  if (isAdmin) return true;
+export function isLeadAuditorUser(user, personnel, yearConfig) {
   if (!user && !personnel) return false;
-  const userEmail = (user?.email || personnel?.email || '').toLowerCase();
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
-  if (yearConfig?.leadAuditorEmail && yearConfig.leadAuditorEmail.toLowerCase() === userEmail) {
+  if (yearConfig?.leadAuditorEmail && yearConfig.leadAuditorEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.leadAuditorId && personId && yearConfig.leadAuditorId === personId) {

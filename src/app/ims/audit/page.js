@@ -127,29 +127,28 @@ export default function ImsAuditPage() {
 
   // Check if yearly config has been explicitly configured by admin
   const isYearConfigured = useMemo(() => {
+    if (selectedYear === 'ALL') return false;
     return yearlyConfig?._isConfigured === true;
-  }, [yearlyConfig]);
+  }, [yearlyConfig, selectedYear]);
 
   // Check if current user is authorized to create/edit audits for this year
   const isAuthorizedToAudit = useMemo(() => {
-    if (isAdmin) return true;
+    if (selectedYear === 'ALL') return false;
     if (!currentUser) return false;
-    return isUserAuthorizedAuditor(currentUser, currentPersonnel, yearlyConfig, isAdmin);
-  }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
+    return isUserAuthorizedAuditor(currentUser, currentPersonnel, yearlyConfig);
+  }, [currentUser, currentPersonnel, yearlyConfig, selectedYear]);
 
   // Check if current user is Lead Auditor
   const isLeadAuditor = useMemo(() => {
-    if (isAdmin) return true;
     if (!currentUser) return false;
-    return isLeadAuditorUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
-  }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
+    return isLeadAuditorUser(currentUser, currentPersonnel, yearlyConfig);
+  }, [currentUser, currentPersonnel, yearlyConfig]);
 
   // Check if current user is DCC (ผู้ควบคุมเอกสาร)
   const isDcc = useMemo(() => {
-    if (isAdmin) return true;
     if (!currentUser) return false;
-    return isDccUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
-  }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
+    return isDccUser(currentUser, currentPersonnel, yearlyConfig);
+  }, [currentUser, currentPersonnel, yearlyConfig]);
 
   // Filtered Audits
   const filteredAudits = useMemo(() => {

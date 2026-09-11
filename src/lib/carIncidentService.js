@@ -804,8 +804,7 @@ export function isDeputyDirectorUser(user, personnel, isAdmin) {
 /**
  * Check if user is DCC (ผู้ควบคุมเอกสาร)
  */
-export function isDccUser(user, personnel, yearlyConfig, isAdmin) {
-  if (isAdmin) return true;
+export function isDccUser(user, personnel, yearlyConfig) {
   if (!user && !personnel) return false;
   const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
@@ -856,7 +855,8 @@ export function canUserDeleteCarIncident(record, user, personnel, yearlyConfig, 
   if (record.status === CAR_INCIDENT_STATUS.CLOSED) {
     return false; // Permanent lock
   }
-  return isDccUser(user, personnel, yearlyConfig, isAdmin);
+  if (isAdmin) return true;
+  return isDccUser(user, personnel, yearlyConfig);
 }
 
 /**

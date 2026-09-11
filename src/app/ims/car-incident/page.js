@@ -153,8 +153,8 @@ export default function CarIncidentHubPage() {
 
   // Role Checks
   const isDCC = useMemo(() => {
-    return isDccUser(currentUser, currentPersonnel, yearlyConfig, isAdmin);
-  }, [currentUser, currentPersonnel, yearlyConfig, isAdmin]);
+    return isDccUser(currentUser, currentPersonnel, yearlyConfig);
+  }, [currentUser, currentPersonnel, yearlyConfig]);
 
   const isDeputy = useMemo(() => {
     return isDeputyDirectorUser(currentUser, currentPersonnel, isAdmin);
