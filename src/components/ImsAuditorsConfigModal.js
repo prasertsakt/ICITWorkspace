@@ -13,6 +13,8 @@ import {
   Plus,
   Trash2,
   FileText,
+  Link2,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function ImsAuditorsConfigModal({
@@ -30,6 +32,7 @@ export default function ImsAuditorsConfigModal({
   const [dccId, setDccId] = useState('');
   const [dccName, setDccName] = useState('');
   const [dccEmail, setDccEmail] = useState('');
+  const [appointmentOrderUrl, setAppointmentOrderUrl] = useState('');
   const [selectedAuditorIds, setSelectedAuditorIds] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +47,7 @@ export default function ImsAuditorsConfigModal({
       setDccId(yearlyConfig.dccId || '');
       setDccName(yearlyConfig.dccName || '');
       setDccEmail(yearlyConfig.dccEmail || '');
+      setAppointmentOrderUrl(yearlyConfig.appointmentOrderUrl || '');
       // Get auditor IDs
       const ids =
         yearlyConfig.auditorIds ||
@@ -57,6 +61,7 @@ export default function ImsAuditorsConfigModal({
       setDccId('');
       setDccName('');
       setDccEmail('');
+      setAppointmentOrderUrl('');
       setSelectedAuditorIds([]);
     }
     setErrorMsg('');
@@ -116,6 +121,7 @@ export default function ImsAuditorsConfigModal({
         dccId,
         dccName,
         dccEmail,
+        appointmentOrderUrl: appointmentOrderUrl ? appointmentOrderUrl.trim() : '',
         auditorIds: selectedAuditorIds,
         auditors,
       });
@@ -515,6 +521,86 @@ export default function ImsAuditorsConfigModal({
                   );
                 })
               )}
+            </div>
+          </div>
+
+          {/* Row: ลิงก์คำสั่งแต่งตั้งคณะผู้ตรวจติดตาม (Google Drive Shared Link) (Optional) */}
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: '10px',
+              background: '#F8FAFC',
+              border: '1.5px solid #E2E8F0',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                }}
+              >
+                <Link2 size={18} color="#0284C7" />
+                <span>ลิงก์คำสั่งแต่งตั้ง (Google Drive Shared Link)</span>
+                <span style={{ fontSize: '0.775rem', fontWeight: 500, color: '#64748B' }}>
+                  (ไม่บังคับ / Optional)
+                </span>
+              </label>
+              {appointmentOrderUrl && (
+                <a
+                  href={appointmentOrderUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#0284C7',
+                    textDecoration: 'none',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: '#E0F2FE',
+                    border: '1px solid #BAE6FD',
+                  }}
+                >
+                  <ExternalLink size={12} />
+                  <span>ทดสอบเปิดลิงก์</span>
+                </a>
+              )}
+            </div>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#64748B' }}>
+              แชร์ลิงก์ไฟล์คำสั่งแต่งตั้งคณะผู้ตรวจติดตามประจำปีงบประมาณ เช่น ลิงก์ PDF ใน Google Drive เพื่อให้ผู้ใช้งานสามารถคลิกเปิดดูเอกสารคำสั่งฉบับเต็มได้
+            </p>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="url"
+                placeholder="https://drive.google.com/file/d/... หรือ ลิงก์คำสั่งแต่งตั้ง"
+                value={appointmentOrderUrl}
+                onChange={(e) => setAppointmentOrderUrl(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.9rem',
+                  background: '#FFFFFF',
+                  boxSizing: 'border-box',
+                }}
+              />
             </div>
           </div>
 

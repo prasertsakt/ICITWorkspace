@@ -1096,12 +1096,14 @@ export async function completeAuditEvaluation(auditId, evaluationData, auditorAc
 
 export const DEFAULT_YEARLY_CONFIG = {
   year: '2569',
+  _isConfigured: false, // false = default placeholder, true = explicitly saved by admin
   leadAuditorId: '',
-  leadAuditorName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ',
-  leadAuditorEmail: 'prasertsak.t@cit.kmutnb.ac.th',
+  leadAuditorName: '',
+  leadAuditorEmail: '',
   dccId: '',
   dccName: '',
   dccEmail: '',
+  appointmentOrderUrl: '',
   auditorIds: [],
   auditors: [],
   updatedAt: new Date().toISOString(),
@@ -1172,7 +1174,7 @@ export function subscribeYearlyAuditors(year, callback) {
           } else {
             // Optimization: Serve default in-memory WITHOUT writing to Firestore!
             // Only explicit Admin action (saveYearlyAuditors) writes to Firestore.
-            const defaultData = { ...DEFAULT_YEARLY_CONFIG, year: currentYear };
+            const defaultData = { ...DEFAULT_YEARLY_CONFIG, year: currentYear, _isConfigured: false };
             cachedConfigMap[currentYear] = defaultData;
             notifyConfigSubscribers(currentYear, defaultData);
           }
@@ -1214,6 +1216,7 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
   const payload = {
     ...configData,
     year: currentYear,
+    _isConfigured: true, // Explicitly saved by admin
     updatedAt: now,
     updatedBy: adminActor?.name || 'Admin',
   };
@@ -1266,6 +1269,7 @@ export function isDccUser(user, personnel, yearConfig, isAdmin) {
 
 /**
  * Check if the user is authorized to create/edit audits for a given year:
+ * - The yearly config must be explicitly configured by admin (_isConfigured === true)
  * - Must be Admin, OR
  * - Assigned as Lead Auditor, OR
  * - Assigned as DCC (ผู้ควบคุมเอกสาร), OR
@@ -1274,6 +1278,11 @@ export function isDccUser(user, personnel, yearConfig, isAdmin) {
 export function isUserAuthorizedAuditor(user, personnel, yearConfig, isAdmin) {
   if (isAdmin) return true;
   if (!user && !personnel) return false;
+
+  // If the yearly config has not been explicitly configured by admin, no one is authorized
+  if (!yearConfig || yearConfig._isConfigured !== true) {
+    return false;
+  }
 
   const userEmail = (user?.email || personnel?.email || '').toLowerCase();
   const personId = personnel?.id;

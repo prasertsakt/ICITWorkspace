@@ -445,7 +445,7 @@ export default function ImsLandingPage() {
                 }}
               >
                 <CheckCircle2 size={13} />
-                <span>เปิดใช้งานแล้ว</span>
+                <span>เปิดให้บริการ</span>
               </div>
 
               <div>
@@ -595,7 +595,7 @@ export default function ImsLandingPage() {
                 }}
               >
                 <CheckCircle2 size={13} />
-                <span>พร้อมใช้งาน</span>
+                <span>เปิดให้บริการ</span>
               </div>
 
               <div>

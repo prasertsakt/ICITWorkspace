@@ -54,6 +54,7 @@ import {
   LogIn,
   History,
   ChevronDown,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function ImsAuditPage() {
@@ -123,6 +124,11 @@ export default function ImsAuditPage() {
     });
     return () => unsub();
   }, [selectedYear]);
+
+  // Check if yearly config has been explicitly configured by admin
+  const isYearConfigured = useMemo(() => {
+    return yearlyConfig?._isConfigured === true;
+  }, [yearlyConfig]);
 
   // Check if current user is authorized to create/edit audits for this year
   const isAuthorizedToAudit = useMemo(() => {
@@ -547,22 +553,35 @@ export default function ImsAuditPage() {
               </button>
             ) : (
               <div
-                title="โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้"
+                title={
+                  !isYearConfigured
+                    ? `ยังไม่ได้กำหนดคณะผู้ตรวจติดตามประจำปีงบประมาณ ${selectedYear} — ผู้ดูแลระบบต้องกำหนดรายชื่อก่อนจึงจะสร้างรายงานได้`
+                    : 'โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้'
+                }
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   padding: '0.55rem 1rem',
                   borderRadius: '8px',
-                  background: '#F1F5F9',
-                  color: '#64748B',
+                  background: !isYearConfigured ? '#FEF2F2' : '#F1F5F9',
+                  color: !isYearConfigured ? '#DC2626' : '#64748B',
                   fontSize: '0.825rem',
                   fontWeight: 600,
-                  border: '1px solid #CBD5E1',
+                  border: `1px solid ${!isYearConfigured ? '#FECACA' : '#CBD5E1'}`,
                 }}
               >
-                <Eye size={15} color="#64748B" />
-                <span>โหมดดูข้อมูลอย่างเดียว</span>
+                {!isYearConfigured ? (
+                  <>
+                    <AlertCircle size={15} color="#DC2626" />
+                    <span>ยังไม่ได้กำหนดคณะผู้ตรวจติดตามของปี {selectedYear}</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye size={15} color="#64748B" />
+                    <span>โหมดดูข้อมูลอย่างเดียว</span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -907,11 +926,10 @@ export default function ImsAuditPage() {
           </div>
         )}
 
-        {/* Assigned Auditors Bar */}
         <div
           style={{
-            background: '#F0FDFA',
-            border: '1px solid #CCFBF1',
+            background: isYearConfigured ? '#F0FDFA' : '#FFFBEB',
+            border: `1px solid ${isYearConfigured ? '#CCFBF1' : '#FDE68A'}`,
             borderRadius: '12px',
             padding: '0.85rem 1.25rem',
             marginBottom: '1.5rem',
@@ -923,40 +941,80 @@ export default function ImsAuditPage() {
             fontSize: '0.85rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F766E' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isYearConfigured ? '#0F766E' : '#92400E' }}>
             <Users size={17} />
-            <span>
-              <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong> Lead IA คือ{' '}
-              <strong>{yearlyConfig?.leadAuditorName || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงค์สมบัติ'}</strong>
-              {yearlyConfig?.dccName && (
-                <>
-                  {' '}• DCC (ผู้ควบคุมเอกสาร): <strong>{yearlyConfig.dccName}</strong>
-                </>
-              )}
-              {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
-                ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน (${yearlyConfig.auditors
-                  .map((a) => a.name)
-                  .join(', ')})`
-                : ''}
-            </span>
+            {isYearConfigured ? (
+              <span>
+                <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong> Lead IA คือ{' '}
+                <strong>{yearlyConfig?.leadAuditorName || '-'}</strong>
+                {yearlyConfig?.dccName && (
+                  <>
+                    {' '}• DCC (ผู้ควบคุมเอกสาร): <strong>{yearlyConfig.dccName}</strong>
+                  </>
+                )}
+                {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
+                  ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน (${yearlyConfig.auditors
+                    .map((a) => a.name)
+                    .join(', ')})`
+                  : ''}
+              </span>
+            ) : (
+              <span>
+                <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
+                <span style={{ color: '#B45309' }}>ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — กรุณาให้ผู้ดูแลระบบกำหนดรายชื่อก่อน</span>
+              </span>
+            )}
           </div>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setIsConfigModalOpen(true)}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: '#0D9488',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                padding: 0,
-              }}
-            >
-              แก้ไขผู้ตรวจ
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {yearlyConfig?.appointmentOrderUrl && (
+              <a
+                href={yearlyConfig.appointmentOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="เปิดดูคำสั่งแต่งตั้งคณะผู้ตรวจติดตาม (Google Drive)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#0F766E',
+                  background: '#CCFBF1',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  border: '1px solid #99F6E4',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#99F6E4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#CCFBF1';
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>คำสั่งแต่งตั้ง</span>
+              </a>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsConfigModalOpen(true)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#0D9488',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                แก้ไขผู้ตรวจ
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter and Search Bar */}

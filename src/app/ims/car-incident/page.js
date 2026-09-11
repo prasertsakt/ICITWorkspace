@@ -53,6 +53,7 @@ import {
   Check,
   Ban,
   Download,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function CarIncidentHubPage() {
@@ -428,11 +429,10 @@ export default function CarIncidentHubPage() {
           zIndex: 2,
         }}
       >
-        {/* Assigned DCC & IMS Stakeholders Bar */}
         <div
           style={{
-            background: '#F0FDFA',
-            border: '1px solid #CCFBF1',
+            background: yearlyConfig?._isConfigured ? '#F0FDFA' : '#FFFBEB',
+            border: `1px solid ${yearlyConfig?._isConfigured ? '#CCFBF1' : '#FDE68A'}`,
             borderRadius: '12px',
             padding: '0.85rem 1.25rem',
             marginBottom: '1.5rem',
@@ -445,30 +445,67 @@ export default function CarIncidentHubPage() {
             boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F766E' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: yearlyConfig?._isConfigured ? '#0F766E' : '#92400E' }}>
             <Users size={17} />
-            <span>
-              <strong>ผู้รับผิดชอบระบบ IMS ปีงบประมาณ {selectedYear}:</strong> DCC (ผู้ควบคุมเอกสาร) คือ{' '}
-              <strong>{yearlyConfig?.dccName || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ'}</strong>
-              {yearlyConfig?.leadAuditorName && (
-                <> &bull; Lead IA: <strong>{yearlyConfig.leadAuditorName}</strong></>
-              )}
-            </span>
+            {yearlyConfig?._isConfigured ? (
+              <span>
+                <strong>ผู้รับผิดชอบระบบ IMS ปีงบประมาณ {selectedYear}:</strong> DCC (ผู้ควบคุมเอกสาร) คือ{' '}
+                <strong>{yearlyConfig?.dccName || '-'}</strong>
+                {yearlyConfig?.leadAuditorName && (
+                  <> &bull; Lead IA: <strong>{yearlyConfig.leadAuditorName}</strong></>
+                )}
+                {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
+                  ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน`
+                  : ''}
+              </span>
+            ) : (
+              <span>
+                <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
+                <span style={{ color: '#B45309' }}>ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — ข้อมูลจะถูกนำเข้าอัตโนมัติจาก Internal Audit Report Service เมื่อมีการกำหนด</span>
+              </span>
+            )}
           </div>
-          {isDCC && (
-            <span
-              style={{
-                background: '#0D9488',
-                color: '#FFFFFF',
-                padding: '2px 10px',
-                borderRadius: '999px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-              }}
-            >
-              ท่านเป็น DCC ประจำปีงบประมาณนี้
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {yearlyConfig?.appointmentOrderUrl && (
+              <a
+                href={yearlyConfig.appointmentOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="เปิดดูคำสั่งแต่งตั้งคณะผู้ตรวจติดตาม (Google Drive)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#0F766E',
+                  background: '#CCFBF1',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  border: '1px solid #99F6E4',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>คำสั่งแต่งตั้ง</span>
+              </a>
+            )}
+            {isDCC && (
+              <span
+                style={{
+                  background: '#0D9488',
+                  color: '#FFFFFF',
+                  padding: '2px 10px',
+                  borderRadius: '999px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                }}
+              >
+                ท่านเป็น DCC ประจำปีงบประมาณนี้
+              </span>
+            )}
+          </div>
         </div>
         {/* Feedback Toast */}
         {feedbackMessage && (
