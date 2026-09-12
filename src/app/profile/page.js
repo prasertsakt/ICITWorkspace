@@ -325,7 +325,11 @@ function ProfileContent() {
             กรุณาลงชื่อเข้าใช้ด้วยบัญชี Google เพื่อตรวจสอบข้อมูลบุคลากร สถิติวันลา
             และประวัติการขอลงเวลาปฏิบัติราชการ
           </p>
-          <button onClick={handleGoogleSignIn} className="btn btn-primary" style={{ width: '100%' }}>
+          <button
+            onClick={handleGoogleSignIn}
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '0.75rem 1.5rem', fontSize: '0.95rem', justifyContent: 'center' }}
+          >
             <LogIn size={18} />
             <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
           </button>

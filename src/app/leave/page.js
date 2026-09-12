@@ -33,6 +33,7 @@ import {
   Sun,
   Baby,
   ArrowRight,
+  ArrowLeft,
   CloudUpload,
   RefreshCw,
   CheckCircle2,
@@ -270,8 +271,13 @@ function LeaveContent() {
               <LogIn size={18} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
-            <Link href="/" className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-              กลับหน้าหลัก (Portal)
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+            >
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
             </Link>
           </div>
         </div>
