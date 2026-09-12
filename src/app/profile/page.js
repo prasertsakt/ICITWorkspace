@@ -328,6 +328,14 @@ function ProfileContent() {
             <LogIn size={18} />
             <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
           </button>
+          <Link
+            href="/"
+            className="btn btn-secondary"
+            style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+          >
+            <ArrowLeft size={16} />
+            <span>กลับสู่หน้าหลัก (Portal)</span>
+          </Link>
         </div>
       </div>
     );

@@ -171,12 +171,7 @@ export default function ImsLandingPage() {
             <Link
               href="/"
               className="btn btn-secondary"
-              style={{
-                width: '100%',
-                justifyContent: 'center',
-                fontSize: '0.875rem',
-                padding: '0.65rem 1rem',
-              }}
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
             >
               <ArrowLeft size={16} />
               <span>กลับสู่หน้าหลัก (Portal)</span>
