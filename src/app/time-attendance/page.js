@@ -56,6 +56,7 @@ import {
   X,
   Trash2,
   Settings,
+  ArrowLeft,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getNotificationRecipientForStep } from '@/lib/emailNotificationService';
@@ -524,17 +525,10 @@ function TimeAttendanceContent() {
             <Link
               href="/"
               className="btn btn-secondary"
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                fontSize: '0.9rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-              }}
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
             >
-              <span>กลับสู่หน้าหลักพอร์ทัล</span>
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
             </Link>
           </div>
 

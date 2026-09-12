@@ -55,6 +55,7 @@ import {
   ChevronRight,
   UserCheck,
   X,
+  ArrowLeft,
 } from 'lucide-react';
 
 function ProfileContent() {
