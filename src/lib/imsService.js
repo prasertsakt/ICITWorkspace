@@ -1250,10 +1250,10 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
     logActivity({
       category: 'IMS_AUDIT',
       action: 'CONFIG_AUDITORS',
-      details: `กำหนดรายชื่อผู้ตรวจติดตามและ DCC ประจำปีงบประมาณ ${currentYear} (Lead: ${payload.leadAuditorName || '-'}, DCC: ${payload.dccName || '-'}, Auditors: ${payload.auditors?.length || 0} ท่าน)`,
+      details: `กำหนดรายชื่อผู้ตรวจติดตามและ DCC ประจำปีงบประมาณ ${currentYear} (MR: ${payload.mrName || '-'}, Lead: ${payload.leadAuditorName || '-'}, DCC: ${payload.dccName || '-'}, Auditors: ${payload.auditors?.length || 0} ท่าน)`,
       actorEmail: adminActor?.email,
       actorName: adminActor?.name,
-      metadata: { year: currentYear, lead: payload.leadAuditorName, dcc: payload.dccName, auditorsCount: payload.auditors?.length || 0 },
+      metadata: { year: currentYear, mr: payload.mrName, lead: payload.leadAuditorName, dcc: payload.dccName, auditorsCount: payload.auditors?.length || 0 },
     });
   } catch (e) {}
 
@@ -1271,6 +1271,22 @@ export function isDccUser(user, personnel, yearConfig) {
     return true;
   }
   if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if the user is assigned as MR (Management Representative) for the given year
+ */
+export function isMrUser(user, personnel, yearConfig) {
+  if (!user && !personnel) return false;
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
+  const personId = personnel?.id;
+  if (yearConfig?.mrEmail && yearConfig.mrEmail.toLowerCase().trim() === userEmail) {
+    return true;
+  }
+  if (yearConfig?.mrId && personId && yearConfig.mrId === personId) {
     return true;
   }
   return false;
@@ -1307,6 +1323,14 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig) {
     return true;
   }
   if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
+    return true;
+  }
+
+  // Check if MR (Management Representative)
+  if (yearConfig?.mrEmail && yearConfig.mrEmail.toLowerCase().trim() === userEmail) {
+    return true;
+  }
+  if (yearConfig?.mrId && personId && yearConfig.mrId === personId) {
     return true;
   }
 
@@ -1378,6 +1402,7 @@ export function canUserEditAudit(audit, user, personnel, yearConfig, isAdmin) {
   if (isAdmin) return true;
   if (isLeadAuditorUser(user, personnel, yearConfig, isAdmin)) return true;
   if (isDccUser(user, personnel, yearConfig, isAdmin)) return true;
+  if (isMrUser(user, personnel, yearConfig)) return true;
   if (isAssignedAuditorOnAudit(audit, user, personnel)) return true;
   return false;
 }

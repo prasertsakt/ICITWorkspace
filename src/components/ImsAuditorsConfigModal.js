@@ -26,6 +26,9 @@ export default function ImsAuditorsConfigModal({
   personnelList = [],
 }) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [mrId, setMrId] = useState('');
+  const [mrName, setMrName] = useState('');
+  const [mrEmail, setMrEmail] = useState('');
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [leadAuditorName, setLeadAuditorName] = useState('');
   const [leadAuditorEmail, setLeadAuditorEmail] = useState('');
@@ -41,6 +44,9 @@ export default function ImsAuditorsConfigModal({
   useEffect(() => {
     if (yearlyConfig) {
       setSelectedYear(yearlyConfig.year || currentYear);
+      setMrId(yearlyConfig.mrId || '');
+      setMrName(yearlyConfig.mrName || '');
+      setMrEmail(yearlyConfig.mrEmail || '');
       setLeadAuditorId(yearlyConfig.leadAuditorId || '');
       setLeadAuditorName(yearlyConfig.leadAuditorName || '');
       setLeadAuditorEmail(yearlyConfig.leadAuditorEmail || '');
@@ -55,6 +61,9 @@ export default function ImsAuditorsConfigModal({
       setSelectedAuditorIds(ids);
     } else {
       setSelectedYear(currentYear);
+      setMrId('');
+      setMrName('');
+      setMrEmail('');
       setLeadAuditorId('');
       setLeadAuditorName('');
       setLeadAuditorEmail('');
@@ -68,6 +77,14 @@ export default function ImsAuditorsConfigModal({
   }, [yearlyConfig, currentYear, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleMrChange = (e) => {
+    const personId = e.target.value;
+    const person = personnelList.find((p) => p.id === personId);
+    setMrId(personId);
+    setMrName(person ? person.name : '');
+    setMrEmail(person ? person.email : '');
+  };
 
   const handleLeadChange = (e) => {
     const personId = e.target.value;
@@ -115,6 +132,9 @@ export default function ImsAuditorsConfigModal({
 
       await onSave(selectedYear, {
         year: selectedYear,
+        mrId,
+        mrName,
+        mrEmail,
         leadAuditorId,
         leadAuditorName,
         leadAuditorEmail,
@@ -279,6 +299,61 @@ export default function ImsAuditorsConfigModal({
               <option value="2569">ปีงบประมาณ 2569</option>
               <option value="2568">ปีงบประมาณ 2568</option>
             </select>
+          </div>
+
+          {/* Row: MR (Management Representative) */}
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: '10px',
+              background: '#F5F3FF',
+              border: '1.5px solid #DDD6FE',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: '#5B21B6',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <ShieldCheck size={18} color="#7C3AED" />
+              <span>ตัวแทนฝ่ายบริหาร (MR - Management Representative)</span>
+            </label>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#5B21B6' }}>
+              ผู้มีอำนาจกำกับดูแลระบบบริหารงานคุณภาพ (IMS) สามารถ Sync ข้อมูล OFI และดูแลการดำเนินงาน
+            </p>
+            <select
+              value={mrId}
+              onChange={handleMrChange}
+              style={{
+                width: '100%',
+                padding: '0.65rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #7C3AED',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                background: '#FFFFFF',
+                color: '#5B21B6',
+              }}
+            >
+              <option value="">-- เลือกตัวแทนฝ่ายบริหาร (MR) --</option>
+              {personnelList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.department ? `(${p.department})` : ''}
+                </option>
+              ))}
+            </select>
+            {!mrId && mrName && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                กำหนดไว้ปัจจุบัน: {mrName}
+              </p>
+            )}
           </div>
 
           {/* Row: Lead Internal Auditor */}

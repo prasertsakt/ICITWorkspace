@@ -131,5 +131,17 @@ service cloud.firestore {
         resource.data.status != "CLOSED"
       );
     }
+
+    // Rules for 'ims_ofi_hub' collection (OFI Hub - Opportunity for Improvement)
+    match /ims_ofi_hub/{ofiId} {
+      // All staff and authenticated visitors can view OFI records
+      allow read: if true;
+
+      // Authenticated users (DCC, MR, Assignees, Admin) can create and update OFI items
+      allow create, update: if isAuthenticated();
+
+      // Authenticated users (DCC, Admin) can delete OFI records
+      allow delete: if isAuthenticated();
+    }
   }
 }

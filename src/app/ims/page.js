@@ -20,15 +20,18 @@ import {
   Compass,
   LogIn,
   ArrowLeft,
+  Lightbulb,
 } from 'lucide-react';
 import { subscribeImsAudits } from '@/lib/imsService';
 import { subscribeCarIncidents } from '@/lib/carIncidentService';
+import { subscribeOfiItems } from '@/lib/ofiHubService';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ImsLandingPage() {
   const { currentUser, isLoading: authLoading, handleGoogleSignIn } = useAuth();
   const [audits, setAudits] = useState([]);
   const [carIncidents, setCarIncidents] = useState([]);
+  const [ofiItems, setOfiItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,9 +42,13 @@ export default function ImsLandingPage() {
     const unsubCars = subscribeCarIncidents((data) => {
       setCarIncidents(data);
     });
+    const unsubOfis = subscribeOfiItems((data) => {
+      setOfiItems(data);
+    });
     return () => {
       unsubAudits();
       unsubCars();
+      unsubOfis();
     };
   }, []);
 
@@ -682,6 +689,173 @@ export default function ImsLandingPage() {
                 }}
               >
                 <span>เข้าสู่ศูนย์ CAR & Incident ({totalCars} รายการ)</span>
+                <ArrowRight size={18} />
+              </div>
+            </div>
+          </Link>
+
+          {/* Sub-Service 3: OFI Hub */}
+          <Link
+            href="/ims/ofi-hub"
+            style={{
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'block',
+            }}
+          >
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '1.25rem',
+                border: '1.5px solid #7C3AED',
+                padding: '2rem',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 10px 25px -5px rgba(124, 58, 237, 0.1)',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(124, 58, 237, 0.22)';
+                e.currentTarget.style.borderColor = '#6D28D9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(124, 58, 237, 0.1)';
+                e.currentTarget.style.borderColor = '#7C3AED';
+              }}
+            >
+              {/* Card Header & Content */}
+              <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1.25rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      background: '#F3E8FF',
+                      color: '#7C3AED',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    บริการย่อย 03
+                  </span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.8rem',
+                      color: '#7C3AED',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Sparkles size={14} />
+                    <span>OFI Management</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '1rem',
+                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1.5rem',
+                    boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)',
+                  }}
+                >
+                  <Lightbulb size={28} />
+                </div>
+
+                <h3
+                  style={{
+                    fontSize: '1.35rem',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    margin: '0 0 0.75rem 0',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  OFI Hub
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#475569', marginTop: '4px' }}>
+                    ศูนย์ติดตามโอกาสในการพัฒนา
+                  </div>
+                </h3>
+
+                <p
+                  style={{
+                    fontSize: '0.925rem',
+                    color: '#64748B',
+                    lineHeight: 1.6,
+                    margin: '0 0 1.5rem 0',
+                  }}
+                >
+                  ระบบบันทึกและติดตามผลการดำเนินงานสำหรับโอกาสในการพัฒนา (Opportunity for Improvement)
+                  เชื่อมโยงข้อค้นพบจากรายงานการตรวจติดตามภายใน มอบหมายฝ่ายและผู้รับผิดชอบ พร้อม Rich Text Editor
+                </p>
+
+                {/* Feature Highlights */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    background: '#FAF5FF',
+                    padding: '1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #F3E8FF',
+                    marginBottom: '1.5rem',
+                    fontSize: '0.85rem',
+                    color: '#6B21A8',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <span>Sync ข้อค้นพบ (OFI) จาก Internal Audit โดยอัตโนมัติ</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <span>ติดตามแผนดำเนินงาน (Implement Yes/No) และสถานะ On Process/Completed</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <span>DCC มอบหมายฝ่าย/ผู้รับผิดชอบ พร้อมกล่องเขียนรายละเอียด WYSIWYG</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Link Button */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #F1F5F9',
+                  color: '#7C3AED',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                }}
+              >
+                <span>เข้าสู่ศูนย์ OFI Hub ({ofiItems.length} รายการ)</span>
                 <ArrowRight size={18} />
               </div>
             </div>
