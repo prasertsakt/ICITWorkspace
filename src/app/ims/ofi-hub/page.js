@@ -443,8 +443,12 @@ export default function OfiHubPage() {
     }
   };
 
-  // Save OFI from Create/Edit Form Modal (DCC / Admin)
+  // Save OFI from Create/Edit Form Modal (DCC only)
   const handleSaveOfiForm = async (itemPayload, isEditing) => {
+    if (!canEditDccFields) {
+      showFeedback('เฉพาะ DCC (ผู้ควบคุมเอกสาร) เท่านั้นที่สามารถสร้างหรือแก้ไขรายการ OFI ได้', 'error');
+      throw new Error('Unauthorized');
+    }
     try {
       await saveOfiItem(itemPayload, {
         email: currentUser?.email,
@@ -1435,7 +1439,7 @@ export default function OfiHubPage() {
             >
               <ShieldCheck size={14} color="#7C3AED" />
               <span>
-                <strong>สิทธิ์การกำหนด:</strong> DCC มอบหมายฝ่าย/ผู้รับผิดชอบ • DCC/MR กำหนดการ Implement/สถานะ/หมายเหตุ • ผู้รับผิดชอบแก้ไขรายละเอียดได้
+                <strong>สิทธิ์การกำหนด:</strong> DCC สร้าง/แก้ไขรายการ OFI และมอบหมายฝ่าย/ผู้รับผิดชอบ • DCC/MR กำหนดการ Implement/สถานะ/หมายเหตุ • ผู้รับผิดชอบแก้ไขรายละเอียดได้
               </span>
             </div>
           </div>

@@ -16,13 +16,11 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { PREDEFINED_DEPARTMENTS, IMS_STANDARDS } from '@/lib/constants';
 import { OFI_IMPLEMENT_OPTIONS, OFI_STATUS_OPTIONS } from '@/lib/ofiHubService';
 
 const STANDARD_OPTIONS = [
-  'ISO 9001:2015 & ISO/IEC 27001:2022',
-  'ISO 9001:2015',
-  'ISO/IEC 27001:2022',
+  ...(IMS_STANDARDS || ['IMS 9001/27001', 'ISO 9001:2015', 'ISO/IEC 27001:2022']),
   'อื่นๆ',
 ];
 
@@ -345,7 +343,7 @@ export default function OfiFormModal({
                   }}
                 >
                   <Layers size={15} color="#7C3AED" />
-                  <span>มาตรฐานที่เกี่ยวข้อง</span>
+                  <span>ISO</span>
                 </label>
                 <select
                   value={standard}
