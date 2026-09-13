@@ -22,6 +22,7 @@ import {
 import { subscribePersonnelList } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import OfiDetailModal from '@/components/OfiDetailModal';
+import OfiFormModal from '@/components/OfiFormModal';
 
 import {
   Lightbulb,
@@ -33,6 +34,7 @@ import {
   RefreshCw,
   FileText,
   Edit3,
+  Edit,
   Trash2,
   CheckCircle2,
   Clock,
@@ -47,6 +49,7 @@ import {
   LogIn,
   Check,
   X,
+  Plus,
   ExternalLink,
   SlidersHorizontal,
   ChevronDown,
@@ -71,7 +74,10 @@ export default function OfiHubPage() {
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, ON_PROCESS, COMPLETED
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
 
-  // Modal States
+  // Modal States (Form Modal for Create/Edit & Detail Modal for WYSIWYG)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [editingOfiItem, setEditingOfiItem] = useState(null);
+
   const [selectedOfiForDetail, setSelectedOfiForDetail] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -437,6 +443,25 @@ export default function OfiHubPage() {
     }
   };
 
+  // Save OFI from Create/Edit Form Modal (DCC / Admin)
+  const handleSaveOfiForm = async (itemPayload, isEditing) => {
+    try {
+      await saveOfiItem(itemPayload, {
+        email: currentUser?.email,
+        name: currentPersonnel?.name || currentUser?.displayName,
+      });
+      showFeedback(
+        isEditing
+          ? 'บันทึกการแก้ไขรายการ OFI เรียบร้อยแล้ว'
+          : `สร้างรายการ OFI ใหม่ (ปีงบประมาณ ${itemPayload.fiscalYear}) เรียบร้อยแล้ว`,
+        'success'
+      );
+    } catch (err) {
+      showFeedback('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+      throw err;
+    }
+  };
+
   // Authentication Gate: User must log in first to access IMS
   if (!currentUser) {
     return (
@@ -773,6 +798,36 @@ export default function OfiHubPage() {
                 </select>
               </div>
 
+              {/* Create OFI Button (DCC / Admin) */}
+              {canEditDccFields && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingOfiItem(null);
+                    setIsFormModalOpen(true);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    background: '#FFFFFF',
+                    color: '#6D28D9',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    transition: 'all 0.2s',
+                  }}
+                  title="สร้างรายการ OFI ใหม่ประจำปีงบประมาณนี้"
+                >
+                  <Plus size={18} />
+                  <span>สร้างรายการ OFI</span>
+                </button>
+              )}
+
               {/* Sync Button (DCC / MR / Admin) */}
               {canSync && (
                 <button
@@ -785,13 +840,13 @@ export default function OfiHubPage() {
                     gap: '8px',
                     padding: '8px 18px',
                     borderRadius: '10px',
-                    background: '#FFFFFF',
-                    color: '#6D28D9',
-                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.35)',
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: isSyncing ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    backdropFilter: 'blur(6px)',
                     transition: 'all 0.2s',
                     opacity: isSyncing ? 0.7 : 1,
                   }}
@@ -1423,29 +1478,58 @@ export default function OfiHubPage() {
                     : 'ติดต่อ DCC หรือ MR เพื่อทำการ Sync ข้อมูลจากรายงานการตรวจติดตามภายใน'
                   : 'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรองเพื่อดูรายการทั้งหมด'}
               </p>
-              {canSync && yearOfiItems.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <RefreshCw size={16} />
-                  <span>Sync ข้อมูลเดี๋ยวนี้ ({availableIaOfiCount} รายการ)</span>
-                </button>
-              )}
+              {/* Action Buttons in Empty State */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {canEditDccFields && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingOfiItem(null);
+                      setIsFormModalOpen(true);
+                    }}
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)',
+                    }}
+                  >
+                    <Plus size={16} />
+                    <span>สร้างรายการ OFI ใหม่</span>
+                  </button>
+                )}
+                {canSync && yearOfiItems.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      background: '#F1F5F9',
+                      color: '#475569',
+                      border: '1px solid #CBD5E1',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <RefreshCw size={16} />
+                    <span>Sync จากรายงาน ({availableIaOfiCount} รายการ)</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -1497,8 +1581,8 @@ export default function OfiHubPage() {
                       Details
                     </th>
                     {canEditDccFields && (
-                      <th style={{ padding: '0.85rem 0.75rem', width: '45px', textAlign: 'center' }}>
-                        ลบ
+                      <th style={{ padding: '0.85rem 0.75rem', width: '75px', textAlign: 'center' }}>
+                        จัดการ
                       </th>
                     )}
                   </tr>
@@ -1905,27 +1989,50 @@ export default function OfiHubPage() {
                           </button>
                         </td>
 
-                        {/* 10. Delete (DCC / Admin) */}
+                        {/* 10. Actions: Edit & Delete (DCC / Admin) */}
                         {canEditDccFields && (
                           <td style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteItem(item)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#94A3B8',
-                                cursor: 'pointer',
-                                padding: '4px',
-                                borderRadius: '6px',
-                                transition: 'color 0.15s',
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = '#DC2626')}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                              title="ลบรายการ OFI นี้"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingOfiItem(item);
+                                  setIsFormModalOpen(true);
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#64748B',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  transition: 'all 0.15s',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#7C3AED')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748B')}
+                                title="แก้ไขข้อมูล OFI"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#94A3B8',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  transition: 'color 0.15s',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#DC2626')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
+                                title="ลบรายการ OFI นี้"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -2203,6 +2310,20 @@ export default function OfiHubPage() {
           </div>
         </div>
       )}
+
+      {/* OFI Form Modal for Creating/Editing OFI metadata (DCC / Admin) */}
+      <OfiFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          setEditingOfiItem(null);
+        }}
+        onSave={handleSaveOfiForm}
+        ofiItem={editingOfiItem}
+        fiscalYear={selectedYear}
+        personnelList={personnelList}
+        availableYears={availableYears}
+      />
 
       {/* OFI WYSIWYG Detail Modal */}
       <OfiDetailModal
