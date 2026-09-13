@@ -721,53 +721,36 @@ export default function ImsLandingPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(124, 58, 237, 0.22)';
-                e.currentTarget.style.borderColor = '#6D28D9';
+                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(124, 58, 237, 0.25)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.transform = 'none';
                 e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(124, 58, 237, 0.1)';
-                e.currentTarget.style.borderColor = '#7C3AED';
               }}
             >
-              {/* Card Header & Content */}
-              <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '1.25rem',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      background: '#F3E8FF',
-                      color: '#7C3AED',
-                      letterSpacing: '0.5px',
-                    }}
-                  >
-                    บริการย่อย 03
-                  </span>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '0.8rem',
-                      color: '#7C3AED',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <Sparkles size={14} />
-                    <span>OFI Management</span>
-                  </div>
-                </div>
+              {/* Active Badge */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '1.5rem',
+                  right: '1.5rem',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  border: '1px solid #A7F3D0',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <CheckCircle2 size={13} />
+                <span>เปิดให้บริการ</span>
+              </div>
 
+              <div>
                 <div
                   style={{
                     width: '56px',
@@ -779,7 +762,7 @@ export default function ImsLandingPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '1.5rem',
-                    boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)',
+                    boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.4)',
                   }}
                 >
                   <Lightbulb size={28} />
@@ -808,8 +791,8 @@ export default function ImsLandingPage() {
                     margin: '0 0 1.5rem 0',
                   }}
                 >
-                  ระบบบันทึกและติดตามผลการดำเนินงานสำหรับโอกาสในการพัฒนา (Opportunity for Improvement)
-                  เชื่อมโยงข้อค้นพบจากรายงานการตรวจติดตามภายใน มอบหมายฝ่ายและผู้รับผิดชอบ พร้อม Rich Text Editor
+                  ระบบติดตามและบริหารจัดการโอกาสในการพัฒนา (Opportunity for Improvement: OFI)
+                  เชื่อมโยงข้อค้นพบจากรายงานตรวจติดตามภายใน (Internal Audit) พร้อมบันทึกความคืบหน้า มอบหมายผู้รับผิดชอบ และเครื่องมือ WYSIWYG
                 </p>
 
                 {/* Feature Highlights */}
@@ -829,11 +812,11 @@ export default function ImsLandingPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle2 size={16} color="#7C3AED" />
-                    <span>Sync ข้อค้นพบ (OFI) จาก Internal Audit โดยอัตโนมัติ</span>
+                    <span>ดึงข้อค้นพบ (OFI) จากรายงานการตรวจติดตามได้ทันที</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle2 size={16} color="#7C3AED" />
-                    <span>ติดตามแผนดำเนินงาน (Implement Yes/No) และสถานะ On Process/Completed</span>
+                    <span>ติดตามแผนดำเนินงาน (Implement Yes/No) และสถานะ On Process</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle2 size={16} color="#7C3AED" />
