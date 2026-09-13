@@ -944,7 +944,13 @@ export default function ImsAuditPage() {
             <Users size={17} />
             {isYearConfigured ? (
               <span>
-                <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong> Lead IA คือ{' '}
+                <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong>{' '}
+                {yearlyConfig?.mrName && (
+                  <>
+                    MR (ตัวแทนฝ่ายบริหาร): <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
+                  </>
+                )}
+                Lead IA คือ{' '}
                 <strong>{yearlyConfig?.leadAuditorName || '-'}</strong>
                 {yearlyConfig?.dccName && (
                   <>

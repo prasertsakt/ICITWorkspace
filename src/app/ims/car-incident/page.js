@@ -449,7 +449,13 @@ export default function CarIncidentHubPage() {
             <Users size={17} />
             {yearlyConfig?._isConfigured ? (
               <span>
-                <strong>ผู้รับผิดชอบระบบ IMS ปีงบประมาณ {selectedYear}:</strong> DCC (ผู้ควบคุมเอกสาร) คือ{' '}
+                <strong>ผู้รับผิดชอบระบบ IMS ปีงบประมาณ {selectedYear}:</strong>{' '}
+                {yearlyConfig?.mrName && (
+                  <>
+                    MR (ตัวแทนฝ่ายบริหาร) คือ <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
+                  </>
+                )}
+                DCC (ผู้ควบคุมเอกสาร) คือ{' '}
                 <strong>{yearlyConfig?.dccName || '-'}</strong>
                 {yearlyConfig?.leadAuditorName && (
                   <> &bull; Lead IA: <strong>{yearlyConfig.leadAuditorName}</strong></>

@@ -823,6 +823,87 @@ export default function OfiHubPage() {
           padding: '0 1.5rem',
         }}
       >
+        {/* Yearly Team & Auditor Banner */}
+        <div
+          style={{
+            background: yearlyConfig?._isConfigured ? '#FAF5FF' : '#FFFBEB',
+            border: `1px solid ${yearlyConfig?._isConfigured ? '#E9D5FF' : '#FDE68A'}`,
+            borderRadius: '12px',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            fontSize: '0.85rem',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: yearlyConfig?._isConfigured ? '#6B21A8' : '#92400E',
+            }}
+          >
+            <Users size={17} />
+            {yearlyConfig?._isConfigured ? (
+              <span>
+                <strong>ผู้รับผิดชอบระบบ IMS ปีงบประมาณ {selectedYear}:</strong>{' '}
+                {yearlyConfig?.mrName && (
+                  <>
+                    MR (ตัวแทนฝ่ายบริหาร) คือ <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
+                  </>
+                )}
+                DCC (ผู้ควบคุมเอกสาร) คือ{' '}
+                <strong>{yearlyConfig?.dccName || '-'}</strong>
+                {yearlyConfig?.leadAuditorName && (
+                  <> &bull; Lead IA: <strong>{yearlyConfig.leadAuditorName}</strong></>
+                )}
+                {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
+                  ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน`
+                  : ''}
+              </span>
+            ) : (
+              <span>
+                <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
+                <span style={{ color: '#B45309' }}>
+                  ยังไม่ได้กำหนดคณะผู้ตรวจติดตามและผู้รับผิดชอบ — ข้อมูลจะเชื่อมโยงอัตโนมัติจาก Internal Audit
+                </span>
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {yearlyConfig?.appointmentOrderUrl && (
+              <a
+                href={yearlyConfig.appointmentOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="เปิดดูคำสั่งแต่งตั้ง (Google Drive)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#6B21A8',
+                  background: '#EDE9FE',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  border: '1px solid #DDD6FE',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>คำสั่งแต่งตั้ง</span>
+              </a>
+            )}
+          </div>
+        </div>
+
         {/* Minimal Dashboard Cards */}
         <div
           style={{
