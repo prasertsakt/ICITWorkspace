@@ -1478,9 +1478,9 @@ export default function OfiHubPage() {
               </h3>
               <p style={{ fontSize: '0.875rem', color: '#64748B', margin: '0 0 1.5rem 0', maxWidth: '480px', marginInline: 'auto' }}>
                 {yearOfiItems.length === 0
-                  ? canSync
-                    ? `คุณสามารถกดปุ่ม "Sync จาก Internal Audit" เพื่อดึงข้อค้นพบประเภท OFI จากรายงานการตรวจติดตาม ปี ${selectedYear}`
-                    : 'ติดต่อ DCC หรือ MR เพื่อทำการ Sync ข้อมูลจากรายงานการตรวจติดตามภายใน'
+                  ? canImport
+                    ? `คุณสามารถกดปุ่ม "นำเข้า OFI จาก Internal Audit" เพื่อดึงข้อค้นพบประเภท OFI จากรายงานการตรวจติดตาม ปี ${selectedYear}`
+                    : 'ติดต่อ DCC หรือ MR เพื่อทำการนำเข้าข้อมูลจากรายงานการตรวจติดตามภายใน'
                   : 'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรองเพื่อดูรายการทั้งหมด'}
               </p>
               {/* Action Buttons in Empty State */}
@@ -1511,11 +1511,11 @@ export default function OfiHubPage() {
                     <span>สร้างรายการ OFI ใหม่</span>
                   </button>
                 )}
-                {canSync && yearOfiItems.length === 0 && (
+                {canImport && yearOfiItems.length === 0 && (
                   <button
                     type="button"
-                    onClick={handleSync}
-                    disabled={isSyncing}
+                    onClick={handleImport}
+                    disabled={isImporting}
                     style={{
                       padding: '0.65rem 1.25rem',
                       borderRadius: '8px',
@@ -1530,8 +1530,8 @@ export default function OfiHubPage() {
                       gap: '8px',
                     }}
                   >
-                    <RefreshCw size={16} />
-                    <span>Sync จากรายงาน ({availableIaOfiCount} รายการ)</span>
+                    <Download size={16} />
+                    <span>นำเข้า OFI จากรายงาน ({availableIaOfiCount} รายการ)</span>
                   </button>
                 )}
               </div>
