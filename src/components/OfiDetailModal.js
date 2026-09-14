@@ -235,13 +235,33 @@ export default function OfiDetailModal({
               <span style={{ color: '#0F172A', fontWeight: 700 }}>{ofiItem.sourceAuditTopic || '-'}</span>
             </div>
             <div>
-              <span style={{ color: '#64748B', fontWeight: 600 }}>ข้อกำหนดอ้างอิง: </span>
-              <span style={{ color: '#0F172A' }}>{ofiItem.sourceClauses || '-'}</span>
+              <span style={{ color: '#64748B', fontWeight: 600 }}>มาตรฐาน / ข้อกำหนด: </span>
+              <span style={{ color: '#0F172A' }}>
+                {ofiItem.sourceStandard ? `${ofiItem.sourceStandard} ` : ''}
+                {ofiItem.sourceClauses ? `(ข้อ ${ofiItem.sourceClauses})` : ''}
+                {ofiItem.sourceItem || ofiItem.item ? ` • Item: ${ofiItem.sourceItem || ofiItem.item}` : ''}
+              </span>
             </div>
+            {(ofiItem.sourceExpectedEvidence || ofiItem.expectedEvidence) && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <span style={{ color: '#64748B', fontWeight: 600 }}>หลักฐานที่คาดหวัง: </span>
+                <span style={{ color: '#334155' }}>
+                  {ofiItem.sourceExpectedEvidence || ofiItem.expectedEvidence}
+                </span>
+              </div>
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
-              <span style={{ color: '#64748B', fontWeight: 600 }}>ข้อค้นพบ OFI: </span>
-              <span style={{ color: '#334155' }}>{ofiItem.sourceFindings || '-'}</span>
+              <span style={{ color: '#64748B', fontWeight: 600 }}>สิ่งที่ตรวจพบ (Findings): </span>
+              <span style={{ color: '#334155' }}>{ofiItem.sourceFindings || ofiItem.findings || '-'}</span>
             </div>
+            {(ofiItem.sourceRecommendation || ofiItem.recommendation) && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <span style={{ color: '#64748B', fontWeight: 600 }}>ข้อเสนอแนะ (Recommendation): </span>
+                <span style={{ color: '#7C3AED', fontWeight: 500 }}>
+                  {ofiItem.sourceRecommendation || ofiItem.recommendation}
+                </span>
+              </div>
+            )}
             {ofiItem.assignees && ofiItem.assignees.length > 0 && (
               <div style={{ gridColumn: '1 / -1' }}>
                 <span style={{ color: '#64748B', fontWeight: 600 }}>ผู้รับผิดชอบ: </span>

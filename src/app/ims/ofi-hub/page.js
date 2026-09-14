@@ -201,7 +201,10 @@ export default function OfiHubPage() {
         const query = searchQuery.toLowerCase().trim();
         const topic = (item.sourceAuditTopic || '').toLowerCase();
         const clauses = (item.sourceClauses || '').toLowerCase();
-        const findings = (item.sourceFindings || '').toLowerCase();
+        const itemCode = (item.sourceItem || item.item || '').toLowerCase();
+        const expected = (item.sourceExpectedEvidence || item.expectedEvidence || '').toLowerCase();
+        const findings = (item.sourceFindings || item.findings || '').toLowerCase();
+        const recommendation = (item.sourceRecommendation || item.recommendation || '').toLowerCase();
         const remark = (item.remark || '').toLowerCase();
         const deptNames = (item.departments || []).join(' ').toLowerCase();
         const assigneeNames = (item.assignees || []).map((a) => a.name || '').join(' ').toLowerCase();
@@ -209,7 +212,10 @@ export default function OfiHubPage() {
         const match =
           topic.includes(query) ||
           clauses.includes(query) ||
+          itemCode.includes(query) ||
+          expected.includes(query) ||
           findings.includes(query) ||
+          recommendation.includes(query) ||
           remark.includes(query) ||
           deptNames.includes(query) ||
           assigneeNames.includes(query);
@@ -1627,33 +1633,48 @@ export default function OfiHubPage() {
                           {idx + 1}
                         </td>
 
-                        {/* 2. Topic & Clauses */}
+                        {/* 2. Topic, Item & Clauses */}
                         <td style={{ padding: '1rem' }}>
                           <div
                             style={{
                               fontWeight: 700,
                               color: '#0F172A',
-                              marginBottom: '4px',
+                              marginBottom: '6px',
                               lineHeight: 1.4,
                             }}
                           >
                             {item.sourceAuditTopic || '-'}
                           </div>
-                          {item.sourceClauses && (
-                            <div
-                              style={{
-                                fontSize: '0.775rem',
-                                color: '#6D28D9',
-                                background: '#EDE9FE',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                display: 'inline-block',
-                                fontWeight: 600,
-                              }}
-                            >
-                              ข้อ {item.sourceClauses}
-                            </div>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                            {(item.sourceItem || item.item) && (
+                              <div
+                                style={{
+                                  fontSize: '0.75rem',
+                                  color: '#0284C7',
+                                  background: '#E0F2FE',
+                                  padding: '2px 7px',
+                                  borderRadius: '4px',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Item: {item.sourceItem || item.item}
+                              </div>
+                            )}
+                            {item.sourceClauses && (
+                              <div
+                                style={{
+                                  fontSize: '0.75rem',
+                                  color: '#6D28D9',
+                                  background: '#EDE9FE',
+                                  padding: '2px 7px',
+                                  borderRadius: '4px',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ข้อ {item.sourceClauses}
+                              </div>
+                            )}
+                          </div>
                           {item.sourceStandard && (
                             <div
                               style={{
@@ -1667,19 +1688,62 @@ export default function OfiHubPage() {
                           )}
                         </td>
 
-                        {/* 3. Findings */}
+                        {/* 3. Findings, Recommendation & Expected Evidence */}
                         <td style={{ padding: '1rem' }}>
-                          <p
-                            style={{
-                              margin: 0,
-                              color: '#334155',
-                              fontSize: '0.85rem',
-                              lineHeight: 1.5,
-                              whiteSpace: 'pre-line',
-                            }}
-                          >
-                            {item.sourceFindings || '-'}
-                          </p>
+                          <div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', marginBottom: '2px' }}>
+                              สิ่งที่ตรวจพบ (Findings):
+                            </div>
+                            <p
+                              style={{
+                                margin: 0,
+                                color: '#334155',
+                                fontSize: '0.85rem',
+                                lineHeight: 1.5,
+                                whiteSpace: 'pre-line',
+                              }}
+                            >
+                              {item.sourceFindings || item.findings || '-'}
+                            </p>
+                          </div>
+
+                          {(item.sourceRecommendation || item.recommendation) && (
+                            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #E2E8F0' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7C3AED', marginBottom: '2px' }}>
+                                ข้อเสนอแนะ (Recommendation):
+                              </div>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: '#4B5563',
+                                  fontSize: '0.825rem',
+                                  lineHeight: 1.4,
+                                  whiteSpace: 'pre-line',
+                                }}
+                              >
+                                {item.sourceRecommendation || item.recommendation}
+                              </p>
+                            </div>
+                          )}
+
+                          {(item.sourceExpectedEvidence || item.expectedEvidence) && (
+                            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #E2E8F0' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', marginBottom: '2px' }}>
+                                หลักฐานที่คาดหวัง:
+                              </div>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: '#64748B',
+                                  fontSize: '0.8rem',
+                                  lineHeight: 1.4,
+                                  whiteSpace: 'pre-line',
+                                }}
+                              >
+                                {item.sourceExpectedEvidence || item.expectedEvidence}
+                              </p>
+                            </div>
+                          )}
                         </td>
 
                         {/* 4. Implement? (Yes / No / Pending) */}

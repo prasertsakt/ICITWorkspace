@@ -38,7 +38,10 @@ export default function OfiFormModal({
   const [standard, setStandard] = useState(STANDARD_OPTIONS[0]);
   const [customStandard, setCustomStandard] = useState('');
   const [clauses, setClauses] = useState('');
+  const [item, setItem] = useState('');
+  const [expectedEvidence, setExpectedEvidence] = useState('');
   const [findings, setFindings] = useState('');
+  const [recommendation, setRecommendation] = useState('');
   const [implement, setImplement] = useState('');
   const [status, setStatus] = useState('');
   const [selectedDepartments, setSelectedDepartments] = useState([]);
@@ -67,7 +70,10 @@ export default function OfiFormModal({
           setCustomStandard('');
         }
         setClauses(ofiItem.sourceClauses || '');
-        setFindings(ofiItem.sourceFindings || '');
+        setItem(ofiItem.sourceItem || ofiItem.item || '');
+        setExpectedEvidence(ofiItem.sourceExpectedEvidence || ofiItem.expectedEvidence || '');
+        setFindings(ofiItem.sourceFindings || ofiItem.findings || '');
+        setRecommendation(ofiItem.sourceRecommendation || ofiItem.recommendation || '');
         setImplement(ofiItem.implement || '');
         setStatus(ofiItem.status || '');
         setSelectedDepartments(ofiItem.departments || []);
@@ -80,7 +86,10 @@ export default function OfiFormModal({
         setStandard(STANDARD_OPTIONS[0]);
         setCustomStandard('');
         setClauses('');
+        setItem('');
+        setExpectedEvidence('');
         setFindings('');
+        setRecommendation('');
         setImplement('');
         setStatus('');
         setSelectedDepartments([]);
@@ -151,7 +160,14 @@ export default function OfiFormModal({
       sourceAuditTopic: topic.trim(),
       sourceStandard: finalStandard,
       sourceClauses: clauses.trim(),
+      sourceItem: item.trim(),
+      sourceExpectedEvidence: expectedEvidence.trim(),
       sourceFindings: findings.trim(),
+      sourceRecommendation: recommendation.trim(),
+      item: item.trim(),
+      expectedEvidence: expectedEvidence.trim(),
+      findings: findings.trim(),
+      recommendation: recommendation.trim(),
       implement: implement || '',
       status: implement === 'YES' ? (status || OFI_STATUS_OPTIONS.ON_PROCESS) : '',
       departments: selectedDepartments,
@@ -419,7 +435,72 @@ export default function OfiFormModal({
               />
             </div>
 
-            {/* Row 3: ข้อกำหนดที่เกี่ยวข้อง */}
+            {/* Row 3: Item & Clauses */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    marginBottom: '0.35rem',
+                  }}
+                >
+                  Item (ข้อตรวจ)
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น 1.1, 2.3, OFI-01"
+                  value={item}
+                  onChange={(e) => setItem(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    marginBottom: '0.35rem',
+                  }}
+                >
+                  ข้อกำหนดที่เกี่ยวข้อง (Clauses)
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น 7.1.3, 8.5.1, A.8.1, A.12.1"
+                  value={clauses}
+                  onChange={(e) => setClauses(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Row 4: หลักฐานที่คาดหวัง (Expected Evidence) */}
             <div>
               <label
                 style={{
@@ -432,25 +513,27 @@ export default function OfiFormModal({
                   marginBottom: '0.35rem',
                 }}
               >
-                <span>ข้อกำหนดที่เกี่ยวข้อง (Clauses)</span>
+                <span>หลักฐานที่คาดหวัง (Expected Evidence)</span>
               </label>
-              <input
-                type="text"
-                placeholder="เช่น 7.1.3, 8.5.1, A.8.1, A.12.1"
-                value={clauses}
-                onChange={(e) => setClauses(e.target.value)}
+              <textarea
+                rows={2}
+                placeholder="ระบุหลักฐานหรือเอกสารที่คาดหวัง..."
+                value={expectedEvidence}
+                onChange={(e) => setExpectedEvidence(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.6rem 0.85rem',
+                  padding: '0.65rem 0.75rem',
                   borderRadius: '8px',
                   border: '1px solid #CBD5E1',
                   fontSize: '0.875rem',
+                  lineHeight: 1.4,
                   outline: 'none',
+                  resize: 'vertical',
                 }}
               />
             </div>
 
-            {/* Row 4: ข้อค้นพบ / โอกาสในการพัฒนา (Findings) */}
+            {/* Row 5: สิ่งที่ตรวจพบ (Findings) */}
             <div>
               <label
                 style={{
@@ -464,12 +547,12 @@ export default function OfiFormModal({
                 }}
               >
                 <Lightbulb size={15} color="#D97706" />
-                <span>ข้อค้นพบ / โอกาสในการพัฒนา (Findings & Recommendations)</span>
+                <span>สิ่งที่ตรวจพบ / ข้อค้นพบ (Findings)</span>
                 <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <textarea
-                rows={4}
-                placeholder="อธิบายรายละเอียดข้อค้นพบ แนวทางที่ควรปรับปรุงหรือพัฒนา..."
+                rows={3}
+                placeholder="อธิบายรายละเอียดสิ่งที่ตรวจพบ..."
                 value={findings}
                 onChange={(e) => setFindings(e.target.value)}
                 style={{
@@ -483,6 +566,40 @@ export default function OfiFormModal({
                   resize: 'vertical',
                 }}
                 required
+              />
+            </div>
+
+            {/* Row 6: ข้อเสนอแนะ (Recommendation) */}
+            <div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                <Sparkles size={15} color="#7C3AED" />
+                <span>ข้อเสนอแนะเพื่อการปรับปรุง (Recommendation)</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="ระบุข้อเสนอแนะหรือแนวทางการพัฒนา..."
+                value={recommendation}
+                onChange={(e) => setRecommendation(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.875rem',
+                  lineHeight: 1.5,
+                  outline: 'none',
+                  resize: 'vertical',
+                }}
               />
             </div>
 
