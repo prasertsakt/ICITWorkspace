@@ -16,8 +16,9 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-import { PREDEFINED_DEPARTMENTS, IMS_STANDARDS } from '@/lib/constants';
+import { PREDEFINED_DEPARTMENTS, IMS_STANDARDS, IMS_AUDIT_TOPICS } from '@/lib/constants';
 import { OFI_IMPLEMENT_OPTIONS, OFI_STATUS_OPTIONS } from '@/lib/ofiHubService';
+import { subscribeImsAuditTopics } from '@/lib/imsService';
 
 const STANDARD_OPTIONS = [
   ...(IMS_STANDARDS || ['IMS 9001/27001', 'ISO 9001:2015', 'ISO/IEC 27001:2022']),
@@ -33,8 +34,10 @@ export default function OfiFormModal({
   personnelList = [],
   availableYears = ['2570', '2569', '2568'],
 }) {
+  const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
   const [selectedYear, setSelectedYear] = useState(fiscalYear);
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState(IMS_AUDIT_TOPICS[0] || '');
+  const [customTopic, setCustomTopic] = useState('');
   const [standard, setStandard] = useState(STANDARD_OPTIONS[0]);
   const [customStandard, setCustomStandard] = useState('');
   const [clauses, setClauses] = useState('');
@@ -55,10 +58,31 @@ export default function OfiFormModal({
   const isEditing = Boolean(ofiItem && ofiItem.id);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeImsAuditTopics((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setTopicsList(data);
+      }
+    });
+    return () => unsub && unsub();
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen) {
       if (ofiItem) {
         setSelectedYear(ofiItem.fiscalYear || fiscalYear);
-        setTopic(ofiItem.sourceAuditTopic || '');
+        const rawTopic = ofiItem.sourceAuditTopic || ofiItem.topic || '';
+        if (topicsList.includes(rawTopic) || IMS_AUDIT_TOPICS.includes(rawTopic)) {
+          setTopic(rawTopic);
+          setCustomTopic('');
+        } else if (rawTopic) {
+          setTopic('อื่นๆ');
+          setCustomTopic(rawTopic);
+        } else {
+          setTopic(topicsList[0] || IMS_AUDIT_TOPICS[0] || '');
+          setCustomTopic('');
+        }
+
         if (STANDARD_OPTIONS.includes(ofiItem.sourceStandard)) {
           setStandard(ofiItem.sourceStandard);
           setCustomStandard('');
@@ -82,7 +106,8 @@ export default function OfiFormModal({
       } else {
         // Reset for new creation
         setSelectedYear(fiscalYear);
-        setTopic('');
+        setTopic(IMS_AUDIT_TOPICS[0] || '');
+        setCustomTopic('');
         setStandard(STANDARD_OPTIONS[0]);
         setCustomStandard('');
         setClauses('');
@@ -129,13 +154,14 @@ export default function OfiFormModal({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!topic.trim()) {
-      setErrorMsg('กรุณาระบุหัวข้อหรือประเด็นการตรวจ');
+    const finalTopic = topic === 'อื่นๆ' ? (customTopic.trim() || 'อื่นๆ') : topic;
+    if (!finalTopic.trim()) {
+      setErrorMsg('กรุณาระบุหัวข้อที่รับการตรวจ');
       return;
     }
 
     if (!findings.trim()) {
-      setErrorMsg('กรุณาระบุข้อค้นพบหรือโอกาสในการพัฒนา');
+      setErrorMsg('กรุณาระบุสิ่งที่ตรวจพบ / ข้อค้นพบ (Findings)');
       return;
     }
 
@@ -157,7 +183,8 @@ export default function OfiFormModal({
       ...(ofiItem || {}),
       id: ofiItem?.id || `ofi-${selectedYear}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       fiscalYear: String(selectedYear),
-      sourceAuditTopic: topic.trim(),
+      sourceAuditTopic: finalTopic.trim(),
+      topic: finalTopic.trim(),
       sourceStandard: finalStandard,
       sourceClauses: clauses.trim(),
       sourceItem: item.trim(),
@@ -400,7 +427,7 @@ export default function OfiFormModal({
               </div>
             </div>
 
-            {/* Row 2: หัวข้อการตรวจ / เรื่อง */}
+            {/* Row 2: หัวข้อการตรวจ (Select from IMS_AUDIT_TOPICS) */}
             <div>
               <label
                 style={{
@@ -414,25 +441,52 @@ export default function OfiFormModal({
                 }}
               >
                 <FileText size={15} color="#7C3AED" />
-                <span>หัวข้อการตรวจ / ประเด็นโอกาสในการพัฒนา</span>
+                <span>หัวข้อที่รับการตรวจ (Audit Topic)</span>
                 <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <input
-                type="text"
-                placeholder="เช่น การสำรองข้อมูลสารสนเทศ, การจัดการเอกสารคุณภาพ"
+              <select
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.65rem 0.85rem',
+                  padding: '0.65rem 0.75rem',
                   borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '0.9rem',
+                  border: '1.5px solid #7C3AED',
+                  fontSize: '0.875rem',
+                  background: '#F5F3FF',
                   fontWeight: 600,
+                  color: '#5B21B6',
                   outline: 'none',
                 }}
                 required
-              />
+              >
+                {topicsList.map((top, idx) => (
+                  <option key={idx} value={top}>
+                    {idx + 1}. {top}
+                  </option>
+                ))}
+                <option value="อื่นๆ">-- อื่นๆ (ระบุหัวข้อเอง) --</option>
+              </select>
+
+              {topic === 'อื่นๆ' && (
+                <input
+                  type="text"
+                  placeholder="พิมพ์หัวข้อที่รับการตรวจเอง..."
+                  value={customTopic}
+                  onChange={(e) => setCustomTopic(e.target.value)}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                  }}
+                  required
+                />
+              )}
             </div>
 
             {/* Row 3: Item & Clauses */}

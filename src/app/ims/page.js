@@ -21,18 +21,21 @@ import {
   LogIn,
   ArrowLeft,
   Lightbulb,
+  Sliders,
 } from 'lucide-react';
 import { subscribeImsAudits } from '@/lib/imsService';
 import { subscribeCarIncidents } from '@/lib/carIncidentService';
 import { subscribeOfiItems } from '@/lib/ofiHubService';
 import { useAuth } from '@/context/AuthContext';
+import ImsAuditTopicsModal from '@/components/ImsAuditTopicsModal';
 
 export default function ImsLandingPage() {
-  const { currentUser, isLoading: authLoading, handleGoogleSignIn } = useAuth();
+  const { currentUser, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
   const [audits, setAudits] = useState([]);
   const [carIncidents, setCarIncidents] = useState([]);
   const [ofiItems, setOfiItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubAudits = subscribeImsAudits((data) => {
@@ -230,21 +233,66 @@ export default function ImsLandingPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '999px',
-              background: 'rgba(255, 255, 255, 0.18)',
-              backdropFilter: 'blur(8px)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: '#FFFFFF',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
               marginBottom: '1.25rem',
             }}
           >
-            <ShieldCheck size={16} color="#A7F3D0" />
-            <span>Integrated Management System (ISO 9001:2015 & ISO/IEC 27001:2022)</span>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                background: 'rgba(255, 255, 255, 0.18)',
+                backdropFilter: 'blur(8px)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#FFFFFF',
+              }}
+            >
+              <ShieldCheck size={16} color="#A7F3D0" />
+              <span>Integrated Management System (ISO 9001:2015 & ISO/IEC 27001:2022)</span>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsTopicsModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.22)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.35)',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.32)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                title="จัดการรายการหัวข้อที่รับการตรวจ (เพิ่ม / แก้ไข / ลบ / จัดเรียง / คืนค่าเริ่มต้น)"
+              >
+                <Sliders size={15} color="#A7F3D0" />
+                <span>จัดการหัวข้อที่รับการตรวจ (Admin)</span>
+              </button>
+            )}
           </div>
 
           <h1
@@ -845,6 +893,16 @@ export default function ImsLandingPage() {
           </Link>
         </div>
       </div>
+
+      {/* Admin Modal for Predefined Audit Topics Management */}
+      <ImsAuditTopicsModal
+        isOpen={isTopicsModalOpen}
+        onClose={() => setIsTopicsModalOpen(false)}
+        actor={{
+          email: currentUser?.email,
+          name: currentUser?.displayName || currentUser?.email || 'Admin',
+        }}
+      />
     </div>
   );
 }

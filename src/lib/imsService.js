@@ -12,9 +12,11 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore';
+import { IMS_AUDIT_TOPICS } from './constants';
 
 const LOCAL_KEY_IMS_AUDITS = 'icit_ims_audits';
 const LOCAL_KEY_IMS_CONFIG_PREFIX = 'icit_ims_config_';
+const LOCAL_KEY_IMS_AUDIT_TOPICS = 'icit_ims_audit_topics';
 
 // Clean state: No dummy/mock seed data (User starts with empty list for real input)
 export const SEED_IMS_AUDITS = [];
@@ -1764,4 +1766,162 @@ export function canUserDeleteAudit(audit, user, personnel, yearConfig, isAdmin) 
     return true;
   }
   return false;
+}
+
+// -------------------------------------------------------------
+// Dynamic IMS Audit Topics Management (Admin only)
+// -------------------------------------------------------------
+
+let topicsSubscribers = [];
+let sharedTopicsUnsubscribe = null;
+let cachedTopics = null;
+
+function notifyTopicsSubscribers(data) {
+  cachedTopics = data;
+  topicsSubscribers.forEach((cb) => {
+    try {
+      cb(data);
+    } catch (e) {
+      console.error('IMS Topics subscriber error:', e);
+    }
+  });
+}
+
+/**
+ * Subscribe to dynamic IMS Audit Topics with real-time Firestore sync & local fallback
+ */
+export function subscribeImsAuditTopics(callback) {
+  topicsSubscribers.push(callback);
+
+  // Send in-memory or localStorage or default topics immediately
+  if (cachedTopics && Array.isArray(cachedTopics) && cachedTopics.length > 0) {
+    callback(cachedTopics);
+  } else if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDIT_TOPICS);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedTopics = parsed;
+          callback(parsed);
+        } else {
+          callback(IMS_AUDIT_TOPICS);
+        }
+      } catch (e) {
+        callback(IMS_AUDIT_TOPICS);
+      }
+    } else {
+      callback(IMS_AUDIT_TOPICS);
+    }
+  } else {
+    callback(IMS_AUDIT_TOPICS);
+  }
+
+  // Multi-tab real-time storage event listener
+  const handleTopicsStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_IMS_AUDIT_TOPICS) {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY_IMS_AUDIT_TOPICS);
+        const list = JSON.parse(raw || '[]');
+        if (Array.isArray(list) && list.length > 0) {
+          cachedTopics = list;
+          callback(list);
+        }
+      } catch (err) {}
+    }
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleTopicsStorageChange);
+  }
+
+  // Single shared Firestore onSnapshot listener
+  if (isFirebaseConfigured && db && !sharedTopicsUnsubscribe) {
+    try {
+      const docRef = doc(db, 'ims_config', 'audit_topics');
+      sharedTopicsUnsubscribe = onSnapshot(
+        docRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const topics =
+              Array.isArray(data?.topics) && data.topics.length > 0 ? data.topics : IMS_AUDIT_TOPICS;
+            cachedTopics = topics;
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_KEY_IMS_AUDIT_TOPICS, JSON.stringify(topics));
+            }
+            notifyTopicsSubscribers(topics);
+          } else {
+            cachedTopics = IMS_AUDIT_TOPICS;
+            notifyTopicsSubscribers(IMS_AUDIT_TOPICS);
+          }
+        },
+        (error) => {
+          console.warn('Firestore ims_config audit_topics onSnapshot error:', error);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to listen to Firestore audit_topics:', e);
+    }
+  }
+
+  return () => {
+    topicsSubscribers = topicsSubscribers.filter((cb) => cb !== callback);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleTopicsStorageChange);
+    }
+    if (topicsSubscribers.length === 0 && sharedTopicsUnsubscribe) {
+      sharedTopicsUnsubscribe();
+      sharedTopicsUnsubscribe = null;
+    }
+  };
+}
+
+/**
+ * Save / update IMS Audit Topics list (Admin only)
+ */
+export async function saveImsAuditTopics(topicsList, actor) {
+  const cleaned = Array.isArray(topicsList)
+    ? topicsList.map((t) => (typeof t === 'string' ? t.trim() : '')).filter(Boolean)
+    : [];
+
+  const now = new Date().toISOString();
+  const payload = {
+    topics: cleaned,
+    updatedAt: now,
+    updatedBy: actor?.name || actor?.email || 'Admin',
+  };
+
+  cachedTopics = cleaned;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_IMS_AUDIT_TOPICS, JSON.stringify(cleaned));
+  }
+  notifyTopicsSubscribers(cleaned);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'ims_config', 'audit_topics'), cleanForFirestore(payload), { merge: true });
+    } catch (err) {
+      console.warn('Failed to save audit_topics to Firestore:', err);
+    }
+  }
+
+  try {
+    logActivity({
+      category: 'IMS_CONFIG',
+      action: 'UPDATE_AUDIT_TOPICS',
+      details: `แก้ไขรายการหัวข้อที่รับการตรวจ (Audit Topics) — จำนวน ${cleaned.length} หัวข้อ`,
+      actorEmail: actor?.email,
+      actorName: actor?.name,
+      metadata: { totalTopics: cleaned.length },
+    });
+  } catch (e) {}
+
+  return cleaned;
+}
+
+/**
+ * Reset IMS Audit Topics back to default predefined topics
+ */
+export async function resetImsAuditTopicsToDefault(actor) {
+  return await saveImsAuditTopics(IMS_AUDIT_TOPICS, actor);
 }

@@ -24,7 +24,7 @@ import {
   IMS_RESULT_TYPES,
   IMS_AUDIT_STATUSES,
 } from '@/lib/constants';
-import { subscribeYearlyAuditors } from '@/lib/imsService';
+import { subscribeYearlyAuditors, subscribeImsAuditTopics } from '@/lib/imsService';
 
 export default function ImsAuditModal({
   isOpen,
@@ -37,6 +37,7 @@ export default function ImsAuditModal({
   isLeadAuditor = false,
   isAdmin = false,
 }) {
+  const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
   const [formData, setFormData] = useState({
     auditYear: currentYear,
     isoStandard: 'IMS 9001/27001',
@@ -56,6 +57,18 @@ export default function ImsAuditModal({
   const [activeYearConfig, setActiveYearConfig] = useState(yearlyConfig || null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Subscribe to dynamic topics list
+  useEffect(() => {
+    if (isOpen) {
+      const unsubTopics = subscribeImsAuditTopics((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setTopicsList(data);
+        }
+      });
+      return () => unsubTopics && unsubTopics();
+    }
+  }, [isOpen]);
 
   // Subscribe to yearly assigned auditors config whenever auditYear changes
   useEffect(() => {
@@ -1080,7 +1093,7 @@ export default function ImsAuditModal({
                 }}
                 required
               >
-                {IMS_AUDIT_TOPICS.map((topic, idx) => (
+                {topicsList.map((topic, idx) => (
                   <option key={idx} value={topic}>
                     {idx + 1}. {topic}
                   </option>

@@ -17,6 +17,7 @@ import {
   isDccUser,
   canUserEditAudit,
   canUserDeleteAudit,
+  subscribeImsAuditTopics,
 } from '@/lib/imsService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import {
@@ -63,6 +64,7 @@ export default function ImsAuditPage() {
   // Data states
   const [audits, setAudits] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
+  const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
   const [selectedYear, setSelectedYear] = useState('2569');
   const [yearlyConfig, setYearlyConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,6 +108,16 @@ export default function ImsAuditPage() {
       setPersonnelList(list || []);
     });
     return () => unsub();
+  }, []);
+
+  // 1.1 Subscribe to Dynamic Audit Topics
+  useEffect(() => {
+    const unsub = subscribeImsAuditTopics((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setTopicsList(data);
+      }
+    });
+    return () => unsub && unsub();
   }, []);
 
   // 2. Subscribe to Audits
@@ -1084,8 +1096,8 @@ export default function ImsAuditPage() {
                 background: '#FFFFFF',
               }}
             >
-              <option value="ALL">-- ทุกหัวข้อที่รับการตรวจ (23 หัวข้อ) --</option>
-              {IMS_AUDIT_TOPICS.map((topic, i) => (
+              <option value="ALL">-- ทุกหัวข้อที่รับการตรวจ ({topicsList.length} หัวข้อ) --</option>
+              {topicsList.map((topic, i) => (
                 <option key={i} value={topic}>
                   {i + 1}. {topic}
                 </option>

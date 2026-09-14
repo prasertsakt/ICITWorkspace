@@ -28,6 +28,7 @@ import {
   IMS_STANDARDS,
   IMS_AUDIT_TOPICS,
 } from '../lib/constants';
+import { subscribeImsAuditTopics } from '../lib/imsService';
 import {
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
@@ -56,6 +57,7 @@ export default function CarIncidentModal({
   onSaved,
 }) {
   const isEdit = Boolean(record && record.id);
+  const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
 
   // Form State
   const [docType, setDocType] = useState(record?.docType || 'CAR');
@@ -65,6 +67,17 @@ export default function CarIncidentModal({
   const [standard, setStandard] = useState(record?.standard || IMS_STANDARDS[1] || 'ISO 9001:2015');
   const [topic, setTopic] = useState(record?.topic || IMS_AUDIT_TOPICS[0] || '');
   const [clauses, setClauses] = useState(record?.clauses || '');
+
+  // Subscribe to dynamic audit topics
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeImsAuditTopics((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setTopicsList(data);
+      }
+    });
+    return () => unsub && unsub();
+  }, [isOpen]);
 
   // Part 1
   const [requesters, setRequesters] = useState(record?.requesters || []);
@@ -833,7 +846,7 @@ export default function CarIncidentModal({
                 {/* Audit Topic (Predefined 23 Topics) */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    หัวข้อตรวจติดตาม (Audit Topic - 23 รายการ) <span style={{ color: '#DC2626' }}>*</span>
+                    หัวข้อตรวจติดตาม (Audit Topic) <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <select
                     value={topic}
@@ -847,7 +860,7 @@ export default function CarIncidentModal({
                       fontSize: '0.85rem',
                     }}
                   >
-                    {IMS_AUDIT_TOPICS.map((top, idx) => (
+                    {topicsList.map((top, idx) => (
                       <option key={top} value={top}>
                         {idx + 1}. {top}
                       </option>
