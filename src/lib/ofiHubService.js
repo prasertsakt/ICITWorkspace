@@ -146,28 +146,72 @@ export function subscribeOfiItems(callback) {
 }
 
 /**
- * Sync OFI items from Internal Audit Reports for a given fiscal year
- * Only DCC or MR can trigger this action
+ * Import OFI items from Internal Audit Reports for a given fiscal year
+ * Only DCC or MR (or Admin) can trigger this action
+ * Checks for duplicates against existing OFI records to prevent duplicate entries
  */
-export async function syncOfiFromAudits(fiscalYear, audits, actor) {
-  const ofiAudits = audits.filter(
+export async function importOfiFromAudits(fiscalYear, audits, actor) {
+  const ofiAudits = (audits || []).filter(
     (a) =>
       String(a.auditYear) === String(fiscalYear) &&
       (a.result === 'OFI' || a.overallResult === 'OFI')
   );
 
-  // Get existing OFI items for this year to avoid duplicates
-  const existing = (cachedOfiItems || []).filter(
+  // Get existing OFI items for this year from cache / local storage to avoid duplicates
+  let allExisting = cachedOfiItems ? [...cachedOfiItems] : [];
+  if (allExisting.length === 0 && typeof window !== 'undefined') {
+    try {
+      allExisting = JSON.parse(localStorage.getItem(LOCAL_KEY_OFI_ITEMS) || '[]');
+    } catch (e) {
+      allExisting = [];
+    }
+  }
+
+  const existingInYear = allExisting.filter(
     (item) => String(item.fiscalYear) === String(fiscalYear)
   );
-  const existingSourceIds = new Set(existing.map((item) => item.sourceAuditId));
+
+  // Set of known source audit IDs & item IDs
+  const existingSourceIds = new Set(
+    existingInYear.map((item) => item.sourceAuditId).filter(Boolean)
+  );
+  const existingItemIds = new Set(
+    existingInYear.map((item) => item.id).filter(Boolean)
+  );
+
+  // Robust duplicate checker
+  const isDuplicate = (audit) => {
+    // 1. Direct ID match
+    if (existingSourceIds.has(audit.id) || existingItemIds.has(audit.id)) {
+      return true;
+    }
+
+    // 2. Exact or normalized Topic + Clauses / Findings matching
+    const topicNorm = (audit.topic || '').trim().toLowerCase();
+    const clausesNorm = (audit.clauses || '').trim().toLowerCase();
+    const findingsNorm = (audit.findings || '').trim().toLowerCase();
+
+    return existingInYear.some((item) => {
+      const itemTopic = (item.sourceAuditTopic || '').trim().toLowerCase();
+      const itemClauses = (item.sourceClauses || '').trim().toLowerCase();
+      const itemFindings = (item.sourceFindings || '').trim().toLowerCase();
+
+      if (topicNorm && itemTopic === topicNorm) {
+        if (clausesNorm && itemClauses === clausesNorm) return true;
+        if (findingsNorm && itemFindings === findingsNorm) return true;
+      }
+      return false;
+    });
+  };
 
   const newItems = [];
+  let skippedCount = 0;
   const now = new Date().toISOString();
 
   for (const audit of ofiAudits) {
-    if (existingSourceIds.has(audit.id)) {
-      continue; // Skip already synced
+    if (isDuplicate(audit)) {
+      skippedCount++;
+      continue; // Skip duplicate
     }
 
     const ofiItem = {
@@ -177,13 +221,15 @@ export async function syncOfiFromAudits(fiscalYear, audits, actor) {
       sourceAuditTopic: audit.topic || '',
       sourceClauses: audit.clauses || '',
       sourceFindings: audit.findings || '',
-      sourceStandard: audit.standard || '',
+      sourceStandard: audit.isoStandard || audit.standard || 'IMS 9001/27001',
       implement: '',
       status: '',
       remark: '',
       departments: [],
       assignees: [],
       detailsHtml: '',
+      importedAt: now,
+      importedBy: actor?.name || actor?.email || '',
       syncedAt: now,
       syncedBy: actor?.name || actor?.email || '',
       createdAt: now,
@@ -196,7 +242,7 @@ export async function syncOfiFromAudits(fiscalYear, audits, actor) {
 
   if (newItems.length > 0) {
     // 1. Update local cache immediately
-    const currentList = cachedOfiItems ? [...cachedOfiItems] : [];
+    const currentList = cachedOfiItems ? [...cachedOfiItems] : allExisting;
     const updatedList = [...newItems, ...currentList];
     cachedOfiItems = updatedList;
 
@@ -224,16 +270,24 @@ export async function syncOfiFromAudits(fiscalYear, audits, actor) {
   try {
     logActivity({
       category: 'IMS_OFI',
-      action: 'SYNC_OFI',
-      details: `Sync OFI จาก Internal Audit Report ปีงบประมาณ ${fiscalYear} — พบ ${ofiAudits.length} รายการ, เพิ่มใหม่ ${newItems.length} รายการ`,
+      action: 'IMPORT_OFI',
+      details: `นำเข้า OFI จาก Internal Audit Report ปีงบประมาณ ${fiscalYear} — พบทั้งหมด ${ofiAudits.length} รายการ, นำเข้าใหม่ ${newItems.length} รายการ, ข้ามรายการซ้ำ ${skippedCount} รายการ`,
       actorEmail: actor?.email,
       actorName: actor?.name,
-      metadata: { fiscalYear, totalOfi: ofiAudits.length, newItems: newItems.length },
+      metadata: {
+        fiscalYear,
+        totalOfi: ofiAudits.length,
+        newItems: newItems.length,
+        skipped: skippedCount,
+      },
     });
   } catch (e) {}
 
-  return { totalOfi: ofiAudits.length, newItems: newItems.length };
+  return { totalOfi: ofiAudits.length, newItems: newItems.length, skippedCount };
 }
+
+// Backward compatibility alias
+export const syncOfiFromAudits = importOfiFromAudits;
 
 /**
  * Save/Update an OFI item

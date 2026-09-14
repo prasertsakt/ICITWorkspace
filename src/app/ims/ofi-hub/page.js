@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
   subscribeOfiItems,
-  syncOfiFromAudits,
+  importOfiFromAudits,
   saveOfiItem,
   deleteOfiItem,
   getOfiEditPermission,
@@ -32,6 +32,7 @@ import {
   Search,
   Filter,
   RefreshCw,
+  Download,
   FileText,
   Edit3,
   Edit,
@@ -87,8 +88,8 @@ export default function OfiHubPage() {
   const [tempSelection, setTempSelection] = useState([]);
   const [personnelSearch, setPersonnelSearch] = useState('');
 
-  // Syncing state & Feedback Toast
-  const [isSyncing, setIsSyncing] = useState(false);
+  // Importing state & Feedback Toast
+  const [isImporting, setIsImporting] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error'|'info', message: '' }
 
   const showFeedback = (message, type = 'success') => {
@@ -150,8 +151,8 @@ export default function OfiHubPage() {
     return isMrUser(currentUser, currentPersonnel, yearlyConfig);
   }, [currentUser, currentPersonnel, yearlyConfig]);
 
-  const canSync = isAdmin || isDcc || isMr;
-  const canEditDccFields = isAdmin || isDcc; // Only DCC & Admin can assign departments & assignees
+  const canImport = isAdmin || isDcc || isMr;
+  const canEditDccFields = isAdmin || isDcc; // Only DCC & Admin can create OFI, assign departments & assignees
 
   // Filter OFI items by selected fiscal year
   const yearOfiItems = useMemo(() => {
@@ -242,27 +243,27 @@ export default function OfiHubPage() {
   }, [yearOfiItems, searchQuery, implementFilter, statusFilter, departmentFilter]);
 
   // Handlers
-  const handleSync = async () => {
-    if (!canSync) {
-      showFeedback('เฉพาะ DCC หรือ MR เท่านั้นที่สามารถ Sync ข้อมูลได้', 'error');
+  const handleImport = async () => {
+    if (!canImport) {
+      showFeedback('เฉพาะ DCC หรือ MR เท่านั้นที่สามารถนำเข้าข้อมูลได้', 'error');
       return;
     }
 
-    setIsSyncing(true);
+    setIsImporting(true);
     try {
       const actor = {
         email: currentUser?.email,
         name: currentPersonnel?.name || currentUser?.displayName || currentUser?.email,
       };
-      const result = await syncOfiFromAudits(selectedYear, iaAudits, actor);
+      const result = await importOfiFromAudits(selectedYear, iaAudits, actor);
       if (result.newItems > 0) {
         showFeedback(
-          `Sync สำเร็จ! ตรวจพบ OFI ทั้งหมด ${result.totalOfi} รายการ, นำเข้าใหม่ ${result.newItems} รายการ`,
+          `นำเข้าสำเร็จ! พบ OFI ${result.totalOfi} รายการ (นำเข้าใหม่ ${result.newItems} รายการ${result.skippedCount > 0 ? `, ข้ามรายการที่มีอยู่แล้ว ${result.skippedCount} รายการ` : ''})`,
           'success'
         );
       } else if (result.totalOfi > 0) {
         showFeedback(
-          `พบ OFI ในรายงานการตรวจ ${result.totalOfi} รายการ (ซิงค์ครบถ้วนแล้วทั้งหมด)`,
+          `พบ OFI ในรายงานการตรวจ ${result.totalOfi} รายการ (มีอยู่ใน OFI Hub ครบถ้วนแล้ว ไม่พบรายการซ้ำซ้อน)`,
           'info'
         );
       } else {
@@ -272,10 +273,10 @@ export default function OfiHubPage() {
         );
       }
     } catch (err) {
-      console.error('Sync OFI error:', err);
-      showFeedback('เกิดข้อผิดพลาดในการ Sync ข้อมูล', 'error');
+      console.error('Import OFI error:', err);
+      showFeedback('เกิดข้อผิดพลาดในการนำเข้าข้อมูล', 'error');
     } finally {
-      setIsSyncing(false);
+      setIsImporting(false);
     }
   };
 
@@ -832,12 +833,12 @@ export default function OfiHubPage() {
                 </button>
               )}
 
-              {/* Sync Button (DCC / MR / Admin) */}
-              {canSync && (
+              {/* Import Button (DCC / MR / Admin) */}
+              {canImport && (
                 <button
                   type="button"
-                  onClick={handleSync}
-                  disabled={isSyncing}
+                  onClick={handleImport}
+                  disabled={isImporting}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -849,23 +850,23 @@ export default function OfiHubPage() {
                     border: '1px solid rgba(255, 255, 255, 0.35)',
                     fontWeight: 700,
                     fontSize: '0.9rem',
-                    cursor: isSyncing ? 'not-allowed' : 'pointer',
+                    cursor: isImporting ? 'not-allowed' : 'pointer',
                     backdropFilter: 'blur(6px)',
                     transition: 'all 0.2s',
-                    opacity: isSyncing ? 0.7 : 1,
+                    opacity: isImporting ? 0.7 : 1,
                   }}
-                  title={`ดึงข้อมูล OFI จาก Internal Audit ปี ${selectedYear} (พบ ${availableIaOfiCount} รายการ)`}
+                  title={`นำเข้าข้อมูล OFI จาก Internal Audit ปี ${selectedYear} (พบ ${availableIaOfiCount} รายการ)`}
                 >
-                  <RefreshCw
+                  <Download
                     size={17}
                     style={{
-                      animation: isSyncing ? 'spin 1s linear infinite' : 'none',
+                      animation: isImporting ? 'spin 1s linear infinite' : 'none',
                     }}
                   />
                   <span>
-                    {isSyncing
-                      ? 'กำลังซิงค์...'
-                      : `Sync จาก Internal Audit (${availableIaOfiCount})`}
+                    {isImporting
+                      ? 'กำลังนำเข้าข้อมูล...'
+                      : `นำเข้า OFI จาก Internal Audit (${availableIaOfiCount})`}
                   </span>
                 </button>
               )}
