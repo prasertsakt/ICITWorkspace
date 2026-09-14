@@ -1261,18 +1261,72 @@ export async function saveYearlyAuditors(year, configData, adminActor) {
 }
 
 /**
- * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) for the given year
+ * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) in any fiscal year (cached or localStorage)
  */
-export function isDccUser(user, personnel, yearConfig) {
+export function isUserDccInAnyYear(user, personnel) {
   if (!user && !personnel) return false;
   const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
+
+  // 1. Check in-memory cached configs
+  for (const yr in cachedConfigMap) {
+    const cfg = cachedConfigMap[yr];
+    if (cfg?.dccEmail && cfg.dccEmail.toLowerCase().trim() === userEmail) return true;
+    if (cfg?.dccId && personId && cfg.dccId === personId) return true;
+  }
+
+  // 2. Check localStorage configs for available years
+  if (typeof window !== 'undefined') {
+    try {
+      const currentYearNum = new Date().getFullYear() + 543;
+      const yearsToCheck = [
+        String(currentYearNum + 1),
+        String(currentYearNum),
+        String(currentYearNum - 1),
+        String(currentYearNum - 2),
+        String(currentYearNum - 3),
+        '2571',
+        '2570',
+        '2569',
+        '2568',
+        '2567',
+      ];
+      for (const yr of yearsToCheck) {
+        const raw = localStorage.getItem(`${LOCAL_KEY_IMS_CONFIG_PREFIX}${yr}`);
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (cfg?.dccEmail && cfg.dccEmail.toLowerCase().trim() === userEmail) return true;
+          if (cfg?.dccId && personId && cfg.dccId === personId) return true;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return false;
+}
+
+/**
+ * Check if the user is assigned as DCC (ผู้ควบคุมเอกสาร) for the given year
+ * If the current year is not configured yet, it will fallback to checking if the user is DCC in any year
+ */
+export function isDccUser(user, personnel, yearConfig, checkOtherYearsIfUnset = true) {
+  if (!user && !personnel) return false;
+  const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
+  const personId = personnel?.id;
+
+  // 1. Check directly against current yearConfig
   if (yearConfig?.dccEmail && yearConfig.dccEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.dccId && personId && yearConfig.dccId === personId) {
     return true;
   }
+
+  // 2. If current year does not have DCC defined yet and checkOtherYearsIfUnset is true, fallback to checking any year
+  if (checkOtherYearsIfUnset && !yearConfig?.dccEmail && !yearConfig?.dccId) {
+    return isUserDccInAnyYear(user, personnel);
+  }
+
   return false;
 }
 

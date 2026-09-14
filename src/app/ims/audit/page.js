@@ -501,7 +501,7 @@ export default function ImsAuditPage() {
               <span>ประวัติกิจกรรม (Activity Log)</span>
             </button>
 
-            {isAdmin && (
+            {(isAdmin || isDcc) && (
               <button
                 type="button"
                 onClick={() => setIsConfigModalOpen(true)}
@@ -966,7 +966,9 @@ export default function ImsAuditPage() {
             ) : (
               <span>
                 <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
-                <span style={{ color: '#B45309' }}>ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — กรุณาให้ผู้ดูแลระบบกำหนดรายชื่อก่อน</span>
+                <span style={{ color: '#B45309' }}>
+                  ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — กรุณาให้ผู้ดูแลระบบหรือ DCC กำหนดรายชื่อก่อน
+                </span>
               </span>
             )}
           </div>
@@ -1002,7 +1004,7 @@ export default function ImsAuditPage() {
                 <span>คำสั่งแต่งตั้ง</span>
               </a>
             )}
-            {isAdmin && (
+            {(isAdmin || isDcc) && (
               <button
                 type="button"
                 onClick={() => setIsConfigModalOpen(true)}
@@ -1016,7 +1018,7 @@ export default function ImsAuditPage() {
                   padding: 0,
                 }}
               >
-                แก้ไขผู้ตรวจ
+                {isYearConfigured ? 'แก้ไขผู้ตรวจ' : 'กำหนดคณะผู้ตรวจ'}
               </button>
             )}
           </div>
