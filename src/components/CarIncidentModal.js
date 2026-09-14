@@ -48,6 +48,7 @@ export default function CarIncidentModal({
   isOpen,
   onClose,
   record,
+  defaultYear = '2569',
   currentUser,
   currentPersonnel,
   personnelList = [],
@@ -61,7 +62,7 @@ export default function CarIncidentModal({
 
   // Form State
   const [docType, setDocType] = useState(record?.docType || 'CAR');
-  const [fiscalYear, setFiscalYear] = useState(record?.fiscalYear || '2569');
+  const [fiscalYear, setFiscalYear] = useState(record?.fiscalYear || defaultYear || '2569');
   const [docNumber, setDocNumber] = useState(record?.docNumber || '');
   const [status, setStatus] = useState(record?.status || CAR_INCIDENT_STATUS.NOT_YET_APPROVED);
   const [standard, setStandard] = useState(record?.standard || IMS_STANDARDS[1] || 'ISO 9001:2015');
@@ -182,7 +183,7 @@ export default function CarIncidentModal({
     } else {
       // Default for new
       setDocType('CAR');
-      setFiscalYear('2569');
+      setFiscalYear(defaultYear || '2569');
       setDocNumber('');
       setStatus(CAR_INCIDENT_STATUS.NOT_YET_APPROVED);
       setStandard(IMS_STANDARDS[1] || 'ISO 9001:2015');
@@ -230,7 +231,7 @@ export default function CarIncidentModal({
     }
     setActiveTab('part1');
     setErrorMsg('');
-  }, [record, isOpen]);
+  }, [record, isOpen, defaultYear]);
 
   if (!isOpen) return null;
 
@@ -263,6 +264,9 @@ export default function CarIncidentModal({
   // Handle NC Import from IA Report
   const handleImportFromNc = (audit) => {
     if (!audit) return;
+    if (audit.auditYear || audit.fiscalYear) {
+      setFiscalYear(String(audit.auditYear || audit.fiscalYear));
+    }
     setTopic(audit.topic || IMS_AUDIT_TOPICS[0]);
     setStandard(audit.standard || IMS_STANDARDS[0]);
     setClauses(audit.clause || audit.clauses || '');

@@ -1041,6 +1041,7 @@ export default function CarIncidentHubPage() {
           isOpen={isFormModalOpen}
           onClose={() => setIsFormModalOpen(false)}
           record={editingRecord}
+          defaultYear={selectedYear}
           currentUser={currentUser}
           currentPersonnel={currentPersonnel}
           personnelList={personnelList}

@@ -69,89 +69,8 @@ function notifyCarSubscribers(data) {
   });
 }
 
-export const SEED_CAR_INCIDENTS = [
-  {
-    id: 'car-2569-001',
-    docNumber: 'CAR-2569-001',
-    docType: 'CAR',
-    fiscalYear: '2569',
-    status: 'ON_PROGRESS',
-    standard: 'ISO 9001:2015',
-    topic: 'Document and record control',
-    clauses: '7.5',
-    sourceAuditId: 'audit-2569-001',
-    sourceAuditCode: 'IA-2569-001',
-    requesters: [
-      {
-        id: 'p-1',
-        name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
-        email: 'prasertsak.t@cit.kmutnb.ac.th',
-        department: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-      },
-    ],
-    requesterStatus: 'AUDITOR',
-    problemStatus: 'INTERNAL',
-    requestDate: '2026-09-10',
-    description: 'พบว่าแบบฟอร์มขอปฏิบัติการแก้ไขในระบบสารสนเทศบางส่วนยังใช้ฉบับเก่า (Version 4.0) ซึ่งยังไม่สอดคล้องกับข้อกำหนดฉบับปรับปรุง Version 5.0 (NC)',
-    requestees: [
-      {
-        id: 'p-2',
-        name: 'นางสาวจารุชา เจือทอง',
-        email: 'jarucha.j@icit.kmutnb.ac.th',
-        department: 'ฝ่ายบริหารงานทั่วไป',
-      },
-      {
-        id: 'p-3',
-        name: 'นายกนก บรรเทิงจิตต์',
-        email: 'kanok.b@icit.kmutnb.ac.th',
-        department: 'ฝ่ายบริการสารสนเทศและสื่อการเรียนรู้',
-      },
-    ],
-    immediateCorrection: 'ดำเนินการแจ้งเวียนยกเลิกการใช้งานแบบฟอร์ม Version 4.0 และอัปโหลดแบบฟอร์ม ICIT-FM-COMMON-013 Version 5.0 ขึ้นสู่ระบบ Intranet ทันที',
-    rootCause: 'บุคลากรบางส่วนยังบันทึกไฟล์เทมเพลตเดิมไว้ในเครื่องคอมพิวเตอร์ส่วนบุคคล และยังไม่ได้ดาวน์โหลดไฟล์เวอร์ชันล่าสุดจากระบบ DCC',
-    part2Date: '2026-09-11',
-    part2SubmittedBy: 'นางสาวจารุชา เจือทอง',
-    actionPlans: [
-      {
-        id: 'step-1',
-        step: 'สำรวจและรวบรวมแบบฟอร์มควบคุมเอกสารทั้งหมดในทุกฝ่าย',
-        responsiblePerson: 'นางสาวจารุชา เจือทอง',
-        targetDate: '2026-09-20',
-        completedDate: '2026-09-15',
-        signature: 'จารุชา เจือทอง (2026-09-15)',
-        remarks: 'ดำเนินการแล้วเสร็จ',
-      },
-      {
-        id: 'step-2',
-        step: 'จัดทำระบบตรวจสอบเวอร์ชันเอกสารอัตโนมัติบน Portal',
-        responsiblePerson: 'นายกนก บรรเทิงจิตต์',
-        targetDate: '2026-09-30',
-        completedDate: '2026-09-25',
-        signature: 'กนก บรรเทิงจิตต์ (2026-09-25)',
-        remarks: 'ติดตั้งระบบเรียบร้อย',
-      },
-    ],
-    executiveSignature: {
-      name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
-      position: 'รองผู้อำนวยการฝ่ายบริหาร',
-      date: '2026-09-12',
-      signedByEmail: 'prasertsak.t@cit.kmutnb.ac.th',
-    },
-    notes: [
-      {
-        id: 'note-1',
-        authorName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
-        authorEmail: 'prasertsak.t@cit.kmutnb.ac.th',
-        content: 'อนุมัติแผนงาน Corrective Actions ขอให้เร่งรัดติดตามการสำรวจให้แล้วเสร็จตามกำหนด',
-        createdAt: '2026-09-12T09:30:00.000Z',
-      },
-    ],
-    createdAt: '2026-09-10T08:00:00.000Z',
-    createdByEmail: 'prasertsak.t@cit.kmutnb.ac.th',
-    createdByName: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
-    updatedAt: '2026-09-12T09:30:00.000Z',
-  },
-];
+// Clean state: No dummy/mock seed data (User starts with real input from Firestore)
+export const SEED_CAR_INCIDENTS = [];
 
 /**
  * Recursively removes undefined fields so Firestore writes never fail with invalid data
@@ -177,8 +96,8 @@ export function cleanForFirestore(obj) {
 function initCarLocalStorage() {
   if (typeof window === 'undefined') return;
   const raw = localStorage.getItem(LOCAL_KEY_CAR_INCIDENTS);
-  if (!raw || raw === '[]') {
-    localStorage.setItem(LOCAL_KEY_CAR_INCIDENTS, JSON.stringify(SEED_CAR_INCIDENTS));
+  if (!raw) {
+    localStorage.setItem(LOCAL_KEY_CAR_INCIDENTS, JSON.stringify([]));
   }
 }
 
