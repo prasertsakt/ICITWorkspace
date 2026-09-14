@@ -161,23 +161,22 @@ export default function CarIncidentHubPage() {
           (typeof a.findings === 'string' && a.findings.includes('NC'));
         if (!isNC) return false;
 
-        // 3. User must be in ผู้ตรวจติดตาม (Auditors) of this IA report (Admin can view all)
-        if (!isAdmin) {
-          const isUserAuditor =
-            (Array.isArray(a.auditors) &&
-              a.auditors.some(
-                (aud) =>
-                  (aud.email && aud.email.toLowerCase().trim() === userEmail) ||
-                  (personId && aud.id === personId) ||
-                  (currentPersonnel?.name && aud.name === currentPersonnel.name)
-              )) ||
-            (a.auditor1Email && a.auditor1Email.toLowerCase().trim() === userEmail) ||
-            (a.auditor2Email && a.auditor2Email.toLowerCase().trim() === userEmail) ||
-            (personId && (a.auditor1Id === personId || a.auditor2Id === personId)) ||
-            (currentPersonnel?.name && (a.auditor1Name === currentPersonnel.name || a.auditor2Name === currentPersonnel.name));
+        // 3. User must be in ผู้ตรวจติดตาม (Auditors) of this IA report
+        const currentName = (currentPersonnel?.name || currentUser?.displayName || '').trim();
+        const isUserAuditor =
+          (Array.isArray(a.auditors) &&
+            a.auditors.some(
+              (aud) =>
+                (userEmail && aud.email && aud.email.toLowerCase().trim() === userEmail) ||
+                (personId && aud.id && aud.id === personId) ||
+                (currentName && aud.name && aud.name.trim() === currentName)
+            )) ||
+          (userEmail && a.auditor1Email && a.auditor1Email.toLowerCase().trim() === userEmail) ||
+          (userEmail && a.auditor2Email && a.auditor2Email.toLowerCase().trim() === userEmail) ||
+          (personId && (a.auditor1Id === personId || a.auditor2Id === personId)) ||
+          (currentName && (a.auditor1Name?.trim() === currentName || a.auditor2Name?.trim() === currentName));
 
-          if (!isUserAuditor) return false;
-        }
+        if (!isUserAuditor) return false;
 
         return true;
       })
