@@ -28,7 +28,7 @@ import {
   IMS_STANDARDS,
   IMS_AUDIT_TOPICS,
 } from '../lib/constants';
-import { subscribeImsAuditTopics } from '../lib/imsService';
+import { subscribeImsAuditTopics, isMrUser } from '../lib/imsService';
 import {
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
@@ -253,14 +253,8 @@ export default function CarIncidentModal({
   const isPart4Eligible = status === CAR_INCIDENT_STATUS.ON_PROGRESS && part3Completed;
   const canEditPart4 = !dccContentEditBlocked && (isAdmin || isRequester) && isPart4Eligible;
 
-  // Deputy Director signature permission
-  const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
-  const isDeputy =
-    isAdmin ||
-    userEmail === 'prasertsak.t@cit.kmutnb.ac.th' ||
-    userEmail === 'tiawongsombat@gmail.com' ||
-    currentPersonnel?.position?.includes('รองผู้อำนวยการฝ่ายบริหาร') ||
-    currentPersonnel?.note?.includes('รองผู้อำนวยการฝ่ายบริหาร');
+  // MR (Management Representative) signature permission (เฉพาะ MR ของปีนี้ หรือ Admin)
+  const isMR = isAdmin || isMrUser(currentUser, currentPersonnel, yearlyConfig);
 
   // Handle NC Import from IA Report
   const handleImportFromNc = (audit) => {
@@ -375,13 +369,13 @@ export default function CarIncidentModal({
     setActionPlans(updated);
   };
 
-  // Electronic Signature for Deputy Director
+  // Electronic Signature for MR (Management Representative)
   const handleSignExecutive = () => {
     const today = new Date().toISOString().split('T')[0];
-    const signerName = currentPersonnel?.name || 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ';
+    const signerName = currentPersonnel?.name || yearlyConfig?.mrName || currentUser?.displayName || 'ผู้แทนฝ่ายบริหาร (MR)';
     setExecutiveSignature({
       name: signerName,
-      position: 'รองผู้อำนวยการฝ่ายบริหาร',
+      position: 'ผู้แทนฝ่ายบริหาร (MR)',
       date: today,
       signedByEmail: currentUser?.email || currentPersonnel?.email || '',
       signedAt: new Date().toISOString(),
@@ -1527,7 +1521,7 @@ export default function CarIncidentModal({
               >
                 <div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
-                    รองผู้อำนวยการฝ่ายบริหาร / ตัวแทนฝ่ายบริหาร
+                    ผู้แทนฝ่ายบริหาร (MR - Management Representative)
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
                     {executiveSignature ? (
@@ -1535,12 +1529,12 @@ export default function CarIncidentModal({
                         ✓ ลงนามรับทราบแล้ว: {executiveSignature.name} ({executiveSignature.date})
                       </span>
                     ) : (
-                      'รอดำเนินการลงนามรับทราบแผนงาน'
+                      'รอดำเนินการลงนามรับทราบแผนงานโดย MR'
                     )}
                   </div>
                 </div>
 
-                {isDeputy && !executiveSignature && (
+                {isMR && !executiveSignature && (
                   <button
                     type="button"
                     onClick={handleSignExecutive}
@@ -1552,10 +1546,11 @@ export default function CarIncidentModal({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
+                      fontWeight: 700,
                     }}
                   >
                     <CheckCircle2 size={15} />
-                    <span>ลงชื่อรับทราบในฐานะรองผู้อำนวยการฝ่ายบริหาร</span>
+                    <span>ลงชื่อรับทราบ (MR)</span>
                   </button>
                 )}
               </div>
@@ -1939,87 +1934,119 @@ export default function CarIncidentModal({
                 if (filtered.length > 0) {
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {filtered.map((audit) => (
-                        <div
-                          key={audit.id}
-                          onClick={() => handleImportFromNc(audit)}
-                          style={{
-                            padding: '12px 14px',
-                            borderRadius: '10px',
-                            border: '1px solid #E2E8F0',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            backgroundColor: '#FFFFFF',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#0D9488';
-                            e.currentTarget.style.backgroundColor = '#F0FDFA';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#E2E8F0';
-                            e.currentTarget.style.backgroundColor = '#FFFFFF';
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontWeight: 800, color: '#0D9488', fontSize: '0.875rem' }}>
-                                {audit.docNumber || audit.auditCode || audit.id}
-                              </span>
-                              {audit.auditYear && (
+                      {filtered.map((audit) => {
+                        const isDuplicate = audit.isAlreadyImported && audit.id !== sourceAuditId;
+
+                        return (
+                          <div
+                            key={audit.id}
+                            onClick={() => {
+                              if (isDuplicate) {
+                                alert(`⚠️ รายงานการตรวจนี้ (${audit.docNumber || audit.id}) ได้ถูกนำไปสร้างเอกสาร CAR หมายเลข ${audit.existingCarDocNumber} แล้ว`);
+                                return;
+                              }
+                              handleImportFromNc(audit);
+                            }}
+                            style={{
+                              padding: '12px 14px',
+                              borderRadius: '10px',
+                              border: `1px solid ${isDuplicate ? '#FDE68A' : '#E2E8F0'}`,
+                              cursor: isDuplicate ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.15s ease',
+                              backgroundColor: isDuplicate ? '#FFFDF5' : '#FFFFFF',
+                              opacity: isDuplicate ? 0.75 : 1,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isDuplicate) {
+                                e.currentTarget.style.borderColor = '#0D9488';
+                                e.currentTarget.style.backgroundColor = '#F0FDFA';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isDuplicate) {
+                                e.currentTarget.style.borderColor = '#E2E8F0';
+                                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                              }
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, color: '#0D9488', fontSize: '0.875rem' }}>
+                                  {audit.docNumber || audit.auditCode || audit.id}
+                                </span>
+                                {audit.auditYear && (
+                                  <span
+                                    style={{
+                                      fontSize: '0.725rem',
+                                      fontWeight: 700,
+                                      background: '#E2E8F0',
+                                      color: '#475569',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                    }}
+                                  >
+                                    ปี {audit.auditYear}
+                                  </span>
+                                )}
+                                {audit.isoStandard && (
+                                  <span
+                                    style={{
+                                      fontSize: '0.725rem',
+                                      background: '#E0F2FE',
+                                      color: '#0369A1',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                    }}
+                                  >
+                                    {audit.isoStandard}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {isDuplicate && (
+                                  <span
+                                    style={{
+                                      background: '#FEF3C7',
+                                      color: '#B45309',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontWeight: 700,
+                                      fontSize: '0.725rem',
+                                      border: '1px solid #FDE68A',
+                                    }}
+                                  >
+                                    สร้าง CAR แล้ว ({audit.existingCarDocNumber})
+                                  </span>
+                                )}
                                 <span
                                   style={{
-                                    fontSize: '0.725rem',
+                                    background: '#FEE2E2',
+                                    color: '#DC2626',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
                                     fontWeight: 700,
-                                    background: '#E2E8F0',
-                                    color: '#475569',
-                                    padding: '1px 6px',
-                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
                                   }}
                                 >
-                                  ปี {audit.auditYear}
+                                  NC (ข้อบกพร่อง)
                                 </span>
-                              )}
-                              {audit.isoStandard && (
-                                <span
-                                  style={{
-                                    fontSize: '0.725rem',
-                                    background: '#E0F2FE',
-                                    color: '#0369A1',
-                                    padding: '1px 6px',
-                                    borderRadius: '4px',
-                                  }}
-                                >
-                                  {audit.isoStandard}
-                                </span>
-                              )}
+                              </div>
                             </div>
-                            <span
-                              style={{
-                                background: '#FEE2E2',
-                                color: '#DC2626',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              NC (ข้อบกพร่อง)
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
-                            {audit.topic}
-                          </div>
-                          {audit.clauses && (
-                            <div style={{ fontSize: '0.775rem', color: '#0284C7', marginBottom: '4px' }}>
-                              ข้อกำหนด: <strong>{audit.clauses}</strong>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
+                              {audit.topic}
                             </div>
-                          )}
-                          <div style={{ fontSize: '0.8rem', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                            {audit.findings || audit.description || '-'}
+                            {audit.clauses && (
+                              <div style={{ fontSize: '0.775rem', color: '#0284C7', marginBottom: '4px' }}>
+                                ข้อกำหนด: <strong>{audit.clauses}</strong>
+                              </div>
+                            )}
+                            <div style={{ fontSize: '0.8rem', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                              {audit.findings || audit.description || '-'}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 }

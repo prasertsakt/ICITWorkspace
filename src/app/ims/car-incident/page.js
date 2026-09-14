@@ -142,18 +142,64 @@ export default function CarIncidentHubPage() {
     return Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
   }, [carIncidents, iaAudits]);
 
-  // NC Audits available for import in the current fiscal year
+  // NC Audits available for import in the current fiscal year (เฉพาะที่ผู้ใช้เป็นผู้ตรวจติดตาม และตรวจพบ NC ในปีงบประมาณเดียวกัน)
   const availableNcAudits = useMemo(() => {
-    return iaAudits.filter((a) => {
-      const isSameYear = selectedYear === 'ALL' || String(a.auditYear || a.fiscalYear) === String(selectedYear);
-      const isNC =
-        a.result === 'NC' ||
-        a.resultType === 'NC' ||
-        a.overallResult === 'NC' ||
-        (typeof a.findings === 'string' && a.findings.includes('NC'));
-      return isSameYear && isNC;
-    });
-  }, [iaAudits, selectedYear]);
+    const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
+    const personId = currentPersonnel?.id;
+
+    return iaAudits
+      .filter((a) => {
+        // 1. Same Fiscal Year
+        const isSameYear = selectedYear === 'ALL' || String(a.auditYear || a.fiscalYear) === String(selectedYear);
+        if (!isSameYear) return false;
+
+        // 2. Result must be NC
+        const isNC =
+          a.result === 'NC' ||
+          a.resultType === 'NC' ||
+          a.overallResult === 'NC' ||
+          (typeof a.findings === 'string' && a.findings.includes('NC'));
+        if (!isNC) return false;
+
+        // 3. User must be in ผู้ตรวจติดตาม (Auditors) of this IA report (Admin can view all)
+        if (!isAdmin) {
+          const isUserAuditor =
+            (Array.isArray(a.auditors) &&
+              a.auditors.some(
+                (aud) =>
+                  (aud.email && aud.email.toLowerCase().trim() === userEmail) ||
+                  (personId && aud.id === personId) ||
+                  (currentPersonnel?.name && aud.name === currentPersonnel.name)
+              )) ||
+            (a.auditor1Email && a.auditor1Email.toLowerCase().trim() === userEmail) ||
+            (a.auditor2Email && a.auditor2Email.toLowerCase().trim() === userEmail) ||
+            (personId && (a.auditor1Id === personId || a.auditor2Id === personId)) ||
+            (currentPersonnel?.name && (a.auditor1Name === currentPersonnel.name || a.auditor2Name === currentPersonnel.name));
+
+          if (!isUserAuditor) return false;
+        }
+
+        return true;
+      })
+      .map((audit) => {
+        // Check for duplicate: has a CAR already been created for this NC?
+        const existingCar = (carIncidents || []).find(
+          (c) =>
+            c.sourceAuditId === audit.id ||
+            (c.sourceAuditCode &&
+              (c.sourceAuditCode === audit.auditCode ||
+                c.sourceAuditCode === audit.docNumber ||
+                c.sourceAuditCode === audit.id))
+        );
+
+        return {
+          ...audit,
+          isAlreadyImported: Boolean(existingCar),
+          existingCarDocNumber: existingCar?.docNumber || null,
+          existingCarId: existingCar?.id || null,
+        };
+      });
+  }, [iaAudits, selectedYear, currentUser, currentPersonnel, isAdmin, carIncidents]);
 
   // Role Checks
   const isDCC = useMemo(() => {

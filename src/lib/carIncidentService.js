@@ -606,9 +606,9 @@ export async function confirmActionStepSignature(carId, stepId, actor) {
 
 /**
  * Sign Executive Approval in Part 3
- * รองผู้อำนวยการฝ่ายบริหาร / ตัวแทนฝ่ายบริหาร
+ * ผู้แทนฝ่ายบริหาร (MR)
  */
-export async function confirmExecutiveSignature(carId, actor, position = 'รองผู้อำนวยการฝ่ายบริหาร') {
+export async function confirmExecutiveSignature(carId, actor, position = 'ผู้แทนฝ่ายบริหาร (MR)') {
   if (!carId) throw new Error('ข้อมูลเอกสารไม่ถูกต้อง');
 
   let list = [];
