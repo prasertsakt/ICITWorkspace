@@ -145,8 +145,12 @@ export default function CarIncidentHubPage() {
   // NC Audits available for import in the current fiscal year
   const availableNcAudits = useMemo(() => {
     return iaAudits.filter((a) => {
-      const isSameYear = String(a.auditYear) === String(selectedYear);
-      const isNC = a.resultType === 'NC' || a.overallResult === 'NC' || (a.findings && a.findings.includes('NC'));
+      const isSameYear = selectedYear === 'ALL' || String(a.auditYear || a.fiscalYear) === String(selectedYear);
+      const isNC =
+        a.result === 'NC' ||
+        a.resultType === 'NC' ||
+        a.overallResult === 'NC' ||
+        (typeof a.findings === 'string' && a.findings.includes('NC'));
       return isSameYear && isNC;
     });
   }, [iaAudits, selectedYear]);

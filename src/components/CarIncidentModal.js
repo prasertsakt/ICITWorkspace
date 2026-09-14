@@ -129,6 +129,7 @@ export default function CarIncidentModal({
   // UI States
   const [activeTab, setActiveTab] = useState('part1'); // 'part1', 'part2', 'part3', 'part4', 'notes'
   const [showNcImportModal, setShowNcImportModal] = useState(false);
+  const [ncSearchQuery, setNcSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [searchPersonnelKeyword, setSearchPersonnelKeyword] = useState('');
@@ -268,11 +269,11 @@ export default function CarIncidentModal({
       setFiscalYear(String(audit.auditYear || audit.fiscalYear));
     }
     setTopic(audit.topic || IMS_AUDIT_TOPICS[0]);
-    setStandard(audit.standard || IMS_STANDARDS[0]);
-    setClauses(audit.clause || audit.clauses || '');
+    setStandard(audit.isoStandard || audit.standard || IMS_STANDARDS[0]);
+    setClauses(audit.clauses || audit.clause || '');
     setDescription(audit.findings || audit.description || '');
     setSourceAuditId(audit.id);
-    setSourceAuditCode(audit.docNumber || audit.id);
+    setSourceAuditCode(audit.auditCode || audit.docNumber || audit.id);
 
     // Populate Requesters from Auditors
     if (Array.isArray(audit.auditors) && audit.auditors.length > 0) {
@@ -1876,73 +1877,165 @@ export default function CarIncidentModal({
                 justifyContent: 'space-between',
               }}
             >
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
-                เลือกข้อบกพร่อง (NC) จากรายงานการตรวจติดตาม
-              </h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                  เลือกข้อบกพร่อง (NC) จากรายงานการตรวจติดตาม
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                  นำเข้าข้อความ findings, clauses, มาตรฐาน และรายชื่อผู้ตรวจ/ผู้รับการตรวจเข้าสู่ CAR
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowNcImportModal(false)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={18} />
               </button>
             </div>
 
+            {/* Search filter for NC audits */}
+            <div style={{ padding: '0.75rem 1.25rem 0', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+              <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+                <Search
+                  size={15}
+                  style={{
+                    position: 'absolute',
+                    left: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94A3B8',
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="ค้นหารหัสตรวจ, หัวข้อตรวจ, หรือข้อบกพร่อง..."
+                  value={ncSearchQuery}
+                  onChange={(e) => setNcSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem 0.75rem 0.45rem 2.25rem',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.85rem',
+                    background: '#FFFFFF',
+                  }}
+                />
+              </div>
+            </div>
+
             <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
-              {availableNcAudits && availableNcAudits.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {availableNcAudits.map((audit) => (
-                    <div
-                      key={audit.id}
-                      onClick={() => handleImportFromNc(audit)}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        backgroundColor: '#FFFFFF',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#0D9488';
-                        e.currentTarget.style.backgroundColor = '#F0FDFA';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#E2E8F0';
-                        e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 800, color: '#0D9488', fontSize: '0.85rem' }}>
-                          {audit.docNumber || audit.id}
-                        </span>
-                        <span
+              {(() => {
+                const filtered = (availableNcAudits || []).filter((audit) => {
+                  if (!ncSearchQuery.trim()) return true;
+                  const q = ncSearchQuery.toLowerCase();
+                  const matchDoc = (audit.docNumber || audit.auditCode || audit.id || '').toLowerCase().includes(q);
+                  const matchTopic = (audit.topic || '').toLowerCase().includes(q);
+                  const matchFindings = (audit.findings || audit.description || '').toLowerCase().includes(q);
+                  const matchClauses = (audit.clauses || audit.clause || '').toLowerCase().includes(q);
+                  return matchDoc || matchTopic || matchFindings || matchClauses;
+                });
+
+                if (filtered.length > 0) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {filtered.map((audit) => (
+                        <div
+                          key={audit.id}
+                          onClick={() => handleImportFromNc(audit)}
                           style={{
-                            background: '#FEE2E2',
-                            color: '#DC2626',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
+                            padding: '12px 14px',
+                            borderRadius: '10px',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            backgroundColor: '#FFFFFF',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#0D9488';
+                            e.currentTarget.style.backgroundColor = '#F0FDFA';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#E2E8F0';
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
                           }}
                         >
-                          NC (ข้อบกพร่อง)
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
-                        {audit.topic}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#64748B', whiteSpace: 'pre-wrap' }}>
-                        {audit.findings || audit.description || '-'}
-                      </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: '#0D9488', fontSize: '0.875rem' }}>
+                                {audit.docNumber || audit.auditCode || audit.id}
+                              </span>
+                              {audit.auditYear && (
+                                <span
+                                  style={{
+                                    fontSize: '0.725rem',
+                                    fontWeight: 700,
+                                    background: '#E2E8F0',
+                                    color: '#475569',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                  }}
+                                >
+                                  ปี {audit.auditYear}
+                                </span>
+                              )}
+                              {audit.isoStandard && (
+                                <span
+                                  style={{
+                                    fontSize: '0.725rem',
+                                    background: '#E0F2FE',
+                                    color: '#0369A1',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                  }}
+                                >
+                                  {audit.isoStandard}
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              style={{
+                                background: '#FEE2E2',
+                                color: '#DC2626',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              NC (ข้อบกพร่อง)
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
+                            {audit.topic}
+                          </div>
+                          {audit.clauses && (
+                            <div style={{ fontSize: '0.775rem', color: '#0284C7', marginBottom: '4px' }}>
+                              ข้อกำหนด: <strong>{audit.clauses}</strong>
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.8rem', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                            {audit.findings || audit.description || '-'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2rem' }}>
-                  ไม่พบรายงานการตรวจที่มีผลเป็น NC ในรอบปีงบประมาณนี้
-                </div>
-              )}
+                  );
+                }
+
+                return (
+                  <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2.5rem 1rem' }}>
+                    <AlertCircle size={32} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#64748B' }}>
+                      ไม่พบรายงานการตรวจที่มีผลเป็น NC
+                    </div>
+                    <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                      รายงานที่มีผลเป็น C (สอดคล้อง) หรือ OFI จะไม่ปรากฏในรายการนี้
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
