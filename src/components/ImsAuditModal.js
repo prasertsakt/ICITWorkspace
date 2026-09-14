@@ -42,7 +42,7 @@ export default function ImsAuditModal({
     isoStandard: 'IMS 9001/27001',
     auditDate: new Date().toISOString().split('T')[0],
     auditors: [{ id: '', name: '', email: '', department: '' }],
-    auditees: [{ id: '', name: '', department: '' }],
+    auditees: [{ id: '', name: '', department: '', email: '' }],
     topic: IMS_AUDIT_TOPICS[0] || '',
     item: '',
     clauses: '',
@@ -118,7 +118,7 @@ export default function ImsAuditModal({
   useEffect(() => {
     if (auditData) {
       // 1. Parse Auditees
-      const existingAuditees =
+      const existingAuditees = (
         Array.isArray(auditData.auditees) && auditData.auditees.length > 0
           ? auditData.auditees
           : auditData.auditee1Name
@@ -127,9 +127,25 @@ export default function ImsAuditModal({
                 id: auditData.auditee1Id || '',
                 name: auditData.auditee1Name || '',
                 department: auditData.auditeeDepartment || '',
+                email: auditData.auditee1Email || '',
               },
             ]
-          : [{ id: '', name: '', department: '' }];
+          : [{ id: '', name: '', department: '', email: '' }]
+      ).map((a) => {
+        let email = a.email || '';
+        if (!email && personnelList && personnelList.length > 0) {
+          const match = personnelList.find(
+            (p) => (a.id && p.id === a.id) || (a.name && p.name && p.name.trim() === a.name.trim())
+          );
+          if (match?.email) email = match.email;
+        }
+        return {
+          id: a.id || '',
+          name: a.name || '',
+          department: a.department || '',
+          email,
+        };
+      });
 
       // 2. Parse Auditors (supports both new array and legacy auditor1 / auditor2 fields)
       let existingAuditors = [];
@@ -248,7 +264,7 @@ export default function ImsAuditModal({
   const handleAddAuditee = () => {
     setFormData((prev) => ({
       ...prev,
-      auditees: [...prev.auditees, { id: '', name: '', department: '' }],
+      auditees: [...prev.auditees, { id: '', name: '', department: '', email: '' }],
     }));
   };
 
@@ -257,7 +273,7 @@ export default function ImsAuditModal({
       const next = prev.auditees.filter((_, i) => i !== idx);
       return {
         ...prev,
-        auditees: next.length > 0 ? next : [{ id: '', name: '', department: '' }],
+        auditees: next.length > 0 ? next : [{ id: '', name: '', department: '', email: '' }],
       };
     });
   };
@@ -271,6 +287,7 @@ export default function ImsAuditModal({
         id: personId,
         name: person ? person.name : '',
         department: person ? (person.department || next[idx].department) : next[idx].department,
+        email: person ? (person.email || next[idx].email || '') : next[idx].email || '',
       };
       return { ...prev, auditees: next };
     });
@@ -353,6 +370,7 @@ export default function ImsAuditModal({
         auditees: validAuditees,
         auditee1Id: validAuditees[0]?.id || '',
         auditee1Name: validAuditees[0]?.name || '',
+        auditee1Email: validAuditees[0]?.email || '',
         auditeeDepartment: validAuditees[0]?.department || '',
         // If not yet approved by Lead IA, prevent entering findings into the record
         findings: isApproved ? formData.findings : '',
@@ -967,6 +985,34 @@ export default function ImsAuditModal({
                         placeholder="เช่น ฝ่ายวิศวกรรมระบบเครือข่าย"
                         value={auditee.department || ''}
                         onChange={(e) => handleAuditeeFieldChange(idx, 'department', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.875rem',
+                          background: '#FFFFFF',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: '#64748B',
+                          marginBottom: '0.25rem',
+                        }}
+                      >
+                        อีเมลผู้รับการตรวจ (สำหรับรับแจ้งผลการตรวจ)
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="เช่น somchai.p@cit.kmutnb.ac.th"
+                        value={auditee.email || ''}
+                        onChange={(e) => handleAuditeeFieldChange(idx, 'email', e.target.value)}
                         style={{
                           width: '100%',
                           padding: '0.55rem 0.75rem',

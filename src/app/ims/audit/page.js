@@ -242,7 +242,11 @@ export default function ImsAuditPage() {
       leadAuditorName: yearlyConfig?.leadAuditorName,
     };
     await saveImsAuditRecord(data, actor, options);
-    showFeedback('บันทึกรายงานการตรวจติดตามเรียบร้อยแล้ว (ส่งอีเมลแจ้งเตือนแล้ว)');
+    if (data.status === 'COMPLETED') {
+      showFeedback('บันทึกผลการตรวจติดตามเรียบร้อยแล้ว (ส่งอีเมลแจ้งผลไปยังผู้รับการตรวจแล้ว)');
+    } else {
+      showFeedback('บันทึกรายงานการตรวจติดตามเรียบร้อยแล้ว (ส่งอีเมลแจ้งเตือนแล้ว)');
+    }
   };
 
   const handleDeleteAudit = async (audit) => {

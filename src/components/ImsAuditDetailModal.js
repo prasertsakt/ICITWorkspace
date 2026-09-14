@@ -302,11 +302,16 @@ export default function ImsAuditDetailModal({
                 audit.auditees.map((auditee, idx) => (
                   <React.Fragment key={idx}>
                     <div style={{ color: '#64748B', fontWeight: 500 }}>
-                      ผู้รับการตรวจ {idx + 1}
+                      ผู้รับการตรวจ {audit.auditees.length > 1 ? idx + 1 : ''}
                     </div>
                     <div style={{ color: '#1E293B', fontWeight: 600 }}>
                       {auditee.name || '-'}
                       {auditee.department ? ` (${auditee.department})` : ''}
+                      {auditee.email && (
+                        <span style={{ display: 'inline-block', marginLeft: '6px', fontSize: '0.8rem', color: '#0D9488', fontWeight: 500 }}>
+                          • {auditee.email}
+                        </span>
+                      )}
                     </div>
                   </React.Fragment>
                 ))
@@ -316,6 +321,11 @@ export default function ImsAuditDetailModal({
                   <div style={{ color: '#1E293B', fontWeight: 600 }}>
                     {audit.auditee1Name || '-'}
                     {audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}
+                    {audit.auditee1Email && (
+                      <span style={{ display: 'inline-block', marginLeft: '6px', fontSize: '0.8rem', color: '#0D9488', fontWeight: 500 }}>
+                        • {audit.auditee1Email}
+                      </span>
+                    )}
                   </div>
                 </>
               )}

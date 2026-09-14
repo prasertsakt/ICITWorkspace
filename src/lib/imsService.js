@@ -705,6 +705,221 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
 }
 
 /**
+ * Generate HTML email for Auditees when Internal Audit is completed & evaluated (C / NC / OFI)
+ */
+export function generateImsEvaluationNotificationHtml({ audit, appBaseUrl = '' }) {
+  const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
+  const auditUrl = `${baseUrl}/ims/audit`;
+
+  const auditeesText =
+    Array.isArray(audit.auditees) && audit.auditees.length > 0
+      ? audit.auditees
+          .map((a, idx) => `${idx + 1}. ${a.name || '-'}${a.department ? ` (${a.department})` : ''}`)
+          .join('<br/>')
+      : `${audit.auditee1Name || '-'}${audit.auditeeDepartment ? ` (${audit.auditeeDepartment})` : ''}`;
+
+  const auditorsText =
+    Array.isArray(audit.auditors) && audit.auditors.length > 0
+      ? audit.auditors
+          .map((a, idx) => `${idx + 1}. ${a.name || '-'}${a.department ? ` (${a.department})` : ''}`)
+          .join('<br/>')
+      : audit.hasSecondAuditor && audit.auditor2Name
+      ? `1. ${audit.auditor1Name || '-'}<br/>2. ${audit.auditor2Name}`
+      : `1. ${audit.auditor1Name || '-'}`;
+
+  const result = audit.result || 'C';
+  let badgeColor = '#16A34A';
+  let badgeBg = '#F0FDF4';
+  let badgeBorder = '#BBF7D0';
+  let resultLabel = 'C (สอดคล้องตามข้อกำหนด - Conformity)';
+  let resultDesc = 'ผลการตรวจติดตามภายในเป็นไปตามข้อกำหนดมาตรฐาน';
+
+  if (result === 'NC') {
+    badgeColor = '#DC2626';
+    badgeBg = '#FEF2F2';
+    badgeBorder = '#FECACA';
+    resultLabel = 'NC (ไม่เป็นไปตามข้อกำหนด - Non-Conformity)';
+    resultDesc = 'พบประเด็นที่ไม่เป็นไปตามข้อกำหนด กรุณาประสานงานเพื่อดำเนินการเปิด CAR และปรับปรุงแก้ไขต่อไป';
+  } else if (result === 'OFI') {
+    badgeColor = '#D97706';
+    badgeBg = '#FFFBEB';
+    badgeBorder = '#FDE68A';
+    resultLabel = 'OFI (โอกาสในการปรับปรุง - Opportunity for Improvement)';
+    resultDesc = 'พบข้อสังเกตเพื่อโอกาสในการพัฒนาและปรับปรุงกระบวนการทำงานให้ดียิ่งขึ้น';
+  }
+
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>แจ้งผลการตรวจติดตามภายใน: ${audit.topic}</title>
+</head>
+<body style="font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
+          <!-- Official ICIT Header -->
+          <tr>
+            <td style="padding: 18px 24px; background-color: #FFFFFF; border-bottom: 3px solid ${badgeColor};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+                <tr>
+                  <td width="48" valign="middle" style="width: 48px; vertical-align: middle; padding-right: 14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 8px; width: 44px; height: 44px; border: 1px solid #E2E8F0; border-collapse: collapse;">
+                      <tr>
+                        <td align="center" valign="middle" style="text-align: center; vertical-align: middle; padding: 4px;">
+                          <img src="https://raw.githubusercontent.com/prasertsakt/ICITWorkspace/main/public/icit-logo.png" width="36" height="36" alt="ICIT" style="width: 36px; height: 36px; display: block; border: 0; outline: none;" />
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td valign="middle" style="vertical-align: middle; text-align: left;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #0D9488; font-weight: 700; line-height: 1.3;">
+                      สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.3; margin-top: 2px;">
+                      ระบบบริหารงาน IMS (ISO 9001 / ISO 27001)
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Banner -->
+          <tr>
+            <td style="padding: 16px 24px; background-color: ${badgeBg}; border-bottom: 1px solid ${badgeBorder};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 15px; font-weight: 700; color: ${badgeColor}; line-height: 1.4;">
+                      [แจ้งผลการตรวจ] บันทึกผลการตรวจติดตามภายในเรียบร้อยแล้ว (${result})
+                    </div>
+                    <div style="font-size: 13px; color: #334155; margin-top: 5px; line-height: 1.5;">
+                      ${resultDesc}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Details Table -->
+          <tr>
+            <td style="padding: 24px;">
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155; line-height: 1.6;">
+                เรียน ผู้รับการตรวจ<br/>
+                คณะผู้ตรวจติดตามภายในได้ดำเนินการตรวจติดตามและบันทึกผลการประเมินในระบบเรียบร้อยแล้ว โดยมีรายละเอียดดังนี้:
+              </p>
+
+              <!-- Result Highlight Card -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 18px; background-color: ${badgeBg}; border: 1.5px solid ${badgeBorder}; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 12px 16px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; margin-bottom: 4px;">
+                      ผลการตรวจสรุป (Result)
+                    </div>
+                    <div style="font-size: 16px; font-weight: 800; color: ${badgeColor}; line-height: 1.4;">
+                      ${resultLabel}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 13.5px; line-height: 1.6; border-collapse: collapse; background-color: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+                <tr>
+                  <td width="150" style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">หัวข้อที่รับการตรวจ:</td>
+                  <td style="padding: 8px 12px; color: #DC2626; font-weight: 700; vertical-align: top;">${audit.topic || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">ปีงบประมาณ / มาตรฐาน:</td>
+                  <td style="padding: 8px 12px; color: #1E293B; vertical-align: top;">ปีงบประมาณ ${audit.auditYear || '2569'} &bull; ${audit.isoStandard || 'IMS 9001/27001'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">วันที่ทำการตรวจ:</td>
+                  <td style="padding: 8px 12px; color: #0284C7; font-weight: 700; vertical-align: top;">${audit.auditDate || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">คณะผู้ตรวจติดตาม:</td>
+                  <td style="padding: 8px 12px; color: #0369A1; vertical-align: top;">${auditorsText}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">ผู้รับการตรวจ:</td>
+                  <td style="padding: 8px 12px; color: #1E293B; vertical-align: top;">${auditeesText}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">Item (ข้อตรวจ):</td>
+                  <td style="padding: 8px 12px; color: #0284C7; vertical-align: top;">${audit.item || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top;">Clauses (ข้อกำหนด):</td>
+                  <td style="padding: 8px 12px; color: #1E293B; vertical-align: top;">${audit.clauses || '-'}</td>
+                </tr>
+                ${audit.findings ? `
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top; border-top: 1px dashed #CBD5E1;">สิ่งที่ตรวจพบ (Findings):</td>
+                  <td style="padding: 8px 12px; color: #334155; vertical-align: top; border-top: 1px dashed #CBD5E1; white-space: pre-line;">${audit.findings}</td>
+                </tr>` : ''}
+                ${audit.recommendation ? `
+                <tr>
+                  <td style="padding: 8px 12px; color: #64748B; font-weight: 600; vertical-align: top; border-top: 1px dashed #CBD5E1;">ข้อเสนอแนะ (Recommendation):</td>
+                  <td style="padding: 8px 12px; color: #334155; vertical-align: top; border-top: 1px dashed #CBD5E1; white-space: pre-line;">${audit.recommendation}</td>
+                </tr>` : ''}
+              </table>
+
+              <!-- Action Button Table -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${auditUrl}" target="_blank" style="display: inline-block; background: ${badgeColor}; color: #FFFFFF; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 14px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);">
+                      เข้าสู่ระบบเพื่อดูรายละเอียดรายงานการตรวจ &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; text-align: center;">
+              อีเมลอัตโนมัติจากระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Helper: Resolve email for an auditee (from object or personnel list cache)
+ */
+function resolveAuditeeEmail(auditee) {
+  if (auditee?.email && auditee.email.trim()) return auditee.email.trim().toLowerCase();
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('icit_org_personnel');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const match = list.find(
+          (p) =>
+            (auditee?.id && p.id === auditee.id) ||
+            (auditee?.name && p.name && p.name.trim() === auditee.name.trim())
+        );
+        if (match?.email && match.email.trim()) {
+          return match.email.trim().toLowerCase();
+        }
+      }
+    } catch (e) {}
+  }
+  return '';
+}
+
+/**
  * Save (create or update) an IMS audit report
  */
 export async function saveImsAuditRecord(auditData, actor, options = {}) {
@@ -714,13 +929,17 @@ export async function saveImsAuditRecord(auditData, actor, options = {}) {
 
   const auditees =
     Array.isArray(auditData.auditees) && auditData.auditees.length > 0
-      ? auditData.auditees
+      ? auditData.auditees.map((a) => ({
+          ...a,
+          email: a.email || resolveAuditeeEmail(a) || '',
+        }))
       : auditData.auditee1Name
       ? [
           {
             id: auditData.auditee1Id || '',
             name: auditData.auditee1Name,
             department: auditData.auditeeDepartment || '',
+            email: auditData.auditee1Email || resolveAuditeeEmail({ id: auditData.auditee1Id, name: auditData.auditee1Name }) || '',
           },
         ]
       : [];
@@ -731,6 +950,7 @@ export async function saveImsAuditRecord(auditData, actor, options = {}) {
     auditees,
     auditee1Id: auditees[0]?.id || auditData.auditee1Id || '',
     auditee1Name: auditees[0]?.name || auditData.auditee1Name || '',
+    auditee1Email: auditees[0]?.email || auditData.auditee1Email || '',
     auditeeDepartment: auditees[0]?.department || auditData.auditeeDepartment || '',
     updatedAt: now,
     createdAt: auditData.createdAt || now,
@@ -806,6 +1026,40 @@ export async function saveImsAuditRecord(auditData, actor, options = {}) {
         }).catch((err) => console.warn('Lead email notification error:', err));
       } catch (err) {
         console.warn('Failed sending email to lead auditor:', err);
+      }
+    }
+  }
+
+  // Mail notification to Auditees when audit evaluation is completed (C / NC / OFI)
+  if (record.status === 'COMPLETED') {
+    const auditeeEmails = [];
+    if (Array.isArray(record.auditees)) {
+      record.auditees.forEach((a) => {
+        const em = a.email || resolveAuditeeEmail(a);
+        if (em && em.trim() && !auditeeEmails.includes(em.trim().toLowerCase())) {
+          auditeeEmails.push(em.trim().toLowerCase());
+        }
+      });
+    }
+    if (record.auditee1Email && !auditeeEmails.includes(record.auditee1Email.trim().toLowerCase())) {
+      auditeeEmails.push(record.auditee1Email.trim().toLowerCase());
+    }
+
+    if (auditeeEmails.length > 0) {
+      try {
+        const htmlBody = generateImsEvaluationNotificationHtml({
+          audit: record,
+        });
+        sendImsAuditEmail({
+          to: auditeeEmails.join(', '),
+          subject: `[ระบบ IMS] แจ้งผลการตรวจติดตามภายใน: ${record.topic} (ผลการตรวจ: ${record.result || 'C'})`,
+          htmlBody,
+          auditId: record.id,
+          targetStep: 'IMS_EVALUATION_COMPLETED',
+          senderName: 'ระบบบริหารงาน IMS (คณะผู้ตรวจติดตาม)',
+        }).catch((err) => console.warn('Auditee evaluation email error:', err));
+      } catch (err) {
+        console.warn('Failed sending evaluation email to auditees:', err);
       }
     }
   }
@@ -1086,6 +1340,40 @@ export async function completeAuditEvaluation(auditId, evaluationData, auditorAc
       metadata: { auditId, result: target?.result, topic: target?.topic },
     });
   } catch (e) {}
+
+  // Mail notification to Auditees when evaluation is completed
+  if (target && target.status === 'COMPLETED') {
+    const auditeeEmails = [];
+    if (Array.isArray(target.auditees)) {
+      target.auditees.forEach((a) => {
+        const em = a.email || resolveAuditeeEmail(a);
+        if (em && em.trim() && !auditeeEmails.includes(em.trim().toLowerCase())) {
+          auditeeEmails.push(em.trim().toLowerCase());
+        }
+      });
+    }
+    if (target.auditee1Email && !auditeeEmails.includes(target.auditee1Email.trim().toLowerCase())) {
+      auditeeEmails.push(target.auditee1Email.trim().toLowerCase());
+    }
+
+    if (auditeeEmails.length > 0) {
+      try {
+        const htmlBody = generateImsEvaluationNotificationHtml({
+          audit: target,
+        });
+        sendImsAuditEmail({
+          to: auditeeEmails.join(', '),
+          subject: `[ระบบ IMS] แจ้งผลการตรวจติดตามภายใน: ${target.topic} (ผลการตรวจ: ${target.result || 'C'})`,
+          htmlBody,
+          auditId: target.id,
+          targetStep: 'IMS_EVALUATION_COMPLETED',
+          senderName: 'ระบบบริหารงาน IMS (คณะผู้ตรวจติดตาม)',
+        }).catch((err) => console.warn('Auditee evaluation email error:', err));
+      } catch (err) {
+        console.warn('Failed sending evaluation email to auditees:', err);
+      }
+    }
+  }
 
   return target;
 }
