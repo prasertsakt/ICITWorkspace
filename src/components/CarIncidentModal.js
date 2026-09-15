@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Save,
@@ -23,6 +23,8 @@ import {
   Clock,
   Send,
   HelpCircle,
+  ChevronLeft,
+  ChevronRight,
   Layers,
 } from 'lucide-react';
 import {
@@ -44,6 +46,49 @@ import {
   confirmActionStepSignature,
   confirmExecutiveSignature,
 } from '../lib/carIncidentService';
+
+const CAR_TABS = [
+  {
+    id: 'part1',
+    num: 1,
+    label: 'ส่วนที่ 1: ผู้ร้องขอการแก้ไข',
+    shortLabel: '1. ข้อมูลทั่วไป & ผู้ร้องขอ',
+    icon: Users,
+    desc: 'ข้อมูลทั่วไป, ผู้ร้องขอ, รายละเอียดข้อบกพร่อง, ผู้รับการแก้ไข',
+  },
+  {
+    id: 'part2',
+    num: 2,
+    label: 'ส่วนที่ 2: แนวทางแก้ไข & สาเหตุ',
+    shortLabel: '2. แก้ไขเบื้องต้น & สาเหตุ',
+    icon: AlertOctagon,
+    desc: 'การแก้ไขทันที (Immediate Correction) & การวิเคราะห์สาเหตุ (Root Cause)',
+  },
+  {
+    id: 'part3',
+    num: 3,
+    label: 'ส่วนที่ 3: แผน Corrective Actions',
+    shortLabel: '3. แผน Corrective Actions',
+    icon: Layers,
+    desc: 'ขั้นตอนปฏิบัติการแก้ไข, ผู้รับผิดชอบ, กำหนดเสร็จ, ลงนาม MR',
+  },
+  {
+    id: 'part4',
+    num: 4,
+    label: 'ส่วนที่ 4: การตรวจติดตามผล',
+    shortLabel: '4. การตรวจติดตามผล',
+    icon: ShieldCheck,
+    desc: 'ผลการตรวจติดตามการแก้ไข, ปิดเอกสาร CAR โดยผู้ตรวจติดตาม',
+  },
+  {
+    id: 'notes',
+    num: 5,
+    label: 'บันทึกเพิ่มเติม (Notes)',
+    shortLabel: '5. บันทึกเพิ่มเติม (Notes)',
+    icon: MessageSquare,
+    desc: 'ข้อความสื่อสารภายในและข้อคิดเห็นระหว่างผู้เกี่ยวข้อง',
+  },
+];
 
 export default function CarIncidentModal({
   isOpen,
@@ -99,17 +144,19 @@ export default function CarIncidentModal({
 
   // Part 3
   const [actionPlans, setActionPlans] = useState(
-    record?.actionPlans || [
-      {
-        id: `step-${Date.now()}-1`,
-        step: '',
-        responsiblePerson: '',
-        targetDate: '',
-        completedDate: '',
-        signature: '',
-        remarks: '',
-      },
-    ]
+    record?.actionPlans && record?.actionPlans.length > 0
+      ? record?.actionPlans
+      : [
+          {
+            id: `step-${Date.now()}-1`,
+            step: '',
+            responsiblePerson: '',
+            targetDate: '',
+            completedDate: '',
+            signature: '',
+            remarks: '',
+          },
+        ]
   );
   const [executiveSignature, setExecutiveSignature] = useState(record?.executiveSignature || null);
 
@@ -128,14 +175,38 @@ export default function CarIncidentModal({
   const [sourceAuditCode, setSourceAuditCode] = useState(record?.sourceAuditCode || null);
 
   // UI States
+  const [activeTab, setActiveTab] = useState('part1'); // 'part1', 'part2', 'part3', 'part4', 'notes'
   const [showNcImportModal, setShowNcImportModal] = useState(false);
   const [ncSearchQuery, setNcSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [searchPersonnelKeyword, setSearchPersonnelKeyword] = useState('');
 
-  // Scroll ref
+  // Navigation helpers & modal scroll ref (JD Modal style)
   const modalBodyRef = useRef(null);
+
+  const currentTabIndex = useMemo(() => {
+    const idx = CAR_TABS.findIndex((t) => t.id === activeTab);
+    return idx >= 0 ? idx : 0;
+  }, [activeTab]);
+
+  const prevTab = currentTabIndex > 0 ? CAR_TABS[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex < CAR_TABS.length - 1 ? CAR_TABS[currentTabIndex + 1] : null;
+
+  const goToTab = (tabId) => {
+    setActiveTab(tabId);
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevTab = () => {
+    if (prevTab) goToTab(prevTab.id);
+  };
+
+  const handleNextTab = () => {
+    if (nextTab) goToTab(nextTab.id);
+  };
 
   // Reset or initialize state on record change
   useEffect(() => {
@@ -703,6 +774,230 @@ export default function CarIncidentModal({
           )}
         </div>
 
+        {/* Smart Step Navigator & Quick-Jump Helper Strip (JD Modal Style) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.45rem 1.25rem',
+            background: '#F8FAFC',
+            borderBottom: '1px solid #E2E8F0',
+            fontSize: '0.8rem',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            flexShrink: 0,
+          }}
+        >
+          {/* Left: Step indicator & interactive 5-step number buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  background: '#0D9488',
+                  color: '#FFFFFF',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.3px',
+                }}
+              >
+                ส่วนที่ {currentTabIndex + 1}/5
+              </span>
+              <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '0.82rem' }}>
+                {CAR_TABS[currentTabIndex]?.shortLabel || CAR_TABS[currentTabIndex]?.label}
+              </span>
+            </div>
+
+            {/* Quick 5 Step Number Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {CAR_TABS.map((t, idx) => {
+                const isCurrent = idx === currentTabIndex;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => goToTab(t.id)}
+                    title={`ไปยัง ${t.label}`}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: isCurrent ? '1.5px solid #0D9488' : '1px solid #CBD5E1',
+                      background: isCurrent ? '#0D9488' : '#FFFFFF',
+                      color: isCurrent ? '#FFFFFF' : '#475569',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {t.num}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right: Quick jump dropdown + mini Prev/Next buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>ไปยังส่วนที่:</span>
+              <select
+                value={activeTab}
+                onChange={(e) => goToTab(e.target.value)}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#1E293B',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {CAR_TABS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quick Prev / Next Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={handlePrevTab}
+                disabled={!prevTab}
+                title={prevTab ? `ย้อนกลับ: ${prevTab.label}` : 'อยู่ที่ส่วนแรกแล้ว'}
+                style={{
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: prevTab ? '#FFFFFF' : '#F1F5F9',
+                  color: prevTab ? '#1E293B' : '#94A3B8',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: prevTab ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <ChevronLeft size={13} />
+                <span>ก่อนหน้า</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextTab}
+                disabled={!nextTab}
+                title={nextTab ? `ถัดไป: ${nextTab.label}` : 'อยู่ที่ส่วนสุดท้ายแล้ว'}
+                style={{
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid #0D9488',
+                  background: nextTab ? '#0D9488' : '#F1F5F9',
+                  color: nextTab ? '#FFFFFF' : '#94A3B8',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: nextTab ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <span>ถัดไป</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 5 Button Navigation Bar (Pills with real-time status indicators) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'stretch',
+            gap: '0.5rem',
+            padding: '0.5rem 1.25rem',
+            background: '#F1F5F9',
+            borderBottom: '1px solid #E2E8F0',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}
+        >
+          {CAR_TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const TabIcon = tab.icon;
+
+            // Real-time badges for each section
+            let badge = null;
+            if (tab.id === 'part1' && requesters.length > 0) {
+              badge = `${requesters.length} คน`;
+            } else if (tab.id === 'part2' && (immediateCorrection || rootCause)) {
+              badge = '✓ ระบุแล้ว';
+            } else if (tab.id === 'part3' && actionPlans.length > 0) {
+              badge = `${actionPlans.length} ขั้นตอน`;
+            } else if (tab.id === 'part4' && followUpResult) {
+              badge = followUpResult === 'RESOLVED' ? '✓ สำเร็จ' : 'ไม่สำเร็จ';
+            } else if (tab.id === 'notes' && notes.length > 0) {
+              badge = `${notes.length}`;
+            }
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => goToTab(tab.id)}
+                style={{
+                  flex: '1 0 auto',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '8px',
+                  border: isActive ? '1.5px solid #0D9488' : '1px solid #CBD5E1',
+                  background: isActive ? 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)' : '#FFFFFF',
+                  color: isActive ? '#FFFFFF' : '#334155',
+                  fontSize: '0.8rem',
+                  fontWeight: isActive ? 800 : 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isActive ? '0 2px 4px rgba(13, 148, 136, 0.25)' : 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <TabIcon size={15} style={{ color: isActive ? '#FFFFFF' : '#0D9488' }} />
+                <span>{tab.shortLabel}</span>
+                {badge && (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      padding: '1px 6px',
+                      borderRadius: '999px',
+                      background: isActive ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                      color: isActive ? '#FFFFFF' : '#475569',
+                      fontWeight: 700,
+                      marginLeft: '2px',
+                    }}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Modal Scrollable Body */}
         <div ref={modalBodyRef} style={{ flex: 1, overflowY: 'auto', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {errorMsg && (
@@ -725,18 +1020,19 @@ export default function CarIncidentModal({
           )}
 
           {/* ===================== ส่วนที่ 1: การแจ้ง CAR/Incident ===================== */}
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-            }}
-          >
+          {activeTab === 'part1' && (
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem',
+              }}
+            >
             <div
               style={{
                 display: 'flex',
@@ -1192,8 +1488,10 @@ export default function CarIncidentModal({
               />
             </div>
           </div>
+        )}
 
-          {/* ===================== ส่วนที่ 2: การวิเคราะห์สาเหตุและแนวทางแก้ไขเบื้องต้น ===================== */}
+        {/* ===================== ส่วนที่ 2: การวิเคราะห์สาเหตุและแนวทางแก้ไขเบื้องต้น ===================== */}
+        {activeTab === 'part2' && (
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -1314,8 +1612,10 @@ export default function CarIncidentModal({
               />
             </div>
           </div>
+        )}
 
-          {/* ===================== ส่วนที่ 3: แผนปฏิบัติการแก้ไขและลงนาม MR ===================== */}
+        {/* ===================== ส่วนที่ 3: แผนปฏิบัติการแก้ไขและลงนาม MR ===================== */}
+        {activeTab === 'part3' && (
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -1614,8 +1914,10 @@ export default function CarIncidentModal({
               )}
             </div>
           </div>
+        )}
 
-          {/* ===================== ส่วนที่ 4: การติดตามและประเมินประสิทธิผล ===================== */}
+        {/* ===================== ส่วนที่ 4: การติดตามและประเมินประสิทธิผล ===================== */}
+        {activeTab === 'part4' && (
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -1818,8 +2120,10 @@ export default function CarIncidentModal({
               )}
             </div>
           </div>
+        )}
 
-          {/* ===================== บันทึกข้อความและหมายเหตุเพิ่มเติม ===================== */}
+        {/* ===================== บันทึกข้อความและหมายเหตุเพิ่มเติม ===================== */}
+        {activeTab === 'notes' && (
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -1942,6 +2246,7 @@ export default function CarIncidentModal({
               )}
             </div>
           </div>
+        )}
         </div>
 
         {/* Modal Footer */}
@@ -1957,8 +2262,34 @@ export default function CarIncidentModal({
             gap: '1rem',
           }}
         >
-          <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
-            <span>กดปุ่ม <strong>บันทึกข้อมูล</strong> เพื่อจัดเก็บลงฐานข้อมูลและแจ้งเตือนผู้เกี่ยวข้อง</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {prevTab && (
+              <button
+                type="button"
+                onClick={handlePrevTab}
+                disabled={isSaving}
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '4px', fontSize: '0.8rem' }}
+                title={`ย้อนกลับไป: ${prevTab.label}`}
+              >
+                <ChevronLeft size={14} />
+                <span>ก่อนหน้า ({prevTab.shortLabel})</span>
+              </button>
+            )}
+
+            {nextTab && (
+              <button
+                type="button"
+                onClick={handleNextTab}
+                disabled={isSaving}
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '4px', fontSize: '0.8rem', borderColor: '#0D9488', color: '#0F766E', fontWeight: 700 }}
+                title={`ถัดไป: ${nextTab.label}`}
+              >
+                <span>ถัดไป ({nextTab.shortLabel})</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
