@@ -460,6 +460,40 @@ export default function CarIncidentDetailModal({
                 </tbody>
               </table>
 
+              {/* Auditor Approval Status & Review Comments */}
+              <div style={{ marginTop: '10px', padding: '8px 10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '9pt' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                  <div>
+                    <strong>การพิจารณาเห็นชอบแผนงานโดยผู้ตรวจติดตาม:</strong>{' '}
+                    {record.auditorApproval?.approved ? (
+                      <span style={{ color: '#059669', fontWeight: 600 }}>
+                        ✓ เห็นชอบและอนุมัติแล้ว โดย {record.auditorApproval.auditorName || 'ผู้ตรวจติดตาม'}
+                        {record.auditorApproval.approvedAt && ` (${new Date(record.auditorApproval.approvedAt).toLocaleDateString('th-TH')})`}
+                      </span>
+                    ) : record.auditorApproval?.approved === false ? (
+                      <span style={{ color: '#D97706', fontWeight: 600 }}>
+                        ⚠️ ขอให้ปรับปรุงแก้ไข: &ldquo;{record.auditorApproval.comment}&rdquo;
+                      </span>
+                    ) : (
+                      <span style={{ color: '#64748B' }}>รอดำเนินการพิจารณาตรวจสอบ</span>
+                    )}
+                  </div>
+                </div>
+
+                {record.reviewComments && record.reviewComments.length > 0 && (
+                  <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #CBD5E1' }}>
+                    <strong>ประวัติข้อคิดเห็นการพิจารณาแผนงาน ({record.reviewComments.length} รายการ):</strong>
+                    <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {record.reviewComments.map((c, i) => (
+                        <div key={c.id || i} style={{ fontSize: '8.5pt', color: '#334155' }}>
+                          • <span style={{ fontWeight: 600 }}>{c.authorName}</span> ({c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : ''}): {c.text || c.content}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Executive Sign-off */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', fontSize: '10pt' }}>
                 <div style={{ textAlign: 'right' }}>
@@ -515,6 +549,30 @@ export default function CarIncidentDetailModal({
                   {record.followUpResult === 'INEFFECTIVE' ? '☑' : '☐'} ไม่สามารถแก้ไข / ไม่สามารถป้องกันได้อย่างมีประสิทธิภาพ
                 </span>
               </div>
+
+              {/* Follow-up Evaluation History in Detail View */}
+              {record.followUpHistory && record.followUpHistory.length > 0 && (
+                <div style={{ marginTop: '10px', padding: '8px 10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '9pt' }}>
+                  <strong>ประวัติผลการตรวจติดตาม ({record.followUpHistory.length} รอบ):</strong>
+                  <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {record.followUpHistory.map((item, idx) => (
+                      <div key={item.id || idx} style={{ padding: '6px 8px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '4px', fontSize: '8.5pt' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 700 }}>
+                            รอบที่ {idx + 1} ({item.followUpDate || '-'}) - ผู้ตรวจ: {item.followUpAuditor?.name || '-'}
+                          </span>
+                          <span style={{ fontWeight: 700, color: item.followUpResult === 'RESOLVED' ? '#16A34A' : '#D97706' }}>
+                            {item.followUpResult === 'RESOLVED' ? '✓ Resolved' : '⚠️ Ineffective'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#475569', marginTop: '2px' }}>
+                          สิ่งที่พบ: {item.followUpFindings || '-'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

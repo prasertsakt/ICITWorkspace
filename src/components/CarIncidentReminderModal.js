@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   Users,
   Info,
+  UserCheck,
+  ShieldCheck,
+  User,
 } from 'lucide-react';
 import { sendCarIncidentReminder } from '../lib/carIncidentService';
 
@@ -18,8 +21,10 @@ export default function CarIncidentReminderModal({
   record,
   currentUser,
   currentPersonnel,
+  yearlyConfig = {},
   onReminderSent,
 }) {
+  const [targetRole, setTargetRole] = useState('AUTO'); // AUTO, REQUESTEES, AUDITORS, MR, ALL
   const [customMessage, setCustomMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [resultMsg, setResultMsg] = useState(null);
@@ -27,34 +32,56 @@ export default function CarIncidentReminderModal({
 
   if (!isOpen || !record) return null;
 
-  // Compute pending recipients preview
   const requesterEmails = (record.requesters || []).map((r) => r.email).filter(Boolean);
   const requesteeEmails = (record.requestees || []).map((r) => r.email).filter(Boolean);
+  const mrEmail = yearlyConfig?.mrEmail || 'prasertsak.t@cit.kmutnb.ac.th';
 
+  // Compute pending recipients preview
   let targetEmails = [];
   let pendingRoleDesc = '';
 
-  if (record.status === 'NOT_YET_APPROVED') {
-    if (!record.immediateCorrection || !record.actionPlans?.length) {
-      targetEmails = requesteeEmails;
-      pendingRoleDesc = 'ผู้รับการร้องขอ / ผู้รับผิดชอบบริการ (รอจัดทำแนวทางแก้ไขเบื้องต้นและแผนการปฏิบัติ)';
-    } else {
-      pendingRoleDesc = 'รองผู้อำนวยการฝ่ายบริหาร และ DCC (รอพิจารณาอนุมัติให้เริ่มดำเนินการ)';
-    }
-  } else if (record.status === 'ON_PROGRESS') {
-    const isPlansDone = (record.actionPlans || []).length > 0 &&
-      record.actionPlans.every((p) => Boolean(p.completedDate && p.signature));
-    if (!isPlansDone) {
-      targetEmails = requesteeEmails;
-      pendingRoleDesc = 'ผู้รับการร้องขอ (รอดำเนินการตามแผนงาน Corrective Actions ให้เสร็จสิ้น)';
-    } else {
-      targetEmails = requesterEmails;
-      pendingRoleDesc = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ (รอดำเนินการตรวจติดตามและประเมินผลการแก้ไข)';
+  if (targetRole === 'REQUESTEES') {
+    targetEmails = requesteeEmails;
+    pendingRoleDesc = 'ผู้รับการร้องขอ / ผู้รับผิดชอบบริการ (Service Owners)';
+  } else if (targetRole === 'AUDITORS') {
+    targetEmails = requesterEmails;
+    pendingRoleDesc = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ (Internal Auditors)';
+  } else if (targetRole === 'MR') {
+    targetEmails = [mrEmail].filter(Boolean);
+    pendingRoleDesc = 'ผู้แทนฝ่ายบริหาร (MR - Management Representative)';
+  } else if (targetRole === 'ALL') {
+    targetEmails = [...new Set([...requesteeEmails, ...requesterEmails, mrEmail])].filter(Boolean);
+    pendingRoleDesc = 'ทุกฝ่ายที่เกี่ยวข้อง (ผู้รับการตรวจ, ผู้ตรวจติดตาม, MR)';
+  } else {
+    // AUTO mode based on current document status & progress
+    if (record.status === 'NOT_YET_APPROVED') {
+      if (!record.immediateCorrection || !record.actionPlans?.length) {
+        targetEmails = requesteeEmails;
+        pendingRoleDesc = 'ผู้รับการร้องขอ (รอจัดทำแนวทางแก้ไขเบื้องต้นและแผนปฏิบัติการ)';
+      } else if (!record.auditorApproval?.approved) {
+        targetEmails = requesterEmails;
+        pendingRoleDesc = 'ผู้ตรวจติดตามภายใน (รอพิจารณาให้ความเห็นชอบแผนงาน)';
+      } else if (!record.executiveSignature) {
+        targetEmails = [mrEmail].filter(Boolean);
+        pendingRoleDesc = 'ผู้แทนฝ่ายบริหาร (MR - รอดำเนินการลงนามรับทราบแผนงาน)';
+      } else {
+        pendingRoleDesc = 'รองผู้อำนวยการฝ่ายบริหาร และ DCC (รอพิจารณาอนุมัติให้เริ่มดำเนินการ)';
+      }
+    } else if (record.status === 'ON_PROGRESS') {
+      const isPlansDone = (record.actionPlans || []).length > 0 &&
+        record.actionPlans.every((p) => Boolean(p.completedDate && p.signature));
+      if (!isPlansDone) {
+        targetEmails = requesteeEmails;
+        pendingRoleDesc = 'ผู้รับการร้องขอ (รอดำเนินการตามแผน Corrective Actions ให้เสร็จสิ้น)';
+      } else {
+        targetEmails = requesterEmails;
+        pendingRoleDesc = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ (รอดำเนินการตรวจติดตามและประเมินผลการแก้ไขในส่วนที่ 4)';
+      }
     }
   }
 
   if (targetEmails.length === 0) {
-    targetEmails = [...new Set([...requesteeEmails, ...requesterEmails])];
+    targetEmails = [...new Set([...requesteeEmails, ...requesterEmails, mrEmail])].filter(Boolean);
   }
 
   const handleSend = async (e) => {
@@ -69,7 +96,7 @@ export default function CarIncidentReminderModal({
         email: currentUser?.email || currentPersonnel?.email || '',
       };
 
-      const res = await sendCarIncidentReminder(record, actor, customMessage);
+      const res = await sendCarIncidentReminder(record, actor, targetRole, customMessage, yearlyConfig);
       setResultMsg('ส่งอีเมลแจ้งเตือนติดตามความคืบหน้าเรียบร้อยแล้ว');
       if (onReminderSent) onReminderSent(res);
       setTimeout(() => {
@@ -104,7 +131,7 @@ export default function CarIncidentReminderModal({
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '1.25rem',
-          maxWidth: '540px',
+          maxWidth: '560px',
           width: '100%',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden',
@@ -201,6 +228,58 @@ export default function CarIncidentReminderModal({
             </div>
           )}
 
+          {/* Target Group Selector */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: '#334155',
+                marginBottom: '0.5rem',
+              }}
+            >
+              เลือกกลุ่มเป้าหมายผู้รับการแจ้งเตือน:
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+              {[
+                { id: 'AUTO', label: 'ตามขั้นตอนปัจจุบัน (Auto)', icon: Info },
+                { id: 'REQUESTEES', label: 'ผู้รับการตรวจ (Requestees)', icon: User },
+                { id: 'AUDITORS', label: 'ผู้ตรวจติดตาม (Auditors)', icon: UserCheck },
+                { id: 'MR', label: 'ผู้แทนฝ่ายบริหาร (MR)', icon: ShieldCheck },
+                { id: 'ALL', label: 'ทุกฝ่ายที่เกี่ยวข้อง (All)', icon: Users },
+              ].map((opt) => {
+                const isSel = targetRole === opt.id;
+                const OptIcon = opt.icon;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setTargetRole(opt.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: isSel ? '1.5px solid #0D9488' : '1px solid #CBD5E1',
+                      background: isSel ? '#F0FDFA' : '#FFFFFF',
+                      color: isSel ? '#0F766E' : '#334155',
+                      fontSize: '0.8rem',
+                      fontWeight: isSel ? 700 : 500,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <OptIcon size={14} style={{ color: isSel ? '#0D9488' : '#64748B' }} />
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Pending Info Card */}
           <div
             style={{
@@ -219,21 +298,19 @@ export default function CarIncidentReminderModal({
                 fontSize: '0.8rem',
                 fontWeight: 700,
                 color: '#64748B',
-                marginBottom: '0.5rem',
+                marginBottom: '0.35rem',
               }}
             >
               <Info size={14} color="#0D9488" />
-              <span>กลุ่มเป้าหมายผู้รับการแจ้งเตือน</span>
+              <span>บทบาทเป้าหมาย:</span>
+              <span style={{ color: '#0F766E', fontWeight: 800 }}>{pendingRoleDesc}</span>
             </div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B', marginBottom: '4px' }}>
-              {pendingRoleDesc || 'ผู้เกี่ยวข้องในกระบวนการ'}
-            </div>
-            <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Users size={14} />
-              <span>
+            <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+              <Users size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+              <span style={{ wordBreak: 'break-all' }}>
                 {targetEmails.length > 0
                   ? targetEmails.join(', ')
-                  : 'ระบุตามรายชื่อผู้รับบริการ / ผู้ตรวจติดตาม'}
+                  : 'ไม่พบอีเมลผู้รับ'}
               </span>
             </div>
           </div>
@@ -253,7 +330,7 @@ export default function CarIncidentReminderModal({
             <textarea
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="เช่น รบกวนเร่งรัดการลงชื่อรับทราบผลการปฏิบัติงานภายในวันที่ 25 ก.พ. นี้..."
+              placeholder="เช่น รบกวนเร่งรัดการลงชื่อรับทราบผลการปฏิบัติงานภายในสัปดาห์นี้..."
               rows={3}
               style={{
                 width: '100%',

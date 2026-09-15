@@ -265,15 +265,18 @@ export async function saveCarIncident(recordData, actor) {
     part2Date: recordData.part2Date || '',
     part2SubmittedBy: recordData.part2SubmittedBy || '',
 
-    // Part 3: Corrective actions
+    // Part 3: Corrective actions & Auditor Approval
     actionPlans: Array.isArray(recordData.actionPlans) ? recordData.actionPlans : [],
+    auditorApproval: recordData.auditorApproval || null,
+    reviewComments: Array.isArray(recordData.reviewComments) ? recordData.reviewComments : [],
     executiveSignature: recordData.executiveSignature || null,
 
-    // Part 4: Evaluation
+    // Part 4: Evaluation & Follow-up History
     followUpAuditor: recordData.followUpAuditor || null,
     followUpDate: recordData.followUpDate || '',
     followUpFindings: recordData.followUpFindings || '',
     followUpResult: recordData.followUpResult || null, // RESOLVED, INEFFECTIVE
+    followUpHistory: Array.isArray(recordData.followUpHistory) ? recordData.followUpHistory : [],
 
     // Notes & Remarks
     notes: Array.isArray(recordData.notes) ? recordData.notes : [],
@@ -564,6 +567,7 @@ export async function confirmActionStepSignature(carId, stepId, actor) {
   const record = list.find((r) => r.id === carId);
   if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
 
+  const wasCompletedBefore = isPart3AllStepsCompleted(record);
   const now = new Date().toISOString();
   const dateStr = now.split('T')[0];
 
@@ -601,14 +605,24 @@ export async function confirmActionStepSignature(carId, stepId, actor) {
     } catch (e) {}
   }
 
+  // If this signature completed all steps in Part 3, notify Auditors to follow up
+  const isCompletedNow = isPart3AllStepsCompleted(updatedRecord);
+  if (!wasCompletedBefore && isCompletedNow) {
+    triggerCarIncidentEmail({
+      record: updatedRecord,
+      eventType: 'ACTION_STEPS_COMPLETED',
+      actor,
+    }).catch((err) => console.warn('Email dispatch warning:', err));
+  }
+
   return updatedRecord;
 }
 
 /**
- * Sign Executive Approval in Part 3
- * ผู้แทนฝ่ายบริหาร (MR)
+ * Approve Action Plan & Immediate Correction by Internal Auditor
+ * (Only ผู้ตรวจติดตาม can approve this)
  */
-export async function confirmExecutiveSignature(carId, actor, position = 'ผู้แทนฝ่ายบริหาร (MR)') {
+export async function approveActionPlanByAuditor(carId, actor, yearlyConfig) {
   if (!carId) throw new Error('ข้อมูลเอกสารไม่ถูกต้อง');
 
   let list = [];
@@ -622,6 +636,185 @@ export async function confirmExecutiveSignature(carId, actor, position = 'ผู
 
   const record = list.find((r) => r.id === carId);
   if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
+
+  const now = new Date().toISOString();
+  const dateStr = now.split('T')[0];
+
+  const auditorApproval = {
+    approved: true,
+    name: actor?.name || 'ผู้ตรวจติดตามภายใน',
+    email: actor?.email || '',
+    date: dateStr,
+    signedAt: now,
+  };
+
+  const newComment = {
+    id: `comm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    text: 'ผู้ตรวจติดตามได้พิจารณาเห็นชอบแนวทางแก้ไขเบื้องต้นและแผนปฏิบัติการแก้ไข (Corrective Actions) เรียบร้อยแล้ว',
+    authorName: actor?.name || 'ผู้ตรวจติดตามภายใน',
+    authorEmail: actor?.email || '',
+    createdAt: now,
+    type: 'APPROVAL',
+  };
+
+  const reviewComments = Array.isArray(record.reviewComments)
+    ? [newComment, ...record.reviewComments]
+    : [newComment];
+
+  const updatedRecord = {
+    ...record,
+    auditorApproval,
+    reviewComments,
+    updatedAt: now,
+  };
+
+  const idx = list.findIndex((r) => r.id === carId);
+  if (idx >= 0) list[idx] = updatedRecord;
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_CAR_INCIDENTS, JSON.stringify(list));
+  }
+  notifyCarSubscribers(list);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'ims_car_incidents', carId);
+      await setDoc(docRef, cleanForFirestore({ auditorApproval, reviewComments, updatedAt: now }), { merge: true });
+    } catch (e) {}
+  }
+
+  try {
+    await logActivity({
+      type: 'CAR_AUDITOR_APPROVED',
+      action: 'ผู้ตรวจติดตามเห็นชอบแผนงาน CAR',
+      details: `${actor?.name || 'ผู้ตรวจติดตาม'} ได้เห็นชอบแผนงาน ${record.docNumber} (${record.docType})`,
+      actorEmail: actor?.email,
+      actorName: actor?.name,
+    });
+  } catch (e) {}
+
+  // Send Email notification to MR to approve/sign
+  triggerCarIncidentEmail({
+    record: updatedRecord,
+    eventType: 'AUDITOR_APPROVED_PLAN',
+    actor,
+    yearlyConfig,
+  }).catch((err) => console.warn('Email dispatch warning:', err));
+
+  return updatedRecord;
+}
+
+/**
+ * Request Action Plan Revision by Internal Auditor
+ * (Leaves comment and notifies Requestees to revise)
+ */
+export async function requestActionPlanRevision(carId, commentText, actor, yearlyConfig) {
+  if (!carId || !commentText?.trim()) throw new Error('กรุณาระบุข้อคิดเห็น/สิ่งที่ต้องปรับปรุงแก้ไข');
+
+  let list = [];
+  if (typeof window !== 'undefined') {
+    try {
+      list = JSON.parse(localStorage.getItem(LOCAL_KEY_CAR_INCIDENTS) || '[]');
+    } catch (e) {
+      list = [];
+    }
+  }
+
+  const record = list.find((r) => r.id === carId);
+  if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
+
+  const now = new Date().toISOString();
+  const dateStr = now.split('T')[0];
+
+  const auditorApproval = {
+    approved: false,
+    status: 'REVISION_REQUESTED',
+    lastComment: commentText.trim(),
+    name: actor?.name || 'ผู้ตรวจติดตามภายใน',
+    email: actor?.email || '',
+    date: dateStr,
+    requestedAt: now,
+  };
+
+  const newComment = {
+    id: `comm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    text: commentText.trim(),
+    authorName: actor?.name || 'ผู้ตรวจติดตามภายใน',
+    authorEmail: actor?.email || '',
+    createdAt: now,
+    type: 'REVISION_REQUEST',
+  };
+
+  const reviewComments = Array.isArray(record.reviewComments)
+    ? [newComment, ...record.reviewComments]
+    : [newComment];
+
+  const updatedRecord = {
+    ...record,
+    auditorApproval,
+    reviewComments,
+    updatedAt: now,
+  };
+
+  const idx = list.findIndex((r) => r.id === carId);
+  if (idx >= 0) list[idx] = updatedRecord;
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_CAR_INCIDENTS, JSON.stringify(list));
+  }
+  notifyCarSubscribers(list);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'ims_car_incidents', carId);
+      await setDoc(docRef, cleanForFirestore({ auditorApproval, reviewComments, updatedAt: now }), { merge: true });
+    } catch (e) {}
+  }
+
+  try {
+    await logActivity({
+      type: 'CAR_REVISION_REQUESTED',
+      action: 'ขอให้ปรับปรุงแก้ไขแผนงาน CAR',
+      details: `${actor?.name || 'ผู้ตรวจติดตาม'} ขอให้แก้ไขแผนงาน ${record.docNumber}: ${commentText.slice(0, 50)}...`,
+      actorEmail: actor?.email,
+      actorName: actor?.name,
+    });
+  } catch (e) {}
+
+  // Send Email notification to Requestees
+  triggerCarIncidentEmail({
+    record: updatedRecord,
+    eventType: 'REVISION_REQUESTED',
+    actor,
+    revisionComment: commentText.trim(),
+  }).catch((err) => console.warn('Email dispatch warning:', err));
+
+  return updatedRecord;
+}
+
+/**
+ * Sign Executive Approval in Part 3
+ * ผู้แทนฝ่ายบริหาร (MR)
+ */
+export async function confirmExecutiveSignature(carId, actor, position = 'ผู้แทนฝ่ายบริหาร (MR)', yearlyConfig = {}, isAdmin = false) {
+  if (!carId) throw new Error('ข้อมูลเอกสารไม่ถูกต้อง');
+
+  let list = [];
+  if (typeof window !== 'undefined') {
+    try {
+      list = JSON.parse(localStorage.getItem(LOCAL_KEY_CAR_INCIDENTS) || '[]');
+    } catch (e) {
+      list = [];
+    }
+  }
+
+  const record = list.find((r) => r.id === carId);
+  if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
+
+  // Verify that auditor has approved the plan (unless admin override)
+  if (!record.auditorApproval?.approved && !isAdmin) {
+    throw new Error('ไม่สามารถลงนามได้ เนื่องจากแผนงานยังไม่ได้รับการเห็นชอบจากผู้ตรวจติดตาม');
+  }
 
   const now = new Date().toISOString();
   const dateStr = now.split('T')[0];
@@ -653,6 +846,124 @@ export async function confirmExecutiveSignature(carId, actor, position = 'ผู
       const docRef = doc(db, 'ims_car_incidents', carId);
       await setDoc(docRef, cleanForFirestore({ executiveSignature, updatedAt: now }), { merge: true });
     } catch (e) {}
+  }
+
+  try {
+    await logActivity({
+      type: 'CAR_MR_SIGNED',
+      action: 'MR ลงนามรับทราบแผนงาน CAR',
+      details: `${actor?.name || 'MR'} ได้ลงนามรับทราบแผนงาน ${record.docNumber} (${record.docType})`,
+      actorEmail: actor?.email,
+      actorName: actor?.name,
+    });
+  } catch (e) {}
+
+  return updatedRecord;
+}
+
+/**
+ * Record Follow-up & Verification Evaluation in Part 4 (with History Tracking)
+ */
+export async function recordFollowUpEvaluation(carId, followUpData, actor, yearlyConfig = {}) {
+  if (!carId) throw new Error('ข้อมูลเอกสารไม่ถูกต้อง');
+
+  let list = [];
+  if (typeof window !== 'undefined') {
+    try {
+      list = JSON.parse(localStorage.getItem(LOCAL_KEY_CAR_INCIDENTS) || '[]');
+    } catch (e) {
+      list = [];
+    }
+  }
+
+  const record = list.find((r) => r.id === carId);
+  if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
+
+  const now = new Date().toISOString();
+  const dateStr = now.split('T')[0];
+
+  const followUpDate = followUpData.followUpDate || dateStr;
+  const followUpFindings = followUpData.followUpFindings || '';
+  const followUpResult = followUpData.followUpResult || 'RESOLVED';
+  const followUpAuditor = {
+    name: actor?.name || 'ผู้ตรวจติดตาม',
+    email: actor?.email || '',
+    date: followUpDate,
+    signedAt: now,
+  };
+
+  const historyEntry = {
+    id: `fup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    followUpDate,
+    followUpFindings,
+    followUpResult,
+    auditor: followUpAuditor,
+    recordedAt: now,
+  };
+
+  const followUpHistory = Array.isArray(record.followUpHistory)
+    ? [historyEntry, ...record.followUpHistory]
+    : [historyEntry];
+
+  const isResolved = followUpResult === 'RESOLVED';
+  const newStatus = isResolved ? CAR_INCIDENT_STATUS.CLOSED : CAR_INCIDENT_STATUS.ON_PROGRESS;
+
+  const updatedRecord = {
+    ...record,
+    followUpDate,
+    followUpFindings,
+    followUpResult,
+    followUpAuditor,
+    followUpHistory,
+    status: newStatus,
+    updatedAt: now,
+  };
+
+  const idx = list.findIndex((r) => r.id === carId);
+  if (idx >= 0) list[idx] = updatedRecord;
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_CAR_INCIDENTS, JSON.stringify(list));
+  }
+  notifyCarSubscribers(list);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'ims_car_incidents', carId);
+      await setDoc(
+        docRef,
+        cleanForFirestore({
+          followUpDate,
+          followUpFindings,
+          followUpResult,
+          followUpAuditor,
+          followUpHistory,
+          status: newStatus,
+          updatedAt: now,
+        }),
+        { merge: true }
+      );
+    } catch (e) {}
+  }
+
+  try {
+    await logActivity({
+      type: isResolved ? 'CAR_CLOSED' : 'CAR_EVALUATED_INEFFECTIVE',
+      action: isResolved ? 'ประเมินผลและปิด CAR สมบูรณ์' : 'ประเมินผลการแก้ไข (Ineffective)',
+      details: `${record.docNumber}: ผลการประเมินเป็น ${isResolved ? 'Resolved (ปิดสมบูรณ์)' : 'Ineffective (ดำเนินการต่อ)'}`,
+      actorEmail: actor?.email,
+      actorName: actor?.name,
+    });
+  } catch (e) {}
+
+  if (isResolved) {
+    // Notify DCC and MR
+    triggerCarIncidentEmail({
+      record: updatedRecord,
+      eventType: 'CAR_CLOSED',
+      actor,
+      yearlyConfig,
+    }).catch((err) => console.warn('Email dispatch warning:', err));
   }
 
   return updatedRecord;
@@ -780,39 +1091,58 @@ export function canUserDeleteCarIncident(record, user, personnel, yearlyConfig, 
 
 /**
  * DCC Reminder Email Dispatcher
- * Allows DCC to re-notify pending stakeholders with the envelope icon
+ * Allows DCC to re-notify pending stakeholders (Requestees, Auditors, MR, or All)
  */
-export async function sendCarIncidentReminder(record, actor, customMessage = '') {
+export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO', customMessage = '', yearlyConfig = {}) {
   if (!record) throw new Error('ไม่พบข้อมูลเอกสาร');
 
-  // Determine who is currently pending action
   let recipientEmails = [];
   let pendingRoleDescription = '';
 
-  if (record.status === CAR_INCIDENT_STATUS.NOT_YET_APPROVED) {
-    // Waiting for Part 2 & 3 from Requestees OR status approval from Deputy/DCC
-    if (!record.immediateCorrection || !record.actionPlans?.length) {
-      recipientEmails = (record.requestees || []).map((r) => r.email).filter(Boolean);
-      pendingRoleDescription = 'ผู้รับการร้องขอ / ผู้รับผิดชอบบริการ (รอจัดทำแนวทางแก้ไขเบื้องต้นและแผนการปฏิบัติ)';
-    } else {
-      pendingRoleDescription = 'รองผู้อำนวยการฝ่ายบริหาร และ DCC (รอพิจารณาอนุมัติให้เริ่มดำเนินการ)';
-    }
-  } else if (record.status === CAR_INCIDENT_STATUS.ON_PROGRESS) {
-    if (!isPart3AllStepsCompleted(record)) {
-      recipientEmails = (record.requestees || []).map((r) => r.email).filter(Boolean);
-      pendingRoleDescription = 'ผู้รับการร้องขอ (รอดำเนินการตามแผน Corrective Actions ให้แล้วเสร็จทุกขั้นตอน)';
-    } else {
-      recipientEmails = (record.requesters || []).map((r) => r.email).filter(Boolean);
-      pendingRoleDescription = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ (รอดำเนินการตรวจติดตามและประเมินผลการแก้ไขในส่วนที่ 4)';
+  const requesterEmails = (record.requesters || []).map((r) => r.email).filter(Boolean);
+  const requesteeEmails = (record.requestees || []).map((r) => r.email).filter(Boolean);
+  const mrEmail = yearlyConfig?.mrEmail || 'prasertsak.t@cit.kmutnb.ac.th';
+
+  if (targetRole === 'REQUESTEES') {
+    recipientEmails = requesteeEmails;
+    pendingRoleDescription = 'ผู้รับการร้องขอ / ผู้รับผิดชอบบริการ';
+  } else if (targetRole === 'AUDITORS') {
+    recipientEmails = requesterEmails;
+    pendingRoleDescription = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ';
+  } else if (targetRole === 'MR') {
+    recipientEmails = [mrEmail].filter(Boolean);
+    pendingRoleDescription = 'ผู้แทนฝ่ายบริหาร (MR)';
+  } else if (targetRole === 'ALL') {
+    recipientEmails = [...new Set([...requesteeEmails, ...requesterEmails, mrEmail])].filter(Boolean);
+    pendingRoleDescription = 'ทุกฝ่ายที่เกี่ยวข้อง (ผู้รับการตรวจ, ผู้ตรวจติดตาม, MR)';
+  } else {
+    // AUTO mode based on current document status & progress
+    if (record.status === CAR_INCIDENT_STATUS.NOT_YET_APPROVED) {
+      if (!record.immediateCorrection || !record.actionPlans?.length) {
+        recipientEmails = requesteeEmails;
+        pendingRoleDescription = 'ผู้รับการร้องขอ / ผู้รับผิดชอบบริการ (รอจัดทำแนวทางแก้ไขเบื้องต้นและแผนการปฏิบัติ)';
+      } else if (!record.auditorApproval?.approved) {
+        recipientEmails = requesterEmails;
+        pendingRoleDescription = 'ผู้ตรวจติดตามภายใน (รอพิจารณาให้ความเห็นชอบแผนงานในส่วนที่ 3)';
+      } else if (!record.executiveSignature) {
+        recipientEmails = [mrEmail].filter(Boolean);
+        pendingRoleDescription = 'ผู้แทนฝ่ายบริหาร (MR - รอดำเนินการลงนามรับทราบแผนงาน)';
+      } else {
+        pendingRoleDescription = 'รองผู้อำนวยการฝ่ายบริหาร และ DCC (รอพิจารณาอนุมัติให้เริ่มดำเนินการ)';
+      }
+    } else if (record.status === CAR_INCIDENT_STATUS.ON_PROGRESS) {
+      if (!isPart3AllStepsCompleted(record)) {
+        recipientEmails = requesteeEmails;
+        pendingRoleDescription = 'ผู้รับการร้องขอ (รอดำเนินการตามแผน Corrective Actions ให้แล้วเสร็จทุกขั้นตอน)';
+      } else {
+        recipientEmails = requesterEmails;
+        pendingRoleDescription = 'ผู้ตรวจติดตามภายใน / ผู้ร้องขอ (รอดำเนินการตรวจติดตามและประเมินผลการแก้ไขในส่วนที่ 4)';
+      }
     }
   }
 
   if (recipientEmails.length === 0) {
-    // Fallback to all stakeholders
-    const allEmails = [
-      ...(record.requestees || []).map((r) => r.email),
-      ...(record.requesters || []).map((r) => r.email),
-    ].filter(Boolean);
+    const allEmails = [...requesteeEmails, ...requesterEmails, mrEmail].filter(Boolean);
     recipientEmails = [...new Set(allEmails)];
   }
 
@@ -954,7 +1284,7 @@ export async function sendCarIncidentReminder(record, actor, customMessage = '')
 /**
  * Trigger Automated Workflow Email Notifications
  */
-async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus, actor }) {
+async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus, actor, yearlyConfig, revisionComment }) {
   if (!record) return;
 
   let recipients = [];
@@ -962,11 +1292,39 @@ async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus
   let heading = '';
   let detailsText = '';
 
+  const mrEmail = yearlyConfig?.mrEmail || 'prasertsak.t@cit.kmutnb.ac.th';
+  const dccEmail = yearlyConfig?.dccEmail || '';
+
   if (eventType === 'NEW_CAR_ISSUED') {
     recipients = (record.requestees || []).map((r) => r.email).filter(Boolean);
     subject = `[แจ้งออกเอกสารใหม่] ${record.docNumber} (${record.docType}) - ${record.topic}`;
     heading = 'แจ้งการออกเอกสารขอปฏิบัติการแก้ไข (CAR) / อุบัติการณ์';
     detailsText = `ท่านได้รับการระบุเป็นผู้รับการร้องขอ/ผู้รับผิดชอบบริการ โปรดเข้าสู่ระบบเพื่อจัดทำแนวทางการแก้ไขปัญหาเบื้องต้น (Correction actions) และสาเหตุของปัญหาในส่วนที่ 2 รวมถึงแผนการปฏิบัติในส่วนที่ 3`;
+  } else if (eventType === 'AUDITOR_APPROVED_PLAN') {
+    recipients = [mrEmail].filter(Boolean);
+    subject = `[เสนอเพื่อลงนามรับทราบ] ผู้ตรวจติดตามเห็นชอบแผนงาน CAR ${record.docNumber} (${record.topic}) แล้ว`;
+    heading = 'ผู้ตรวจติดตามได้พิจารณาเห็นชอบแผนปฏิบัติการแก้ไข (CAR)';
+    detailsText = `ผู้ตรวจติดตาม (${actor?.name || 'ผู้ตรวจติดตาม'}) ได้ตรวจสอบและให้ความเห็นชอบต่อแนวทางการแก้ไขและแผน Corrective Actions แล้ว จึงขอเรียนเสนอผู้แทนฝ่ายบริหาร (MR) เพื่อโปรดพิจารณาลงนามรับทราบแผนงานในระบบ`;
+  } else if (eventType === 'REVISION_REQUESTED') {
+    recipients = (record.requestees || []).map((r) => r.email).filter(Boolean);
+    subject = `[ขอให้ปรับปรุงแก้ไขแผนงาน] CAR ${record.docNumber} - ข้อคิดเห็นจากผู้ตรวจติดตาม`;
+    heading = 'ผู้ตรวจติดตามขอให้ปรับปรุงแก้ไขแนวทางการแก้ไข / แผนงาน (CAR)';
+    detailsText = `ผู้ตรวจติดตาม (${actor?.name || 'ผู้ตรวจติดตาม'}) ได้ตรวจสอบแนวทางแก้ไขและแผนงานแล้ว และมีข้อคิดเห็น/สิ่งที่ต้องปรับปรุงแก้ไขดังนี้:<br/><br/>
+      <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; border-radius: 4px; color: #92400E; font-size: 13px;">
+        <strong>ข้อคิดเห็นจากผู้ตรวจติดตาม:</strong><br/>
+        ${revisionComment || '-'}
+      </div><br/>
+      โปรดเข้าสู่ระบบเพื่อปรับปรุงแก้ไขข้อมูลในส่วนที่ 2 และส่วนที่ 3 เพื่อเสนอให้ผู้ตรวจติดตามพิจารณาอีกครั้ง`;
+  } else if (eventType === 'ACTION_STEPS_COMPLETED') {
+    recipients = (record.requesters || []).map((r) => r.email).filter(Boolean);
+    subject = `[แจ้งเตือนตรวจติดตามผล] ผู้รับการตรวจดำเนินการตามแผนงาน CAR ${record.docNumber} ครบถ้วนแล้ว`;
+    heading = 'ผู้รับการตรวจได้ดำเนินการตามแผนงานในส่วนที่ 3 ครบทุกขั้นตอนแล้ว';
+    detailsText = `ผู้รับการตรวจได้บันทึกวันที่แล้วเสร็จและลงชื่อยืนยันการปฏิบัติการแก้ไขในส่วนที่ 3 ครบถ้วนทุกข้อแล้ว ขอเชิญผู้ตรวจติดตามเข้าสู่ระบบเพื่อทำการตรวจติดตามผลและประเมินประสิทธิผลในส่วนที่ 4 (Follow-up & Verification)`;
+  } else if (eventType === 'CAR_CLOSED') {
+    recipients = [dccEmail, mrEmail].filter(Boolean);
+    subject = `[ปิดเอกสารสมบูรณ์] ผลการตรวจติดตาม CAR ${record.docNumber} (${record.topic}) - ปิดสมบูรณ์แล้ว`;
+    heading = 'การแก้ไขตามเอกสาร CAR เสร็จสิ้นและปิดเอกสารสมบูรณ์';
+    detailsText = `ผู้ตรวจติดตามได้ทำการตรวจติดตามผลการแก้ไขและประเมินว่า <strong>สามารถแก้ไข / ป้องกันได้อย่างมีประสิทธิผล (Resolved & Effective)</strong> เอกสารหมายเลข <strong>${record.docNumber}</strong> ได้รับการปิดสมบูรณ์ (Closed) เรียบร้อยแล้ว`;
   } else if (eventType === 'STATUS_CHANGED') {
     recipients = [
       ...(record.requestees || []).map((r) => r.email),

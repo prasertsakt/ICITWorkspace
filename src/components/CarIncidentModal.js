@@ -26,6 +26,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  History,
+  MessageSquareQuote,
+  CheckSquare,
+  XCircle,
+  Info,
 } from 'lucide-react';
 import {
   IMS_STANDARDS,
@@ -45,6 +50,8 @@ import {
   isDccUser,
   confirmActionStepSignature,
   confirmExecutiveSignature,
+  approveActionPlanByAuditor,
+  requestActionPlanRevision,
 } from '../lib/carIncidentService';
 
 const CAR_TABS = [
@@ -159,12 +166,15 @@ export default function CarIncidentModal({
         ]
   );
   const [executiveSignature, setExecutiveSignature] = useState(record?.executiveSignature || null);
+  const [auditorApproval, setAuditorApproval] = useState(record?.auditorApproval || null);
+  const [reviewComments, setReviewComments] = useState(record?.reviewComments || []);
 
   // Part 4
   const [followUpDate, setFollowUpDate] = useState(record?.followUpDate || '');
   const [followUpFindings, setFollowUpFindings] = useState(record?.followUpFindings || '');
   const [followUpResult, setFollowUpResult] = useState(record?.followUpResult || '');
   const [followUpAuditor, setFollowUpAuditor] = useState(record?.followUpAuditor || null);
+  const [followUpHistory, setFollowUpHistory] = useState(record?.followUpHistory || []);
 
   // Notes
   const [notes, setNotes] = useState(record?.notes || []);
@@ -173,6 +183,13 @@ export default function CarIncidentModal({
   // Source IA link
   const [sourceAuditId, setSourceAuditId] = useState(record?.sourceAuditId || null);
   const [sourceAuditCode, setSourceAuditCode] = useState(record?.sourceAuditCode || null);
+
+  // Sub-Modals & Workflow States
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [revisionCommentInput, setRevisionCommentInput] = useState('');
+  const [showCommentsHistoryModal, setShowCommentsHistoryModal] = useState(false);
+  const [showFollowUpHistoryModal, setShowFollowUpHistoryModal] = useState(false);
+  const [isAuditorSubmitting, setIsAuditorSubmitting] = useState(false);
 
   // UI States
   const [activeTab, setActiveTab] = useState('part1'); // 'part1', 'part2', 'part3', 'part4', 'notes'
@@ -247,11 +264,14 @@ export default function CarIncidentModal({
             ]
       );
       setExecutiveSignature(record.executiveSignature || null);
+      setAuditorApproval(record.auditorApproval || null);
+      setReviewComments(record.reviewComments || []);
 
       setFollowUpDate(record.followUpDate || '');
       setFollowUpFindings(record.followUpFindings || '');
       setFollowUpResult(record.followUpResult || '');
       setFollowUpAuditor(record.followUpAuditor || null);
+      setFollowUpHistory(record.followUpHistory || []);
       setNotes(record.notes || []);
       setSourceAuditId(record.sourceAuditId || null);
       setSourceAuditCode(record.sourceAuditCode || null);
@@ -295,10 +315,14 @@ export default function CarIncidentModal({
         },
       ]);
       setExecutiveSignature(null);
+      setAuditorApproval(null);
+      setReviewComments([]);
 
       setFollowUpDate('');
       setFollowUpFindings('');
       setFollowUpResult('');
+      setFollowUpAuditor(null);
+      setFollowUpHistory([]);
       setNotes([]);
       setSourceAuditId(null);
       setSourceAuditCode(null);
@@ -408,7 +432,7 @@ export default function CarIncidentModal({
     setActionPlans(actionPlans.filter((_, idx) => idx !== index));
   };
 
-  // Signature Confirmations
+  // Signature Confirmations & Workflow Actions
   const handleSignActionStep = async (stepId) => {
     try {
       const updatedPlans = confirmActionStepSignature(actionPlans, stepId, currentUser, currentPersonnel);
@@ -418,9 +442,96 @@ export default function CarIncidentModal({
     }
   };
 
+  const handleAuditorApprove = async () => {
+    if (!window.confirm('ยืนยันการเห็นชอบและอนุมัติแผนปฏิบัติการแก้ไข (Correction & Action Plan)?\n\nระบบจะบันทึกการอนุมัติและส่งอีเมลแจ้งเตือนไปยัง MR เพื่อดำเนินการลงชื่อรับทราบ')) {
+      return;
+    }
+    setIsAuditorSubmitting(true);
+    try {
+      const actor = {
+        id: currentPersonnel?.id || currentUser?.uid || 'auditor',
+        name: currentPersonnel?.name || currentUser?.displayName || 'ผู้ตรวจติดตาม',
+        email: currentUser?.email || currentPersonnel?.email || '',
+        role: 'ผู้ตรวจติดตาม (Auditor)',
+      };
+
+      const approvalObj = {
+        approved: true,
+        auditorId: actor.id,
+        auditorName: actor.name,
+        auditorEmail: actor.email,
+        approvedAt: new Date().toISOString(),
+        comment: 'เห็นชอบและอนุมัติแผนปฏิบัติการแก้ไข',
+      };
+
+      setAuditorApproval(approvalObj);
+      if (status === CAR_INCIDENT_STATUS.NOT_YET_APPROVED) {
+        setStatus(CAR_INCIDENT_STATUS.ON_PROGRESS);
+      }
+
+      if (isEdit && record?.id) {
+        await approveActionPlanByAuditor(record.id, actor, yearlyConfig);
+      }
+      alert('✅ บันทึกการเห็นชอบแผนงานเรียบร้อยแล้ว');
+    } catch (err) {
+      console.error('Auditor approval error:', err);
+      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการอนุมัติแผนงาน');
+    } finally {
+      setIsAuditorSubmitting(false);
+    }
+  };
+
+  const handleSubmitRevision = async () => {
+    if (!revisionCommentInput.trim()) {
+      alert('กรุณาระบุข้อคิดเห็น/สิ่งที่ต้องการให้ปรับปรุงแก้ไข');
+      return;
+    }
+    setIsAuditorSubmitting(true);
+    try {
+      const actor = {
+        id: currentPersonnel?.id || currentUser?.uid || 'auditor',
+        name: currentPersonnel?.name || currentUser?.displayName || 'ผู้ตรวจติดตาม',
+        email: currentUser?.email || currentPersonnel?.email || '',
+      };
+      const now = new Date().toISOString();
+      const newComment = {
+        id: `rev-${Date.now()}`,
+        text: revisionCommentInput.trim(),
+        authorId: actor.id,
+        authorName: actor.name,
+        authorEmail: actor.email,
+        createdAt: now,
+        role: 'ผู้ตรวจติดตาม (Auditor)',
+      };
+
+      setReviewComments((prev) => [...prev, newComment]);
+      setAuditorApproval({
+        approved: false,
+        auditorId: actor.id,
+        auditorName: actor.name,
+        auditorEmail: actor.email,
+        revisedAt: now,
+        comment: revisionCommentInput.trim(),
+      });
+
+      if (isEdit && record?.id) {
+        await requestActionPlanRevision(record.id, revisionCommentInput.trim(), actor, yearlyConfig);
+      }
+
+      setShowRevisionModal(false);
+      setRevisionCommentInput('');
+      alert('✉️ บันทึกข้อคิดเห็นและส่งแจ้งเตือนผู้รับการตรวจเพื่อแก้ไขเรียบร้อยแล้ว');
+    } catch (err) {
+      console.error('Request revision error:', err);
+      alert(err.message || 'เกิดข้อผิดพลาดในการส่งข้อคิดเห็น');
+    } finally {
+      setIsAuditorSubmitting(false);
+    }
+  };
+
   const handleSignExecutive = () => {
     try {
-      const sig = confirmExecutiveSignature(currentUser, currentPersonnel);
+      const sig = confirmExecutiveSignature(currentUser, currentPersonnel, auditorApproval, isAdmin);
       setExecutiveSignature(sig);
     } catch (err) {
       setErrorMsg(err.message || 'ไม่สามารถลงชื่อรับทราบในฐานะ MR ได้');
@@ -429,14 +540,28 @@ export default function CarIncidentModal({
 
   const handleSignEvaluator = () => {
     const name = currentPersonnel?.name || currentUser?.displayName || currentUser?.email || 'ผู้ตรวจติดตาม';
-    const date = new Date().toISOString().split('T')[0];
-    setFollowUpAuditor({
+    const date = followUpDate || new Date().toISOString().split('T')[0];
+    const auditorObj = {
       id: currentPersonnel?.id || currentUser?.uid || 'auditor',
       name,
       email: currentUser?.email || currentPersonnel?.email || '',
       date,
-    });
+    };
+    setFollowUpAuditor(auditorObj);
     setFollowUpDate(date);
+
+    // Record entry into followUpHistory if findings or result are provided
+    if (followUpFindings || followUpResult) {
+      const historyEntry = {
+        id: `fu-${Date.now()}`,
+        followUpDate: date,
+        followUpFindings: followUpFindings || '',
+        followUpResult: followUpResult || '',
+        followUpAuditor: auditorObj,
+        recordedAt: new Date().toISOString(),
+      };
+      setFollowUpHistory((prev) => [...(prev || []), historyEntry]);
+    }
   };
 
   // Add Note
@@ -528,12 +653,15 @@ export default function CarIncidentModal({
         // Part 3
         actionPlans,
         executiveSignature,
+        auditorApproval,
+        reviewComments,
 
         // Part 4
         followUpAuditor,
         followUpDate,
         followUpFindings,
         followUpResult,
+        followUpHistory,
 
         // Notes
         notes,
@@ -1864,6 +1992,168 @@ export default function CarIncidentModal({
               </table>
             </div>
 
+            {/* Auditor Review & Approval Card */}
+            <div
+              style={{
+                background: auditorApproval?.approved
+                  ? '#F0FDF4'
+                  : auditorApproval?.approved === false
+                  ? '#FFFBEB'
+                  : '#F8FAFC',
+                padding: '1.25rem',
+                borderRadius: '10px',
+                border: `1.5px solid ${
+                  auditorApproval?.approved
+                    ? '#86EFAC'
+                    : auditorApproval?.approved === false
+                    ? '#FDE68A'
+                    : '#CBD5E1'
+                }`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldCheck
+                    size={20}
+                    color={
+                      auditorApproval?.approved
+                        ? '#16A34A'
+                        : auditorApproval?.approved === false
+                        ? '#D97706'
+                        : '#64748B'
+                    }
+                  />
+                  <div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>
+                      การพิจารณาเห็นชอบแผนงานโดยผู้ตรวจติดตาม (Auditor Review & Approval)
+                    </div>
+                    <div style={{ fontSize: '0.775rem', color: '#64748B' }}>
+                      ผู้ตรวจติดตามต้องพิจารณาเห็นชอบแนวทางแก้ไขเบื้องต้นและแผน Corrective Actions ก่อน MR ลงนาม
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comments History Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setShowCommentsHistoryModal(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '0.75rem',
+                    padding: '3px 8px',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    color: '#475569',
+                  }}
+                >
+                  <MessageSquareQuote size={13} color="#0D9488" />
+                  <span>ดูประวัติข้อคิดเห็น ({reviewComments.length})</span>
+                </button>
+              </div>
+
+              {/* Approval Status Display */}
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '0.825rem',
+                }}
+              >
+                {auditorApproval?.approved ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontWeight: 700 }}>
+                    <CheckCircle2 size={16} />
+                    <span>
+                      ✓ เห็นชอบและอนุมัติแผนงานแล้ว โดย {auditorApproval.auditorName || 'ผู้ตรวจติดตาม'}
+                      {auditorApproval.approvedAt && (
+                        <span style={{ fontWeight: 400, color: '#64748B', marginLeft: '6px' }}>
+                          ({new Date(auditorApproval.approvedAt).toLocaleDateString('th-TH')})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ) : auditorApproval?.approved === false ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#D97706' }}>
+                    <AlertCircle size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontWeight: 700 }}>ผู้ตรวจติดตามขอให้ปรับปรุงแก้ไขแผนงาน:</div>
+                      <div style={{ color: '#475569', marginTop: '2px', whiteSpace: 'pre-wrap' }}>
+                        &ldquo;{auditorApproval.comment || auditorApproval.feedbackText || 'โปรดแก้ไขรายละเอียดแผนงานตามข้อคิดเห็น'}&rdquo;
+                      </div>
+                      {auditorApproval.auditorName && (
+                        <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '4px' }}>
+                          โดย {auditorApproval.auditorName}{' '}
+                          {auditorApproval.revisedAt && `(${new Date(auditorApproval.revisedAt).toLocaleDateString('th-TH')})`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748B' }}>
+                    <Clock size={16} />
+                    <span>รอดำเนินการพิจารณาตรวจสอบแผนงานโดยผู้ตรวจติดตาม</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Auditor Action Buttons */}
+              {canEditPart1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={handleAuditorApprove}
+                    disabled={isAuditorSubmitting}
+                    className="btn btn-sm"
+                    style={{
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '5px 12px',
+                    }}
+                  >
+                    <CheckSquare size={14} />
+                    <span>{auditorApproval?.approved ? 'ยืนยันการอนุมัติอีกครั้ง' : 'เห็นชอบ/อนุมัติแผนงาน'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRevisionCommentInput('');
+                      setShowRevisionModal(true);
+                    }}
+                    disabled={isAuditorSubmitting}
+                    className="btn btn-sm"
+                    style={{
+                      background: '#FFFFFF',
+                      color: '#D97706',
+                      border: '1.5px solid #F59E0B',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '5px 12px',
+                    }}
+                  >
+                    <MessageSquare size={14} />
+                    <span>ขอให้แก้ไขแผนงาน (ระบุข้อคิดเห็น)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Executive Sign-off Block */}
             <div
               style={{
@@ -1891,21 +2181,33 @@ export default function CarIncidentModal({
                     'รอดำเนินการลงนามรับทราบแผนงานโดย MR'
                   )}
                 </div>
+                {!auditorApproval?.approved && !executiveSignature && (
+                  <div style={{ fontSize: '0.75rem', color: '#D97706', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Info size={13} />
+                    <span>หมายเหตุ: ผู้แทนฝ่ายบริหาร (MR) จะสามารถลงนามได้หลังจากผู้ตรวจติดตามเห็นชอบแผนงานแล้ว</span>
+                  </div>
+                )}
               </div>
 
               {isMR && !executiveSignature && (
                 <button
                   type="button"
                   onClick={handleSignExecutive}
+                  disabled={!auditorApproval?.approved && !isAdmin}
                   className="btn btn-primary btn-sm"
+                  title={!auditorApproval?.approved && !isAdmin ? 'ต้องได้รับการเห็นชอบจากผู้ตรวจติดตามก่อน' : 'ลงชื่อรับทราบในฐานะ MR'}
                   style={{
-                    background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+                    background: auditorApproval?.approved || isAdmin
+                      ? 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)'
+                      : '#94A3B8',
                     color: '#FFFFFF',
                     border: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     fontWeight: 700,
+                    cursor: auditorApproval?.approved || isAdmin ? 'pointer' : 'not-allowed',
+                    opacity: auditorApproval?.approved || isAdmin ? 1 : 0.6,
                   }}
                 >
                   <CheckCircle2 size={15} />
@@ -1967,6 +2269,26 @@ export default function CarIncidentModal({
                   </div>
                 </div>
               </div>
+
+              {/* View Follow-up History Button */}
+              <button
+                type="button"
+                onClick={() => setShowFollowUpHistoryModal(true)}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.775rem',
+                  padding: '4px 10px',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  color: '#475569',
+                }}
+              >
+                <History size={14} color="#0D9488" />
+                <span>ดูประวัติผลการตรวจติดตาม ({followUpHistory.length})</span>
+              </button>
             </div>
 
             {!isPart4Eligible && (
@@ -2108,14 +2430,14 @@ export default function CarIncidentModal({
                 </div>
               </div>
 
-              {canEditPart4 && !followUpAuditor && (
+              {canEditPart4 && (
                 <button
                   type="button"
                   onClick={handleSignEvaluator}
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: '0.8rem' }}
                 >
-                  ลงชื่อยืนยันการตรวจติดตาม
+                  {followUpAuditor ? 'บันทึกการตรวจรอบใหม่' : 'ลงชื่อยืนยันการตรวจติดตาม'}
                 </button>
               )}
             </div>
@@ -2557,6 +2879,394 @@ export default function CarIncidentModal({
           </div>
         </div>
       )}
+
+      {/* Revision Request Modal (Auditor to Requestee) */}
+      {showRevisionModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowRevisionModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1rem',
+              maxWidth: '600px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem 1.25rem',
+                background: 'linear-gradient(135deg, #B45309 0%, #D97706 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquareQuote size={20} />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>
+                  ขอให้ปรับปรุงแก้ไขแนวทาง/แผนปฏิบัติการ (Request Plan Revision)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRevisionModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div
+                style={{
+                  background: '#FFFBEB',
+                  border: '1px solid #FDE68A',
+                  color: '#92400E',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <Info size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  เมื่อส่งข้อคิดเห็น ระบบจะบันทึกสถานะการขอให้แก้ไข และ<strong>ส่งอีเมลแจ้งเตือนไปยังผู้รับการร้องขอ (Requestees)</strong> เพื่อให้เข้ามาปรับปรุงแนวทางแก้ไขเบื้องต้นและแผน Corrective Actions
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  ข้อคิดเห็น / สิ่งที่ต้องการให้ปรับปรุงแก้ไข <span style={{ color: '#DC2626' }}>*</span>
+                </label>
+                <textarea
+                  value={revisionCommentInput}
+                  onChange={(e) => setRevisionCommentInput(e.target.value)}
+                  rows={5}
+                  placeholder="ระบุข้อคิดเห็น เช่น ขอให้ระบุสาเหตุที่แท้จริงเพิ่มเติม, ปรับเป้าหมายระยะเวลาให้กระชับขึ้น, หรือเพิ่มขั้นตอนการป้องกัน..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.875rem',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '0.85rem 1.25rem',
+                background: '#F8FAFC',
+                borderTop: '1px solid #E2E8F0',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowRevisionModal(false)}
+                className="btn btn-ghost btn-sm"
+                disabled={isAuditorSubmitting}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitRevision}
+                disabled={isAuditorSubmitting || !revisionCommentInput.trim()}
+                className="btn btn-sm"
+                style={{
+                  background: '#D97706',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  padding: '6px 14px',
+                }}
+              >
+                <Send size={14} />
+                <span>{isAuditorSubmitting ? 'กำลังส่ง...' : 'ส่งข้อคิดเห็นและแจ้งเตือนผู้รับการตรวจ'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Comments History Modal */}
+      {showCommentsHistoryModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowCommentsHistoryModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1rem',
+              maxWidth: '650px',
+              width: '100%',
+              maxHeight: '80vh',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem 1.25rem',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#F8FAFC',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <History size={18} color="#0D9488" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+                  ประวัติข้อคิดเห็นการพิจารณาแผนงาน (Review Comments History)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCommentsHistoryModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
+              {reviewComments && reviewComments.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {reviewComments.map((comm, idx) => (
+                    <div
+                      key={comm.id || idx}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#F8FAFC',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '0.85rem' }}>
+                            {comm.authorName || 'ผู้ตรวจติดตาม'}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: '#E0F2FE',
+                              color: '#0369A1',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {comm.role || 'Auditor'}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                          {comm.createdAt ? new Date(comm.createdAt).toLocaleString('th-TH') : '-'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.825rem', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                        {comm.text || comm.content || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2.5rem 1rem' }}>
+                  <MessageSquareQuote size={32} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#64748B' }}>
+                    ยังไม่มีประวัติข้อคิดเห็นการพิจารณาแผนงาน
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', textAlign: 'right' }}>
+              <button
+                type="button"
+                onClick={() => setShowCommentsHistoryModal(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Follow-up Evaluation History Modal */}
+      {showFollowUpHistoryModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowFollowUpHistoryModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1rem',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem 1.25rem',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#F8FAFC',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <History size={18} color="#0D9488" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+                  ประวัติผลการตรวจติดตาม (Follow-up Evaluation History)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFollowUpHistoryModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
+              {followUpHistory && followUpHistory.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {followUpHistory.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: `1px solid ${item.followUpResult === 'RESOLVED' ? '#A7F3D0' : '#FED7AA'}`,
+                        backgroundColor: item.followUpResult === 'RESOLVED' ? '#F0FDF4' : '#FFFDF5',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.875rem' }}>
+                            รอบที่ {idx + 1} ({item.followUpDate || '-'})
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.725rem',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontWeight: 700,
+                              background: item.followUpResult === 'RESOLVED' ? '#DCFCE7' : '#FEF3C7',
+                              color: item.followUpResult === 'RESOLVED' ? '#15803D' : '#B45309',
+                              border: `1px solid ${item.followUpResult === 'RESOLVED' ? '#86EFAC' : '#FDE68A'}`,
+                            }}
+                          >
+                            {item.followUpResult === 'RESOLVED' ? '✓ ปิดข้อบกพร่อง (Resolved)' : '⚠️ ยังไม่ปิด (Ineffective)'}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                          {item.recordedAt ? new Date(item.recordedAt).toLocaleString('th-TH') : ''}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.8rem', color: '#334155', marginTop: '4px' }}>
+                        <strong>สิ่งที่พบจากการตรวจ:</strong>
+                        <div style={{ whiteSpace: 'pre-wrap', marginTop: '2px', color: '#475569' }}>
+                          {item.followUpFindings || '-'}
+                        </div>
+                      </div>
+
+                      {item.followUpAuditor?.name && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '6px' }}>
+                          ผู้ตรวจติดตาม: <strong>{item.followUpAuditor.name}</strong> {item.followUpAuditor.email && `(${item.followUpAuditor.email})`}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2.5rem 1rem' }}>
+                  <ShieldCheck size={32} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#64748B' }}>
+                    ยังไม่มีประวัติการบันทึกผลการตรวจติดตามในอดีต
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', textAlign: 'right' }}>
+              <button
+                type="button"
+                onClick={() => setShowFollowUpHistoryModal(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
