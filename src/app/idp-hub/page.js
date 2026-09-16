@@ -23,6 +23,7 @@ import {
   Settings,
   Calendar,
   UserCheck,
+  Building2,
 } from 'lucide-react';
 import { subscribeIdpRecords, subscribeIdpConfig, isHrOfficer } from '@/lib/idpService';
 import { useAuth } from '@/context/AuthContext';
