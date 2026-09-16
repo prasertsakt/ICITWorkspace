@@ -436,36 +436,85 @@ export default function IDPPreviewModal({
           {/* Signatures Blocks Matching Sample Form */}
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '2rem',
               marginTop: '1.75rem',
-              fontSize: '9.5pt',
+              fontSize: '9pt',
               lineHeight: 1.8,
             }}
           >
             {/* Left: Self */}
-            <div style={{ textAlign: 'center', width: '45%' }}>
-              <div>
-                ลงชื่อ &nbsp;&nbsp;<u>&nbsp;&nbsp;{selfSign?.signed ? selfSign.name : '............................................................'}&nbsp;&nbsp;</u>&nbsp;&nbsp; (ผู้รับการประเมิน)
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                <span>ลงชื่อ</span>
+                <span
+                  style={{
+                    borderBottom: '1px dotted #000000',
+                    minWidth: '160px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                    fontWeight: selfSign?.signed ? 'bold' : 'normal',
+                    padding: '0 8px',
+                  }}
+                >
+                  {selfSign?.signed ? selfSign.name : ''}
+                </span>
+                <span>(ผู้รับการประเมิน)</span>
               </div>
-              <div style={{ marginTop: '2px' }}>
-                ( &nbsp;{selfSign?.signed ? selfSign.name : record.personnelName || 'นายบุคลากร ดีเด่น'}&nbsp; )
+              <div style={{ marginTop: '3px' }}>
+                ( &nbsp;{selfSign?.signed ? selfSign.name : record.personnelName || '...................................................'} &nbsp;)
               </div>
-              <div>
-                วันที่ &nbsp;&nbsp;<u>&nbsp;&nbsp;{selfSign?.signed ? selfSign.signedAt : '............................................................'}&nbsp;&nbsp;</u>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '3px', whiteSpace: 'nowrap' }}>
+                <span>วันที่</span>
+                <span
+                  style={{
+                    borderBottom: '1px dotted #000000',
+                    minWidth: '160px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                    padding: '0 8px',
+                  }}
+                >
+                  {selfSign?.signed ? selfSign.signedAt : ''}
+                </span>
               </div>
             </div>
 
             {/* Right: Supervisor / Head of Dept / Deputy Director */}
-            <div style={{ textAlign: 'center', width: '45%' }}>
-              <div>
-                ลงชื่อ &nbsp;&nbsp;<u>&nbsp;&nbsp;{headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : '............................................................'}&nbsp;&nbsp;</u>&nbsp;&nbsp; (ผู้ประเมิน/ผู้บังคับบัญชาเหนือขึ้นไป)
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                <span>ลงชื่อ</span>
+                <span
+                  style={{
+                    borderBottom: '1px dotted #000000',
+                    minWidth: '150px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                    fontWeight: (headSign?.signed || deputySign?.signed) ? 'bold' : 'normal',
+                    padding: '0 8px',
+                  }}
+                >
+                  {headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : ''}
+                </span>
+                <span style={{ fontSize: '8.5pt' }}>(ผู้ประเมิน/ผู้บังคับบัญชาเหนือขึ้นไป)</span>
               </div>
-              <div style={{ marginTop: '2px' }}>
-                ( &nbsp;{headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : record.departmentHead?.name || record.supervisingDeputyDirector?.name || 'หัวหน้าฝ่าย / รองผู้อำนวยการ'}&nbsp; )
+              <div style={{ marginTop: '3px' }}>
+                ( &nbsp;{headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : record.departmentHead?.name || record.supervisingDeputyDirector?.name || '...................................................'} &nbsp;)
               </div>
-              <div>
-                วันที่ &nbsp;&nbsp;<u>&nbsp;&nbsp;{headSign?.signed ? headSign.signedAt : deputySign?.signed ? deputySign.signedAt : '............................................................'}&nbsp;&nbsp;</u>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '3px', whiteSpace: 'nowrap' }}>
+                <span>วันที่</span>
+                <span
+                  style={{
+                    borderBottom: '1px dotted #000000',
+                    minWidth: '150px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                    padding: '0 8px',
+                  }}
+                >
+                  {headSign?.signed ? headSign.signedAt : deputySign?.signed ? deputySign.signedAt : ''}
+                </span>
               </div>
             </div>
           </div>

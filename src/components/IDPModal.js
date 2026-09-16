@@ -168,26 +168,39 @@ export default function IDPModal({
 
   if (!isOpen) return null;
 
-  // Permissions Evaluation
-  const isOwner =
-    Boolean(currentUser?.email && personnelEmail && currentUser.email.toLowerCase() === personnelEmail.toLowerCase()) ||
-    Boolean(currentPersonnel?.id && selectedPersonnelId && currentPersonnel.id === selectedPersonnelId);
+  // Permissions Evaluation (Strictly matches the person indicated)
+  // 1. ผู้รับการประเมิน (ตนเอง)
+  const isOwner = Boolean(
+    (currentUser?.email && personnelEmail && currentUser.email.trim().toLowerCase() === personnelEmail.trim().toLowerCase()) ||
+    (currentPersonnel?.id && selectedPersonnelId && currentPersonnel.id === selectedPersonnelId) ||
+    (currentPersonnel?.email && personnelEmail && currentPersonnel.email.trim().toLowerCase() === personnelEmail.trim().toLowerCase())
+  );
 
-  const isDeptHead =
-    Boolean(departmentHead?.email && currentUser?.email && departmentHead.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-    Boolean(departmentHead?.id && currentPersonnel?.id && departmentHead.id === currentPersonnel.id) ||
-    isAdmin;
+  // 2. ผู้ประเมิน (หัวหน้าฝ่าย)
+  const isDeptHead = Boolean(
+    (departmentHead?.email && currentUser?.email && departmentHead.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase()) ||
+    (departmentHead?.email && currentPersonnel?.email && departmentHead.email.trim().toLowerCase() === currentPersonnel.email.trim().toLowerCase()) ||
+    (departmentHead?.id && currentPersonnel?.id && departmentHead.id === currentPersonnel.id)
+  );
 
-  const isDeputyDirector =
-    Boolean(supervisingDeputyDirector?.email && currentUser?.email && supervisingDeputyDirector.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-    Boolean(supervisingDeputyDirector?.id && currentPersonnel?.id && supervisingDeputyDirector.id === currentPersonnel.id) ||
-    isAdmin;
+  // 3. ผู้ประเมิน (รองผู้อำนวยการที่กำกับดูแลฝ่าย)
+  const isDeputyDirector = Boolean(
+    (supervisingDeputyDirector?.email && currentUser?.email && supervisingDeputyDirector.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase()) ||
+    (supervisingDeputyDirector?.email && currentPersonnel?.email && supervisingDeputyDirector.email.trim().toLowerCase() === currentPersonnel.email.trim().toLowerCase()) ||
+    (supervisingDeputyDirector?.id && currentPersonnel?.id && supervisingDeputyDirector.id === currentPersonnel.id)
+  );
 
-  // Can edit scores:
-  // - Self scores (3): Owner or Admin
-  // - Supervisor scores (4): Dept Head, Deputy Director, or Admin
-  const canEditSelfScore = isOwner || isAdmin;
-  const canEditSupervisorScore = isDeptHead || isDeputyDirector || isAdmin;
+  // Strict score editing permissions:
+  // - ONLY ผู้รับการประเมิน can input value in ตนเอง (3)
+  const canEditSelfScore = isOwner;
+
+  // - ONLY ผู้ประเมิน (หัวหน้าฝ่าย) and ผู้ประเมิน (รองผู้อำนวยการ) can input value in หัวหน้า (4)
+  const canEditSupervisorScore = isDeptHead || isDeputyDirector;
+
+  // Strict signature permissions (only the name indicated can click that button):
+  const canSignSelf = isOwner;
+  const canSignDeptHead = isDeptHead;
+  const canSignDeputyDirector = isDeputyDirector;
 
   // Live Summary Calculation
   const liveSummary = calculateIdpSummary(coreCompetencies, functionalCompetencies);
@@ -675,35 +688,14 @@ export default function IDPModal({
               color: '#1E40AF',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px',
+              gap: '8px',
               flexShrink: 0,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Info size={18} color="#2563EB" style={{ flexShrink: 0 }} />
-              <span>
-                <strong>คำแนะนำการประเมิน:</strong> เจ้าของฟอร์มประเมินในคอลัมน์ <strong style={{ color: '#0369A1' }}>ตนเอง (3)</strong> • หัวหน้าฝ่ายหรือรองผู้อำนวยการประเมินในคอลัมน์ <strong style={{ color: '#92400E' }}>หัวหน้า (4)</strong> (ระดับคะแนน 1 - 5)
-              </span>
-            </div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, display: 'flex', gap: '8px' }}>
-              {isOwner && (
-                <span style={{ background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '4px' }}>
-                  ✓ ท่านคือเจ้าของแบบฟอร์ม
-                </span>
-              )}
-              {isDeptHead && (
-                <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '4px' }}>
-                  ✓ ท่านคือหัวหน้าฝ่าย
-                </span>
-              )}
-              {isDeputyDirector && (
-                <span style={{ background: '#F3E8FF', color: '#7E22CE', padding: '2px 8px', borderRadius: '4px' }}>
-                  ✓ ท่านคือรองผู้อำนวยการ
-                </span>
-              )}
-            </div>
+            <Info size={18} color="#2563EB" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>คำแนะนำการประเมิน:</strong> เจ้าของฟอร์มประเมินในคอลัมน์ <strong style={{ color: '#0369A1' }}>ตนเอง (3)</strong> • หัวหน้าฝ่ายหรือรองผู้อำนวยการประเมินในคอลัมน์ <strong style={{ color: '#92400E' }}>หัวหน้า (4)</strong> (ระดับคะแนน 1 - 5)
+            </span>
           </div>
 
           {/* ==================== 1. สมรรถนะหลัก (Core Competency) ==================== */}
@@ -1161,28 +1153,47 @@ export default function IDPModal({
                 </div>
               </div>
 
-              {!signatures.evaluatorSelf?.signed && canEditSelfScore && (
-                <button
-                  type="button"
-                  onClick={handleSignSelf}
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    background: '#F0F9FF',
-                    borderColor: '#0284C7',
-                    color: '#0369A1',
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✍️ ลงชื่อผู้รับการประเมิน (ตนเอง)
-                </button>
+              {/* Action Button / Permission Notice */}
+              {!signatures.evaluatorSelf?.signed && (
+                canSignSelf ? (
+                  <button
+                    type="button"
+                    onClick={handleSignSelf}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      background: '#F0F9FF',
+                      borderColor: '#0284C7',
+                      color: '#0369A1',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✍️ ลงชื่อผู้รับการประเมิน (ตนเอง)
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#64748B',
+                      background: '#F1F5F9',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Lock size={13} color="#94A3B8" />
+                    <span>สงวนสิทธิ์การลงชื่อเฉพาะ: <strong>{personnelName || 'ผู้รับการประเมิน'}</strong></span>
+                  </div>
+                )
               )}
             </div>
 
-            {/* 2. Department Head Signature */}
+            {/* 2. Department Head Signature (เฉพาะหัวหน้าฝ่ายที่ระบุเท่านั้นที่กดได้) */}
             <div
               style={{
                 border: '1.5px solid #CBD5E1',
@@ -1223,28 +1234,47 @@ export default function IDPModal({
                 </div>
               </div>
 
-              {!signatures.evaluatorSupervisor?.signed && (isDeptHead || isAdmin) && (
-                <button
-                  type="button"
-                  onClick={handleSignDeptHead}
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    background: '#F0FDF4',
-                    borderColor: '#16A34A',
-                    color: '#15803D',
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✍️ ลงชื่อผู้ประเมิน (หัวหน้าฝ่าย)
-                </button>
+              {/* Action Button / Permission Notice */}
+              {!signatures.evaluatorSupervisor?.signed && (
+                canSignDeptHead ? (
+                  <button
+                    type="button"
+                    onClick={handleSignDeptHead}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      background: '#F0FDF4',
+                      borderColor: '#16A34A',
+                      color: '#15803D',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✍️ ลงชื่อผู้ประเมิน (หัวหน้าฝ่าย)
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#64748B',
+                      background: '#F1F5F9',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Lock size={13} color="#94A3B8" />
+                    <span>สงวนสิทธิ์การลงชื่อเฉพาะ: <strong>{departmentHead?.name || 'หัวหน้าฝ่าย'}</strong></span>
+                  </div>
+                )
               )}
             </div>
 
-            {/* 3. Supervising Deputy Director Signature */}
+            {/* 3. Supervising Deputy Director Signature (เฉพาะรองผู้อำนวยการที่ระบุเท่านั้นที่กดได้) */}
             <div
               style={{
                 border: '1.5px solid #CBD5E1',
@@ -1285,24 +1315,43 @@ export default function IDPModal({
                 </div>
               </div>
 
-              {!signatures.evaluatorDeputyDirector?.signed && (isDeputyDirector || isAdmin) && (
-                <button
-                  type="button"
-                  onClick={handleSignDeputyDirector}
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    background: '#FDF4FF',
-                    borderColor: '#9333EA',
-                    color: '#7E22CE',
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✍️ ลงชื่อผู้ประเมิน (รองผู้อำนวยการ)
-                </button>
+              {/* Action Button / Permission Notice */}
+              {!signatures.evaluatorDeputyDirector?.signed && (
+                canSignDeputyDirector ? (
+                  <button
+                    type="button"
+                    onClick={handleSignDeputyDirector}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      background: '#FDF4FF',
+                      borderColor: '#9333EA',
+                      color: '#7E22CE',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✍️ ลงชื่อผู้ประเมิน (รองผู้อำนวยการ)
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#64748B',
+                      background: '#F1F5F9',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Lock size={13} color="#94A3B8" />
+                    <span>สงวนสิทธิ์การลงชื่อเฉพาะ: <strong>{supervisingDeputyDirector?.name || 'รองผู้อำนวยการ'}</strong></span>
+                  </div>
+                )
               )}
             </div>
           </div>
