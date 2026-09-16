@@ -55,6 +55,17 @@ export default function IDPHubLandingPage() {
     };
   }, [fiscalYear]);
 
+  // The 4 Core Divisions/Departments in ICIT (including สำนักงานผู้อำนวยการ)
+  const MAIN_4_DEPTS = useMemo(
+    () => [
+      'สำนักงานผู้อำนวยการ',
+      'ฝ่ายพัฒนาระบบสารสนเทศ',
+      'ฝ่ายวิศวกรรมระบบเครือข่าย',
+      'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
+    ],
+    []
+  );
+
   // Statistics
   const stats = useMemo(() => {
     const total = idpRecords.length;
@@ -66,8 +77,36 @@ export default function IDPHubLandingPage() {
     ).length;
     const completed = idpRecords.filter((r) => r.status === 'COMPLETED').length;
 
-    return { total, selfEvaluated, supervisorEvaluated, completed };
-  }, [idpRecords]);
+    // Breakdown for all 4 departments (รวมสำนักงานผู้อำนวยการ)
+    const deptStats = MAIN_4_DEPTS.map((deptName) => {
+      const deptRecords = idpRecords.filter((r) => r.department === deptName);
+      const dTotal = deptRecords.length;
+      const dCompleted = deptRecords.filter((r) => r.status === 'COMPLETED').length;
+      const dSelf = deptRecords.filter(
+        (r) => r.signatures?.evaluatorSelf?.signed || r.status === 'SELF_EVALUATED'
+      ).length;
+      const percent = dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0;
+      return {
+        name: deptName,
+        total: dTotal,
+        completed: dCompleted,
+        selfDone: dSelf,
+        percent,
+        isAllDone: dTotal > 0 && dCompleted === dTotal,
+      };
+    });
+
+    const completedDepts = deptStats.filter((d) => d.isAllDone).length;
+
+    return {
+      total,
+      selfEvaluated,
+      supervisorEvaluated,
+      completed,
+      deptStats,
+      completedDepts,
+    };
+  }, [idpRecords, MAIN_4_DEPTS]);
 
   if (authLoading) {
     return (
@@ -193,7 +232,7 @@ export default function IDPHubLandingPage() {
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
             >
               <ArrowLeft size={16} />
-              <span>กลับสู่หน้าหลัก (Portal Landing)</span>
+              <span>กลับสู่หน้าหลัก</span>
             </Link>
           </div>
         </div>
@@ -340,7 +379,7 @@ export default function IDPHubLandingPage() {
               lineHeight: 1.2,
             }}
           >
-            ระบบพัฒนาบุคลากรรายบุคคล (IDP Hub)
+            IDP Hub
           </h1>
 
           <p
@@ -414,13 +453,68 @@ export default function IDPHubLandingPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E0E7FF', fontWeight: 600 }}>
                 <CheckCircle2 size={16} color="#A5B4FC" />
-                <span>เสร็จสมบูรณ์ครบ 3 ฝ่าย</span>
+                <span>เสร็จสมบูรณ์ทั้ง 4 ฝ่าย</span>
               </div>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#BBF7D0', letterSpacing: '-0.02em' }}>
-                {stats.completed} <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>ฉบับ</span>
+                {stats.completed} <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>/ {stats.total} ฉบับ</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#E0E7FF', opacity: 0.85, marginTop: '2px' }}>
+                รวมสำนักงานผู้อำนวยการ ({stats.completedDepts}/4 ฝ่ายเสร็จ 100%)
               </div>
             </div>
           </div>
+
+          {/* 4 Departments Progress Quick Breakdown */}
+          {stats.deptStats && stats.deptStats.length > 0 && (
+            <div
+              style={{
+                marginTop: '1.5rem',
+                maxWidth: '820px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '12px',
+                padding: '0.85rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+              }}
+            >
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E0E7FF', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={14} color="#A5B4FC" />
+                <span>ความก้าวหน้าทั้ง 4 ฝ่าย (รวมสำนักงานผู้อำนวยการ):</span>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                  gap: '0.75rem',
+                }}
+              >
+                {stats.deptStats.map((d) => (
+                  <div
+                    key={d.name}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.75rem', color: '#E0E7FF', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
+                      {d.name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: d.isAllDone ? '#BBF7D0' : '#FFFFFF' }}>
+                        {d.completed}/{d.total} ฉบับ
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: d.isAllDone ? '#BBF7D0' : '#A5B4FC', fontWeight: 700 }}>
+                        {d.percent}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -463,7 +557,7 @@ export default function IDPHubLandingPage() {
             บริการย่อยภายใต้ระบบ IDP Hub
           </h2>
           <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748B' }}>
-            เลือกบริการที่ต้องการเข้าใช้งานเพื่อวิเคราะห์สมรรถนะ วางแผน และติดตามการพัฒนาตนเอง
+            วิเคราะห์สมรรถนะ วางแผน และติดตามการพัฒนาตนเอง
           </p>
         </div>
 
@@ -538,7 +632,7 @@ export default function IDPHubLandingPage() {
                       border: '1px solid #BBF7D0',
                     }}
                   >
-                    พร้อมใช้งาน (Active)
+                    เปิดให้บริการ
                   </span>
                 </div>
 

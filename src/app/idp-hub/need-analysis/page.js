@@ -202,6 +202,17 @@ export default function IDPNeedAnalysisPage() {
     });
   }, [idpRecords, selectedDept, quickFilter, searchQuery, currentUser, currentPersonnel]);
 
+  // The 4 Core Divisions/Departments in ICIT (including สำนักงานผู้อำนวยการ)
+  const MAIN_4_DEPTS = useMemo(
+    () => [
+      'สำนักงานผู้อำนวยการ',
+      'ฝ่ายพัฒนาระบบสารสนเทศ',
+      'ฝ่ายวิศวกรรมระบบเครือข่าย',
+      'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
+    ],
+    []
+  );
+
   // Dashboard Statistics
   const stats = useMemo(() => {
     const total = idpRecords.length;
@@ -221,8 +232,37 @@ export default function IDPNeedAnalysisPage() {
     });
     const avgGap = total > 0 ? (totalGaps / total).toFixed(1) : '0';
 
-    return { total, selfEvaluated, supervisorEvaluated, completed, avgGap };
-  }, [idpRecords]);
+    // Breakdown for all 4 departments (รวมสำนักงานผู้อำนวยการ)
+    const deptStats = MAIN_4_DEPTS.map((deptName) => {
+      const deptRecords = idpRecords.filter((r) => r.department === deptName);
+      const dTotal = deptRecords.length;
+      const dCompleted = deptRecords.filter((r) => r.status === IDP_STATUSES.COMPLETED.key).length;
+      const dSelf = deptRecords.filter(
+        (r) => r.signatures?.evaluatorSelf?.signed || r.status === IDP_STATUSES.SELF_EVALUATED.key
+      ).length;
+      const percent = dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0;
+      return {
+        name: deptName,
+        total: dTotal,
+        completed: dCompleted,
+        selfDone: dSelf,
+        percent,
+        isAllDone: dTotal > 0 && dCompleted === dTotal,
+      };
+    });
+
+    const completedDepts = deptStats.filter((d) => d.isAllDone).length;
+
+    return {
+      total,
+      selfEvaluated,
+      supervisorEvaluated,
+      completed,
+      avgGap,
+      deptStats,
+      completedDepts,
+    };
+  }, [idpRecords, MAIN_4_DEPTS]);
 
   // If Not Logged In, Show Login Gate
   if (!isAuthLoading && !currentUser) {
@@ -548,19 +588,80 @@ export default function IDPNeedAnalysisPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#64748B', fontSize: '0.825rem' }}>
-            <span style={{ fontWeight: 600 }}>เสร็จสมบูรณ์ครบ 3 ฝ่าย</span>
+            <span style={{ fontWeight: 600 }}>เสร็จสมบูรณ์ทั้ง 4 ฝ่าย</span>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckCircle2 size={16} />
             </div>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#16A34A', marginTop: '0.5rem' }}>
-            {stats.completed} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B' }}>ฉบับ</span>
+            {stats.completed} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B' }}>/ {stats.total} ฉบับ</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: '#16A34A', marginTop: '2px', fontWeight: 600 }}>
-            {stats.completed === stats.total && stats.total > 0 ? '✓ ครบถ้วน 100%' : `รออีก ${stats.total - stats.completed} ฉบับ`}
+            รวมสำนักงานผู้อำนวยการ ({stats.completedDepts}/4 ฝ่ายเสร็จ 100%)
           </div>
         </div>
       </div>
+
+      {/* 4 Departments Progress Quick Breakdown */}
+      {stats.deptStats && stats.deptStats.length > 0 && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '1.5rem',
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            padding: '1rem 1.25rem',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+          }}
+        >
+          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E293B', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Building2 size={16} color="#4F46E5" />
+            <span>ความก้าวหน้าการประเมินแยกตาม 4 ฝ่ายหลัก (รวมสำนักงานผู้อำนวยการ):</span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '0.75rem',
+            }}
+          >
+            {stats.deptStats.map((d) => (
+              <div
+                key={d.name}
+                style={{
+                  background: d.isAllDone ? '#F0FDF4' : '#F8FAFC',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                  border: d.isAllDone ? '1px solid #BBF7D0' : '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
+                  {d.name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: d.isAllDone ? '#15803D' : '#1E293B' }}>
+                    {d.completed} / {d.total} ฉบับ
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: d.isAllDone ? '#DCFCE7' : '#EEF2FF',
+                      color: d.isAllDone ? '#15803D' : '#4F46E5',
+                    }}
+                  >
+                    {d.percent}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div
