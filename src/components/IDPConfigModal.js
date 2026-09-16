@@ -238,7 +238,7 @@ export default function IDPConfigModal({
         {/* Header */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             padding: '1.25rem 1.75rem',
             display: 'flex',
@@ -248,16 +248,17 @@ export default function IDPConfigModal({
             gap: '1rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '40px',
-                height: '40px',
+                width: '42px',
+                height: '42px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
               }}
             >
               <Layers size={22} color="#FFFFFF" />
@@ -266,15 +267,15 @@ export default function IDPConfigModal({
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
                 ตั้งค่าสมรรถนะมาตรฐานประจำปีงบประมาณ (IDP Competency Config)
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#CBD5E1' }}>
                 กำหนดหัวข้อสมรรถนะหลัก (Core) และสมรรถนะตามตำแหน่งงาน (Functional) พร้อมน้ำหนักคะแนนและระดับคาดหวัง
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.2)', padding: '4px 10px', borderRadius: '8px' }}>
-              <Calendar size={15} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.12)', border: '1px solid rgba(255, 255, 255, 0.25)', padding: '4px 10px', borderRadius: '8px' }}>
+              <Calendar size={15} color="#FB923C" />
               <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>ปีงบประมาณ:</span>
               <select
                 value={selectedYear}
@@ -329,8 +330,8 @@ export default function IDPConfigModal({
               style={{
                 padding: '6px 14px',
                 borderRadius: '8px',
-                border: activeTab === 'core' ? '1.5px solid #4F46E5' : '1px solid #CBD5E1',
-                background: activeTab === 'core' ? '#4F46E5' : '#FFFFFF',
+                border: activeTab === 'core' ? '1.5px solid #F97316' : '1px solid #CBD5E1',
+                background: activeTab === 'core' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : '#FFFFFF',
                 color: activeTab === 'core' ? '#FFFFFF' : '#475569',
                 fontSize: '0.825rem',
                 fontWeight: 700,
@@ -338,6 +339,7 @@ export default function IDPConfigModal({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                boxShadow: activeTab === 'core' ? '0 2px 8px rgba(249, 115, 22, 0.25)' : 'none',
               }}
             >
               <Layers size={14} />
@@ -361,8 +363,8 @@ export default function IDPConfigModal({
               style={{
                 padding: '6px 14px',
                 borderRadius: '8px',
-                border: activeTab === 'functional' ? '1.5px solid #4F46E5' : '1px solid #CBD5E1',
-                background: activeTab === 'functional' ? '#4F46E5' : '#FFFFFF',
+                border: activeTab === 'functional' ? '1.5px solid #F97316' : '1px solid #CBD5E1',
+                background: activeTab === 'functional' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : '#FFFFFF',
                 color: activeTab === 'functional' ? '#FFFFFF' : '#475569',
                 fontSize: '0.825rem',
                 fontWeight: 700,
@@ -370,6 +372,7 @@ export default function IDPConfigModal({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                boxShadow: activeTab === 'functional' ? '0 2px 8px rgba(249, 115, 22, 0.25)' : 'none',
               }}
             >
               <Briefcase size={14} />
@@ -398,9 +401,9 @@ export default function IDPConfigModal({
               alignItems: 'center',
               gap: '6px',
               fontSize: '0.8rem',
-              color: '#4F46E5',
-              borderColor: '#C7D2FE',
-              background: '#EEF2FF',
+              color: '#C2410C',
+              borderColor: '#FED7AA',
+              background: '#FFF7ED',
               fontWeight: 700,
             }}
           >
@@ -838,13 +841,14 @@ export default function IDPConfigModal({
               className="btn btn-primary btn-sm"
               disabled={isSaving}
               style={{
-                background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                 border: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: 700,
                 padding: '0.5rem 1.25rem',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
               }}
             >
               <Save size={15} />

@@ -120,13 +120,13 @@ export default function IDPHubLandingPage() {
           background: '#F8FAFC',
         }}
       >
-        <div style={{ textAlign: 'center', color: '#4F46E5', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', color: '#EA580C', fontWeight: 600 }}>
           <div
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #EEF2FF',
-              borderTopColor: '#4F46E5',
+              border: '3px solid #FFEDD5',
+              borderTopColor: '#EA580C',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 1rem',
@@ -145,7 +145,7 @@ export default function IDPHubLandingPage() {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #EEF2FF 0%, #F8FAFC 100%)',
+          background: 'linear-gradient(135deg, #FFF7ED 0%, #F8FAFC 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -158,10 +158,10 @@ export default function IDPHubLandingPage() {
             width: '100%',
             background: '#FFFFFF',
             borderRadius: '1.5rem',
-            border: '1px solid #E2E8F0',
+            border: '1px solid #FED7AA',
             padding: '2.5rem 2.25rem',
             textAlign: 'center',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+            boxShadow: '0 20px 25px -5px rgba(249, 115, 22, 0.08), 0 8px 10px -6px rgba(0,0,0,0.02)',
           }}
         >
           <div
@@ -169,13 +169,13 @@ export default function IDPHubLandingPage() {
               width: '70px',
               height: '70px',
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #3730A3 0%, #4F46E5 100%)',
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.5rem',
-              boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)',
+              boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.35)',
             }}
           >
             <Target size={38} />
@@ -188,10 +188,11 @@ export default function IDPHubLandingPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '999px',
-              background: '#EEF2FF',
-              color: '#4338CA',
+              background: '#FFF7ED',
+              color: '#C2410C',
               fontSize: '0.8rem',
               fontWeight: 700,
+              border: '1px solid #FFEDD5',
               marginBottom: '1rem',
             }}
           >
@@ -199,7 +200,7 @@ export default function IDPHubLandingPage() {
             <span>สงวนสิทธิ์เฉพาะบุคลากรที่เข้าสู่ระบบ</span>
           </div>
 
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#1E1B4B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
             ระบบพัฒนาบุคลากรรายบุคคล (IDP Hub)
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
@@ -218,9 +219,9 @@ export default function IDPHubLandingPage() {
                 fontWeight: 700,
                 justifyContent: 'center',
                 gap: '8px',
-                background: 'linear-gradient(135deg, #3730A3 0%, #4F46E5 100%)',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                 border: 'none',
-                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
               }}
             >
               <LogIn size={18} />
@@ -246,7 +247,7 @@ export default function IDPHubLandingPage() {
       {/* Hero Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #312E81 0%, #4338CA 40%, #6366F1 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
           padding: '3.5rem 1.5rem 4.5rem',
           position: 'relative',
@@ -295,16 +296,17 @@ export default function IDPHubLandingPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 14px',
+                padding: '4px 12px',
                 borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.18)',
-                backdropFilter: 'blur(8px)',
-                fontSize: '0.8rem',
+                background: 'rgba(249, 115, 22, 0.25)',
+                color: '#FED7AA',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 letterSpacing: '0.5px',
               }}
             >
-              <Sparkles size={14} color="#A5B4FC" />
+              <Sparkles size={14} color="#FB923C" />
               <span>HUMAN RESOURCE DEVELOPMENT SYSTEM</span>
             </div>
 
@@ -315,14 +317,15 @@ export default function IDPHubLandingPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: 'rgba(255, 255, 255, 0.18)',
+                  background: 'rgba(255, 255, 255, 0.12)',
                   backdropFilter: 'blur(8px)',
                   padding: '4px 12px',
                   borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                 }}
               >
-                <Calendar size={15} color="#A5B4FC" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>ปีงบประมาณ:</span>
+                <Calendar size={15} color="#FB923C" />
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#CBD5E1' }}>ปีงบประมาณ:</span>
                 <select
                   value={fiscalYear}
                   onChange={(e) => setFiscalYear(e.target.value)}
@@ -350,8 +353,8 @@ export default function IDPHubLandingPage() {
                   type="button"
                   onClick={() => setIsConfigModalOpen(true)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    border: '1px solid rgba(255, 255, 255, 0.35)',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     color: '#FFFFFF',
                     padding: '5px 12px',
                     borderRadius: '10px',
@@ -362,34 +365,54 @@ export default function IDPHubLandingPage() {
                     gap: '6px',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
+                    backdropFilter: 'blur(8px)',
                   }}
                 >
-                  <Settings size={14} />
+                  <Settings size={14} style={{ color: '#FB923C' }} />
                   <span>ตั้งค่าสมรรถนะมาตรฐาน</span>
                 </button>
               )}
             </div>
           </div>
 
-          <h1
-            style={{
-              fontSize: 'clamp(2rem, 4vw, 2.75rem)',
-              fontWeight: 800,
-              margin: '0 0 1rem 0',
-              letterSpacing: '-0.025em',
-              lineHeight: 1.2,
-            }}
-          >
-            IDP Hub
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.75rem' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
+              }}
+            >
+              <Target size={28} color="#FFFFFF" />
+            </div>
+            <div>
+              <h1
+                style={{
+                  fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)',
+                  fontWeight: 800,
+                  margin: 0,
+                  letterSpacing: '-0.025em',
+                  lineHeight: 1.2,
+                  color: '#FFFFFF',
+                }}
+              >
+                IDP Hub
+              </h1>
+            </div>
+          </div>
 
           <p
             style={{
-              fontSize: 'clamp(1rem, 2vw, 1.15rem)',
-              color: '#E0E7FF',
+              fontSize: 'clamp(0.95rem, 1.8vw, 1.05rem)',
+              color: '#CBD5E1',
               maxWidth: '720px',
               lineHeight: 1.6,
-              margin: '0 0 2rem 0',
+              margin: '0 0 1.75rem 0',
             }}
           >
             ศูนย์กลางการวิเคราะห์ความต้องการจำเป็น วางแผน และพัฒนาศักยภาพบุคลากรรายบุคคล สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
@@ -406,61 +429,61 @@ export default function IDPHubLandingPage() {
           >
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E0E7FF', fontWeight: 600 }}>
-                <FileText size={16} color="#A5B4FC" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <FileText size={16} color="#FB923C" />
                 <span>แบบวิเคราะห์ทั้งหมด</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em' }}>
-                {stats.total} <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>ฉบับ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                {stats.total} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>ฉบับ</span>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E0E7FF', fontWeight: 600 }}>
-                <UserCheck size={16} color="#A5B4FC" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <UserCheck size={16} color="#38BDF8" />
                 <span>ประเมินตนเองแล้ว</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#BAE6FD', letterSpacing: '-0.02em' }}>
-                {stats.selfEvaluated} <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>ฉบับ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#7DD3FC', letterSpacing: '-0.02em' }}>
+                {stats.selfEvaluated} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>ฉบับ</span>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E0E7FF', fontWeight: 600 }}>
-                <CheckCircle2 size={16} color="#A5B4FC" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <CheckCircle2 size={16} color="#4ADE80" />
                 <span>เสร็จสมบูรณ์ทั้ง 4 ฝ่าย</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#BBF7D0', letterSpacing: '-0.02em' }}>
-                {stats.completed} <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>/ {stats.total} ฉบับ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#86EFAC', letterSpacing: '-0.02em' }}>
+                {stats.completed} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ฉบับ</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#E0E7FF', opacity: 0.85, marginTop: '2px' }}>
-                รวมสำนักงานผู้อำนวยการ ({stats.completedDepts}/4 ฝ่ายเสร็จ 100%)
+              <div style={{ fontSize: '0.75rem', color: '#CBD5E1', marginTop: '2px' }}>
+                (เสร็จสิ้นแล้ว {stats.completedDepts}/4 ฝ่าย)
               </div>
             </div>
           </div>
@@ -469,17 +492,17 @@ export default function IDPHubLandingPage() {
           {stats.deptStats && stats.deptStats.length > 0 && (
             <div
               style={{
-                marginTop: '1.5rem',
+                marginTop: '1.25rem',
                 maxWidth: '820px',
-                background: 'rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 backdropFilter: 'blur(8px)',
                 borderRadius: '12px',
                 padding: '0.85rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
               }}
             >
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E0E7FF', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Building2 size={14} color="#A5B4FC" />
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E2E8F0', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={14} color="#FB923C" />
                 <span>ความก้าวหน้าทั้ง 4 ฝ่าย (รวมสำนักงานผู้อำนวยการ):</span>
               </div>
 
@@ -494,20 +517,20 @@ export default function IDPHubLandingPage() {
                   <div
                     key={d.name}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.08)',
+                      background: 'rgba(255, 255, 255, 0.06)',
                       borderRadius: '8px',
                       padding: '0.5rem 0.75rem',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                   >
-                    <div style={{ fontSize: '0.75rem', color: '#E0E7FF', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
+                    <div style={{ fontSize: '0.75rem', color: '#E2E8F0', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
                       {d.name}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: d.isAllDone ? '#BBF7D0' : '#FFFFFF' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: d.isAllDone ? '#86EFAC' : '#FFFFFF' }}>
                         {d.completed}/{d.total} ฉบับ
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: d.isAllDone ? '#BBF7D0' : '#A5B4FC', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.75rem', color: d.isAllDone ? '#86EFAC' : '#FED7AA', fontWeight: 700 }}>
                         {d.percent}%
                       </span>
                     </div>
@@ -537,7 +560,7 @@ export default function IDPHubLandingPage() {
               gap: '6px',
               fontSize: '0.8rem',
               fontWeight: 700,
-              color: '#4F46E5',
+              color: '#EA580C',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: '0.35rem',
@@ -595,9 +618,9 @@ export default function IDPHubLandingPage() {
                 cursor: 'pointer',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#6366F1';
+                e.currentTarget.style.borderColor = '#F97316';
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(79, 70, 229, 0.15)';
+                e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(249, 115, 22, 0.2)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = '#E2E8F0';
@@ -612,12 +635,12 @@ export default function IDPHubLandingPage() {
                       width: '54px',
                       height: '54px',
                       borderRadius: '16px',
-                      background: 'linear-gradient(135deg, #3730A3 0%, #4F46E5 100%)',
+                      background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                       color: '#FFFFFF',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 8px 16px -4px rgba(79, 70, 229, 0.3)',
+                      boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.35)',
                     }}
                   >
                     <FileCheck size={26} />
@@ -637,7 +660,7 @@ export default function IDPHubLandingPage() {
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1E1B4B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
                   แบบวิเคราะห์ความต้องการจำเป็น (IDP Need Analysis)
                 </h3>
                 <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
@@ -652,13 +675,26 @@ export default function IDPHubLandingPage() {
                   justifyContent: 'space-between',
                   paddingTop: '1rem',
                   borderTop: '1px solid #F1F5F9',
-                  color: '#4F46E5',
+                  color: '#EA580C',
                   fontWeight: 700,
                   fontSize: '0.9rem',
                 }}
               >
                 <span>เข้าสู่แบบวิเคราะห์ ({stats.total} รายการ)</span>
-                <ArrowRight size={18} />
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#FFF7ED',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#EA580C',
+                  }}
+                >
+                  <ArrowRight size={16} />
+                </div>
               </div>
             </div>
           </Link>

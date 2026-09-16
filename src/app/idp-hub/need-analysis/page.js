@@ -223,8 +223,8 @@ export default function IDPNeedAnalysisPage() {
             padding: '3rem 2rem',
             textAlign: 'center',
             borderRadius: '1.5rem',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #E2E8F0',
+            boxShadow: '0 20px 25px -5px rgba(249, 115, 22, 0.08)',
+            border: '1px solid #FED7AA',
           }}
         >
           <div
@@ -232,19 +232,19 @@ export default function IDPNeedAnalysisPage() {
               width: '64px',
               height: '64px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
-              boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)',
+              boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.35)',
             }}
           >
             <Target size={32} />
           </div>
 
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1E1B4B', margin: '0 0 0.5rem 0' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0' }}>
             IDP Need Analysis Form
           </h2>
           <p style={{ fontSize: '0.9rem', color: '#64748B', maxWidth: '500px', margin: '0 auto 1.75rem auto', lineHeight: 1.6 }}>
@@ -261,11 +261,11 @@ export default function IDPNeedAnalysisPage() {
               gap: '8px',
               padding: '0.75rem 1.75rem',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
               border: 'none',
               fontWeight: 700,
               fontSize: '0.95rem',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+              boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
             }}
           >
             <LogIn size={18} />
@@ -288,12 +288,13 @@ export default function IDPNeedAnalysisPage() {
               alignItems: 'center',
               gap: '6px',
               fontSize: '0.85rem',
-              color: '#4F46E5',
+              color: '#EA580C',
               textDecoration: 'none',
               fontWeight: 700,
-              background: '#EEF2FF',
+              background: '#FFF7ED',
               padding: '4px 10px',
               borderRadius: '8px',
+              border: '1px solid #FFEDD5',
             }}
           >
             <ArrowLeft size={16} />
@@ -307,7 +308,7 @@ export default function IDPNeedAnalysisPage() {
 
         {/* Fiscal Year Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '4px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-          <Calendar size={16} color="#4F46E5" />
+          <Calendar size={16} color="#EA580C" />
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>รอบปีงบประมาณ:</span>
           <select
             value={fiscalYear}
@@ -316,7 +317,7 @@ export default function IDPNeedAnalysisPage() {
               border: 'none',
               background: 'transparent',
               fontWeight: 800,
-              color: '#4F46E5',
+              color: '#EA580C',
               fontSize: '0.9rem',
               cursor: 'pointer',
               outline: 'none',
@@ -334,41 +335,59 @@ export default function IDPNeedAnalysisPage() {
       {/* Page Header Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #6366F1 100%)',
-          borderRadius: '1.25rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          borderRadius: 'var(--radius-xl)',
           padding: '1.75rem 2rem',
           color: '#FFFFFF',
           marginBottom: '1.5rem',
-          boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.25)',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1.25rem',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                fontWeight: 800,
-                letterSpacing: '0.5px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
               }}
             >
-              IDP NEED ANALYSIS
-            </span>
-            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-              ปีงบประมาณ {fiscalYear}
-            </span>
+              <FileCheck size={24} color="#FFF" />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+                  IDP Need Analysis
+                </h1>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
+                  }}
+                >
+                  แบบวิเคราะห์ความต้องการจำเป็น • ปีงบประมาณ {fiscalYear}
+                </span>
+              </div>
+            </div>
           </div>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>
-            แบบวิเคราะห์ความต้องการจำเป็นเพื่อจัดทำแผนพัฒนาบุคลากรรายบุคคล
-          </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', opacity: 0.9, maxWidth: '650px' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#CBD5E1', maxWidth: '650px', lineHeight: 1.5 }}>
             วิเคราะห์และประเมินระดับสมรรถนะหลัก (Core) และสมรรถนะตามตำแหน่งงาน (Functional) ตามแบบฟอร์ม มจพ.
           </p>
         </div>
@@ -381,18 +400,19 @@ export default function IDPNeedAnalysisPage() {
               onClick={() => setIsConfigModalOpen(true)}
               className="btn btn-secondary btn-sm"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.12)',
                 color: '#FFFFFF',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: 700,
                 fontSize: '0.825rem',
                 padding: '0.5rem 0.9rem',
+                backdropFilter: 'blur(8px)',
               }}
             >
-              <Settings size={15} />
+              <Settings size={15} style={{ color: '#FB923C' }} />
               <span>ตั้งค่าสมรรถนะมาตรฐาน</span>
             </button>
 
@@ -401,18 +421,19 @@ export default function IDPNeedAnalysisPage() {
               onClick={() => setIsDuplicateModalOpen(true)}
               className="btn btn-secondary btn-sm"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.12)',
                 color: '#FFFFFF',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: 700,
                 fontSize: '0.825rem',
                 padding: '0.5rem 0.9rem',
+                backdropFilter: 'blur(8px)',
               }}
             >
-              <Copy size={15} />
+              <Copy size={15} style={{ color: '#FB923C' }} />
               <span>คัดลอกจากปีก่อนหน้า</span>
             </button>
 
@@ -421,8 +442,8 @@ export default function IDPNeedAnalysisPage() {
               onClick={() => setIsNewModalOpen(true)}
               className="btn btn-sm"
               style={{
-                background: '#FFFFFF',
-                color: '#4338CA',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#FFFFFF',
                 border: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -430,7 +451,8 @@ export default function IDPNeedAnalysisPage() {
                 fontWeight: 800,
                 fontSize: '0.825rem',
                 padding: '0.5rem 1rem',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.4)',
+                borderRadius: '8px',
               }}
             >
               <Plus size={16} />
@@ -440,13 +462,111 @@ export default function IDPNeedAnalysisPage() {
         )}
       </div>
 
+      {/* 4 Departments Progress Notice & Guidance Banner (Orange-Tinted Theme) */}
+      {stats.deptStats && stats.deptStats.length > 0 && (
+        <div
+          style={{
+            marginBottom: '1.5rem',
+            background: '#FFF7ED',
+            borderRadius: '16px',
+            padding: '1.25rem 1.5rem',
+            border: '1px solid #FFEDD5',
+            borderLeft: '4px solid #F97316',
+            boxShadow: '0 2px 6px rgba(249, 115, 22, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Building2 size={16} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B' }}>
+                  ความก้าวหน้าการประเมิน IDP ทั้ง 4 ฝ่าย
+                </span>
+                <span
+                  style={{
+                    marginLeft: '8px',
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(249, 115, 22, 0.15)',
+                    color: '#C2410C',
+                    border: '1px solid rgba(249, 115, 22, 0.25)',
+                  }}
+                >
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.8rem', color: '#9A3412', fontWeight: 600 }}>
+              เสร็จสิ้นแล้ว {stats.completedDepts} / 4 ฝ่าย
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '0.75rem',
+            }}
+          >
+            {stats.deptStats.map((d) => (
+              <div
+                key={d.name}
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                  border: d.isAllDone ? '1.5px solid #86EFAC' : '1px solid #FED7AA',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
+                  {d.name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: d.isAllDone ? '#15803D' : '#1E293B' }}>
+                    {d.completed} / {d.total} ฉบับ
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: d.isAllDone ? '#DCFCE7' : '#FFF7ED',
+                      color: d.isAllDone ? '#15803D' : '#EA580C',
+                      border: d.isAllDone ? '1px solid #BBF7D0' : '1px solid #FED7AA',
+                    }}
+                  >
+                    {d.percent}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Minimal Dashboard Summary Cards */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
           gap: '1rem',
-          marginBottom: '1.75rem',
+          marginBottom: '1.5rem',
         }}
       >
         {/* Card 1: Total */}
@@ -462,7 +582,7 @@ export default function IDPNeedAnalysisPage() {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#64748B', fontSize: '0.825rem' }}>
             <span style={{ fontWeight: 600 }}>แบบประเมินทั้งหมด</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Layers size={16} />
             </div>
           </div>
@@ -545,71 +665,10 @@ export default function IDPNeedAnalysisPage() {
             {stats.completed} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B' }}>/ {stats.total} ฉบับ</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: '#16A34A', marginTop: '2px', fontWeight: 600 }}>
-            รวมสำนักงานผู้อำนวยการ ({stats.completedDepts}/4 ฝ่ายเสร็จ 100%)
+            (เสร็จสิ้นแล้ว {stats.completedDepts}/4 ฝ่าย)
           </div>
         </div>
       </div>
-
-      {/* 4 Departments Progress Quick Breakdown */}
-      {stats.deptStats && stats.deptStats.length > 0 && (
-        <div
-          className="card"
-          style={{
-            marginBottom: '1.5rem',
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            padding: '1rem 1.25rem',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E293B', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building2 size={16} color="#4F46E5" />
-            <span>ความก้าวหน้าการประเมินแยกตาม 4 ฝ่ายหลัก (รวมสำนักงานผู้อำนวยการ):</span>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '0.75rem',
-            }}
-          >
-            {stats.deptStats.map((d) => (
-              <div
-                key={d.name}
-                style={{
-                  background: d.isAllDone ? '#F0FDF4' : '#F8FAFC',
-                  borderRadius: '10px',
-                  padding: '0.75rem 1rem',
-                  border: d.isAllDone ? '1px solid #BBF7D0' : '1px solid #E2E8F0',
-                }}
-              >
-                <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.name}>
-                  {d.name}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: d.isAllDone ? '#15803D' : '#1E293B' }}>
-                    {d.completed} / {d.total} ฉบับ
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      background: d.isAllDone ? '#DCFCE7' : '#EEF2FF',
-                      color: d.isAllDone ? '#15803D' : '#4F46E5',
-                    }}
-                  >
-                    {d.percent}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Filter and Search Bar */}
       <div
@@ -642,9 +701,9 @@ export default function IDPNeedAnalysisPage() {
               style={{
                 padding: '6px 14px',
                 borderRadius: '8px',
-                border: quickFilter === pill.key ? '1.5px solid #4F46E5' : '1px solid #E2E8F0',
-                background: quickFilter === pill.key ? '#EEF2FF' : '#FFFFFF',
-                color: quickFilter === pill.key ? '#4F46E5' : '#64748B',
+                border: quickFilter === pill.key ? '1.5px solid #F97316' : '1px solid #E2E8F0',
+                background: quickFilter === pill.key ? '#FFF7ED' : '#FFFFFF',
+                color: quickFilter === pill.key ? '#C2410C' : '#64748B',
                 fontWeight: quickFilter === pill.key ? 800 : 600,
                 fontSize: '0.825rem',
                 cursor: 'pointer',
@@ -714,13 +773,13 @@ export default function IDPNeedAnalysisPage() {
       >
         {loading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#64748B' }}>
-            <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #EEF2FF', borderTopColor: '#4F46E5', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #FFEDD5', borderTopColor: '#EA580C', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             <p style={{ marginTop: '0.75rem', fontSize: '0.9rem' }}>กำลังโหลดข้อมูลแบบประเมิน IDP...</p>
           </div>
         ) : filteredRecords.length === 0 ? (
           <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', color: '#64748B' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: '#F8FAFC', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
               <Target size={28} />
             </div>
             <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#1E293B', fontWeight: 700 }}>
@@ -735,13 +794,14 @@ export default function IDPNeedAnalysisPage() {
                 onClick={() => setIsNewModalOpen(true)}
                 className="btn btn-primary btn-sm"
                 style={{
-                  background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                   border: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   fontWeight: 700,
                   padding: '0.5rem 1.25rem',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
                 }}
               >
                 <Plus size={16} />
@@ -795,7 +855,7 @@ export default function IDPNeedAnalysisPage() {
                         <div style={{ fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>{rec.personnelName}</span>
                           {isOwner && (
-                            <span style={{ fontSize: '0.7rem', background: '#EEF2FF', color: '#4F46E5', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                            <span style={{ fontSize: '0.7rem', background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
                               ตนเอง
                             </span>
                           )}
@@ -890,7 +950,7 @@ export default function IDPNeedAnalysisPage() {
                             type="button"
                             onClick={() => setEditingRecord(rec)}
                             className="btn btn-ghost btn-icon"
-                            style={{ padding: '6px', color: '#4F46E5' }}
+                            style={{ padding: '6px', color: '#EA580C' }}
                             title="เปิดดู / ประเมินผล"
                           >
                             <Edit3 size={16} />

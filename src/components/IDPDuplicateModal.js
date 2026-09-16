@@ -104,7 +104,7 @@ export default function IDPDuplicateModal({
             </h3>
 
             <p style={{ fontSize: '0.9rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-              สร้างแบบประเมิน IDP สำหรับปีงบประมาณ <strong style={{ color: '#4338CA' }}>{fiscalYear}</strong> เรียบร้อยแล้ว
+              สร้างแบบประเมิน IDP สำหรับปีงบประมาณ <strong style={{ color: '#EA580C' }}>{fiscalYear}</strong> เรียบร้อยแล้ว
               จำนวน <strong style={{ color: '#16A34A' }}>{result.count}</strong> รายการ
             </p>
 
@@ -114,11 +114,13 @@ export default function IDPDuplicateModal({
               className="btn btn-primary"
               style={{
                 width: '100%',
-                background: '#4F46E5',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                 color: '#FFFFFF',
                 fontWeight: 700,
                 padding: '0.65rem',
                 borderRadius: '10px',
+                border: 'none',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
               }}
             >
               ตกลง
@@ -134,11 +136,12 @@ export default function IDPDuplicateModal({
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
-                    background: '#EEF2FF',
-                    color: '#4F46E5',
+                    background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                    color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
                   }}
                 >
                   <Copy size={22} />
@@ -171,14 +174,14 @@ export default function IDPDuplicateModal({
                 justifyContent: 'center',
                 gap: '1rem',
                 padding: '0.85rem 1rem',
-                background: '#F8FAFC',
-                border: '1px solid #E2E8F0',
+                background: '#FFF7ED',
+                border: '1px solid #FFEDD5',
                 borderRadius: '12px',
                 marginBottom: '1rem',
               }}
             >
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>ปีงบประมาณเดิม</div>
+                <div style={{ fontSize: '0.7rem', color: '#9A3412', fontWeight: 600 }}>ปีงบประมาณเดิม</div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#475569' }}>{fromYear}</div>
               </div>
               <div
@@ -186,8 +189,8 @@ export default function IDPDuplicateModal({
                   width: '28px',
                   height: '28px',
                   borderRadius: '50%',
-                  background: '#EEF2FF',
-                  color: '#4F46E5',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -196,8 +199,8 @@ export default function IDPDuplicateModal({
                 <ArrowRight size={16} />
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#4F46E5', fontWeight: 600 }}>ปีงบประมาณใหม่</div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#4F46E5' }}>{fiscalYear}</div>
+                <div style={{ fontSize: '0.7rem', color: '#C2410C', fontWeight: 600 }}>ปีงบประมาณใหม่</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#EA580C' }}>{fiscalYear}</div>
               </div>
             </div>
 
@@ -207,9 +210,10 @@ export default function IDPDuplicateModal({
                 fontSize: '0.825rem',
                 color: '#475569',
                 lineHeight: 1.55,
-                background: '#F1F5F9',
+                background: '#F8FAFC',
                 padding: '0.85rem 1rem',
                 borderRadius: '10px',
+                border: '1px solid #E2E8F0',
                 marginBottom: '1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
@@ -217,7 +221,7 @@ export default function IDPDuplicateModal({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1E293B' }}>
-                <Sparkles size={14} color="#6366F1" />
+                <Sparkles size={14} color="#EA580C" />
                 <span>รายละเอียดการดำเนินการ:</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#475569' }}>
@@ -271,7 +275,7 @@ export default function IDPDuplicateModal({
                 disabled={isDuplicating}
                 className="btn btn-primary"
                 style={{
-                  background: '#4F46E5',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                   color: '#FFFFFF',
                   padding: '0.6rem 1.25rem',
                   borderRadius: '10px',
@@ -280,7 +284,8 @@ export default function IDPDuplicateModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
                 }}
               >
                 {isDuplicating ? (

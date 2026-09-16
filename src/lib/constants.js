@@ -317,7 +317,7 @@ export const DEFAULT_PORTAL_SERVICES = [
     iconType: 'lucide',
     iconName: 'Target',
     iconImageUrl: '',
-    colorTheme: 'indigo',
+    colorTheme: 'orange',
     badgeText: 'ต้องเข้าสู่ระบบ',
     badgeType: 'user',
     footerLeft: 'แผนพัฒนาบุคลากรรายบุคคล (IDP)',
