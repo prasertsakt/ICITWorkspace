@@ -154,10 +154,10 @@ export default function ImsLandingPage() {
           </div>
 
           <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
-            ระบบบริหารงาน IMS
+            ระบบบริหารงาน IMS & TQA
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
-            ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) สำนักคอมพิวเตอร์ฯ มจพ.
+            ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) & TQA สำนักคอมพิวเตอร์ฯ มจพ.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -304,7 +304,7 @@ export default function ImsLandingPage() {
               lineHeight: 1.2,
             }}
           >
-            ระบบบริหารงาน IMS
+            ระบบบริหารงาน IMS & TQA
           </h1>
 
           <p
@@ -316,8 +316,7 @@ export default function ImsLandingPage() {
               margin: '0 0 2rem 0',
             }}
           >
-            ศูนย์กลางการกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ
-            ขับเคลื่อนกระบวนการตรวจติดตามภายใน (Internal Audit) พร้อมยกระดับสู่ระบบบริหารจัดการข้อบกพร่องและอุบัติการณ์
+            ศูนย์กลางการกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ & TQA
           </p>
 
           {/* Quick Stat Counters */}
@@ -416,7 +415,7 @@ export default function ImsLandingPage() {
             }}
           >
             <Layers size={15} />
-            <span>IMS SERVICES & MODULES</span>
+            <span>IMS & TQA SERVICES</span>
           </div>
           <h2
             style={{
@@ -427,7 +426,7 @@ export default function ImsLandingPage() {
               lineHeight: 1.3,
             }}
           >
-            บริการย่อยภายใต้ระบบบริหารงาน IMS
+            บริการย่อยภายใต้ระบบบริหารงาน IMS & TQA
           </h2>
           <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748B' }}>
             เลือกบริการที่ต้องการเข้าใช้งานและกำกับดูแลมาตรฐานคุณภาพ
