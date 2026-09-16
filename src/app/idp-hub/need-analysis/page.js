@@ -45,6 +45,8 @@ import { IDP_STATUSES, POSITIONS } from '@/lib/constants';
 import IDPModal from '@/components/IDPModal';
 import IDPConfigModal from '@/components/IDPConfigModal';
 import IDPPreviewModal from '@/components/IDPPreviewModal';
+import IDPDuplicateModal from '@/components/IDPDuplicateModal';
+import IDPDeleteModal from '@/components/IDPDeleteModal';
 
 export default function IDPNeedAnalysisPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
@@ -70,7 +72,8 @@ export default function IDPNeedAnalysisPage() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [previewRecord, setPreviewRecord] = useState(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [deletingRecord, setDeletingRecord] = useState(null);
 
   // Authorization helper
   const isHR = isHrOfficer(currentUser, currentPersonnel, isAdmin);
@@ -108,61 +111,7 @@ export default function IDPNeedAnalysisPage() {
     };
   }, [fiscalYear]);
 
-  // Batch duplicate IDPs from previous year
-  const handleDuplicateFromPreviousYear = async () => {
-    const fromYear = String(Number(fiscalYear) - 1);
-    if (
-      !window.confirm(
-        `ยืนยันการคัดลอกแบบประเมิน IDP จากปีงบประมาณ ${fromYear} มายังปี ${fiscalYear} สำหรับบุคลากรทุกคน?`
-      )
-    ) {
-      return;
-    }
 
-    setIsDuplicating(true);
-    try {
-      const actor = {
-        name: currentPersonnel?.name || currentUser?.displayName || 'เจ้าหน้าที่งานบุคคล',
-        email: currentUser?.email || currentPersonnel?.email || '',
-      };
-
-      const created = await duplicateIdpRecordsFromPreviousYear(
-        fromYear,
-        fiscalYear,
-        actor,
-        personnelList,
-        departmentList,
-        executiveList,
-        idpConfig
-      );
-
-      alert(`✅ คัดลอกและสร้างแบบประเมิน IDP ปีงบประมาณ ${fiscalYear} สำเร็จ (${created.length} รายการ)`);
-    } catch (err) {
-      console.error('Duplicate IDPs error:', err);
-      alert(err.message || 'เกิดข้อผิดพลาดในการคัดลอกข้อมูล');
-    } finally {
-      setIsDuplicating(false);
-    }
-  };
-
-  // Delete Record
-  const handleDelete = async (rec) => {
-    if (!rec || !rec.id) return;
-    if (
-      !window.confirm(
-        `คุณแน่ใจหรือไม่ว่าต้องการลบแบบประเมิน IDP ของ "${rec.personnelName}" ปีงบประมาณ ${rec.fiscalYear}?`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await deleteIdpRecord(rec.id, rec.fiscalYear);
-    } catch (err) {
-      console.error('Delete IDP error:', err);
-      alert('เกิดข้อผิดพลาดในการลบแบบประเมิน');
-    }
-  };
 
   // Filtered IDP Records
   const filteredRecords = useMemo(() => {
@@ -449,8 +398,7 @@ export default function IDPNeedAnalysisPage() {
 
             <button
               type="button"
-              onClick={handleDuplicateFromPreviousYear}
-              disabled={isDuplicating}
+              onClick={() => setIsDuplicateModalOpen(true)}
               className="btn btn-secondary btn-sm"
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
@@ -465,7 +413,7 @@ export default function IDPNeedAnalysisPage() {
               }}
             >
               <Copy size={15} />
-              <span>{isDuplicating ? 'กำลังคัดลอก...' : 'คัดลอกจากปีก่อนหน้า'}</span>
+              <span>คัดลอกจากปีก่อนหน้า</span>
             </button>
 
             <button
@@ -952,7 +900,7 @@ export default function IDPNeedAnalysisPage() {
                           {isHR && (
                             <button
                               type="button"
-                              onClick={() => handleDelete(rec)}
+                              onClick={() => setDeletingRecord(rec)}
                               className="btn btn-ghost btn-icon"
                               style={{ padding: '6px', color: '#EF4444' }}
                               title="ลบแบบประเมิน"
@@ -1020,6 +968,34 @@ export default function IDPNeedAnalysisPage() {
             setIdpConfig(cfg);
             setIsConfigModalOpen(false);
           }}
+        />
+      )}
+
+      {/* 4. Batch Duplicate Modal */}
+      {isDuplicateModalOpen && (
+        <IDPDuplicateModal
+          isOpen={isDuplicateModalOpen}
+          onClose={() => setIsDuplicateModalOpen(false)}
+          fiscalYear={fiscalYear}
+          currentUser={currentUser}
+          currentPersonnel={currentPersonnel}
+          personnelList={personnelList}
+          departmentList={departmentList}
+          executiveList={executiveList}
+          idpConfig={idpConfig}
+          onCompleted={() => {
+            // Realtime listener automatically updates
+          }}
+        />
+      )}
+
+      {/* 5. Delete Confirm Modal */}
+      {deletingRecord && (
+        <IDPDeleteModal
+          isOpen={Boolean(deletingRecord)}
+          onClose={() => setDeletingRecord(null)}
+          record={deletingRecord}
+          onDeleted={() => setDeletingRecord(null)}
         />
       )}
     </div>
