@@ -503,7 +503,7 @@ export default function IDPHubLandingPage() {
             >
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E2E8F0', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Building2 size={14} color="#FB923C" />
-                <span>ความก้าวหน้าทั้ง 4 ฝ่าย (รวมสำนักงานผู้อำนวยการ):</span>
+                <span>ความก้าวหน้าทั้ง 4 ฝ่าย:</span>
               </div>
 
               <div
