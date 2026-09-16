@@ -495,19 +495,7 @@ export default function IDPNeedAnalysisPage() {
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B' }}>
                   ความก้าวหน้าการประเมิน IDP ทั้ง 4 ฝ่าย
                 </span>
-                <span
-                  style={{
-                    marginLeft: '8px',
-                    fontSize: '0.725rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '999px',
-                    background: 'rgba(249, 115, 22, 0.15)',
-                    color: '#C2410C',
-                    border: '1px solid rgba(249, 115, 22, 0.25)',
-                  }}
-                >
-                </span>
+
               </div>
             </div>
             <span style={{ fontSize: '0.8rem', color: '#9A3412', fontWeight: 600 }}>
