@@ -143,5 +143,35 @@ service cloud.firestore {
       // Authenticated users (DCC, Admin) can delete OFI records
       allow delete: if isAuthenticated();
     }
+
+    // Rules for 'idp_records' collection (IDP Hub - Individual Development Plan)
+    match /idp_records/{idpId} {
+      // Authenticated staff can view IDP records
+      allow read: if isAuthenticated();
+
+      // Authenticated HR/Admin/Owners can create
+      allow create: if isAuthenticated();
+
+      // Form owner, Supervisor, Deputy Director, HR Officer, or Admin can update
+      allow update: if isAuthenticated();
+
+      // Only HR Officer (jarucha) or Admin can delete
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
+      );
+    }
+
+    // Rules for 'idp_config' collection (IDP Master Competency Configuration per Fiscal Year)
+    match /idp_config/{configId} {
+      // All authenticated staff can read competency configuration
+      allow read: if isAuthenticated();
+
+      // Only HR Officer (jarucha) or Admin can write/update configuration
+      allow write: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
+      );
+    }
   }
 }

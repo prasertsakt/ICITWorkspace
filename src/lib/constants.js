@@ -309,6 +309,21 @@ export const DEFAULT_PORTAL_SERVICES = [
     footerRightText: 'เข้าใช้งาน',
   },
   {
+    id: 'idp-hub',
+    title: 'ระบบพัฒนาบุคลากร (IDP Hub)',
+    desc: 'แบบวิเคราะห์ความต้องการจำเป็นเพื่อจัดทำแผนพัฒนาบุคลากรรายบุคคล (Individual Development Plan)',
+    href: '/idp-hub',
+    openInNewTab: false,
+    iconType: 'lucide',
+    iconName: 'Target',
+    iconImageUrl: '',
+    colorTheme: 'indigo',
+    badgeText: 'ต้องเข้าสู่ระบบ',
+    badgeType: 'user',
+    footerLeft: 'แผนพัฒนาบุคลากรรายบุคคล (IDP)',
+    footerRightText: 'เข้าใช้งาน',
+  },
+  {
     id: 'knowledge',
     title: 'ICIT Personal Knowledge Map',
     desc: 'แผนที่องค์ความรู้และทักษะความเชี่ยวชาญเฉพาะบุคคลของบุคลากรภายในสำนัก',
@@ -524,3 +539,147 @@ export const IMS_AUDIT_STATUSES = {
     border: '#A7F3D0',
   },
 };
+
+// 18. สถานะแบบวิเคราะห์แผนพัฒนาบุคลากรรายบุคคล (IDP Workflow Statuses)
+export const IDP_STATUSES = {
+  DRAFT: {
+    key: 'DRAFT',
+    label: 'ฉบับร่าง / รอดำเนินการ',
+    shortLabel: 'ฉบับร่าง',
+    color: '#64748B',
+    bg: '#F8FAFC',
+    border: '#CBD5E1',
+    badgeBg: '#94A3B8',
+  },
+  SELF_EVALUATED: {
+    key: 'SELF_EVALUATED',
+    label: 'ประเมินตนเองแล้ว (รอหัวหน้า/รองฯ ประเมิน)',
+    shortLabel: 'ประเมินตนเองแล้ว',
+    color: '#0369A1',
+    bg: '#F0F9FF',
+    border: '#BAE6FD',
+    badgeBg: '#0284C7',
+  },
+  SUPERVISOR_EVALUATED: {
+    key: 'SUPERVISOR_EVALUATED',
+    label: 'หัวหน้าประเมินแล้ว (รอลงนามครบ)',
+    shortLabel: 'หัวหน้าประเมินแล้ว',
+    color: '#D97706',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+    badgeBg: '#F59E0B',
+  },
+  COMPLETED: {
+    key: 'COMPLETED',
+    label: 'ประเมินและลงนามเสร็จสมบูรณ์',
+    shortLabel: 'เสร็จสมบูรณ์',
+    color: '#059669',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    badgeBg: '#10B981',
+  },
+};
+
+// 19. สมรรถนะหลักมาตรฐาน มจพ. (Default Core Competencies)
+export const DEFAULT_IDP_CORE_COMPETENCIES = [
+  { id: 'core-1', title: 'ความใฝ่เรียนรู้', weight: 20, expectedLevel: 3 },
+  { id: 'core-2', title: 'คุณธรรมและความซื่อสัตย์', weight: 20, expectedLevel: 5 },
+  { id: 'core-3', title: 'ความมุ่งมั่นให้เกิดผลสำเร็จของงาน', weight: 15, expectedLevel: 3 },
+  { id: 'core-4', title: 'การทำงานเป็นทีม', weight: 15, expectedLevel: 3 },
+  { id: 'core-5', title: 'จิตสำนึกองค์กร', weight: 15, expectedLevel: 3 },
+  { id: 'core-6', title: 'การพัฒนางานอย่างต่อเนื่อง', weight: 15, expectedLevel: 3 },
+];
+
+// 20. สมรรถนะตามตำแหน่งงานมาตรฐาน (Default Functional Competencies by Position)
+export const DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION = {
+  'บุคลากร': [
+    { id: 'func-1', title: 'ความรู้ด้านการบริหารทรัพยากรบุคคล', weight: 20, expectedLevel: 3 },
+    { id: 'func-2', title: 'ความรู้เรื่องกฎและระเบียบที่เกี่ยวข้องกับงาน', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การสื่อสารและให้คำปรึกษา', weight: 15, expectedLevel: 2 },
+    { id: 'func-4', title: 'ด้านประสานงาน', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความละเอียดรอบคอบและความถูกต้องของงาน', weight: 15, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการ', weight: 15, expectedLevel: 3 },
+  ],
+  'นักวิชาการคอมพิวเตอร์': [
+    { id: 'func-1', title: 'ความรู้และทักษะด้านการพัฒนาระบบและเทคโนโลยีดิจิทัล', weight: 20, expectedLevel: 3 },
+    { id: 'func-2', title: 'การดูแลและบริหารจัดการระบบสารสนเทศและความมั่นคงปลอดภัย', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การวิเคราะห์และแก้ไขปัญหาทางเทคนิค (Troubleshooting)', weight: 15, expectedLevel: 3 },
+    { id: 'func-4', title: 'การบริหารจัดการโครงการและการประสานงานทางเทคนิค', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'การถ่ายทอดองค์ความรู้และให้คำปรึกษาด้านไอที', weight: 15, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและการสนับสนุนผู้ใช้งาน', weight: 15, expectedLevel: 3 },
+  ],
+  'นักวิชาการพัสดุ': [
+    { id: 'func-1', title: 'ความรู้กฎหมายระเบียบการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การบริหารจัดการสัญญาและการตรวจรับพัสดุ', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การควบคุมและตรวจนับทรัพย์สิน/ครุภัณฑ์', weight: 15, expectedLevel: 3 },
+    { id: 'func-4', title: 'การประสานงานและการเจรจาต่อรอง', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความถูกต้องแม่นยำและการตรวจสอบเอกสาร', weight: 15, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและการสื่อสารประสานงาน', weight: 10, expectedLevel: 3 },
+  ],
+  'เจ้าหน้าที่บริหารงานทั่วไป': [
+    { id: 'func-1', title: 'งานสารบรรณและการจัดการเอกสารทางราชการ', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การประสานงานและการจัดประชุม', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การบริหารจัดการงานสำนักงานและอาคารสถานที่', weight: 15, expectedLevel: 3 },
+    { id: 'func-4', title: 'การสื่อสารและการประชาสัมพันธ์ภายในองค์กร', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความละเอียดรอบคอบในการจัดทำเอกสาร', weight: 15, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและความร่วมมือในงาน', weight: 10, expectedLevel: 3 },
+  ],
+  'นักวิเคราะห์นโยบายและแผน': [
+    { id: 'func-1', title: 'การจัดทำแผนยุทธศาสตร์และแผนปฏิบัติการประจำปี', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การติดตาม ประเมินผล และรายงานผลการดำเนินงาน', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การวิเคราะห์ข้อมูลและสารสนเทศเชิงยุทธศาสตร์', weight: 20, expectedLevel: 3 },
+    { id: 'func-4', title: 'การบริหารความเสี่ยงและการควบคุมภายใน', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'การประสานงานและการขับเคลื่อนโครงการ', weight: 10, expectedLevel: 3 },
+    { id: 'func-6', title: 'การนำเสนอข้อมูลและการสื่อสารเชิงกลยุทธ์', weight: 10, expectedLevel: 3 },
+  ],
+  'นักวิชาการเงินและบัญชี': [
+    { id: 'func-1', title: 'ความรู้ด้านระเบียบการเงิน การเบิกจ่าย และระบบบัญชีภาครัฐ', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การตรวจสอบความถูกต้องของเอกสารหลักฐานทางการเงิน', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การจัดทำรายงานทางการเงินและการบริหารงบประมาณ', weight: 20, expectedLevel: 3 },
+    { id: 'func-4', title: 'การใช้ระบบสารสนเทศทางการเงินและบัญชี', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความซื่อสัตย์สุจริตและความละเอียดรอบคอบ', weight: 10, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและการให้คำปรึกษาด้านการเบิกจ่าย', weight: 10, expectedLevel: 3 },
+  ],
+  'วิศวกร': [
+    { id: 'func-1', title: 'ความรู้ทางวิศวกรรมและการออกแบบระบบเครือข่าย/โครงสร้างพื้นฐาน', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การบริหารจัดการและบำรุงรักษาเชิงป้องกัน (Preventive Maintenance)', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การวิเคราะห์และแก้ไขปัญหาทางวิศวกรรมขั้นสูง', weight: 20, expectedLevel: 3 },
+    { id: 'func-4', title: 'ความปลอดภัยในการปฏิบัติงานและมาตรฐานทางวิศวกรรม', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'การบริหารโครงการและการควบคุมงาน', weight: 10, expectedLevel: 3 },
+    { id: 'func-6', title: 'การทำงานเป็นทีมและการถ่ายทอดองค์ความรู้', weight: 10, expectedLevel: 3 },
+  ],
+  'ช่างเครื่องคอมพิวเตอร์': [
+    { id: 'func-1', title: 'การซ่อมบำรุงและตรวจเช็คอุปกรณ์คอมพิวเตอร์และโสตทัศนูปกรณ์', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การติดตั้งระบบปฏิบัติการ ซอฟต์แวร์ และการเชื่อมต่อเครือข่าย', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การแก้ไขปัญหาเฉพาะหน้าและการให้บริการหน้างาน (On-site Support)', weight: 20, expectedLevel: 3 },
+    { id: 'func-4', title: 'การดูแลรักษาระบบห้องปฏิบัติการคอมพิวเตอร์', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความปลอดภัยในการใช้อุปกรณ์ไฟฟ้าและอิเล็กทรอนิกส์', weight: 10, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและมนุษยสัมพันธ์ที่ดี', weight: 10, expectedLevel: 3 },
+  ],
+  'ช่างเทคนิค': [
+    { id: 'func-1', title: 'การซ่อมบำรุงและตรวจเช็คอุปกรณ์คอมพิวเตอร์และระบบอาคาร', weight: 25, expectedLevel: 3 },
+    { id: 'func-2', title: 'การติดตั้งระบบสายสัญญาณและอุปกรณ์เครือข่าย', weight: 20, expectedLevel: 3 },
+    { id: 'func-3', title: 'การแก้ไขปัญหาเฉพาะหน้าและการให้บริการหน้างาน', weight: 20, expectedLevel: 3 },
+    { id: 'func-4', title: 'การดูแลรักษาเครื่องมือและอุปกรณ์ประจำห้องปฏิบัติการ', weight: 15, expectedLevel: 3 },
+    { id: 'func-5', title: 'ความปลอดภัยในการทำงานและมาตรฐานการซ่อมบำรุง', weight: 10, expectedLevel: 3 },
+    { id: 'func-6', title: 'การมีจิตบริการและการประสานงาน', weight: 10, expectedLevel: 3 },
+  ],
+  'ผู้บริหาร': [
+    { id: 'func-1', title: 'ภาวะผู้นำและการบริหารจัดการเชิงยุทธศาสตร์', weight: 25, expectedLevel: 4 },
+    { id: 'func-2', title: 'การบริหารทรัพยากรบุคคลและการพัฒนาองค์กร', weight: 20, expectedLevel: 4 },
+    { id: 'func-3', title: 'การตัดสินใจและการแก้ไขปัญหาเชิงบริหาร', weight: 20, expectedLevel: 4 },
+    { id: 'func-4', title: 'การบริหารงบประมาณและความคุ้มค่า', weight: 15, expectedLevel: 4 },
+    { id: 'func-5', title: 'การขับเคลื่อนนวัตกรรมและการเปลี่ยนแปลงองค์กร', weight: 10, expectedLevel: 4 },
+    { id: 'func-6', title: 'ธรรมาภิบาลและความรับผิดชอบต่อสังคม', weight: 10, expectedLevel: 4 },
+  ],
+};
+
+// Default Functional Competency template fallback
+export const DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL = [
+  { id: 'func-1', title: 'ความรู้ความเชี่ยวชาญเฉพาะด้านตามตำแหน่งงาน', weight: 25, expectedLevel: 3 },
+  { id: 'func-2', title: 'ความรู้เรื่องกฎ ระเบียบ และแนวปฏิบัติตามสายงาน', weight: 20, expectedLevel: 3 },
+  { id: 'func-3', title: 'การสื่อสาร การให้คำปรึกษา และการประสานงาน', weight: 15, expectedLevel: 3 },
+  { id: 'func-4', title: 'การแก้ไขปัญหาและการปรับปรุงกระบวนการทำงาน', weight: 15, expectedLevel: 3 },
+  { id: 'func-5', title: 'ความถูกต้องแม่นยำและความรับผิดชอบในงาน', weight: 15, expectedLevel: 3 },
+  { id: 'func-6', title: 'การมีจิตบริการและการทำงานเชิงรุก', weight: 10, expectedLevel: 3 },
+];

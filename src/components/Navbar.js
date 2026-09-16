@@ -17,6 +17,7 @@ import {
   X,
   ChevronRight,
   FileText,
+  Target,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -128,6 +129,14 @@ export default function Navbar() {
                 >
                   <FileText size={16} />
                   <span>JD Hub</span>
+                </Link>
+
+                <Link
+                  href="/idp-hub"
+                  className={`nav-link-item ${pathname.startsWith('/idp-hub') ? 'active' : ''}`}
+                >
+                  <Target size={16} />
+                  <span>IDP Hub</span>
                 </Link>
 
                 <Link
@@ -326,6 +335,18 @@ export default function Navbar() {
                       <FileText size={18} />
                     </div>
                     <span style={{ flex: 1 }}>JD Hub</span>
+                    <ChevronRight size={16} opacity={0.4} />
+                  </Link>
+
+                  <Link
+                    href="/idp-hub"
+                    className={`mobile-drawer-link ${pathname.startsWith('/idp-hub') ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="drawer-icon-box" style={{ color: '#8B5CF6' }}>
+                      <Target size={18} />
+                    </div>
+                    <span style={{ flex: 1 }}>IDP Hub</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 
