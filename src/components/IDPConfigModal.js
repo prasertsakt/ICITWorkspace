@@ -225,9 +225,9 @@ export default function IDPConfigModal({
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '1.25rem',
-          maxWidth: '920px',
-          width: '100%',
-          maxHeight: '92vh',
+          maxWidth: '1140px',
+          width: '95vw',
+          maxHeight: '94vh',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
           display: 'flex',
           flexDirection: 'column',
@@ -512,7 +512,7 @@ export default function IDPConfigModal({
         )}
 
         {/* Modal Body */}
-        <div style={{ padding: '1.25rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: '1.25rem 1.75rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {activeTab === 'core' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
