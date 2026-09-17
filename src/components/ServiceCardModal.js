@@ -30,6 +30,8 @@ import {
   Bell,
   Share2,
   Briefcase,
+  Compass,
+  Target,
 } from 'lucide-react';
 import { PORTAL_COLOR_THEMES, PORTAL_AVAILABLE_ICONS } from '@/lib/constants';
 
@@ -55,6 +57,8 @@ export const PORTAL_ICON_COMPONENTS = {
   Bell,
   Share2,
   Briefcase,
+  Compass,
+  Target,
 };
 
 export default function ServiceCardModal({
