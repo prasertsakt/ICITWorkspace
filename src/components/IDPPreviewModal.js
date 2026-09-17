@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { X, Printer, Download, Eye } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Printer, Download, Eye, LayoutGrid, FileText, Check } from 'lucide-react';
 import { calculateIdpSummary } from '../lib/idpService';
 
 export default function IDPPreviewModal({
@@ -10,6 +10,7 @@ export default function IDPPreviewModal({
   record,
 }) {
   const printRef = useRef(null);
+  const [orientation, setOrientation] = useState('landscape'); // 'landscape' | 'portrait'
 
   if (!isOpen || !record) return null;
 
@@ -30,8 +31,8 @@ export default function IDPPreviewModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(5px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(6px)',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
@@ -44,13 +45,14 @@ export default function IDPPreviewModal({
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '1.25rem',
-          maxWidth: '1050px',
+          maxWidth: orientation === 'landscape' ? '1200px' : '900px',
           width: '100%',
           maxHeight: '94vh',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          transition: 'max-width 0.25s ease',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -58,59 +60,130 @@ export default function IDPPreviewModal({
         <div
           className="no-print"
           style={{
-            background: '#1E1B4B',
+            background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
             color: '#FFFFFF',
-            padding: '1rem 1.75rem',
+            padding: '0.85rem 1.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '0.75rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span
               style={{
-                backgroundColor: '#EEF2FF',
-                color: '#3730A3',
+                backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                color: '#FB923C',
+                border: '1px solid rgba(249, 115, 22, 0.3)',
                 padding: '3px 10px',
                 borderRadius: '999px',
                 fontSize: '0.75rem',
                 fontWeight: 800,
+                letterSpacing: '0.05em',
               }}
             >
-              IDP A4 PREVIEW
+              IDP PRINT PREVIEW
             </span>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#F8FAFC' }}>
               {record.personnelName} - ปีงบประมาณ {record.fiscalYear}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Orientation Toggle Button Group */}
+            <div
+              style={{
+                display: 'inline-flex',
+                background: 'rgba(15, 23, 42, 0.6)',
+                padding: '3px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setOrientation('landscape')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: orientation === 'landscape' ? '#EA580C' : 'transparent',
+                  color: orientation === 'landscape' ? '#FFFFFF' : '#94A3B8',
+                  transition: 'all 0.15s ease',
+                }}
+                title="แนวนอน (เหมาะกับตารางกว้าง 9 คอลัมน์)"
+              >
+                <span>แนวนอน (Landscape)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrientation('portrait')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: orientation === 'portrait' ? '#EA580C' : 'transparent',
+                  color: orientation === 'portrait' ? '#FFFFFF' : '#94A3B8',
+                  transition: 'all 0.15s ease',
+                }}
+                title="แนวตั้ง"
+              >
+                <span>แนวตั้ง (Portrait)</span>
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handlePrint}
-              className="btn btn-primary btn-sm"
               style={{
-                background: '#4F46E5',
+                background: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)',
                 color: '#FFFFFF',
-                border: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: 700,
                 fontSize: '0.8rem',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
               }}
             >
               <Printer size={15} />
-              <span>พิมพ์เอกสาร / บันทึกเป็น PDF</span>
+              <span>พิมพ์เอกสาร / บันทึก PDF</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer', padding: '4px' }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                color: '#E2E8F0',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              aria-label="Close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -524,6 +597,15 @@ export default function IDPPreviewModal({
       {/* Print Optimization CSS */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: A4 ${orientation};
+            margin: 8mm 10mm;
+          }
+          html, body {
+            background: #ffffff !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -536,9 +618,13 @@ export default function IDPPreviewModal({
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            padding: 0.5cm !important;
+            padding: 0 !important;
             margin: 0 !important;
             background: white !important;
+            box-shadow: none !important;
+            border: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .no-print {
             display: none !important;

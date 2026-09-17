@@ -960,8 +960,8 @@ button, input, select, textarea {
   }
 
   @page {
-    size: A4 portrait;
-    margin: 12mm 15mm 12mm 15mm;
+    size: auto;
+    margin: 10mm;
   }
 }
 
