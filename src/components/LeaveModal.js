@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
 import { sanitizeText } from '@/lib/securityUtils';
 import { formatLocalDate, parseLocalDate } from '@/lib/dateUtils';
@@ -14,6 +14,9 @@ import {
   AlertCircle,
   Building2,
   Sparkles,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export default function LeaveModal({
@@ -34,7 +37,19 @@ export default function LeaveModal({
   });
 
   const [searchPerson, setSearchPerson] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errors, setErrors] = useState({});
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (leaveToEdit) {
@@ -57,6 +72,7 @@ export default function LeaveModal({
     }
     setErrors({});
     setSearchPerson('');
+    setIsDropdownOpen(false);
   }, [leaveToEdit, isOpen, personnelList]);
 
   if (!isOpen) return null;
@@ -174,90 +190,311 @@ export default function LeaveModal({
 
         <form onSubmit={handleSubmit} className="modal-body">
           {/* 1. เลือกบุคลากร */}
-          <div className="form-group">
-            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="form-group" ref={dropdownRef} style={{ position: 'relative' }}>
+            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>บุคลากรผู้ขอลา <span style={{ color: 'var(--rose-500)' }}>*</span></span>
               {selectedPerson && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', fontWeight: 600 }}>
                   ฝ่าย: {selectedPerson.department}
                 </span>
               )}
             </label>
 
-            {personnelList.length > 8 && (
+            {/* Search Input Box with Auto-Expand on Focus & Typing */}
+            <div style={{ position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-tertiary, #94A3B8)',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Search size={16} />
+              </div>
+
               <input
                 type="text"
-                className="form-input"
-                placeholder="🔍 พิมพ์ค้นหาชื่อ หรืออีเมล..."
+                className={`form-input ${errors.personnelId ? 'input-error' : ''}`}
+                placeholder={selectedPerson ? `${selectedPerson.name} (${selectedPerson.department})` : "พิมพ์ค้นหาชื่อ หรืออีเมล..."}
                 value={searchPerson}
-                onChange={(e) => setSearchPerson(e.target.value)}
-                style={{ marginBottom: '0.4rem', fontSize: '0.8rem' }}
+                onFocus={() => setIsDropdownOpen(true)}
+                onChange={(e) => {
+                  setSearchPerson(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                style={{
+                  paddingLeft: '36px',
+                  paddingRight: searchPerson ? '60px' : '36px',
+                  fontSize: '0.85rem',
+                  fontWeight: selectedPerson && !searchPerson ? 600 : 400,
+                }}
               />
-            )}
 
-            <select
-              className={`form-input ${errors.personnelId ? 'input-error' : ''}`}
-              value={formData.personnelId}
-              onChange={(e) => setFormData({ ...formData, personnelId: e.target.value })}
-            >
-              <option value="">-- กรุณาเลือกบุคลากร --</option>
-              {filteredPersonnel.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.department} - {p.position})
-                </option>
-              ))}
-            </select>
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                {searchPerson && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchPerson('');
+                      setIsDropdownOpen(true);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-tertiary, #94A3B8)',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    title="ล้างคำค้นหา"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-tertiary, #94A3B8)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={isDropdownOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
+                >
+                  {isDropdownOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </div>
+
+              {/* Auto-expanding Dropdown List */}
+              {isDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    zIndex: 1000,
+                    backgroundColor: 'var(--bg-card, #FFFFFF)',
+                    border: '1px solid var(--border-medium, #CBD5E1)',
+                    borderRadius: 'var(--radius-md, 10px)',
+                    boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.18), 0 6px 12px -4px rgba(0, 0, 0, 0.08)',
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    padding: '4px',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '5px 10px',
+                      fontSize: '0.72rem',
+                      color: 'var(--text-tertiary, #64748B)',
+                      fontWeight: 700,
+                      borderBottom: '1px solid var(--border-subtle, #F1F5F9)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      backgroundColor: 'var(--bg-subtle, #F8FAFC)',
+                      borderRadius: '6px 6px 0 0',
+                    }}
+                  >
+                    <span>{searchPerson.trim() ? `ผลการค้นหาสำหรับ "${searchPerson}"` : 'เลือกบุคลากรจากรายชื่อ'}</span>
+                    <span>{filteredPersonnel.length} คน</span>
+                  </div>
+
+                  {filteredPersonnel.length === 0 ? (
+                    <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--text-tertiary, #94A3B8)', fontSize: '0.85rem' }}>
+                      ไม่พบข้อมูลบุคลากรที่ตรงกับคำค้นหา
+                    </div>
+                  ) : (
+                    filteredPersonnel.map((p) => {
+                      const isSelected = p.id === formData.personnelId;
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, personnelId: p.id }));
+                            if (errors.personnelId) {
+                              setErrors((prev) => ({ ...prev, personnelId: null }));
+                            }
+                            setSearchPerson('');
+                            setIsDropdownOpen(false);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            backgroundColor: isSelected ? 'var(--primary-50, #EEF2FF)' : 'transparent',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-hover, #F1F5F9)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            {p.avatarUrl ? (
+                              <img
+                                src={p.avatarUrl}
+                                alt=""
+                                style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: '30px',
+                                  height: '30px',
+                                  borderRadius: '50%',
+                                  background: isSelected ? 'var(--primary-600, #4F46E5)' : 'var(--primary-100, #E0E7FF)',
+                                  color: isSelected ? '#FFFFFF' : 'var(--primary-700, #4338CA)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                  fontSize: '0.75rem',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {p.name?.charAt(0) || 'U'}
+                              </div>
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontSize: '0.85rem',
+                                  fontWeight: isSelected ? 700 : 600,
+                                  color: isSelected ? 'var(--primary-700, #4338CA)' : 'var(--text-primary, #1E293B)',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {p.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: '0.72rem',
+                                  color: 'var(--text-secondary, #64748B)',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {p.department} &bull; {p.position} {p.email ? `(${p.email})` : ''}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <div style={{ color: 'var(--primary-600, #4F46E5)', display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
+                              <Check size={16} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
             {errors.personnelId && (
-              <span className="error-message">
+              <span className="error-message" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <AlertCircle size={12} /> {errors.personnelId}
               </span>
             )}
 
+            {/* Selected Personnel Card */}
             {selectedPerson && (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: '0.5rem 0.75rem',
-                  background: 'var(--bg-card-subtle)',
-                  borderRadius: 'var(--radius-md)',
+                  justifyContent: 'space-between',
+                  padding: '0.55rem 0.85rem',
+                  background: 'var(--bg-card-subtle, #F8FAFC)',
+                  borderRadius: 'var(--radius-md, 8px)',
                   marginTop: '0.5rem',
-                  border: '1px solid var(--border-subtle)',
+                  border: '1px solid var(--border-subtle, #E2E8F0)',
                 }}
               >
-                {selectedPerson.avatarUrl ? (
-                  <img
-                    src={selectedPerson.avatarUrl}
-                    alt=""
-                    style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: 'var(--primary-100)',
-                      color: 'var(--primary-600)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    {selectedPerson.name?.charAt(0) || 'U'}
-                  </div>
-                )}
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {selectedPerson.name}
-                  </div>
-                  <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
-                    {selectedPerson.position} &bull; {selectedPerson.department}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  {selectedPerson.avatarUrl ? (
+                    <img
+                      src={selectedPerson.avatarUrl}
+                      alt=""
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'var(--primary-100, #E0E7FF)',
+                        color: 'var(--primary-600, #4F46E5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {selectedPerson.name?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {selectedPerson.name}
+                    </div>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
+                      {selectedPerson.position} &bull; {selectedPerson.department}
+                    </div>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDropdownOpen(true);
+                    setSearchPerson('');
+                  }}
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--primary-600, #4F46E5)',
+                    background: 'transparent',
+                    border: '1px solid var(--primary-200, #C7D2FE)',
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  เลือกบุคลากรอื่น
+                </button>
               </div>
             )}
           </div>
