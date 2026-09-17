@@ -41,7 +41,7 @@ import {
   subscribeDepartmentList,
   subscribeExecutiveList,
 } from '@/lib/storageService';
-import { IDP_STATUSES, POSITIONS } from '@/lib/constants';
+import { IDP_STATUSES, POSITIONS, MAIN_6_DEPTS } from '@/lib/constants';
 import IDPModal from '@/components/IDPModal';
 import IDPConfigModal from '@/components/IDPConfigModal';
 import IDPPreviewModal from '@/components/IDPPreviewModal';
@@ -151,17 +151,6 @@ export default function IDPNeedAnalysisPage() {
     });
   }, [idpRecords, selectedDept, quickFilter, searchQuery, currentUser, currentPersonnel]);
 
-  // The 4 Core Divisions/Departments in ICIT (including สำนักงานผู้อำนวยการ)
-  const MAIN_4_DEPTS = useMemo(
-    () => [
-      'สำนักงานผู้อำนวยการ',
-      'ฝ่ายพัฒนาระบบสารสนเทศ',
-      'ฝ่ายวิศวกรรมระบบเครือข่าย',
-      'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-    ],
-    []
-  );
-
   // Dashboard Statistics
   const stats = useMemo(() => {
     const total = idpRecords.length;
@@ -181,8 +170,8 @@ export default function IDPNeedAnalysisPage() {
     });
     const avgGap = total > 0 ? (totalGaps / total).toFixed(1) : '0';
 
-    // Breakdown for all 4 departments (รวมสำนักงานผู้อำนวยการ)
-    const deptStats = MAIN_4_DEPTS.map((deptName) => {
+    // Breakdown for all 6 main departments
+    const deptStats = MAIN_6_DEPTS.map((deptName) => {
       const deptRecords = idpRecords.filter((r) => r.department === deptName);
       const dTotal = deptRecords.length;
       const dCompleted = deptRecords.filter((r) => r.status === IDP_STATUSES.COMPLETED.key).length;
@@ -211,7 +200,7 @@ export default function IDPNeedAnalysisPage() {
       deptStats,
       completedDepts,
     };
-  }, [idpRecords, MAIN_4_DEPTS]);
+  }, [idpRecords]);
 
   // If Not Logged In, Show Login Gate
   if (!isAuthLoading && !currentUser) {
@@ -493,12 +482,12 @@ export default function IDPNeedAnalysisPage() {
               </div>
               <div>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E293B' }}>
-                  ความก้าวหน้าการประเมิน IDP ทั้ง 4 ฝ่าย
+                  ความก้าวหน้าการประเมิน IDP ทั้ง 6 ฝ่าย
                 </span>
               </div>
             </div>
             <span style={{ fontSize: '0.8rem', color: '#9A3412', fontWeight: 600 }}>
-              เสร็จสิ้นแล้ว {stats.completedDepts} / 4 ฝ่าย
+              เสร็จสิ้นแล้ว {stats.completedDepts} / {MAIN_6_DEPTS.length} ฝ่าย
             </span>
           </div>
 
@@ -643,7 +632,7 @@ export default function IDPNeedAnalysisPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#64748B', fontSize: '0.825rem' }}>
-            <span style={{ fontWeight: 600 }}>เสร็จสมบูรณ์ทั้ง 4 ฝ่าย</span>
+            <span style={{ fontWeight: 600 }}>เสร็จสมบูรณ์ทั้ง 6 ฝ่าย</span>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckCircle2 size={16} />
             </div>
@@ -652,7 +641,7 @@ export default function IDPNeedAnalysisPage() {
             {stats.completed} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B' }}>/ {stats.total} ฉบับ</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: '#16A34A', marginTop: '2px', fontWeight: 600 }}>
-            (เสร็จสิ้นแล้ว {stats.completedDepts}/4 ฝ่าย)
+            (เสร็จสิ้นแล้ว {stats.completedDepts}/{MAIN_6_DEPTS.length} ฝ่าย)
           </div>
         </div>
       </div>

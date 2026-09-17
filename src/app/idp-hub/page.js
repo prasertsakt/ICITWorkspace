@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { subscribeIdpRecords, subscribeIdpConfig, isHrOfficer } from '@/lib/idpService';
 import { useAuth } from '@/context/AuthContext';
+import { MAIN_6_DEPTS } from '@/lib/constants';
 import IDPConfigModal from '@/components/IDPConfigModal';
 
 export default function IDPHubLandingPage() {
@@ -56,17 +57,6 @@ export default function IDPHubLandingPage() {
     };
   }, [fiscalYear]);
 
-  // The 4 Core Divisions/Departments in ICIT (including สำนักงานผู้อำนวยการ)
-  const MAIN_4_DEPTS = useMemo(
-    () => [
-      'สำนักงานผู้อำนวยการ',
-      'ฝ่ายพัฒนาระบบสารสนเทศ',
-      'ฝ่ายวิศวกรรมระบบเครือข่าย',
-      'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-    ],
-    []
-  );
-
   // Statistics
   const stats = useMemo(() => {
     const total = idpRecords.length;
@@ -78,8 +68,8 @@ export default function IDPHubLandingPage() {
     ).length;
     const completed = idpRecords.filter((r) => r.status === 'COMPLETED').length;
 
-    // Breakdown for all 4 departments (รวมสำนักงานผู้อำนวยการ)
-    const deptStats = MAIN_4_DEPTS.map((deptName) => {
+    // Breakdown for all 6 main departments
+    const deptStats = MAIN_6_DEPTS.map((deptName) => {
       const deptRecords = idpRecords.filter((r) => r.department === deptName);
       const dTotal = deptRecords.length;
       const dCompleted = deptRecords.filter((r) => r.status === 'COMPLETED').length;
@@ -107,7 +97,7 @@ export default function IDPHubLandingPage() {
       deptStats,
       completedDepts,
     };
-  }, [idpRecords, MAIN_4_DEPTS]);
+  }, [idpRecords]);
 
   if (authLoading) {
     return (
@@ -477,18 +467,18 @@ export default function IDPHubLandingPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
                 <CheckCircle2 size={16} color="#4ADE80" />
-                <span>เสร็จสมบูรณ์ทั้ง 4 ฝ่าย</span>
+                <span>เสร็จสมบูรณ์ทั้ง 6 ฝ่าย</span>
               </div>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#86EFAC', letterSpacing: '-0.02em' }}>
                 {stats.completed} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ฉบับ</span>
               </div>
               <div style={{ fontSize: '0.75rem', color: '#CBD5E1', marginTop: '2px' }}>
-                (เสร็จสิ้นแล้ว {stats.completedDepts}/4 ฝ่าย)
+                (เสร็จสิ้นแล้ว {stats.completedDepts}/{MAIN_6_DEPTS.length} ฝ่าย)
               </div>
             </div>
           </div>
 
-          {/* 4 Departments Progress Quick Breakdown */}
+          {/* 6 Departments Progress Quick Breakdown */}
           {stats.deptStats && stats.deptStats.length > 0 && (
             <div
               style={{
@@ -503,7 +493,7 @@ export default function IDPHubLandingPage() {
             >
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E2E8F0', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Building2 size={14} color="#FB923C" />
-                <span>ความก้าวหน้าทั้ง 4 ฝ่าย:</span>
+                <span>ความก้าวหน้าทั้ง 6 ฝ่าย:</span>
               </div>
 
               <div
