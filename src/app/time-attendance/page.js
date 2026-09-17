@@ -22,6 +22,7 @@ import {
   TIME_ATTENDANCE_STEP_CONFIG,
   PREDEFINED_DEPARTMENTS,
 } from '@/lib/constants';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import TimeAttendanceModal from '@/components/TimeAttendanceModal';
 import TimeAttendanceDetailModal from '@/components/TimeAttendanceDetailModal';
 import TimeAttendanceEmailModal from '@/components/TimeAttendanceEmailModal';
@@ -330,7 +331,7 @@ function TimeAttendanceContent() {
         const matchName = item.requesterName?.toLowerCase().includes(q);
         const matchWitness = item.witnessName?.toLowerCase().includes(q);
         const matchDept = item.requesterDepartment?.toLowerCase().includes(q);
-        const matchDate = item.attendanceDate?.includes(q);
+        const matchDate = item.attendanceDate?.includes(q) || formatDateDDMMYYYYBE(item.attendanceDate)?.includes(q);
         const matchReason = item.reason?.toLowerCase().includes(q);
         if (!matchName && !matchWitness && !matchDept && !matchDate && !matchReason) return false;
       }
@@ -1197,7 +1198,7 @@ function TimeAttendanceContent() {
 
                         {/* วันที่ขอลงเวลา */}
                         <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#0284C7' }}>
-                          {item.attendanceDate}
+                          {formatDateDDMMYYYYBE(item.attendanceDate)}
                         </td>
 
                         {/* เวลาจริง */}

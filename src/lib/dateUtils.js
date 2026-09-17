@@ -67,6 +67,78 @@ export function formatToBuddhistDate(date) {
 }
 
 /**
+ * Format any date string or Date object to DD/MM/YYYY in Buddhist Era (พ.ศ.)
+ * e.g., '2026-09-08' -> '08/09/2569'
+ * e.g., '9/8/2026' -> '08/09/2569'
+ */
+export function formatDateDDMMYYYYBE(dateInput) {
+  if (!dateInput) return '-';
+
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+    const d = String(dateInput.getDate()).padStart(2, '0');
+    const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const y = dateInput.getFullYear() < 2400 ? dateInput.getFullYear() + 543 : dateInput.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+
+  if (typeof dateInput !== 'string') return String(dateInput);
+
+  const trimmed = dateInput.trim();
+  if (!trimmed) return '-';
+
+  // Check if ISO format: YYYY-MM-DD
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    const y = parseInt(isoMatch[1], 10);
+    const m = String(parseInt(isoMatch[2], 10)).padStart(2, '0');
+    const d = String(parseInt(isoMatch[3], 10)).padStart(2, '0');
+    const beYear = y < 2400 ? y + 543 : y;
+    return `${d}/${m}/${beYear}`;
+  }
+
+  // Check if slash format: M/D/YYYY or D/M/YYYY or DD/MM/YYYY
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    if (parts.length === 3) {
+      let p1 = parseInt(parts[0], 10);
+      let p2 = parseInt(parts[1], 10);
+      let yStr = parts[2].trim().split(' ')[0];
+      let y = parseInt(yStr, 10);
+
+      if (!isNaN(p1) && !isNaN(p2) && !isNaN(y)) {
+        const beYear = y < 2400 ? y + 543 : y;
+        // If first number > 12, it is definitely Day: DD/MM/YYYY
+        // If first number <= 12 and second number > 12, first is Month: MM/DD/YYYY
+        let d = p1;
+        let m = p2;
+        if (p1 <= 12 && p2 > 12) {
+          d = p2;
+          m = p1;
+        }
+        return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${beYear}`;
+      }
+    }
+  }
+
+  // Check if dash format: DD-MM-YYYY
+  if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    if (parts.length === 3) {
+      const p1 = parseInt(parts[0], 10);
+      const p2 = parseInt(parts[1], 10);
+      let yStr = parts[2].trim().split(' ')[0];
+      let y = parseInt(yStr, 10);
+      if (!isNaN(p1) && !isNaN(p2) && !isNaN(y)) {
+        const beYear = y < 2400 ? y + 543 : y;
+        return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${beYear}`;
+      }
+    }
+  }
+
+  return trimmed;
+}
+
+/**
  * Format DD-MM-YYYY (พ.ศ.) to readable Thai date string
  * Example: '01-10-2560' -> '1 ตุลาคม 2560'
  */

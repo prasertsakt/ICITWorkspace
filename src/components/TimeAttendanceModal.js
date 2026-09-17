@@ -18,6 +18,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_TYPES } from '@/lib/constants';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import { getNotificationRecipientForStep, resolveRoleEmailsFromDirectory } from '@/lib/emailNotificationService';
 
@@ -111,7 +112,7 @@ export default function TimeAttendanceModal({
       const today = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const todayYmd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-      const todayDisplay = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+      const todayDisplay = formatDateDDMMYYYYBE(today);
 
       setActionDate(todayDisplay);
       setAttendanceDate(todayYmd);
@@ -151,12 +152,8 @@ export default function TimeAttendanceModal({
       return;
     }
 
-    // Format display date M/D/YYYY
-    let displayAttendanceDate = attendanceDate;
-    if (attendanceDate.includes('-')) {
-      const [year, month, day] = attendanceDate.split('-');
-      displayAttendanceDate = `${parseInt(month, 10)}/${parseInt(day, 10)}/${year}`;
-    }
+    // Format display date DD/MM/YYYY in Buddhist Era (พ.ศ.)
+    const displayAttendanceDate = formatDateDDMMYYYYBE(attendanceDate);
 
     // Format time (e.g. 6:00:00 PM or 18:00)
     let displayTime = attendanceTime;

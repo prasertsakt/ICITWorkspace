@@ -23,6 +23,7 @@ import {
   Check,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_STEP_CONFIG } from '@/lib/constants';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import {
   getNotificationRecipientForStep,
@@ -377,14 +378,14 @@ export default function TimeAttendanceDetailModal({
               {/* วันที่ดำเนินการ */}
               <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', alignItems: 'baseline' }}>
                 <span style={{ fontSize: '0.95rem', color: '#475569' }}>วันที่ดำเนินการ</span>
-                <span style={{ fontSize: '1rem', color: '#1E293B' }}>{record.actionDate}</span>
+                <span style={{ fontSize: '1rem', color: '#1E293B' }}>{formatDateDDMMYYYYBE(record.actionDate)}</span>
               </div>
 
               {/* วันที่ขอลงเวลา */}
               <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', alignItems: 'baseline' }}>
                 <span style={{ fontSize: '0.95rem', color: '#475569' }}>วันที่ขอลงเวลา</span>
                 <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0284C7' }}>
-                  {record.attendanceDate}
+                  {formatDateDDMMYYYYBE(record.attendanceDate)}
                 </span>
               </div>
 

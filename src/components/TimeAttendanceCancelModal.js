@@ -12,6 +12,7 @@ import {
   Loader2,
   Check,
 } from 'lucide-react';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
 const REASON_PRESETS = [
   'ระบุเวลาผิดพลาด',
@@ -237,7 +238,7 @@ export default function TimeAttendanceCancelModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
                 <Calendar size={13} color="#64748B" />
                 <span>
-                  วันที่: <strong style={{ color: '#0284C7' }}>{record.attendanceDate}</strong>
+                  วันที่: <strong style={{ color: '#0284C7' }}>{formatDateDDMMYYYYBE(record.attendanceDate)}</strong>
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>

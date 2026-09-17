@@ -1,5 +1,6 @@
 // Thai Email Notification System with 1-Click Approval Actions
 import { formatImageDisplayUrl } from './driveUtils';
+import { formatDateDDMMYYYYBE } from './dateUtils';
 import { db, isFirebaseConfigured } from './firebase';
 import {
   collection,
@@ -239,11 +240,11 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
           </tr>
           <tr style="border-bottom: 1px solid #F1F5F9;">
             <td style="padding: 10px 8px; color: #64748B;">วันที่ดำเนินการ (ยื่นคำขอ):</td>
-            <td style="padding: 10px 8px; color: #1E293B;">${record.actionDate}</td>
+            <td style="padding: 10px 8px; color: #1E293B;">${formatDateDDMMYYYYBE(record.actionDate)}</td>
           </tr>
           <tr style="border-bottom: 1px solid #F1F5F9;">
             <td style="padding: 10px 8px; color: #64748B;">วันที่ขอลงเวลา:</td>
-            <td style="padding: 10px 8px; color: #2563EB; font-weight: 700; font-size: 16px;">${record.attendanceDate}</td>
+            <td style="padding: 10px 8px; color: #2563EB; font-weight: 700; font-size: 16px;">${formatDateDDMMYYYYBE(record.attendanceDate)}</td>
           </tr>
           <tr style="border-bottom: 1px solid #F1F5F9;">
             <td style="padding: 10px 8px; color: #64748B;">เวลา:</td>
