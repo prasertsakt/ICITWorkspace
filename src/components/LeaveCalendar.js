@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import { isDummyLeaveRecord } from '@/lib/storageService';
-import { formatLocalDate, parseLocalDate } from '@/lib/dateUtils';
+import { formatLocalDate, parseLocalDate, formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -1391,7 +1391,11 @@ export default function LeaveCalendar({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>ช่วงวันที่ลา:</span>
-                  <strong>{selectedLeaveItem.startDate} ถึง {selectedLeaveItem.endDate}</strong>
+                  <strong>
+                    {selectedLeaveItem.startDate === selectedLeaveItem.endDate
+                      ? formatDateDDMMYYYYBE(selectedLeaveItem.startDate)
+                      : `${formatDateDDMMYYYYBE(selectedLeaveItem.startDate)} ถึง ${formatDateDDMMYYYYBE(selectedLeaveItem.endDate)}`}
+                  </strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--border-subtle)' }}>

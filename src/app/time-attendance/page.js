@@ -756,8 +756,8 @@ function TimeAttendanceContent() {
                       requestType: 'ลงเวลาปฏิบัติราชการ',
                       requesterName: currentPersonnel?.name || 'ผู้ดูแลระบบ',
                       requesterEmail: currentPersonnel?.email || 'admin@icit.kmutnb.ac.th',
-                      actionDate: '9/8/2026',
-                      attendanceDate: '9/8/2026',
+                      actionDate: formatDateDDMMYYYYBE(new Date()),
+                      attendanceDate: formatDateDDMMYYYYBE(new Date()),
                       attendanceTime: '08:30:00 AM',
                     };
                     setEmailModalRecord(sampleRecord);
@@ -1184,7 +1184,7 @@ function TimeAttendanceContent() {
                             {item.requestType}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
-                            ยื่นเมื่อ {item.actionDate}
+                            ยื่นเมื่อ {formatDateDDMMYYYYBE(item.actionDate)}
                           </span>
                         </td>
 

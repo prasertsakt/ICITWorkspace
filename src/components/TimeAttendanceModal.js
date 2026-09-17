@@ -176,7 +176,7 @@ export default function TimeAttendanceModal({
       requesterEmail: selectedRequester.email,
       requesterDepartment: selectedRequester.department || '-',
       requesterPosition: selectedRequester.position || '-',
-      actionDate: actionDate || '9/8/2026',
+      actionDate: actionDate || formatDateDDMMYYYYBE(new Date()),
       attendanceDate: displayAttendanceDate,
       attendanceTime: displayTime,
       // HR: เจ้าหน้าที่ ตำแหน่งงานบุคลากร jarucha.j@icit.kmutnb.ac.th
