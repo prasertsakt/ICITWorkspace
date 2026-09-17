@@ -8,6 +8,7 @@ import {
   POSITIONS,
 } from './constants';
 import { resolveRoleEmailsFromDirectory } from './emailNotificationService';
+import { getCurrentThaiFiscalYear } from './dateUtils';
 import {
   collection,
   doc,
@@ -166,7 +167,7 @@ export function calculateIdpSummary(coreCompetencies = [], functionalCompetencie
 /**
  * Real-Time Subscription to IDP Records (Optimized by Fiscal Year)
  */
-export function subscribeIdpRecords(fiscalYear = '2569', callback) {
+export function subscribeIdpRecords(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
   if (typeof window === 'undefined') return () => {};
 
   const localCacheKey = `${LOCAL_KEY_IDP_RECORDS}_${fiscalYear}`;
@@ -220,7 +221,7 @@ export function subscribeIdpRecords(fiscalYear = '2569', callback) {
 /**
  * Real-Time Subscription to IDP Master Config per Fiscal Year
  */
-export function subscribeIdpConfig(fiscalYear = '2569', callback) {
+export function subscribeIdpConfig(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
   if (typeof window === 'undefined') return () => {};
 
   const configDocId = `idp-config-${fiscalYear}`;
@@ -346,7 +347,7 @@ export async function saveIdpRecord(recordData, actor) {
 /**
  * Delete an IDP Record
  */
-export async function deleteIdpRecord(idpId, fiscalYear = '2569') {
+export async function deleteIdpRecord(idpId, fiscalYear = String(getCurrentThaiFiscalYear())) {
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'idp_records', idpId);

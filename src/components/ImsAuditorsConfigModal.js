@@ -16,6 +16,7 @@ import {
   Link2,
   ExternalLink,
 } from 'lucide-react';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function ImsAuditorsConfigModal({
   isOpen,
@@ -295,9 +296,11 @@ export default function ImsAuditorsConfigModal({
                 background: '#F8FAFC',
               }}
             >
-              <option value="2570">ปีงบประมาณ 2570</option>
-              <option value="2569">ปีงบประมาณ 2569</option>
-              <option value="2568">ปีงบประมาณ 2568</option>
+              {getAvailableFiscalYears(2568, 1, true).map((y) => (
+                <option key={y} value={y}>
+                  ปีงบประมาณ {y}
+                </option>
+              ))}
             </select>
           </div>
 

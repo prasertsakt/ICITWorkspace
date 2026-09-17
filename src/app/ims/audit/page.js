@@ -29,6 +29,7 @@ import ImsAuditModal from '@/components/ImsAuditModal';
 import ImsAuditDetailModal from '@/components/ImsAuditDetailModal';
 import ImsAuditorsConfigModal from '@/components/ImsAuditorsConfigModal';
 import ImsActivityLogModal from '@/components/ImsActivityLogModal';
+import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
 import {
   ShieldCheck,
   FileCheck,
@@ -65,13 +66,13 @@ export default function ImsAuditPage() {
   const [audits, setAudits] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
-  const [selectedYear, setSelectedYear] = useState('2569');
+  const [selectedYear, setSelectedYear] = useState(() => String(getCurrentThaiFiscalYear()));
   const [yearlyConfig, setYearlyConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Available fiscal years in descending order (2570, 2569, 2568, ...)
+  // Available fiscal years in descending order
   const availableYears = useMemo(() => {
-    const yearsSet = new Set(['2570', '2569', '2568']);
+    const yearsSet = new Set(getAvailableFiscalYears(2568, 1, true));
     audits.forEach((a) => {
       if (a.auditYear) yearsSet.add(a.auditYear);
     });

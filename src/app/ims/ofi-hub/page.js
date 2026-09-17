@@ -21,6 +21,7 @@ import {
 } from '@/lib/imsService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 import OfiDetailModal from '@/components/OfiDetailModal';
 import OfiFormModal from '@/components/OfiFormModal';
 
@@ -132,7 +133,7 @@ export default function OfiHubPage() {
 
   // Compute available fiscal years
   const availableYears = useMemo(() => {
-    const yearsSet = new Set(['2570', '2569', '2568']);
+    const yearsSet = new Set(getAvailableFiscalYears(2568, 1, true));
     ofiItems.forEach((item) => {
       if (item.fiscalYear) yearsSet.add(String(item.fiscalYear));
     });

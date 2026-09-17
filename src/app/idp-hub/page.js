@@ -29,10 +29,11 @@ import { subscribeIdpRecords, subscribeIdpConfig, isHrOfficer } from '@/lib/idpS
 import { useAuth } from '@/context/AuthContext';
 import { MAIN_6_DEPTS } from '@/lib/constants';
 import IDPConfigModal from '@/components/IDPConfigModal';
+import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function IDPHubLandingPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
-  const [fiscalYear, setFiscalYear] = useState('2569');
+  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
   const [idpRecords, setIdpRecords] = useState([]);
   const [idpConfig, setIdpConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -330,7 +331,7 @@ export default function IDPHubLandingPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  {['2568', '2569', '2570', '2571', '2572'].map((y) => (
+                  {getAvailableFiscalYears().map((y) => (
                     <option key={y} value={y}>
                       {y}
                     </option>

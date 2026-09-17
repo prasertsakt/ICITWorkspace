@@ -25,6 +25,7 @@ import {
   IMS_STANDARDS,
   IMS_AUDIT_TOPICS,
 } from '@/lib/constants';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 
 import CarIncidentModal from '@/components/CarIncidentModal';
 import CarIncidentDetailModal from '@/components/CarIncidentDetailModal';
@@ -132,7 +133,7 @@ export default function CarIncidentHubPage() {
 
   // Compute available years
   const availableYears = useMemo(() => {
-    const yearsSet = new Set(['2570', '2569', '2568']);
+    const yearsSet = new Set(getAvailableFiscalYears(2568, 1, true));
     carIncidents.forEach((c) => {
       if (c.fiscalYear) yearsSet.add(String(c.fiscalYear));
     });

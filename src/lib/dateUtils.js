@@ -262,6 +262,32 @@ export function getFiscalYear(date = new Date()) {
 }
 
 /**
+ * คำนวณปีงบประมาณไทย พ.ศ. (Thai Buddhist Era Fiscal Year) จากวันที่ปัจจุบันหรือวันที่กำหนด
+ * เช่น วันที่ 18 ก.ย. 2026 -> 2569, วันที่ 1 ต.ค. 2026 -> 2570
+ */
+export function getCurrentThaiFiscalYear(date = new Date()) {
+  const ceFiscalYear = getFiscalYear(date);
+  return ceFiscalYear + 543;
+}
+
+/**
+ * สร้างรายการปีงบประมาณแบบ Dynamic (พ.ศ.) สำหรับตัวเลือกใน Dropdown อัตโนมัติ
+ * รองรับการเลื่อนปีอัตโนมัติเมื่อถึงรอบปีงบประมาณใหม่
+ * @param {number} baseStartYear - ปีงบประมาณเริ่มต้นในระบบ (default 2568)
+ * @param {number} futureOffset - จำนวนปีงบประมาณล่วงหน้าที่จะแสดง (default 1)
+ * @returns {string[]} อาร์เรย์ของปีงบประมาณ เช่น ['2568', '2569', '2570'] และจะขึ้น 2571 อัตโนมัติเมื่อเข้าสู่รอบปี
+ */
+export function getAvailableFiscalYears(baseStartYear = 2568, futureOffset = 1, descending = false) {
+  const currentFiscalYear = getCurrentThaiFiscalYear();
+  const maxYear = Math.max(currentFiscalYear + futureOffset, baseStartYear + 2);
+  const years = [];
+  for (let y = baseStartYear; y <= maxYear; y++) {
+    years.push(String(y));
+  }
+  return descending ? years.reverse() : years;
+}
+
+/**
  * คำนวณช่วงวันที่ของไตรมาส (รองรับทั้งปีปฏิทิน Calendar Year และปีงบประมาณ Fiscal Year)
  * @param {number} quarterNumber - ไตรมาส 1, 2, 3 หรือ 4
  * @param {object} options

@@ -40,7 +40,7 @@ import {
 } from '@/lib/skillMapService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import { MAIN_6_DEPTS } from '@/lib/constants';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, getAvailableFiscalYears } from '@/lib/dateUtils';
 import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
 
 // Modals
@@ -400,7 +400,7 @@ export default function IDPSkillMapPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  {['2567', '2568', '2569', '2570', '2571', '2572'].map((y) => (
+                  {getAvailableFiscalYears().map((y) => (
                     <option key={y} value={y}>
                       {y}
                     </option>

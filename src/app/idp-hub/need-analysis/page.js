@@ -47,12 +47,13 @@ import IDPConfigModal from '@/components/IDPConfigModal';
 import IDPPreviewModal from '@/components/IDPPreviewModal';
 import IDPDuplicateModal from '@/components/IDPDuplicateModal';
 import IDPDeleteModal from '@/components/IDPDeleteModal';
+import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function IDPNeedAnalysisPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
 
   // Fiscal Year
-  const [fiscalYear, setFiscalYear] = useState('2569');
+  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
 
   // Data states
   const [idpRecords, setIdpRecords] = useState([]);
@@ -312,7 +313,7 @@ export default function IDPNeedAnalysisPage() {
               outline: 'none',
             }}
           >
-            {['2568', '2569', '2570', '2571', '2572'].map((y) => (
+            {getAvailableFiscalYears().map((y) => (
               <option key={y} value={y}>
                 ปี {y}
               </option>

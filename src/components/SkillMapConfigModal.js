@@ -25,6 +25,7 @@ import {
 } from '@/lib/skillMapService';
 import { getPersonnelListSync } from '@/lib/storageService';
 import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function SkillMapConfigModal({
   isOpen,
@@ -287,8 +288,8 @@ export default function SkillMapConfigModal({
                   fontWeight: 600,
                 }}
               >
-                {[2567, 2568, 2569, 2570].map((y) => (
-                  <option key={y} value={y}>
+                {getAvailableFiscalYears().map((y) => (
+                  <option key={y} value={Number(y)}>
                     ปีงบประมาณ {y}
                   </option>
                 ))}
@@ -356,8 +357,8 @@ export default function SkillMapConfigModal({
                   fontSize: '0.85rem',
                 }}
               >
-                {[2567, 2568, 2569, 2570, 2571].map((y) => (
-                  <option key={y} value={y}>
+                {getAvailableFiscalYears().map((y) => (
+                  <option key={y} value={Number(y)}>
                     ปี {y}
                   </option>
                 ))}

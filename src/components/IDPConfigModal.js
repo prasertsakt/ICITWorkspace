@@ -22,6 +22,7 @@ import {
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
 } from '../lib/constants';
 import { saveIdpConfig, duplicateIdpConfig } from '../lib/idpService';
+import { getAvailableFiscalYears } from '../lib/dateUtils';
 
 export default function IDPConfigModal({
   isOpen,
@@ -317,7 +318,7 @@ export default function IDPConfigModal({
                   cursor: 'pointer',
                 }}
               >
-                {['2568', '2569', '2570', '2571', '2572'].map((y) => (
+                {getAvailableFiscalYears().map((y) => (
                   <option key={y} value={y}>
                     {y}
                   </option>
@@ -469,7 +470,7 @@ export default function IDPConfigModal({
                   fontSize: '0.825rem',
                 }}
               >
-                {['2568', '2569', '2570', '2571'].map((y) => (
+                {getAvailableFiscalYears().map((y) => (
                   <option key={y} value={y}>
                     ปีงบประมาณ {y}
                   </option>

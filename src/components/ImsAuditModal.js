@@ -25,6 +25,7 @@ import {
   IMS_AUDIT_STATUSES,
 } from '@/lib/constants';
 import { subscribeYearlyAuditors, subscribeImsAuditTopics } from '@/lib/imsService';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function ImsAuditModal({
   isOpen,
@@ -583,9 +584,11 @@ export default function ImsAuditModal({
                   }}
                   required
                 >
-                  <option value="2570">ปีงบประมาณ 2570</option>
-                  <option value="2569">ปีงบประมาณ 2569</option>
-                  <option value="2568">ปีงบประมาณ 2568</option>
+                  {getAvailableFiscalYears(2568, 1, true).map((y) => (
+                    <option key={y} value={y}>
+                      ปีงบประมาณ {y}
+                    </option>
+                  ))}
                 </select>
               </div>
 

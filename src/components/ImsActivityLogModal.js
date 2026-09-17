@@ -24,6 +24,7 @@ import {
   Users,
 } from 'lucide-react';
 import { subscribeActivityLogs, ACTIVITY_CATEGORIES } from '@/lib/activityLogService';
+import { getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function ImsActivityLogModal({
   isOpen,
@@ -420,9 +421,11 @@ export default function ImsActivityLogModal({
               }}
             >
               <option value="ALL">ทุกปีงบประมาณ</option>
-              <option value="2569">ปีงบประมาณ 2569</option>
-              <option value="2570">ปีงบประมาณ 2570</option>
-              <option value="2568">ปีงบประมาณ 2568</option>
+              {getAvailableFiscalYears(2568, 1, true).map((y) => (
+                <option key={y} value={y}>
+                  ปีงบประมาณ {y}
+                </option>
+              ))}
             </select>
           </div>
         </div>
