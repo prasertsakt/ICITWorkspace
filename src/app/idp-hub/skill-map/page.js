@@ -329,34 +329,7 @@ export default function IDPSkillMapPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  backgroundColor: 'rgba(249, 115, 22, 0.25)',
-                  color: '#FED7AA',
-                  border: '1px solid rgba(249, 115, 22, 0.4)',
-                  padding: '3px 10px',
-                  borderRadius: '999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                }}
-              >
-                Individual Development Plan (IDP)
-              </span>
-              <span
-                style={{
-                  backgroundColor: 'rgba(99, 102, 241, 0.25)',
-                  color: '#C7D2FE',
-                  border: '1px solid rgba(99, 102, 241, 0.4)',
-                  padding: '3px 10px',
-                  borderRadius: '999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                }}
-              >
-                Knowledge & Skill Map
-              </span>
-            </div>
+
 
             <h1 style={{ margin: 0, fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Compass size={28} color="#A5B4FC" />
