@@ -15,12 +15,16 @@ import {
   ChevronUp,
   Sparkles,
   BookOpen,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   getSkillMapConfig,
   saveSkillMapConfig,
   cloneSkillMapConfigFromYear,
+  getAllAssessments,
 } from '@/lib/skillMapService';
+import { getPersonnelList } from '@/lib/storageService';
+import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
 
 export default function SkillMapConfigModal({
   isOpen,
@@ -181,6 +185,39 @@ export default function SkillMapConfigModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Export to Excel Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const allAssessments = getAllAssessments(fiscalYear);
+                const pList = getPersonnelList();
+                exportSkillMapToExcel({
+                  fiscalYear,
+                  workAreas,
+                  personnelList: pList,
+                  assessments: allAssessments,
+                });
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)',
+              }}
+              title="ส่งออกโครงสร้างและผลการประเมินเป็นไฟล์ Excel (.xlsx)"
+            >
+              <FileSpreadsheet size={15} />
+              <span>ส่งออก Excel</span>
+            </button>
+
             {/* Clone Button */}
             <button
               type="button"

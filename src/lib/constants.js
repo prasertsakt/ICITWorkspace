@@ -337,7 +337,7 @@ export const DEFAULT_PORTAL_SERVICES = [
     id: 'skill-map',
     title: 'Knowledge & Skill Map',
     desc: 'แผนที่ความรู้และทักษะบุคลากร ประเมินตนเองตามโครงสร้าง 3 ระดับ พร้อม Spider Radar Chart และ AI วิเคราะห์ศักยภาพ',
-    href: '/skill-map',
+    href: '/idp-hub/skill-map',
     openInNewTab: false,
     iconType: 'lucide',
     iconName: 'Compass',
@@ -345,7 +345,7 @@ export const DEFAULT_PORTAL_SERVICES = [
     colorTheme: 'blue',
     badgeText: 'ต้องเข้าสู่ระบบ',
     badgeType: 'user',
-    footerLeft: 'แผนที่ทักษะและศักยภาพบุคลากร ICIT',
+    footerLeft: 'ส่วนหนึ่งของระบบ IDP Hub',
     footerRightText: 'เข้าใช้งาน',
   },
   {

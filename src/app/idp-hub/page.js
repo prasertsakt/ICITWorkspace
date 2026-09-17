@@ -689,6 +689,112 @@ export default function IDPHubLandingPage() {
             </div>
           </Link>
 
+          {/* Sub-Service: Knowledge & Skill Map (Active) */}
+          <Link
+            href="/idp-hub/skill-map"
+            style={{
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'block',
+            }}
+          >
+            <div
+              className="card"
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '1.25rem',
+                border: '1.5px solid #E2E8F0',
+                padding: '1.75rem',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.25s ease',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#4F46E5';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(79, 70, 229, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                  <div
+                    style={{
+                      width: '54px',
+                      height: '54px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #4F46E5 0%, #312E81 100%)',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 8px 16px -4px rgba(79, 70, 229, 0.35)',
+                    }}
+                  >
+                    <Compass size={26} />
+                  </div>
+                  <span
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '999px',
+                      background: '#DCFCE7',
+                      color: '#15803D',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      border: '1px solid #BBF7D0',
+                    }}
+                  >
+                    เปิดให้บริการ
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+                  แผนที่ความรู้และทักษะ (Knowledge & Skill Map)
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
+                  ประเมินทักษะ 4 ด้านงานตามโครงสร้าง 3 ระดับ (เกณฑ์ 0-5) พร้อม Personalized Spider Radar และ AI วิเคราะห์ความพร้อมต่อพันธกิจสำนักฯ
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #F1F5F9',
+                  color: '#4F46E5',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                }}
+              >
+                <span>เข้าสู่แผนที่ความรู้และทักษะ</span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#EEF2FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#4F46E5',
+                  }}
+                >
+                  <ArrowRight size={16} />
+                </div>
+              </div>
+            </div>
+          </Link>
+
           {/* Sub-Service 2: Individual Development Plan (Coming Soon) */}
           <div
             className="card"
