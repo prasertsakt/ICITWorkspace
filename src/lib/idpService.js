@@ -66,6 +66,7 @@ export function resolvePersonnelOrgHierarchy(targetPersonnel, allPersonnel = [],
 
   return {
     position: targetPersonnel.position || 'บุคลากร',
+    level: targetPersonnel.level || '',
     department: deptName || 'สำนักงานผู้อำนวยการ',
     departmentHead: dirRoles.deptHead
       ? {
@@ -486,20 +487,26 @@ export async function duplicateIdpRecordsFromPreviousYear(
 
     const coreList = configForToYear?.coreCompetencies || DEFAULT_IDP_CORE_COMPETENCIES;
 
+    const userLevel = p.level || hierarchy.level || 'ชำนาญการ';
     const newRecord = {
       fiscalYear: String(toYear),
       personnelId: p.id || src.personnelId,
       personnelName: p.name || src.personnelName,
       personnelEmail: p.email || src.personnelEmail,
       position: hierarchy.position,
+      level: userLevel,
       department: hierarchy.department,
       departmentHead: hierarchy.departmentHead,
       supervisingDeputyDirector: hierarchy.supervisingDeputyDirector,
-      coreCompetencies: coreList.map((c) => ({
-        ...c,
-        selfScore: null,
-        supervisorScore: null,
-      })),
+      coreCompetencies: coreList.map((c) => {
+        const expLevel = c.expectedLevels?.[userLevel] ?? c.expectedLevel ?? 3;
+        return {
+          ...c,
+          expectedLevel: expLevel,
+          selfScore: null,
+          supervisorScore: null,
+        };
+      }),
       functionalCompetencies: funcList.map((f) => ({
         ...f,
         selfScore: null,

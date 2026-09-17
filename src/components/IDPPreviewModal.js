@@ -226,7 +226,7 @@ export default function IDPPreviewModal({
               ชื่อ - สกุล : &nbsp;&nbsp;<u>&nbsp;&nbsp;{record.personnelName || '......................................................'}&nbsp;&nbsp;</u>
             </div>
             <div>
-              ตำแหน่ง : &nbsp;&nbsp;<u>&nbsp;&nbsp;{record.position || '......................................................'}&nbsp;&nbsp;</u>
+              ตำแหน่ง : &nbsp;&nbsp;<u>&nbsp;&nbsp;{record.position || '......................................................'}{record.level ? ` (${record.level})` : ''}&nbsp;&nbsp;</u>
             </div>
             <div>
               ฝ่าย : &nbsp;&nbsp;<u>&nbsp;&nbsp;{record.department || '......................................................'}&nbsp;&nbsp;</u>

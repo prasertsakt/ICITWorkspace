@@ -58,6 +58,7 @@ export default function IDPModal({
   const [personnelName, setPersonnelName] = useState(record?.personnelName || '');
   const [personnelEmail, setPersonnelEmail] = useState(record?.personnelEmail || '');
   const [position, setPosition] = useState(record?.position || 'บุคลากร');
+  const [level, setLevel] = useState(record?.level || '');
   const [department, setDepartment] = useState(record?.department || 'สำนักงานผู้อำนวยการ');
   const [departmentHead, setDepartmentHead] = useState(record?.departmentHead || null);
   const [supervisingDeputyDirector, setSupervisingDeputyDirector] = useState(
@@ -92,6 +93,8 @@ export default function IDPModal({
 
     const hierarchy = resolvePersonnelOrgHierarchy(p, personnelList, departmentList, executiveList);
     setPosition(hierarchy.position);
+    const userLevel = p.level || hierarchy.level || 'ชำนาญการ';
+    setLevel(userLevel);
     setDepartment(hierarchy.department);
     setDepartmentHead(hierarchy.departmentHead);
     setSupervisingDeputyDirector(hierarchy.supervisingDeputyDirector);
@@ -105,11 +108,15 @@ export default function IDPModal({
       DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL;
 
     setCoreCompetencies(
-      coreList.map((c) => ({
-        ...c,
-        selfScore: null,
-        supervisorScore: null,
-      }))
+      coreList.map((c) => {
+        const expectedLevel = c.expectedLevels?.[userLevel] ?? c.expectedLevel ?? 3;
+        return {
+          ...c,
+          expectedLevel,
+          selfScore: null,
+          supervisorScore: null,
+        };
+      })
     );
 
     setFunctionalCompetencies(
@@ -128,6 +135,7 @@ export default function IDPModal({
       setPersonnelName(record.personnelName || '');
       setPersonnelEmail(record.personnelEmail || '');
       setPosition(record.position || 'บุคลากร');
+      setLevel(record.level || '');
       setDepartment(record.department || 'สำนักงานผู้อำนวยการ');
       setDepartmentHead(record.departmentHead || null);
       setSupervisingDeputyDirector(record.supervisingDeputyDirector || null);
@@ -264,6 +272,7 @@ export default function IDPModal({
         personnelName,
         personnelEmail,
         position,
+        level,
         department,
         departmentHead,
         supervisingDeputyDirector,
@@ -561,9 +570,9 @@ export default function IDPModal({
                   <Building size={18} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>ตำแหน่ง / ฝ่ายงาน</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>ตำแหน่ง / ระดับ / ฝ่ายงาน</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
-                    {position || '-'} ({department || '-'})
+                    {position || '-'}{level ? ` (${level})` : ''} • {department || '-'}
                   </div>
                 </div>
               </div>

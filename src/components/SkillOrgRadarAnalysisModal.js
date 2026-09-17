@@ -222,7 +222,7 @@ export default function SkillOrgRadarAnalysisModal({
         <div
           style={{
             padding: '1.25rem 1.75rem',
-            background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #312E81 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -236,12 +236,12 @@ export default function SkillOrgRadarAnalysisModal({
                 width: '44px',
                 height: '44px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
               }}
             >
               <Award size={24} />
@@ -249,23 +249,23 @@ export default function SkillOrgRadarAnalysisModal({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
-                  Spider Radar & บทวิเคราะห์ภาพรวมระดับสำนักฯ (Organization Overview)
+                  Spider Radar &amp; บทวิเคราะห์ภาพรวมระดับสำนักฯ (Organization Overview)
                 </h3>
                 <span
                   style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.3)',
-                    color: '#C7D2FE',
+                    backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
                     fontSize: '0.75rem',
                     padding: '2px 8px',
                     borderRadius: '6px',
                     fontWeight: 700,
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
                   }}
                 >
                   ปีงบประมาณ {fiscalYear}
                 </span>
               </div>
-              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#94A3B8' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#CBD5E1' }}>
                 สรุปภาพรวมสมรรถนะบุคลากรทั้งหมด {orgData.totalStaff} คน (ไม่รวมผู้บริหาร) เทียบเกณฑ์มาตรฐานและพันธกิจสำนักฯ
               </p>
             </div>

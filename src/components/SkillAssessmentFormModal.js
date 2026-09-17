@@ -131,7 +131,7 @@ export default function SkillAssessmentFormModal({
         <div
           style={{
             padding: '1.25rem 1.75rem',
-            background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #312E81 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -144,7 +144,7 @@ export default function SkillAssessmentFormModal({
               <img
                 src={personnel.avatarUrl}
                 alt=""
-                style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #6366F1' }}
+                style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #FB923C' }}
               />
             ) : (
               <div
@@ -152,13 +152,14 @@ export default function SkillAssessmentFormModal({
                   width: '45px',
                   height: '45px',
                   borderRadius: '50%',
-                  background: 'rgba(99, 102, 241, 0.3)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 900,
                   fontSize: '1.2rem',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
                 }}
               >
                 {personnel.name?.charAt(0) || 'U'}
@@ -167,23 +168,23 @@ export default function SkillAssessmentFormModal({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-                  แบบประเมิน Knowledge & Skill Map
+                  แบบประเมิน Knowledge &amp; Skill Map
                 </h3>
                 <span
                   style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.3)',
-                    color: '#C7D2FE',
+                    backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
                     fontSize: '0.75rem',
                     padding: '2px 8px',
                     borderRadius: '6px',
                     fontWeight: 700,
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
                   }}
                 >
                   ปีงบประมาณ {fiscalYear}
                 </span>
               </div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#94A3B8', marginTop: '2px' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#CBD5E1', marginTop: '2px' }}>
                 {personnel.name} &bull; {personnel.position} &bull; {personnel.department}
               </p>
             </div>
@@ -233,8 +234,8 @@ export default function SkillAssessmentFormModal({
                 </strong>
                 <span
                   style={{
-                    backgroundColor: summary.completionPercentage === 100 ? '#DCFCE7' : '#EEF2FF',
-                    color: summary.completionPercentage === 100 ? '#15803D' : '#4F46E5',
+                    backgroundColor: summary.completionPercentage === 100 ? '#DCFCE7' : '#FFF7ED',
+                    color: summary.completionPercentage === 100 ? '#15803D' : '#EA580C',
                     fontSize: '0.75rem',
                     fontWeight: 800,
                     padding: '2px 8px',
@@ -250,7 +251,7 @@ export default function SkillAssessmentFormModal({
 
             <div>
               <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>คะแนนเฉลี่ยรวม</span>
-              <strong style={{ fontSize: '1.2rem', color: '#4F46E5', fontWeight: 900 }}>
+              <strong style={{ fontSize: '1.2rem', color: '#EA580C', fontWeight: 900 }}>
                 {summary.overallAverage}{' '}
                 <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>/ 5.00</span>
               </strong>
@@ -270,7 +271,7 @@ export default function SkillAssessmentFormModal({
               onClick={handleSave}
               disabled={isSaving}
               style={{
-                background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                 color: '#FFFFFF',
                 border: 'none',
                 padding: '9px 24px',
@@ -281,7 +282,7 @@ export default function SkillAssessmentFormModal({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
               }}
             >
               <Save size={16} />

@@ -41,7 +41,7 @@ export default function SkillRatingScaleModal({ isOpen, onClose }) {
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -54,14 +54,14 @@ export default function SkillRatingScaleModal({ isOpen, onClose }) {
                 width: '38px',
                 height: '38px',
                 borderRadius: '10px',
-                backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
+                boxShadow: '0 4px 10px rgba(249, 115, 22, 0.35)',
               }}
             >
-              <Target size={20} color="#C7D2FE" />
+              <Target size={20} color="#FFFFFF" />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>

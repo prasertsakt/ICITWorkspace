@@ -592,14 +592,74 @@ export const IDP_STATUSES = {
   },
 };
 
-// 19. สมรรถนะหลักมาตรฐาน มจพ. (Default Core Competencies)
+// 19. สมรรถนะหลักมาตรฐาน มจพ. (Default Core Competencies with Level Expectations)
 export const DEFAULT_IDP_CORE_COMPETENCIES = [
-  { id: 'core-1', title: 'ความใฝ่เรียนรู้', weight: 20, expectedLevel: 3 },
-  { id: 'core-2', title: 'คุณธรรมและความซื่อสัตย์', weight: 20, expectedLevel: 5 },
-  { id: 'core-3', title: 'ความมุ่งมั่นให้เกิดผลสำเร็จของงาน', weight: 15, expectedLevel: 3 },
-  { id: 'core-4', title: 'การทำงานเป็นทีม', weight: 15, expectedLevel: 3 },
-  { id: 'core-5', title: 'จิตสำนึกองค์กร', weight: 15, expectedLevel: 3 },
-  { id: 'core-6', title: 'การพัฒนางานอย่างต่อเนื่อง', weight: 15, expectedLevel: 3 },
+  {
+    id: 'core-1',
+    title: 'ความใฝ่เรียนรู้',
+    weight: 20,
+    expectedLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 2,
+      'ชำนาญการ': 3,
+      'ชำนาญการพิเศษ': 4,
+    },
+  },
+  {
+    id: 'core-2',
+    title: 'คุณธรรมและความซื่อสัตย์',
+    weight: 20,
+    expectedLevel: 5,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 5,
+    },
+  },
+  {
+    id: 'core-3',
+    title: 'ความมุ่งมั่นให้เกิดผลสำเร็จของงาน',
+    weight: 15,
+    expectedLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 2,
+      'ชำนาญการ': 3,
+      'ชำนาญการพิเศษ': 4,
+    },
+  },
+  {
+    id: 'core-4',
+    title: 'การทำงานเป็นทีม',
+    weight: 15,
+    expectedLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 2,
+      'ชำนาญการ': 3,
+      'ชำนาญการพิเศษ': 4,
+    },
+  },
+  {
+    id: 'core-5',
+    title: 'จิตสำนึกองค์กร',
+    weight: 15,
+    expectedLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 2,
+      'ชำนาญการ': 3,
+      'ชำนาญการพิเศษ': 4,
+    },
+  },
+  {
+    id: 'core-6',
+    title: 'การพัฒนางานอย่างต่อเนื่อง',
+    weight: 15,
+    expectedLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 2,
+      'ชำนาญการ': 3,
+      'ชำนาญการพิเศษ': 4,
+    },
+  },
 ];
 
 // 20. สมรรถนะตามตำแหน่งงานมาตรฐาน (Default Functional Competencies by Position)

@@ -303,382 +303,401 @@ export default function IDPSkillMapPage() {
       {/* 2. Header Hero Section */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #312E81 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
-          padding: '1.75rem 2rem',
-          borderRadius: '1.25rem',
+          padding: '2.5rem 2rem 2.25rem',
+          borderRadius: '1.5rem',
           marginBottom: '1.75rem',
-          boxShadow: '0 15px 30px -10px rgba(15, 23, 42, 0.4)',
+          boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.4)',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Glow effect */}
+        {/* Background decorative circles */}
         <div
           style={{
             position: 'absolute',
-            top: '-50%',
-            right: '-10%',
-            width: '320px',
-            height: '320px',
+            width: '400px',
+            height: '400px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(99, 102, 241, 0) 70%)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            top: '-150px',
+            right: '-100px',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            width: '260px',
+            height: '260px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.04)',
+            bottom: '-100px',
+            left: '10%',
             pointerEvents: 'none',
           }}
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
-          <div>
-
-
-            <h1 style={{ margin: 0, fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Compass size={28} color="#A5B4FC" />
-              <span>แผนที่ความรู้และทักษะบุคลากร (Knowledge & Skill Map)</span>
-            </h1>
-            <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: '#CBD5E1', maxWidth: '780px' }}>
-              ประเมินความรู้และทักษะ 4 ด้านงาน โครงสร้าง 3 ระดับ วิเคราะห์ช่องว่างและศักยภาพเชื่อมโยงกับวิสัยทัศน์ &ldquo;{ICIT_VISION}&rdquo;
-            </p>
-          </div>
-
-          {/* Action Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {/* Year Selector */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Top Pill & Action Controls */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              marginBottom: '1.25rem',
+            }}
+          >
             <div
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                borderRadius: '10px',
-                padding: '4px 10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 12px',
+                borderRadius: '999px',
+                background: 'rgba(249, 115, 22, 0.25)',
+                color: '#FED7AA',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+              }}
+            >
+              <Sparkles size={14} color="#FB923C" />
+              <span>HUMAN RESOURCE DEVELOPMENT SYSTEM &bull; KNOWLEDGE &amp; SKILL MAP</span>
+            </div>
+
+            {/* Fiscal Year & Top Header Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '4px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <Calendar size={15} color="#FB923C" />
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#CBD5E1' }}>ปีงบประมาณ:</span>
+                <select
+                  value={fiscalYear}
+                  onChange={(e) => setFiscalYear(e.target.value)}
+                  style={{
+                    background: '#FFFFFF',
+                    color: '#1E293B',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {['2567', '2568', '2569', '2570', '2571', '2572'].map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rating Scale Button */}
+              <button
+                type="button"
+                onClick={() => setIsRatingModalOpen(true)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="ดูคำอธิบายเกณฑ์ระดับคะแนน 0 - 5"
+              >
+                <Info size={14} color="#FB923C" />
+                <span>เกณฑ์คะแนน (0-5)</span>
+              </button>
+
+              {/* Org Radar & AI Overview Button */}
+              <button
+                type="button"
+                onClick={() => setIsOrgRadarModalOpen(true)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="ดู Spider Radar และบทวิเคราะห์ศักยภาพภาพรวมของทั้งองค์กร"
+              >
+                <TrendingUp size={14} color="#38BDF8" />
+                <span>Radar &amp; AI ภาพรวมสำนักฯ</span>
+              </button>
+
+              {/* Export to Excel Button */}
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="ส่งออกผลการประเมินทักษะทั้งหมดเป็นไฟล์ Excel (.xlsx)"
+              >
+                <FileSpreadsheet size={14} color="#4ADE80" />
+                <span>ส่งออก Excel</span>
+              </button>
+
+              {/* HR Config Button */}
+              {isHrOrAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfigModalOpen(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#FFFFFF',
+                    padding: '5px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="ตั้งค่าโครงสร้างความรู้และทักษะ"
+                >
+                  <Settings size={14} color="#FB923C" />
+                  <span>ตั้งค่าโครงสร้าง (HR)</span>
+                </button>
+              )}
+
+              {/* Start Self Assessment Button */}
+              {currentPersonnel ? (
+                <button
+                  type="button"
+                  onClick={handleOpenSelfAssessment}
+                  style={{
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '6px 16px',
+                    borderRadius: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
+                  }}
+                >
+                  <Edit3 size={15} />
+                  <span>ประเมินตนเอง (ปี {fiscalYear})</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  style={{
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '6px 16px',
+                    borderRadius: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
+                  }}
+                >
+                  <LogIn size={15} />
+                  <span>เข้าสู่ระบบเพื่อประเมิน</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Title and Subtitle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.5rem' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
               }}
             >
-              <Calendar size={15} color="#C7D2FE" />
-              <span style={{ fontSize: '0.75rem', color: '#E2E8F0', fontWeight: 600 }}>ปีงบ:</span>
-              <select
-                value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
+              <Compass size={28} color="#FFFFFF" />
+            </div>
+            <div>
+              <h1
                 style={{
-                  backgroundColor: '#FFFFFF',
-                  color: '#1E1B4B',
-                  border: 'none',
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.85rem',
+                  fontSize: 'clamp(1.5rem, 3vw, 2.2rem)',
                   fontWeight: 800,
-                  cursor: 'pointer',
-                }}
-              >
-                {[2567, 2568, 2569, 2570, 2571].map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Rating Scale Button */}
-            <button
-              type="button"
-              onClick={() => setIsRatingModalOpen(true)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                color: '#FFFFFF',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                padding: '7px 14px',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease',
-              }}
-              title="ดูคำอธิบายเกณฑ์ระดับคะแนน 0 - 5"
-            >
-              <Info size={15} color="#C7D2FE" />
-              <span>เกณฑ์ระดับคะแนน (0-5)</span>
-            </button>
-
-            {/* Org Overview Radar & AI Button */}
-            <button
-              type="button"
-              onClick={() => setIsOrgRadarModalOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '7px 14px',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 4px 10px rgba(99, 102, 241, 0.35)',
-              }}
-              title="ดู Spider Radar และบทวิเคราะห์ศักยภาพภาพรวมของทั้งองค์กร"
-            >
-              <TrendingUp size={15} />
-              <span>Radar & AI ภาพรวมสำนักฯ</span>
-            </button>
-
-            {/* Export to Excel Button */}
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '7px 14px',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
-              }}
-              title="ส่งออกผลการประเมินทักษะทั้งหมดเป็นไฟล์ Excel (.xlsx)"
-            >
-              <FileSpreadsheet size={15} />
-              <span>ส่งออก Excel</span>
-            </button>
-
-            {/* HR Config Button */}
-            {isHrOrAdmin && (
-              <button
-                type="button"
-                onClick={() => setIsConfigModalOpen(true)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  margin: 0,
+                  letterSpacing: '-0.025em',
+                  lineHeight: 1.2,
                   color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  padding: '7px 14px',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-                title="ตั้งค่าโครงสร้างความรู้และทักษะ"
-              >
-                <Settings size={15} />
-                <span>ตั้งค่าโครงสร้าง (HR)</span>
-              </button>
-            )}
-
-            {/* Start Self Assessment Button */}
-            {currentPersonnel ? (
-              <button
-                type="button"
-                onClick={handleOpenSelfAssessment}
-                style={{
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '8px 18px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 14px rgba(249, 115, 22, 0.4)',
                 }}
               >
-                <Edit3 size={16} />
-                <span>ทำการประเมินตนเอง (ปี {fiscalYear})</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                style={{
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '8px 18px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <LogIn size={16} />
-                <span>เข้าสู่ระบบเพื่อประเมิน</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. 4 KPI Summary Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.75rem',
-        }}
-      >
-        {/* Card 1: Total Staff */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#EFF6FF',
-              color: '#2563EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Users size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>บุคลากรทั้งหมด</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0F172A' }}>
-              {stats.totalStaff} <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>คน</span>
+                Knowledge &amp; Skill Map
+              </h1>
             </div>
           </div>
-        </div>
 
-        {/* Card 2: Evaluated Count */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
+          <p
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#DCFCE7',
-              color: '#16A34A',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: 'clamp(0.88rem, 1.6vw, 0.98rem)',
+              color: '#CBD5E1',
+              maxWidth: '820px',
+              lineHeight: 1.6,
+              margin: '0 0 1.75rem 0',
             }}
           >
-            <CheckCircle2 size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>ประเมินตนเองแล้ว</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#15803D' }}>
-              {stats.evaluatedCount}{' '}
-              <span style={{ fontSize: '0.8rem', color: '#16A34A', fontWeight: 700 }}>
-                ({stats.completionRate}%)
-              </span>
+            ศูนย์กลางการวิเคราะห์และประเมินทักษะความรู้ 4 ด้านงาน โครงสร้าง 3 ระดับ วิเคราะห์ช่องว่างและศักยภาพบุคลากรเชื่อมโยงกับวิสัยทัศน์ &ldquo;{ICIT_VISION}&rdquo;
+          </p>
+
+          {/* Dark Glassmorphic Quick Stat Counters inside Hero */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem',
+            }}
+          >
+            {/* Card 1: Total Staff */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <Users size={16} color="#FB923C" />
+                <span>บุคลากรทั้งหมด</span>
+              </div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                {stats.totalStaff} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>คน</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Card 3: Pending Count */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#FFFBEB',
-              color: '#D97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Clock size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>ยังไม่ประเมิน</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#B45309' }}>
-              {stats.pendingCount} <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>คน</span>
+            {/* Card 2: Evaluated Count */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <UserCheck size={16} color="#38BDF8" />
+                <span>ประเมินตนเองแล้ว</span>
+              </div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#7DD3FC', letterSpacing: '-0.02em' }}>
+                {stats.evaluatedCount} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>คน</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#CBD5E1', marginTop: '2px' }}>
+                (ความครอบคลุม {stats.completionRate}%)
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Card 4: Org Average Score */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#EEF2FF',
-              color: '#4F46E5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Award size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>คะแนนเฉลี่ยรวมสำนักฯ</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4F46E5' }}>
-              {stats.orgAverage}{' '}
-              <span style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600 }}>/ 5.00</span>
+            {/* Card 3: Pending Count */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <Clock size={16} color="#FBBF24" />
+                <span>ยังไม่ประเมิน</span>
+              </div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#FCD34D', letterSpacing: '-0.02em' }}>
+                {stats.pendingCount} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>คน</span>
+              </div>
+            </div>
+
+            {/* Card 4: Org Average */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '14px',
+                padding: '1.15rem 1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <Award size={16} color="#4ADE80" />
+                <span>คะแนนเฉลี่ยรวมสำนักฯ</span>
+              </div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#86EFAC', letterSpacing: '-0.02em' }}>
+                {stats.orgAverage} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#94A3B8' }}>/ 5.00</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 4. Filter & Search Controls */}
+      {/* 3. Filter & Search Controls */}
       <div
         style={{
           backgroundColor: '#FFFFFF',
@@ -718,9 +737,9 @@ export default function IDPSkillMapPage() {
                 style={{
                   padding: '7px 16px',
                   borderRadius: '999px',
-                  border: isActive ? '1.5px solid #4F46E5' : '1px solid #E2E8F0',
-                  backgroundColor: isActive ? '#EEF2FF' : '#FFFFFF',
-                  color: isActive ? '#4F46E5' : '#475569',
+                  border: isActive ? '1.5px solid #EA580C' : '1px solid #E2E8F0',
+                  backgroundColor: isActive ? '#FFF7ED' : '#FFFFFF',
+                  color: isActive ? '#EA580C' : '#475569',
                   fontSize: '0.82rem',
                   fontWeight: isActive ? 800 : 600,
                   cursor: 'pointer',
@@ -786,7 +805,7 @@ export default function IDPSkillMapPage() {
         </div>
       </div>
 
-      {/* 5. Main Evaluations Table */}
+      {/* 4. Main Evaluations Table */}
       <div
         style={{
           backgroundColor: '#FFFFFF',
@@ -832,11 +851,11 @@ export default function IDPSkillMapPage() {
                       key={pers.id || idx}
                       style={{
                         borderBottom: '1px solid #F1F5F9',
-                        backgroundColor: isSelf ? '#F8FAFC' : '#FFFFFF',
+                        backgroundColor: isSelf ? '#FFFBF7' : '#FFFFFF',
                         transition: 'background-color 0.15s ease',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isSelf ? '#EEF2FF' : '#F8FAFC')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isSelf ? '#F8FAFC' : '#FFFFFF')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isSelf ? '#FFF7ED' : '#F8FAFC')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isSelf ? '#FFFBF7' : '#FFFFFF')}
                     >
                       {/* 1. ลำดับ */}
                       <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748B', fontWeight: 600 }}>
@@ -858,8 +877,8 @@ export default function IDPSkillMapPage() {
                                 width: '38px',
                                 height: '38px',
                                 borderRadius: '50%',
-                                backgroundColor: '#EEF2FF',
-                                color: '#4F46E5',
+                                backgroundColor: isSelf ? '#FFEDD5' : '#F1F5F9',
+                                color: isSelf ? '#EA580C' : '#64748B',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -876,7 +895,7 @@ export default function IDPSkillMapPage() {
                               {isSelf && (
                                 <span
                                   style={{
-                                    backgroundColor: '#4F46E5',
+                                    backgroundColor: '#F97316',
                                     color: '#FFFFFF',
                                     fontSize: '0.65rem',
                                     fontWeight: 700,
@@ -918,7 +937,7 @@ export default function IDPSkillMapPage() {
                             <span style={{ fontWeight: 700, color: hasStarted ? '#0F172A' : '#94A3B8' }}>
                               {summ.completedCount} / {totalSubSkillsCount} รายการ
                             </span>
-                            <span style={{ fontWeight: 800, color: isCompleted ? '#16A34A' : '#4F46E5' }}>
+                            <span style={{ fontWeight: 800, color: isCompleted ? '#16A34A' : '#EA580C' }}>
                               {summ.completionPercentage}%
                             </span>
                           </div>
@@ -927,7 +946,7 @@ export default function IDPSkillMapPage() {
                               style={{
                                 height: '100%',
                                 width: `${summ.completionPercentage}%`,
-                                backgroundColor: isCompleted ? '#16A34A' : '#4F46E5',
+                                backgroundColor: isCompleted ? '#16A34A' : '#F97316',
                                 borderRadius: '999px',
                               }}
                             />
@@ -943,16 +962,17 @@ export default function IDPSkillMapPage() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
-                              backgroundColor: '#EEF2FF',
-                              color: '#4F46E5',
+                              backgroundColor: '#FFF7ED',
+                              color: '#EA580C',
                               padding: '4px 10px',
                               borderRadius: '8px',
                               fontWeight: 900,
                               fontSize: '0.9rem',
+                              border: '1px solid #FFEDD5',
                             }}
                           >
                             <span>{summ.overallAverage}</span>
-                            <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>/ 5</span>
+                            <span style={{ fontSize: '0.7rem', color: '#FB923C' }}>/ 5</span>
                           </div>
                         ) : (
                           <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>-</span>
@@ -973,7 +993,7 @@ export default function IDPSkillMapPage() {
                                 type="button"
                                 onClick={handleOpenSelfAssessment}
                                 style={{
-                                  backgroundColor: '#4F46E5',
+                                  backgroundColor: '#F97316',
                                   color: '#FFFFFF',
                                   border: 'none',
                                   padding: '5px 12px',
@@ -984,6 +1004,7 @@ export default function IDPSkillMapPage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
+                                  boxShadow: '0 2px 6px rgba(249, 115, 22, 0.25)',
                                 }}
                               >
                                 <Edit3 size={13} />
@@ -994,9 +1015,9 @@ export default function IDPSkillMapPage() {
                                 type="button"
                                 onClick={() => handleOpenRadarModal(pers, true)}
                                 style={{
-                                  backgroundColor: '#EEF2FF',
-                                  color: '#4F46E5',
-                                  border: '1px solid #C7D2FE',
+                                  backgroundColor: '#FFF7ED',
+                                  color: '#EA580C',
+                                  border: '1px solid #FED7AA',
                                   padding: '5px 10px',
                                   borderRadius: '6px',
                                   fontSize: '0.78rem',
@@ -1009,7 +1030,7 @@ export default function IDPSkillMapPage() {
                                 title="ดู Spider Radar & AI Analysis"
                               >
                                 <Sparkles size={13} color="#EA580C" />
-                                <span>Radar & AI</span>
+                                <span>Radar &amp; AI</span>
                               </button>
                             </>
                           ) : (
@@ -1030,8 +1051,8 @@ export default function IDPSkillMapPage() {
                                 gap: '4px',
                               }}
                             >
-                              <Eye size={13} color="#4F46E5" />
-                              <span>ดูผล & Radar</span>
+                              <Eye size={13} color="#F97316" />
+                              <span>ดูผล &amp; Radar</span>
                             </button>
                           )}
                         </div>

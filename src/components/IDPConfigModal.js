@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   POSITIONS,
+  POSITION_LEVELS,
   DEFAULT_IDP_CORE_COMPETENCIES,
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
@@ -80,6 +81,11 @@ export default function IDPConfigModal({
       title: '',
       weight: 15,
       expectedLevel: 3,
+      expectedLevels: {
+        'ปฏิบัติการ': 2,
+        'ชำนาญการ': 3,
+        'ชำนาญการพิเศษ': 4,
+      },
     };
     setCoreCompetencies([...coreCompetencies, newItem]);
   };
@@ -87,6 +93,26 @@ export default function IDPConfigModal({
   const handleUpdateCoreItem = (index, field, value) => {
     const updated = [...coreCompetencies];
     updated[index] = { ...updated[index], [field]: value };
+    setCoreCompetencies(updated);
+  };
+
+  const handleUpdateCoreExpectedLevel = (index, levelKey, value) => {
+    const updated = [...coreCompetencies];
+    const currentItem = updated[index];
+    const currentExpectedLevels = currentItem.expectedLevels || {
+      'ปฏิบัติการ': currentItem.expectedLevel || 2,
+      'ชำนาญการ': currentItem.expectedLevel || 3,
+      'ชำนาญการพิเศษ': currentItem.expectedLevel || 4,
+    };
+    const numVal = Number(value);
+    updated[index] = {
+      ...currentItem,
+      expectedLevel: levelKey === 'ชำนาญการ' ? numVal : (currentItem.expectedLevel || numVal),
+      expectedLevels: {
+        ...currentExpectedLevels,
+        [levelKey]: numVal,
+      },
+    };
     setCoreCompetencies(updated);
   };
 
@@ -540,92 +566,170 @@ export default function IDPConfigModal({
               </div>
 
               {/* Table */}
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                      <th style={{ padding: '8px 10px', width: '40px', textAlign: 'center' }}>#</th>
-                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>ชื่อสมรรถนะหลัก</th>
-                      <th style={{ padding: '8px 10px', width: '130px', textAlign: 'center' }}>น้ำหนักคะแนน (1)</th>
-                      <th style={{ padding: '8px 10px', width: '150px', textAlign: 'center' }}>ระดับคาดหวัง (2)</th>
-                      <th style={{ padding: '8px 6px', width: '50px', textAlign: 'center' }}></th>
+                      <th rowSpan={2} style={{ padding: '8px 10px', width: '36px', textAlign: 'center' }}>#</th>
+                      <th rowSpan={2} style={{ padding: '8px 10px', textAlign: 'left', minWidth: '220px' }}>ชื่อสมรรถนะหลัก (Core Competency)</th>
+                      <th rowSpan={2} style={{ padding: '8px 10px', width: '100px', textAlign: 'center' }}>น้ำหนัก (1)</th>
+                      <th colSpan={3} style={{ padding: '6px 10px', textAlign: 'center', background: '#F1F5F9', borderBottom: '1px solid #CBD5E1', fontWeight: 800, color: '#1E293B' }}>
+                        ระดับค่าคาดหวังแยกตามระดับตำแหน่ง (2)
+                      </th>
+                      <th rowSpan={2} style={{ padding: '8px 6px', width: '45px', textAlign: 'center' }}></th>
+                    </tr>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.75rem' }}>
+                      <th style={{ padding: '6px 6px', width: '100px', textAlign: 'center', background: '#F0F9FF' }}>
+                        <span style={{ color: '#0369A1', fontWeight: 700 }}>ปฏิบัติการ</span>
+                      </th>
+                      <th style={{ padding: '6px 6px', width: '100px', textAlign: 'center', background: '#F0FDF4' }}>
+                        <span style={{ color: '#15803D', fontWeight: 700 }}>ชำนาญการ</span>
+                      </th>
+                      <th style={{ padding: '6px 6px', width: '110px', textAlign: 'center', background: '#FAF5FF' }}>
+                        <span style={{ color: '#7E22CE', fontWeight: 700 }}>ชำนาญการพิเศษ</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {coreCompetencies.map((item, idx) => (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '8px', textAlign: 'center', color: '#94A3B8', fontWeight: 700 }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: '6px 8px' }}>
-                          <input
-                            type="text"
-                            value={item.title}
-                            onChange={(e) => handleUpdateCoreItem(idx, 'title', e.target.value)}
-                            placeholder="ระบุชื่อสมรรถนะหลัก..."
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                          <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={item.weight}
-                            onChange={(e) => handleUpdateCoreItem(idx, 'weight', Number(e.target.value))}
-                            style={{
-                              width: '80px',
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                              textAlign: 'center',
-                              fontWeight: 700,
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                          <select
-                            value={item.expectedLevel}
-                            onChange={(e) => handleUpdateCoreItem(idx, 'expectedLevel', Number(e.target.value))}
-                            style={{
-                              padding: '5px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {[1, 2, 3, 4, 5].map((lvl) => (
-                              <option key={lvl} value={lvl}>
-                                ระดับ {lvl}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={{ padding: '6px', textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCoreItem(idx)}
-                            disabled={coreCompetencies.length <= 1}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: coreCompetencies.length <= 1 ? '#CBD5E1' : '#EF4444',
-                              cursor: coreCompetencies.length <= 1 ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {coreCompetencies.map((item, idx) => {
+                      const expLevels = item.expectedLevels || {
+                        'ปฏิบัติการ': item.expectedLevel || 2,
+                        'ชำนาญการ': item.expectedLevel || 3,
+                        'ชำนาญการพิเศษ': item.expectedLevel || 4,
+                      };
+
+                      return (
+                        <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px', textAlign: 'center', color: '#94A3B8', fontWeight: 700 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => handleUpdateCoreItem(idx, 'title', e.target.value)}
+                              placeholder="ระบุชื่อสมรรถนะหลัก..."
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '0.8rem',
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={item.weight}
+                              onChange={(e) => handleUpdateCoreItem(idx, 'weight', Number(e.target.value))}
+                              style={{
+                                width: '70px',
+                                padding: '6px 6px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '0.8rem',
+                                textAlign: 'center',
+                                fontWeight: 700,
+                              }}
+                            />
+                          </td>
+
+                          {/* 1. ปฏิบัติการ */}
+                          <td style={{ padding: '6px 6px', textAlign: 'center', background: '#F8FAFC' }}>
+                            <select
+                              value={expLevels['ปฏิบัติการ'] ?? 2}
+                              onChange={(e) => handleUpdateCoreExpectedLevel(idx, 'ปฏิบัติการ', e.target.value)}
+                              style={{
+                                padding: '5px 6px',
+                                borderRadius: '6px',
+                                border: '1px solid #BAE6FD',
+                                backgroundColor: '#F0F9FF',
+                                color: '#0369A1',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                width: '100%',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {[1, 2, 3, 4, 5].map((lvl) => (
+                                <option key={lvl} value={lvl}>
+                                  ระดับ {lvl}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* 2. ชำนาญการ */}
+                          <td style={{ padding: '6px 6px', textAlign: 'center', background: '#F8FAFC' }}>
+                            <select
+                              value={expLevels['ชำนาญการ'] ?? 3}
+                              onChange={(e) => handleUpdateCoreExpectedLevel(idx, 'ชำนาญการ', e.target.value)}
+                              style={{
+                                padding: '5px 6px',
+                                borderRadius: '6px',
+                                border: '1px solid #BBF7D0',
+                                backgroundColor: '#F0FDF4',
+                                color: '#15803D',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                width: '100%',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {[1, 2, 3, 4, 5].map((lvl) => (
+                                <option key={lvl} value={lvl}>
+                                  ระดับ {lvl}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* 3. ชำนาญการพิเศษ */}
+                          <td style={{ padding: '6px 6px', textAlign: 'center', background: '#F8FAFC' }}>
+                            <select
+                              value={expLevels['ชำนาญการพิเศษ'] ?? 4}
+                              onChange={(e) => handleUpdateCoreExpectedLevel(idx, 'ชำนาญการพิเศษ', e.target.value)}
+                              style={{
+                                padding: '5px 6px',
+                                borderRadius: '6px',
+                                border: '1px solid #E9D5FF',
+                                backgroundColor: '#FAF5FF',
+                                color: '#7E22CE',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                width: '100%',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {[1, 2, 3, 4, 5].map((lvl) => (
+                                <option key={lvl} value={lvl}>
+                                  ระดับ {lvl}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td style={{ padding: '6px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCoreItem(idx)}
+                              disabled={coreCompetencies.length <= 1}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: coreCompetencies.length <= 1 ? '#CBD5E1' : '#EF4444',
+                                cursor: coreCompetencies.length <= 1 ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr style={{ background: '#F8FAFC', fontWeight: 800 }}>
@@ -642,7 +746,7 @@ export default function IDPConfigModal({
                       >
                         {coreTotalWeight} / 100
                       </td>
-                      <td colSpan={2} style={{ padding: '10px', fontSize: '0.75rem', color: coreTotalWeight === 100 ? '#15803D' : '#DC2626' }}>
+                      <td colSpan={4} style={{ padding: '10px', fontSize: '0.75rem', color: coreTotalWeight === 100 ? '#15803D' : '#DC2626' }}>
                         {coreTotalWeight === 100 ? '✓ น้ำหนักคะแนนถูกต้อง (ครบ 100)' : '⚠️ ต้องปรับน้ำหนักให้รวมเท่ากับ 100'}
                       </td>
                     </tr>

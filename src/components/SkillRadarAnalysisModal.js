@@ -151,7 +151,7 @@ export default function SkillRadarAnalysisModal({
         <div
           style={{
             padding: '1.25rem 1.75rem',
-            background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #312E81 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -164,7 +164,7 @@ export default function SkillRadarAnalysisModal({
               <img
                 src={personnel.avatarUrl}
                 alt=""
-                style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #6366F1' }}
+                style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #FB923C' }}
               />
             ) : (
               <div
@@ -172,13 +172,14 @@ export default function SkillRadarAnalysisModal({
                   width: '45px',
                   height: '45px',
                   borderRadius: '50%',
-                  background: 'rgba(99, 102, 241, 0.3)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 900,
                   fontSize: '1.2rem',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
                 }}
               >
                 {personnel.name?.charAt(0) || 'U'}
@@ -187,17 +188,17 @@ export default function SkillRadarAnalysisModal({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-                  Personalized Spider Radar & AI Analysis
+                  Personalized Spider Radar &amp; AI Analysis
                 </h3>
                 <span
                   style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.3)',
-                    color: '#C7D2FE',
+                    backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
                     fontSize: '0.75rem',
                     padding: '2px 8px',
                     borderRadius: '6px',
                     fontWeight: 700,
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
                   }}
                 >
                   ปีงบประมาณ {fiscalYear}
@@ -217,7 +218,7 @@ export default function SkillRadarAnalysisModal({
                   </span>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#94A3B8', marginTop: '2px' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#CBD5E1', marginTop: '2px' }}>
                 {personnel.name} &bull; {personnel.position} &bull; {personnel.department}
               </p>
             </div>
