@@ -202,22 +202,23 @@ export default function IDPPreviewModal({
           className="printable-idp-document"
         >
           {/* Header Title */}
-          <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-            <h3 style={{ margin: '0 0 4px 0', fontSize: '12pt', fontWeight: 'bold' }}>
+          <div className="idp-header-title" style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: '0 0 2px 0', fontSize: '11pt', fontWeight: 'bold' }}>
               แบบวิเคราะห์ความต้องการจำเป็นเพื่อจัดทำแผนพัฒนาบุคลากรรายบุคคล (IDP)
             </h3>
-            <div style={{ fontSize: '10pt', color: '#333333' }}>
+            <div style={{ fontSize: '9pt', color: '#333333' }}>
               สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ ประจำปีงบประมาณ {record.fiscalYear}
             </div>
           </div>
 
           {/* Personnel Information Line */}
           <div
+            className="idp-personnel-line"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginBottom: '1rem',
-              fontSize: '10pt',
+              marginBottom: '0.65rem',
+              fontSize: '9.5pt',
               fontWeight: 600,
             }}
           >
@@ -246,7 +247,7 @@ export default function IDPPreviewModal({
               {/* Row 1 Header */}
               <tr style={{ backgroundColor: '#F8F9FA' }}>
                 <th
-                  rowSpan={3}
+                  rowSpan={4}
                   style={{
                     border: '1px solid #000000',
                     padding: '4px',
@@ -257,11 +258,11 @@ export default function IDPPreviewModal({
                   ลำดับ
                 </th>
                 <th
-                  rowSpan={3}
+                  rowSpan={4}
                   style={{
                     border: '1px solid #000000',
-                    padding: '6px',
-                    width: '210px',
+                    padding: '4px 6px',
+                    width: '190px',
                     textAlign: 'center',
                     verticalAlign: 'middle',
                   }}
@@ -269,11 +270,11 @@ export default function IDPPreviewModal({
                   ประเภทของสมรรถนะ<br />(Type of Competency)
                 </th>
                 <th
-                  rowSpan={3}
+                  rowSpan={4}
                   style={{
                     border: '1px solid #000000',
                     padding: '4px',
-                    width: '45px',
+                    width: '40px',
                     verticalAlign: 'middle',
                   }}
                 >
@@ -294,28 +295,32 @@ export default function IDPPreviewModal({
               <tr style={{ backgroundColor: '#F8F9FA' }}>
                 <th
                   colSpan={5}
+                  rowSpan={2}
                   style={{
                     border: '1px solid #000000',
-                    padding: '2px',
+                    padding: '3px',
+                    verticalAlign: 'middle',
                   }}
                 >
                   ระดับคาดหวังที่กำหนด (2)
                 </th>
                 <th
                   colSpan={2}
+                  rowSpan={2}
                   style={{
                     border: '1px solid #000000',
-                    padding: '2px',
+                    padding: '3px',
+                    verticalAlign: 'middle',
                   }}
                 >
                   ค่าคะแนนคาดหวัง(5) และที่ประเมินได้(6)
                 </th>
                 <th
-                  rowSpan={2}
+                  rowSpan={3}
                   style={{
                     border: '1px solid #000000',
                     padding: '2px',
-                    width: '45px',
+                    width: '42px',
                     verticalAlign: 'middle',
                   }}
                 >
@@ -325,14 +330,36 @@ export default function IDPPreviewModal({
                   colSpan={10}
                   style={{
                     border: '1px solid #000000',
-                    padding: '2px',
+                    padding: '3px',
                   }}
                 >
                   ผลการประเมิน
                 </th>
               </tr>
 
-              {/* Row 3 Subheaders */}
+              {/* Row 3 Header: ตนเอง vs หัวหน้า */}
+              <tr style={{ backgroundColor: '#F8F9FA' }}>
+                <th
+                  colSpan={5}
+                  style={{
+                    border: '1px solid #000000',
+                    padding: '2px',
+                  }}
+                >
+                  ตนเอง (3)
+                </th>
+                <th
+                  colSpan={5}
+                  style={{
+                    border: '1px solid #000000',
+                    padding: '2px',
+                  }}
+                >
+                  หัวหน้า (4)
+                </th>
+              </tr>
+
+              {/* Row 4 Subheaders: 1-5 levels */}
               <tr style={{ backgroundColor: '#F8F9FA' }}>
                 {/* Levels 1-5 for Expected */}
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -341,27 +368,25 @@ export default function IDPPreviewModal({
                   </th>
                 ))}
                 {/* Expected Score Formula */}
-                <th style={{ border: '1px solid #000000', padding: '2px', width: '50px', fontSize: '7.5pt' }}>
+                <th style={{ border: '1px solid #000000', padding: '2px', width: '46px', fontSize: '7pt' }}>
                   คาดหวัง(5)<br />(1) × (2)
                 </th>
                 {/* Evaluated Score Formula */}
-                <th style={{ border: '1px solid #000000', padding: '2px', width: '55px', fontSize: '7pt' }}>
+                <th style={{ border: '1px solid #000000', padding: '2px', width: '50px', fontSize: '6.5pt' }}>
                   ประเมินได้(6)<br />{'[(3)+(4)]/2'}×(1)
                 </th>
                 {/* Levels 1-5 for Self Assessment */}
-                <th colSpan={5} style={{ border: '1px solid #000000', padding: '2px' }}>
-                  ตนเอง (3)
-                  <div style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #000000', marginTop: '2px' }}>
-                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                  </div>
-                </th>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <th key={`self-${n}`} style={{ border: '1px solid #000000', padding: '2px', width: '18px' }}>
+                    {n}
+                  </th>
+                ))}
                 {/* Levels 1-5 for Supervisor Assessment */}
-                <th colSpan={5} style={{ border: '1px solid #000000', padding: '2px' }}>
-                  หัวหน้า (4)
-                  <div style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #000000', marginTop: '2px' }}>
-                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                  </div>
-                </th>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <th key={`sup-${n}`} style={{ border: '1px solid #000000', padding: '2px', width: '18px' }}>
+                    {n}
+                  </th>
+                ))}
               </tr>
             </thead>
 
@@ -501,20 +526,21 @@ export default function IDPPreviewModal({
           </table>
 
           {/* Formulas & Footnote */}
-          <div style={{ fontSize: '8pt', marginTop: '8px', lineHeight: 1.5, color: '#333333' }}>
+          <div className="idp-footnote" style={{ fontSize: '7.5pt', marginTop: '6px', lineHeight: 1.3, color: '#333333' }}>
             <div>* ที่ประเมินได้(6) = {'{ผลตนเอง(3) + ผลหัวหน้า(4)}'} ÷ 2 × น้ำหนักคะแนน(1)</div>
             <div>* หมายเหตุ ระดับความคาดหวังมาจากสมรรถนะหลักของมหาวิทยาลัย สามารถดูได้ที่ เว็บไซต์ กองบริหารและจัดการทรัพยากรมนุษย์</div>
           </div>
 
           {/* Signatures Blocks Matching Sample Form */}
           <div
+            className="idp-signature-block"
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: '2rem',
-              marginTop: '1.75rem',
-              fontSize: '9pt',
-              lineHeight: 1.8,
+              marginTop: '1rem',
+              fontSize: '8.5pt',
+              lineHeight: 1.5,
             }}
           >
             {/* Left: Self */}
@@ -524,29 +550,29 @@ export default function IDPPreviewModal({
                 <span
                   style={{
                     borderBottom: '1px dotted #000000',
-                    minWidth: '160px',
+                    minWidth: '150px',
                     display: 'inline-block',
                     textAlign: 'center',
                     fontWeight: selfSign?.signed ? 'bold' : 'normal',
-                    padding: '0 8px',
+                    padding: '0 6px',
                   }}
                 >
                   {selfSign?.signed ? selfSign.name : ''}
                 </span>
                 <span>(ผู้รับการประเมิน)</span>
               </div>
-              <div style={{ marginTop: '3px' }}>
+              <div style={{ marginTop: '2px' }}>
                 ( &nbsp;{selfSign?.signed ? selfSign.name : record.personnelName || '...................................................'} &nbsp;)
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '3px', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px', whiteSpace: 'nowrap' }}>
                 <span>วันที่</span>
                 <span
                   style={{
                     borderBottom: '1px dotted #000000',
-                    minWidth: '160px',
+                    minWidth: '150px',
                     display: 'inline-block',
                     textAlign: 'center',
-                    padding: '0 8px',
+                    padding: '0 6px',
                   }}
                 >
                   {selfSign?.signed ? selfSign.signedAt : ''}
@@ -565,17 +591,17 @@ export default function IDPPreviewModal({
                     display: 'inline-block',
                     textAlign: 'center',
                     fontWeight: (headSign?.signed || deputySign?.signed) ? 'bold' : 'normal',
-                    padding: '0 8px',
+                    padding: '0 6px',
                   }}
                 >
                   {headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : ''}
                 </span>
-                <span style={{ fontSize: '8.5pt' }}>(ผู้ประเมิน/ผู้บังคับบัญชาเหนือขึ้นไป)</span>
+                <span style={{ fontSize: '8pt' }}>(ผู้ประเมิน/ผู้บังคับบัญชาเหนือขึ้นไป)</span>
               </div>
-              <div style={{ marginTop: '3px' }}>
+              <div style={{ marginTop: '2px' }}>
                 ( &nbsp;{headSign?.signed ? headSign.name : deputySign?.signed ? deputySign.name : record.departmentHead?.name || record.supervisingDeputyDirector?.name || '...................................................'} &nbsp;)
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '3px', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px', whiteSpace: 'nowrap' }}>
                 <span>วันที่</span>
                 <span
                   style={{
@@ -583,7 +609,7 @@ export default function IDPPreviewModal({
                     minWidth: '150px',
                     display: 'inline-block',
                     textAlign: 'center',
-                    padding: '0 8px',
+                    padding: '0 6px',
                   }}
                 >
                   {headSign?.signed ? headSign.signedAt : deputySign?.signed ? deputySign.signedAt : ''}
@@ -599,12 +625,16 @@ export default function IDPPreviewModal({
         @media print {
           @page {
             size: A4 ${orientation};
-            margin: 8mm 10mm;
+            margin: ${orientation === 'landscape' ? '5mm 7mm' : '7mm 8mm'};
           }
           html, body {
             background: #ffffff !important;
             height: auto !important;
+            min-height: auto !important;
             overflow: visible !important;
+            font-size: 8pt !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           body * {
             visibility: hidden !important;
@@ -625,6 +655,46 @@ export default function IDPPreviewModal({
             border: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .printable-idp-document table {
+            font-size: ${orientation === 'landscape' ? '7.5pt' : '6.5pt'} !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .printable-idp-document th,
+          .printable-idp-document td {
+            padding: ${orientation === 'landscape' ? '2px 3px' : '1px 2px'} !important;
+            line-height: 1.15 !important;
+          }
+          .printable-idp-document .idp-header-title {
+            margin-bottom: 4px !important;
+          }
+          .printable-idp-document .idp-header-title h3 {
+            font-size: 10.5pt !important;
+            margin: 0 0 1px 0 !important;
+          }
+          .printable-idp-document .idp-header-title div {
+            font-size: 8.5pt !important;
+          }
+          .printable-idp-document .idp-personnel-line {
+            margin-bottom: 4px !important;
+            font-size: 8.5pt !important;
+          }
+          .printable-idp-document .idp-footnote {
+            margin-top: 3px !important;
+            font-size: 6.5pt !important;
+            line-height: 1.15 !important;
+          }
+          .printable-idp-document .idp-signature-block {
+            margin-top: 6px !important;
+            font-size: 7.5pt !important;
+            line-height: 1.25 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .no-print {
             display: none !important;
