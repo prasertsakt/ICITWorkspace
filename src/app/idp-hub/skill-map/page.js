@@ -47,6 +47,7 @@ import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
 import SkillRatingScaleModal from '@/components/SkillRatingScaleModal';
 import SkillAssessmentFormModal from '@/components/SkillAssessmentFormModal';
 import SkillRadarAnalysisModal from '@/components/SkillRadarAnalysisModal';
+import SkillOrgRadarAnalysisModal from '@/components/SkillOrgRadarAnalysisModal';
 import SkillMapConfigModal from '@/components/SkillMapConfigModal';
 
 export default function IDPSkillMapPage() {
@@ -70,10 +71,18 @@ export default function IDPSkillMapPage() {
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
+  const [isOrgRadarModalOpen, setIsOrgRadarModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [targetPersonnelForModal, setTargetPersonnelForModal] = useState(null);
   const [targetAssessmentForModal, setTargetAssessmentForModal] = useState(null);
   const [isModalSelfMode, setIsModalSelfMode] = useState(false);
+
+  // Filter out Executive personnel (บุคลากรที่ต้องทำการประเมิน ไม่รวม ผู้บริหาร)
+  const staffList = useMemo(() => {
+    return (personnelList || []).filter(
+      (p) => p.department !== 'คณะผู้บริหาร' && p.position !== 'ผู้บริหาร' && !p.isExecutive && p.status !== 'ลาออก'
+    );
+  }, [personnelList]);
 
   // Subscribe personnel list
   useEffect(() => {
@@ -144,15 +153,14 @@ export default function IDPSkillMapPage() {
     return assessments.find((a) => a.personnelId === currentPersonnel.id) || null;
   }, [assessments, currentPersonnel]);
 
-  // KPI Statistics
+  // KPI Statistics (คำนวณเฉพาะบุคลากรปฏิบัติงานจริง ไม่รวมผู้บริหาร)
   const stats = useMemo(() => {
-    const activeStaff = personnelList.filter((p) => p.status === 'ปกติ');
-    const totalStaff = activeStaff.length || personnelList.length || 1;
+    const totalStaff = staffList.length || 1;
 
     let evaluatedCount = 0;
     let totalScoreSum = 0;
 
-    personnelList.forEach((pers) => {
+    staffList.forEach((pers) => {
       const evalRec = assessments.find((a) => a.personnelId === pers.id);
       const summ = calculateAssessmentSummary(workAreas, evalRec?.ratings || {});
       if (summ.completedCount > 0) {
@@ -172,11 +180,11 @@ export default function IDPSkillMapPage() {
       completionRate: Math.min(100, completionRate),
       orgAverage,
     };
-  }, [personnelList, assessments, workAreas]);
+  }, [staffList, assessments, workAreas]);
 
-  // Filtered personnel table list
+  // Filtered personnel table list (ไม่รวมผู้บริหาร)
   const filteredPersonnel = useMemo(() => {
-    return personnelList.filter((pers) => {
+    return staffList.filter((pers) => {
       // Dept filter
       if (selectedDept !== 'ALL' && pers.department !== selectedDept) {
         return false;
@@ -209,7 +217,7 @@ export default function IDPSkillMapPage() {
 
       return true;
     });
-  }, [personnelList, selectedDept, quickFilter, searchQuery, assessments, workAreas, currentPersonnel]);
+  }, [staffList, selectedDept, quickFilter, searchQuery, assessments, workAreas, currentPersonnel]);
 
   // Open Self Assessment Modal
   const handleOpenSelfAssessment = () => {
@@ -241,7 +249,7 @@ export default function IDPSkillMapPage() {
     exportSkillMapToExcel({
       fiscalYear,
       workAreas,
-      personnelList,
+      personnelList: staffList,
       assessments,
     });
   };
@@ -419,6 +427,30 @@ export default function IDPSkillMapPage() {
             >
               <Info size={15} color="#C7D2FE" />
               <span>เกณฑ์ระดับคะแนน (0-5)</span>
+            </button>
+
+            {/* Org Overview Radar & AI Button */}
+            <button
+              type="button"
+              onClick={() => setIsOrgRadarModalOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 10px rgba(99, 102, 241, 0.35)',
+              }}
+              title="ดู Spider Radar และบทวิเคราะห์ศักยภาพภาพรวมของทั้งองค์กร"
+            >
+              <TrendingUp size={15} />
+              <span>Radar & AI ภาพรวมสำนักฯ</span>
             </button>
 
             {/* Export to Excel Button */}
@@ -1074,12 +1106,24 @@ export default function IDPSkillMapPage() {
         />
       )}
 
-      {/* 4. HR Config Modal */}
+      {/* 4. Org Overview Radar & AI Analysis Modal */}
+      <SkillOrgRadarAnalysisModal
+        isOpen={isOrgRadarModalOpen}
+        onClose={() => setIsOrgRadarModalOpen(false)}
+        fiscalYear={fiscalYear}
+        workAreas={workAreas}
+        personnelList={staffList}
+        assessments={assessments}
+        onExportExcel={handleExportExcel}
+      />
+
+      {/* 5. HR Config Modal */}
       <SkillMapConfigModal
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
         currentYear={Number(fiscalYear)}
         operatorName={currentPersonnel?.name || 'HR Officer'}
+        personnelList={staffList}
         onConfigSaved={() => loadYearData(fiscalYear)}
       />
     </div>

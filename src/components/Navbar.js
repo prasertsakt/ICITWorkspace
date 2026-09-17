@@ -141,14 +141,6 @@ export default function Navbar() {
                 </Link>
 
                 <Link
-                  href="/skill-map"
-                  className={`nav-link-item ${pathname.startsWith('/skill-map') ? 'active' : ''}`}
-                >
-                  <Compass size={16} />
-                  <span>Skill Map</span>
-                </Link>
-
-                <Link
                   href="/ims"
                   className={`nav-link-item ${pathname.startsWith('/ims') ? 'active' : ''}`}
                 >
@@ -356,18 +348,6 @@ export default function Navbar() {
                       <Target size={18} />
                     </div>
                     <span style={{ flex: 1 }}>IDP Hub</span>
-                    <ChevronRight size={16} opacity={0.4} />
-                  </Link>
-
-                  <Link
-                    href="/skill-map"
-                    className={`mobile-drawer-link ${pathname.startsWith('/skill-map') ? 'active' : ''}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div className="drawer-icon-box" style={{ color: '#0284C7' }}>
-                      <Compass size={18} />
-                    </div>
-                    <span style={{ flex: 1 }}>Knowledge & Skill Map</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 

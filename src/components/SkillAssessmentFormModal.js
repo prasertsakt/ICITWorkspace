@@ -291,7 +291,18 @@ export default function SkillAssessmentFormModal({
         </div>
 
         {/* Modal Scrollable Content (4 Work Areas) */}
-        <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div
+          style={{
+            padding: '1.5rem 1.75rem',
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {workAreas.map((area, aIdx) => {
             const areaSumm = summary.areaSummaries[area.id];
             const isOpen = activeAreaIdx === aIdx;

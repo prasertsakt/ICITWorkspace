@@ -386,6 +386,23 @@ export function subscribePersonnelList(callback) {
 }
 
 /**
+ * Synchronously retrieve the cached Personnel list
+ */
+export function getPersonnelListSync() {
+  if (typeof window === 'undefined') return [...ESSENTIAL_STAFF_RECORDS];
+  try {
+    initLocalStorage();
+    const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
+    if (raw) {
+      return JSON.parse(raw).filter((p) => !isDummyPersonnel(p));
+    }
+  } catch (e) {
+    console.error('getPersonnelListSync error', e);
+  }
+  return [...ESSENTIAL_STAFF_RECORDS];
+}
+
+/**
  * Subscribe to real-time changes of Departments list
  */
 export function subscribeDepartmentList(callback) {

@@ -173,5 +173,32 @@ service cloud.firestore {
         userEmail() == "jarucha.j@icit.kmutnb.ac.th"
       );
     }
+
+    // Rules for 'skill_map_configs' collection (Knowledge & Skill Map Master Hierarchy per Fiscal Year)
+    match /skill_map_configs/{configId} {
+      // All authenticated staff can read skill map structure
+      allow read: if isAuthenticated();
+
+      // Only HR Officer (jarucha) or Admin can write/update configuration
+      allow write: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
+      );
+    }
+
+    // Rules for 'skill_map_assessments' collection (Personnel Knowledge & Skill Map Self-Assessments)
+    match /skill_map_assessments/{assessmentId} {
+      // All authenticated staff can read assessments (including peer matrix and spider radar)
+      allow read: if isAuthenticated();
+
+      // Authenticated staff can create and update their self-assessment; Admin & HR can update
+      allow create, update: if isAuthenticated();
+
+      // Only HR Officer or Admin can delete assessment records
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
+      );
+    }
   }
 }

@@ -23,7 +23,7 @@ import {
   cloneSkillMapConfigFromYear,
   getAllAssessments,
 } from '@/lib/skillMapService';
-import { getPersonnelList } from '@/lib/storageService';
+import { getPersonnelListSync } from '@/lib/storageService';
 import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
 
 export default function SkillMapConfigModal({
@@ -31,6 +31,7 @@ export default function SkillMapConfigModal({
   onClose,
   currentYear,
   operatorName = 'เจ้าหน้าที่บุคลากร',
+  personnelList = [],
   onConfigSaved,
 }) {
   const [fiscalYear, setFiscalYear] = useState(currentYear || 2569);
@@ -190,7 +191,7 @@ export default function SkillMapConfigModal({
               type="button"
               onClick={() => {
                 const allAssessments = getAllAssessments(fiscalYear);
-                const pList = getPersonnelList();
+                const pList = (personnelList && personnelList.length > 0) ? personnelList : getPersonnelListSync();
                 exportSkillMapToExcel({
                   fiscalYear,
                   workAreas,
