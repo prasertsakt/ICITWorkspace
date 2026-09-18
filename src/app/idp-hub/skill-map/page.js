@@ -28,6 +28,7 @@ import {
   Lock,
   LogIn,
   AlertCircle,
+  Printer,
 } from 'lucide-react';
 import {
   getSkillMapConfig,
