@@ -376,7 +376,7 @@ export default function AdminManualEmailModal({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>เวลาที่ส่ง:</span>
-                <span>{new Date().toLocaleTimeString('th-TH')} น.</span>
+                <span>{new Date().toLocaleTimeString('th-TH', { hour12: false })} น.</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>การบันทึกประวัติ:</span>

@@ -115,13 +115,15 @@ export default function JDModal({
     if (nextTab) goToTab(nextTab.id);
   };
 
-  // 1. Auto-detect Head of Department (ผู้บังคับบัญชา)
-  const getDeptHeadInfo = (deptName) => {
-    if (!deptName) return null;
-    const cleanDept = deptName.trim();
+  // 1. Auto-detect Supervisor (ผู้บังคับบัญชา)
+  // หากเป็นหัวหน้าฝ่าย -> ให้ดึง "รองผู้อำนวยการที่กำกับดูแลฝ่าย" เป็นผู้บังคับบัญชาแทน
+  // หากเป็นบุคลากรทั่วไป -> ให้ดึง "หัวหน้าฝ่าย" เป็นผู้บังคับบัญชาตามปกติ
+  const getSupervisorInfo = (deptName, targetPerson = null) => {
+    const cleanDept = (deptName || targetPerson?.department || '').trim();
+    if (!cleanDept && !targetPerson) return null;
     const normDept = cleanDept.replace(/^ฝ่าย/, '').trim();
 
-    // Try matching with departmentList & personnelList
+    // Try matching with departmentList
     const matchedDept = departmentList.find((d) => {
       const dNorm = (d.name || '').replace(/^ฝ่าย/, '').trim();
       return (
@@ -132,12 +134,72 @@ export default function JDModal({
       );
     });
 
+    // Check if targetPerson is Head of Department (หัวหน้าฝ่าย)
+    const personId = targetPerson?.id;
+    const personName = targetPerson?.name || '';
+    const personPos = targetPerson?.position || '';
+    const personNote = targetPerson?.note || '';
+
+    const isHeadOfDept = Boolean(
+      (matchedDept?.headPersonnelId && personId && matchedDept.headPersonnelId === personId) ||
+      (matchedDept && departmentList.some((d) => d.id === matchedDept.id && d.headPersonnelId === personId)) ||
+      (personPos.includes('หัวหน้า') || personNote.includes('หัวหน้า')) ||
+      (KNOWN_DEPT_HEADS[cleanDept]?.name && KNOWN_DEPT_HEADS[cleanDept]?.name === personName) ||
+      (KNOWN_DEPT_HEADS[normDept]?.name && KNOWN_DEPT_HEADS[normDept]?.name === personName)
+    );
+
+    // CASE 1: บุคลากรเป็น "หัวหน้าฝ่าย" -> ดึง "รองผู้อำนวยการที่กำกับดูแลฝ่าย"
+    if (isHeadOfDept) {
+      // 1.1 Try finding supervising executive from matchedDept.supervisingExecutiveId
+      if (matchedDept?.supervisingExecutiveId) {
+        const exec = executiveList.find((e) => e.id === matchedDept.supervisingExecutiveId);
+        if (exec) {
+          return {
+            name: exec.name,
+            position: exec.position || 'รองผู้อำนวยการที่กำกับดูแลฝ่าย',
+            isDeputy: true,
+          };
+        }
+      }
+
+      // 1.2 Match รองผู้อำนวยการฝ่ายบริหาร or supervising deputy in executiveList
+      const deputyAdmin = executiveList.find(
+        (e) =>
+          e.email?.toLowerCase() === 'prasertsak.t@cit.kmutnb.ac.th' ||
+          (e.position?.includes('รองผู้อำนวยการ') && (e.position?.includes('บริหาร') || e.note?.includes('บริหาร')))
+      );
+      if (deputyAdmin) {
+        return {
+          name: deputyAdmin.name,
+          position: deputyAdmin.position || 'รองผู้อำนวยการฝ่ายบริหาร',
+          isDeputy: true,
+        };
+      }
+
+      const anyDeputy = executiveList.find((e) => e.position?.includes('รองผู้อำนวยการ'));
+      if (anyDeputy) {
+        return {
+          name: anyDeputy.name,
+          position: anyDeputy.position || 'รองผู้อำนวยการ',
+          isDeputy: true,
+        };
+      }
+
+      return {
+        name: 'รศ. ดร.ประเสริฐศักดิ์ เตียวงศ์สมบัติ',
+        position: 'รองผู้อำนวยการฝ่ายบริหาร',
+        isDeputy: true,
+      };
+    }
+
+    // CASE 2: บุคลากรทั่วไป -> ดึง "หัวหน้าฝ่าย"
     if (matchedDept?.headPersonnelId) {
       const headPerson = personnelList.find((p) => p.id === matchedDept.headPersonnelId);
       if (headPerson) {
         return {
           name: headPerson.name,
           position: headPerson.position || `หัวหน้า${matchedDept.name || cleanDept}`,
+          isDeputy: false,
         };
       }
     }
@@ -157,6 +219,7 @@ export default function JDModal({
       return {
         name: headInDept.name,
         position: headInDept.position,
+        isDeputy: false,
       };
     }
 
@@ -164,19 +227,36 @@ export default function JDModal({
     for (const [key, val] of Object.entries(KNOWN_DEPT_HEADS)) {
       const keyNorm = key.replace(/^ฝ่าย/, '').trim();
       if (cleanDept === key || normDept === keyNorm || cleanDept.includes(keyNorm) || key.includes(normDept)) {
-        return val;
+        return {
+          ...val,
+          isDeputy: false,
+        };
       }
     }
 
     return {
       name: 'นางสาวชาลินทร์ เกรียงสินยศ',
       position: 'หัวหน้าสำนักงานผู้อำนวยการ (นักวิชาการพัสดุ)',
+      isDeputy: false,
     };
   };
 
+  // Resolved target person for this JD
+  const targetPreparerPerson = useMemo(() => {
+    if (formData.personnelId) {
+      const found = personnelList.find((p) => p.id === formData.personnelId);
+      if (found) return found;
+    }
+    if (formData.personnelName) {
+      const found = personnelList.find((p) => p.name === formData.personnelName);
+      if (found) return found;
+    }
+    return currentPersonnel || null;
+  }, [formData.personnelId, formData.personnelName, personnelList, currentPersonnel]);
+
   const autoDeptHead = useMemo(() => {
-    return getDeptHeadInfo(formData.department);
-  }, [formData.department, departmentList, personnelList]);
+    return getSupervisorInfo(formData.department, targetPreparerPerson);
+  }, [formData.department, targetPreparerPerson, departmentList, personnelList, executiveList]);
 
   // 2. Auto-detect Director (ผู้อนุมัติ : ผู้อำนวยการสำนักคอมพิวเตอร์)
   const autoDirector = useMemo(() => {
@@ -254,7 +334,12 @@ export default function JDModal({
         (currentUser?.email ? currentUser.email.split('@')[0] : '') ||
         initialData.personnelName ||
         '';
-      const head = getDeptHeadInfo(initialData.department);
+
+      const resolvedPerson = initialData.personnelId
+        ? personnelList.find((p) => p.id === initialData.personnelId)
+        : personnelList.find((p) => p.name === initialData.personnelName) || currentPersonnel || { name: loginUserName };
+
+      const supervisor = getSupervisorInfo(initialData.department, resolvedPerson);
       const director = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
 
       // ผู้จัดทำ (Position By):
@@ -274,11 +359,11 @@ export default function JDModal({
         name: preparerName,
         date: initialData.signatures.preparedBy?.date || '',
       };
-      if (head) {
-        initialData.supervisorName = head.name;
-        initialData.supervisorPosition = head.position;
+      if (supervisor) {
+        initialData.supervisorName = supervisor.name;
+        initialData.supervisorPosition = supervisor.position;
         initialData.signatures.reviewedBy = {
-          name: head.name,
+          name: supervisor.name,
           date: initialData.signatures.reviewedBy?.date || '',
         };
       }
@@ -292,7 +377,7 @@ export default function JDModal({
       setErrorMsg('');
       setIsSubmitting(false);
     }
-  }, [isOpen, jdToEdit, currentPersonnel, currentUser, personnelList, isAdmin, autoDirector]);
+  }, [isOpen, jdToEdit, currentPersonnel, currentUser, personnelList, isAdmin, autoDirector, departmentList, executiveList]);
 
   if (!isOpen) return null;
 
@@ -300,7 +385,7 @@ export default function JDModal({
   const handleSelectPersonnel = (pId) => {
     const selected = personnelList.find((p) => p.id === pId);
     if (!selected) return;
-    const headForSelected = getDeptHeadInfo(selected.department);
+    const supervisorForSelected = getSupervisorInfo(selected.department, selected);
     setFormData((prev) => ({
       ...prev,
       personnelId: selected.id,
@@ -311,8 +396,8 @@ export default function JDModal({
       department: selected.department || prev.department,
       positionLevel: selected.positionLevel || prev.positionLevel,
       positionType: selected.personnelType || prev.positionType,
-      supervisorName: headForSelected?.name || prev.supervisorName,
-      supervisorPosition: headForSelected?.position || prev.supervisorPosition,
+      supervisorName: supervisorForSelected?.name || prev.supervisorName,
+      supervisorPosition: supervisorForSelected?.position || prev.supervisorPosition,
       signatures: {
         ...prev.signatures,
         preparedBy: {
@@ -320,7 +405,7 @@ export default function JDModal({
           date: prev.signatures?.preparedBy?.date || '',
         },
         reviewedBy: {
-          name: headForSelected?.name || prev.signatures?.reviewedBy?.name || '',
+          name: supervisorForSelected?.name || prev.signatures?.reviewedBy?.name || '',
           date: prev.signatures?.reviewedBy?.date || '',
         },
         approvedBy: {
@@ -337,7 +422,7 @@ export default function JDModal({
       (p) => p.name && (p.name.trim().toLowerCase() === nameVal.trim().toLowerCase() || p.name.includes(nameVal.trim()))
     );
     const deptToUse = matchedPerson?.department || formData.department;
-    const headForDept = getDeptHeadInfo(deptToUse);
+    const supervisorForDept = getSupervisorInfo(deptToUse, matchedPerson || { name: nameVal, department: deptToUse });
 
     setFormData((prev) => ({
       ...prev,
@@ -345,8 +430,8 @@ export default function JDModal({
       personnelId: matchedPerson ? matchedPerson.id : prev.personnelId,
       personnelEmail: matchedPerson ? (matchedPerson.email || prev.personnelEmail) : prev.personnelEmail,
       department: deptToUse || prev.department,
-      supervisorName: headForDept?.name || prev.supervisorName,
-      supervisorPosition: headForDept?.position || prev.supervisorPosition,
+      supervisorName: supervisorForDept?.name || prev.supervisorName,
+      supervisorPosition: supervisorForDept?.position || prev.supervisorPosition,
       signatures: {
         ...prev.signatures,
         preparedBy: {
@@ -354,7 +439,7 @@ export default function JDModal({
           date: prev.signatures?.preparedBy?.date || '',
         },
         reviewedBy: {
-          name: headForDept?.name || prev.signatures?.reviewedBy?.name || '',
+          name: supervisorForDept?.name || prev.signatures?.reviewedBy?.name || '',
           date: prev.signatures?.reviewedBy?.date || '',
         },
         approvedBy: {
@@ -367,16 +452,16 @@ export default function JDModal({
 
   // Handle department change in Tab 1
   const handleDepartmentChange = (newDept) => {
-    const newHead = getDeptHeadInfo(newDept);
+    const newSupervisor = getSupervisorInfo(newDept, targetPreparerPerson);
     setFormData((prev) => ({
       ...prev,
       department: newDept,
-      supervisorName: newHead?.name || '',
-      supervisorPosition: newHead?.position || '',
+      supervisorName: newSupervisor?.name || '',
+      supervisorPosition: newSupervisor?.position || '',
       signatures: {
         ...prev.signatures,
         reviewedBy: {
-          name: newHead?.name || '',
+          name: newSupervisor?.name || '',
           date: prev.signatures?.reviewedBy?.date || '',
         },
       },
@@ -1772,7 +1857,7 @@ export default function JDModal({
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#2563EB' }}>
                           <ShieldCheck size={10} />
-                          <span>Admin สามารถแก้ไขหรือเลือกผู้จัดทำได้ (ผู้บังคับบัญชาจะเปลี่ยนตามหัวหน้าฝ่ายอัตโนมัติ)</span>
+                          <span>Admin สามารถแก้ไขหรือเลือกผู้จัดทำได้ (ผู้บังคับบัญชาจะเปลี่ยนตามสายการบังคับบัญชาอัตโนมัติ)</span>
                         </div>
                       </>
                     ) : (
@@ -1829,7 +1914,7 @@ export default function JDModal({
                         }}
                       >
                         <Lock size={11} />
-                        อัตโนมัติตามหัวหน้าฝ่าย (แก้ไขไม่ได้)
+                        {autoDeptHead?.isDeputy ? 'อัตโนมัติตามรอง ผอ. ผู้กำกับดูแล (แก้ไขไม่ได้)' : 'อัตโนมัติตามหัวหน้าฝ่าย (แก้ไขไม่ได้)'}
                       </span>
                     </div>
 
@@ -1850,7 +1935,7 @@ export default function JDModal({
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748B' }}>
                       <Lock size={10} />
-                      <span>{autoDeptHead?.position ? `${autoDeptHead.position} (ไม่สามารถแก้ไขได้)` : 'ดึงชื่ออัตโนมัติตามหัวหน้าฝ่ายของผู้จัดทำ (ไม่สามารถแก้ไขได้)'}</span>
+                      <span>{autoDeptHead?.position ? `${autoDeptHead.position} (ไม่สามารถแก้ไขได้)` : 'ดึงชื่ออัตโนมัติตามสายการบังคับบัญชา (ไม่สามารถแก้ไขได้)'}</span>
                     </div>
                   </div>
 

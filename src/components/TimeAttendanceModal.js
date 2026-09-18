@@ -18,7 +18,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_TYPES } from '@/lib/constants';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import { getNotificationRecipientForStep, resolveRoleEmailsFromDirectory } from '@/lib/emailNotificationService';
 
@@ -155,14 +155,8 @@ export default function TimeAttendanceModal({
     // Format display date DD/MM/YYYY in Buddhist Era (พ.ศ.)
     const displayAttendanceDate = formatDateDDMMYYYYBE(attendanceDate);
 
-    // Format time (e.g. 6:00:00 PM or 18:00)
-    let displayTime = attendanceTime;
-    if (/^\d{2}:\d{2}$/.test(attendanceTime)) {
-      const [h, min] = attendanceTime.split(':').map(Number);
-      const period = h >= 12 ? 'PM' : 'AM';
-      const h12 = h % 12 || 12;
-      displayTime = `${h12}:${String(min).padStart(2, '0')}:00 ${period}`;
-    }
+    // Format 24-hour time (e.g. 18:00 น.)
+    const displayTime = formatTo24HrTime(attendanceTime);
 
     const hrEmailFinal = (selectedHrOfficer?.email || 'jarucha.j@icit.kmutnb.ac.th').trim();
     const deptHeadEmailFinal = (detectedDeptHead?.email || '').trim();

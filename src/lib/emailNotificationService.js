@@ -1,6 +1,6 @@
 // Thai Email Notification System with 1-Click Approval Actions
 import { formatImageDisplayUrl } from './driveUtils';
-import { formatDateDDMMYYYYBE } from './dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime } from './dateUtils';
 import { db, isFirebaseConfigured } from './firebase';
 import {
   collection,
@@ -248,7 +248,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
           </tr>
           <tr style="border-bottom: 1px solid #F1F5F9;">
             <td style="padding: 10px 8px; color: #64748B;">เวลา:</td>
-            <td style="padding: 10px 8px; color: #1E293B; font-weight: 600;">${record.attendanceTime}</td>
+            <td style="padding: 10px 8px; color: #1E293B; font-weight: 600;">${formatTo24HrTime(record.attendanceTime)}</td>
           </tr>
           <tr style="border-bottom: 1px solid #F1F5F9;">
             <td style="padding: 10px 8px; color: #64748B;">ระบุบุคลากร (พยาน):</td>

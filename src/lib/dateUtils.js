@@ -437,3 +437,81 @@ export function parseLocalDate(dateStr) {
   return new Date(y, m - 1, d);
 }
 
+/**
+ * Format any time string or Date to 24-hour format (e.g., '18:00 น.' or '08:30 น.')
+ * Converts legacy 12-hour AM/PM strings (e.g. '6:00:00 PM' -> '18:00 น.')
+ */
+export function formatTo24HrTime(timeInput, { includeSeconds = false, includeUnit = true } = {}) {
+  if (!timeInput) return '-';
+
+  if (timeInput instanceof Date && !isNaN(timeInput.getTime())) {
+    const h = String(timeInput.getHours()).padStart(2, '0');
+    const m = String(timeInput.getMinutes()).padStart(2, '0');
+    const s = String(timeInput.getSeconds()).padStart(2, '0');
+    const secStr = includeSeconds ? `:${s}` : '';
+    const unitStr = includeUnit ? ' น.' : '';
+    return `${h}:${m}${secStr}${unitStr}`;
+  }
+
+  const str = String(timeInput).trim();
+  if (!str) return '-';
+
+  // 1. Check for 12-hour AM/PM format (e.g. '6:00:00 PM', '06:30 AM', '6:00 PM')
+  const ampmMatch = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)$/i);
+  if (ampmMatch) {
+    let hour = parseInt(ampmMatch[1], 10);
+    const min = ampmMatch[2];
+    const sec = ampmMatch[3] || '00';
+    const period = ampmMatch[4].toUpperCase();
+
+    if (period === 'PM' && hour < 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+
+    const hStr = String(hour).padStart(2, '0');
+    const secStr = includeSeconds && ampmMatch[3] ? `:${sec}` : '';
+    const unitStr = includeUnit ? ' น.' : '';
+    return `${hStr}:${min}${secStr}${unitStr}`;
+  }
+
+  // 2. Check for 24-hour format (e.g. '18:00', '18:00:00', '08:30')
+  const match24 = str.match(/^(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?(?:\s*น\.?)?$/);
+  if (match24) {
+    const h = String(parseInt(match24[1], 10)).padStart(2, '0');
+    const m = match24[2];
+    const s = match24[3] || '00';
+    const secStr = includeSeconds && match24[3] ? `:${s}` : '';
+    const unitStr = includeUnit ? ' น.' : '';
+    return `${h}:${m}${secStr}${unitStr}`;
+  }
+
+  // 3. Return original with unit if reasonable
+  if (includeUnit && !str.includes('น.') && !str.includes('PM') && !str.includes('AM')) {
+    return `${str} น.`;
+  }
+
+  return str;
+}
+
+/**
+ * Format Date or ISO string to Thai Date and 24-hour Time
+ * Example: '18 ก.ย. 2569, 14:30:00 น.'
+ */
+export function formatThaiDateTime(input, { includeSeconds = true, shortMonth = true } = {}) {
+  if (!input) return '-';
+  try {
+    const d = typeof input === 'string' ? new Date(input) : input;
+    if (!(d instanceof Date) || isNaN(d.getTime())) return String(input);
+    const day = d.getDate();
+    const month = shortMonth ? THAI_MONTHS_SHORT[d.getMonth()] : THAI_MONTHS_FULL[d.getMonth()];
+    const beYear = d.getFullYear() < 2400 ? d.getFullYear() + 543 : d.getFullYear();
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    const timeStr = includeSeconds ? `${h}:${m}:${s}` : `${h}:${m}`;
+    return `${day} ${month} ${beYear}, ${timeStr} น.`;
+  } catch (e) {
+    return String(input);
+  }
+}
+
+

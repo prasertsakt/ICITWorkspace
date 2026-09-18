@@ -12,7 +12,7 @@ import {
   Loader2,
   Check,
 } from 'lucide-react';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
 
 const REASON_PRESETS = [
   'ระบุเวลาผิดพลาด',
@@ -244,7 +244,7 @@ export default function TimeAttendanceCancelModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
                 <Clock size={13} color="#64748B" />
                 <span>
-                  เวลา: <strong style={{ color: '#0F172A' }}>{record.attendanceTime}</strong>
+                  เวลา: <strong style={{ color: '#0F172A' }}>{formatTo24HrTime(record.attendanceTime)}</strong>
                 </span>
               </div>
             </div>

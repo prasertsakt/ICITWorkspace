@@ -22,7 +22,7 @@ import {
   TIME_ATTENDANCE_STEP_CONFIG,
   PREDEFINED_DEPARTMENTS,
 } from '@/lib/constants';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
 import TimeAttendanceModal from '@/components/TimeAttendanceModal';
 import TimeAttendanceDetailModal from '@/components/TimeAttendanceDetailModal';
 import TimeAttendanceEmailModal from '@/components/TimeAttendanceEmailModal';
@@ -253,6 +253,9 @@ function TimeAttendanceContent() {
   // Count items pending current user's action (strictly active pending steps only, excluding cancelled/completed/rejected)
   const pendingMeCount = useMemo(() => {
     if (!currentPersonnel) return 0;
+    const myId = currentPersonnel.id;
+    const myEmail = currentPersonnel.email?.toLowerCase().trim();
+
     return visibleAttendances.filter((item) => {
       // Must be an active pending step, NOT cancelled, completed, or rejected
       const isPendingStep =
@@ -263,31 +266,46 @@ function TimeAttendanceContent() {
 
       if (!isPendingStep) return false;
 
+      // Requester should never act as witness on their own request
+      const isRequester = item.requesterId === myId || (myEmail && item.requesterEmail?.toLowerCase().trim() === myEmail);
+
       const needsHr = item.currentStep === 'HR_REVIEW' && isHrStaff;
-      const needsWitness = item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === currentPersonnel.id;
+      const needsWitness =
+        item.currentStep === 'WITNESS_CONFIRM' &&
+        !isRequester &&
+        (item.witnessId === myId || (myEmail && item.witnessEmail?.toLowerCase().trim() === myEmail));
       const needsDeptHead =
         item.currentStep === 'DEPT_HEAD_APPROVE' &&
-        (item.departmentHeadId === currentPersonnel.id || headDeptNames.includes(item.requesterDepartment));
+        (item.departmentHeadId === myId ||
+          (myEmail && item.departmentHeadEmail?.toLowerCase().trim() === myEmail) ||
+          headDeptNames.includes(item.requesterDepartment));
       const needsDeputy =
         item.currentStep === 'DEPUTY_APPROVE' &&
-        (item.deputyDirectorId === currentPersonnel.id || isExecutive);
+        (item.deputyDirectorId === myId ||
+          (myEmail && item.deputyDirectorEmail?.toLowerCase().trim() === myEmail) ||
+          (isExecutive && !isRequester));
 
-      return needsHr || needsWitness || needsDeptHead || needsDeputy || isAdmin;
+      return needsHr || needsWitness || needsDeptHead || needsDeputy;
     }).length;
-  }, [visibleAttendances, currentPersonnel, isHrStaff, isExecutive, isAdmin, headDeptNames]);
+  }, [visibleAttendances, currentPersonnel, isHrStaff, isExecutive, headDeptNames]);
 
   // Filtered List based on Active Tab, Search, and Filters
   const filteredAttendances = useMemo(() => {
+    const myId = currentPersonnel?.id;
+    const myEmail = currentPersonnel?.email?.toLowerCase().trim();
+
     return visibleAttendances.filter((item) => {
       if (!item) return false;
       // Tab filter
       if (activeTab === 'mine') {
-        if (currentPersonnel && item.requesterId !== currentPersonnel.id) return false;
+        if (currentPersonnel && item.requesterId !== currentPersonnel.id && !(myEmail && item.requesterEmail?.toLowerCase().trim() === myEmail)) return false;
       } else if (activeTab === 'witness') {
-        if (currentPersonnel && item.witnessId !== currentPersonnel.id) return false;
+        if (currentPersonnel && item.witnessId !== currentPersonnel.id && !(myEmail && item.witnessEmail?.toLowerCase().trim() === myEmail)) return false;
       } else if (activeTab === 'dept_head') {
         const isHeadForThis =
-          item.departmentHeadId === currentPersonnel.id || headDeptNames.includes(item.requesterDepartment);
+          item.departmentHeadId === currentPersonnel?.id ||
+          (myEmail && item.departmentHeadEmail?.toLowerCase().trim() === myEmail) ||
+          headDeptNames.includes(item.requesterDepartment);
         if (!isHeadForThis) return false;
       } else if (activeTab === 'pending_me') {
         if (!currentPersonnel) return false;
@@ -301,17 +319,26 @@ function TimeAttendanceContent() {
 
         if (!isPendingStep) return false;
 
+        const isRequester = item.requesterId === myId || (myEmail && item.requesterEmail?.toLowerCase().trim() === myEmail);
+
         // Check if item needs action from current user
         const needsHr = item.currentStep === 'HR_REVIEW' && isHrStaff;
-        const needsWitness = item.currentStep === 'WITNESS_CONFIRM' && item.witnessId === currentPersonnel.id;
+        const needsWitness =
+          item.currentStep === 'WITNESS_CONFIRM' &&
+          !isRequester &&
+          (item.witnessId === myId || (myEmail && item.witnessEmail?.toLowerCase().trim() === myEmail));
         const needsDeptHead =
           item.currentStep === 'DEPT_HEAD_APPROVE' &&
-          (item.departmentHeadId === currentPersonnel.id || headDeptNames.includes(item.requesterDepartment));
+          (item.departmentHeadId === myId ||
+            (myEmail && item.departmentHeadEmail?.toLowerCase().trim() === myEmail) ||
+            headDeptNames.includes(item.requesterDepartment));
         const needsDeputy =
           item.currentStep === 'DEPUTY_APPROVE' &&
-          (item.deputyDirectorId === currentPersonnel.id || isExecutive);
+          (item.deputyDirectorId === myId ||
+            (myEmail && item.deputyDirectorEmail?.toLowerCase().trim() === myEmail) ||
+            (isExecutive && !isRequester));
 
-        if (!needsHr && !needsWitness && !needsDeptHead && !needsDeputy && !isAdmin) {
+        if (!needsHr && !needsWitness && !needsDeptHead && !needsDeputy) {
           return false;
         }
       }
@@ -758,7 +785,7 @@ function TimeAttendanceContent() {
                       requesterEmail: currentPersonnel?.email || 'admin@icit.kmutnb.ac.th',
                       actionDate: formatDateDDMMYYYYBE(new Date()),
                       attendanceDate: formatDateDDMMYYYYBE(new Date()),
-                      attendanceTime: '08:30:00 AM',
+                      attendanceTime: '08:30 น.',
                     };
                     setEmailModalRecord(sampleRecord);
                   }}
@@ -1203,7 +1230,7 @@ function TimeAttendanceContent() {
 
                         {/* เวลาจริง */}
                         <td style={{ padding: '1rem 1.25rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {item.attendanceTime}
+                          {formatTo24HrTime(item.attendanceTime)}
                         </td>
 
                         {/* พยานผู้รับรอง */}

@@ -23,7 +23,7 @@ import {
   Check,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_STEP_CONFIG } from '@/lib/constants';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import {
   getNotificationRecipientForStep,
@@ -96,21 +96,47 @@ export default function TimeAttendanceDetailModal({
     color: '#475569',
   };
 
+  const myId = currentPersonnel?.id;
+  const myEmail = currentPersonnel?.email?.toLowerCase().trim();
+  const isRequesterUser = Boolean(
+    currentPersonnel &&
+    (myId === record.requesterId || (myEmail && myEmail === record.requesterEmail?.toLowerCase().trim()))
+  );
+
   // Check if current user is authorized to act on the current step
-  const isHrPersonnel = currentPersonnel?.position === 'บุคลากร' || isAdmin;
-  const isWitness = currentPersonnel?.id === record.witnessId || isAdmin;
-  const isDeptHead = currentPersonnel?.id === record.departmentHeadId || isAdmin;
-  const isDeputyDirector =
-    currentPersonnel?.id === record.deputyDirectorId ||
-    currentPersonnel?.position?.includes('ผู้บริหาร') ||
-    isAdmin;
+  const isHrPersonnel = Boolean(
+    (currentPersonnel?.position === 'บุคลากร' ||
+      currentPersonnel?.position?.includes('บริหารงานทั่วไป') ||
+      myEmail === 'jarucha.j@icit.kmutnb.ac.th' ||
+      isAdmin) &&
+      !isRequesterUser
+  );
+
+  // Witness must be the designated witness and NOT the requester
+  const isWitness = Boolean(
+    !isRequesterUser &&
+      currentPersonnel &&
+      (myId === record.witnessId || (myEmail && myEmail === record.witnessEmail?.toLowerCase().trim()))
+  );
+
+  const isDeptHead = Boolean(
+    currentPersonnel &&
+      (myId === record.departmentHeadId ||
+        (myEmail && myEmail === record.departmentHeadEmail?.toLowerCase().trim()) ||
+        (currentPersonnel?.position?.includes('หัวหน้า') && currentPersonnel?.department === record.requesterDepartment))
+  );
+
+  const isDeputyDirector = Boolean(
+    currentPersonnel &&
+      (myId === record.deputyDirectorId ||
+        (myEmail && myEmail === record.deputyDirectorEmail?.toLowerCase().trim()) ||
+        currentPersonnel?.position?.includes('รองผู้อำนวยการ') ||
+        currentPersonnel?.position?.includes('ผู้บริหาร') ||
+        isAdmin)
+  );
 
   // Eligibility to cancel: Requester (or Admin) can cancel only if it has NOT yet been finished สมบูรณ์ by รองผู้อำนวยการฝ่ายบริหาร
-  const isRequester =
-    currentPersonnel &&
-    (currentPersonnel.id === record.requesterId ||
-      currentPersonnel.email?.toLowerCase() === record.requesterEmail?.toLowerCase() ||
-      isAdmin);
+  const isRequester = isRequesterUser || isAdmin;
 
   const isFinishedByDeputy = record.currentStep === 'COMPLETED' || record.statusDeputy === 'อนุมัติ';
   const isAlreadyCancelled = record.currentStep === 'CANCELLED' || record.finalStatus?.includes('ยกเลิก');
@@ -393,7 +419,7 @@ export default function TimeAttendanceDetailModal({
               <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', alignItems: 'baseline' }}>
                 <span style={{ fontSize: '0.95rem', color: '#475569' }}>เวลา</span>
                 <span style={{ fontSize: '1rem', color: '#1E293B', fontWeight: 500 }}>
-                  {record.attendanceTime}
+                  {formatTo24HrTime(record.attendanceTime)}
                 </span>
               </div>
 
