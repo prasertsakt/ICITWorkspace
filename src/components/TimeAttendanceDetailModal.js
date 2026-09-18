@@ -681,25 +681,21 @@ export default function TimeAttendanceDetailModal({
                   </div>
                 )}
 
-                {/* Comment textarea */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    {record.currentStep === 'HR_REVIEW'
-                      ? 'บันทึกข้อความการตรวจสอบ (Related comment_บันทึกใบลงเวลา) *'
-                      : 'ความเห็นเพิ่มเติม (ถ้ามี)'}
-                  </label>
-                  <textarea
-                    rows={2}
-                    className="form-input"
-                    placeholder={
-                      record.currentStep === 'HR_REVIEW'
-                        ? 'เช่น นางสาวธัญนันท์ ลงเวลามา 07.10 น. และไม่ได้ลงเวลากลับ (นายกนก ลงเวลากลับ 18.00 น.)'
-                        : 'ระบุความเห็นเพิ่มเติมสำหรับการอนุมัติ/ไม่อนุมัติ...'
-                    }
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                  />
-                </div>
+                {/* Comment textarea - only HR can write verification comment */}
+                {record.currentStep === 'HR_REVIEW' && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      บันทึกข้อความการตรวจสอบ (Related comment_บันทึกใบลงเวลา) *
+                    </label>
+                    <textarea
+                      rows={2}
+                      className="form-input"
+                      placeholder="เช่น นางสาวธัญนันท์ ลงเวลามา 07.10 น. และไม่ได้ลงเวลากลับ (นายกนก ลงเวลากลับ 18.00 น.)"
+                      value={commentInput}
+                      onChange={(e) => setCommentInput(e.target.value)}
+                    />
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

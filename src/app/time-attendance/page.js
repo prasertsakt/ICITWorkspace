@@ -637,19 +637,21 @@ function TimeAttendanceContent() {
               สำหรับคำขอนี้หรือไม่?
             </p>
 
-            <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                ความเห็นเพิ่มเติม / บันทึกการตรวจสอบ:
-              </label>
-              <textarea
-                rows={3}
-                className="form-input"
-                placeholder="ระบุความเห็นเพิ่มเติม (ถ้ามี)..."
-                value={oneClickComment}
-                onChange={(e) => setOneClickComment(e.target.value)}
-                style={{ width: '100%', resize: 'vertical', fontSize: '0.9rem' }}
-              />
-            </div>
+            {oneClickData.step === 'HR_REVIEW' && (
+              <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  ความเห็นการตรวจสอบ / บันทึกเพิ่มเติม:
+                </label>
+                <textarea
+                  rows={3}
+                  className="form-input"
+                  placeholder="ระบุความเห็นการตรวจสอบ (ถ้ามี)..."
+                  value={oneClickComment}
+                  onChange={(e) => setOneClickComment(e.target.value)}
+                  style={{ width: '100%', resize: 'vertical', fontSize: '0.9rem' }}
+                />
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button
@@ -1238,7 +1240,7 @@ function TimeAttendanceContent() {
                           <div>{item.witnessName || '-'}</div>
                           {item.statusWitness === 'รับรอง' && (
                             <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 600 }}>
-                              &check; รับรองแล้ว
+                              ✓ รับรองแล้ว
                             </span>
                           )}
                         </td>

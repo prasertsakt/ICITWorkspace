@@ -312,21 +312,28 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
       </div>
 
       ${showActionButtons ? `
-      <!-- 1-Click Action with Comment Textbox in Email -->
+      <!-- 1-Click Action in Email -->
       <div style="background: #FFFFFF; border: 2px dashed #CBD5E1; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
         <div style="font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 4px; text-align: center;">
-          ดำเนินการตรวจสอบและลงความเห็นผ่านอีเมล (1-Click Action)
+          ${targetStep === 'HR_REVIEW'
+            ? 'ดำเนินการตรวจสอบและลงความเห็นผ่านอีเมล (1-Click Action)'
+            : targetStep === 'WITNESS_CONFIRM'
+              ? 'ดำเนินการรับรองพยานผ่านอีเมล (1-Click Action)'
+              : 'ดำเนินการอนุมัติผ่านอีเมล (1-Click Action)'}
         </div>
         <p style="font-size: 12.5px; color: #64748B; margin: 0 0 16px 0; text-align: center;">
-          สามารถพิมพ์ความเห็นในกล่องข้อความ และกดปุ่มเพื่อดำเนินการบันทึกผลได้ทันที:
+          ${targetStep === 'HR_REVIEW'
+            ? 'สามารถพิมพ์ความเห็นในกล่องข้อความ และกดปุ่มเพื่อดำเนินการบันทึกผลได้ทันที:'
+            : 'สามารถกดปุ่มเพื่อดำเนินการบันทึกผลได้ทันที:'}
         </p>
 
-        <!-- Direct Form with Comment Textbox -->
+        <!-- Direct Form -->
         <form action="${baseUrl}/time-attendance" method="GET" target="_blank" style="margin: 0; padding: 0;">
           <input type="hidden" name="actionId" value="${record.id}" />
           <input type="hidden" name="step" value="${targetStep}" />
           <input type="hidden" name="token" value="${token}" />
 
+          ${targetStep === 'HR_REVIEW' ? `
           <div style="margin-bottom: 14px; text-align: left;">
             <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">
               ความเห็นการตรวจสอบ / บันทึกเพิ่มเติม:
@@ -337,7 +344,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
               placeholder="พิมพ์ความเห็นการตรวจสอบ เช่น เวลามา-กลับถูกต้อง, ตรวจสอบภาพจากกล้องวงจรปิดแล้ว (ถ้ามี)..."
               style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 13.5px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-family: inherit; line-height: 1.5; color: #1E293B; background: #F8FAFC;"
             ></textarea>
-          </div>
+          </div>` : ''}
 
           <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
             <button
@@ -346,7 +353,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
               value="approve"
               style="cursor: pointer; border: none; background-color: #10B981; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); text-decoration: none;"
             >
-              &check; ${approveBtnText}
+              ✓ ${approveBtnText}
             </button>
             <button
               type="submit"
@@ -354,7 +361,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
               value="reject"
               style="cursor: pointer; border: none; background-color: #EF4444; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 26px; border-radius: 8px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); text-decoration: none;"
             >
-              &cross; ${rejectBtnText}
+              ✕ ${rejectBtnText}
             </button>
           </div>
         </form>
