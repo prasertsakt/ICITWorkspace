@@ -169,7 +169,7 @@ export default function JDHubPage() {
   };
 
   const handleCreateNew = () => {
-    const newJD = createBlankJD(currentPersonnel || { name: '', email: currentUser?.email });
+    const newJD = createBlankJD(null);
     setEditingJD(newJD);
   };
 
@@ -998,6 +998,7 @@ export default function JDHubPage() {
           isOpen={!!editingJD}
           onClose={() => setEditingJD(null)}
           jdToEdit={editingJD}
+          existingJDs={jds}
           personnelList={personnelList}
           departmentList={departmentList}
           executiveList={executiveList}

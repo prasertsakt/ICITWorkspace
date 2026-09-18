@@ -1137,7 +1137,7 @@ export default function LeaveCalendar({
 
       {/* 1. Day Detail Modal (Shows all leaves on a specific day) */}
       {selectedDayDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedDayDetail(null)}>
+        <div className="modal-overlay">
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
@@ -1287,7 +1287,7 @@ export default function LeaveCalendar({
 
       {/* 2. Single Leave Item Detail Modal */}
       {selectedLeaveItem && (
-        <div className="modal-overlay" onClick={() => setSelectedLeaveItem(null)}>
+        <div className="modal-overlay">
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}

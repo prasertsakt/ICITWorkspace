@@ -889,7 +889,7 @@ export default function OrganizationPage() {
 
       {/* Personnel Quick Detail Modal */}
       {selectedPersonnelDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedPersonnelDetail(null)}>
+        <div className="modal-overlay">
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}

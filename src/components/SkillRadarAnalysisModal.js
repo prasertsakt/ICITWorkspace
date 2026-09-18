@@ -13,6 +13,7 @@ import {
   Calendar,
   Lock,
   BookOpen,
+  Printer,
 } from 'lucide-react';
 import SkillRadarChart from '@/components/SkillRadarChart';
 import {
@@ -130,7 +131,6 @@ export default function SkillRadarAnalysisModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -224,24 +224,48 @@ export default function SkillRadarAnalysisModal({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              color: '#FFFFFF',
-              width: '34px',
-              height: '34px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              title="พิมพ์เอกสารหรือบันทึกเป็น PDF"
+            >
+              <Printer size={15} />
+              <span>พิมพ์ / PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                color: '#FFFFFF',
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content (Grid) */}

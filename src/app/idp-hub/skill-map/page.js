@@ -49,6 +49,7 @@ import SkillAssessmentFormModal from '@/components/SkillAssessmentFormModal';
 import SkillRadarAnalysisModal from '@/components/SkillRadarAnalysisModal';
 import SkillOrgRadarAnalysisModal from '@/components/SkillOrgRadarAnalysisModal';
 import SkillMapConfigModal from '@/components/SkillMapConfigModal';
+import SkillMapPreviewModal from '@/components/SkillMapPreviewModal';
 
 export default function IDPSkillMapPage() {
   const { currentUser, currentPersonnel: authPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
@@ -76,6 +77,11 @@ export default function IDPSkillMapPage() {
   const [targetPersonnelForModal, setTargetPersonnelForModal] = useState(null);
   const [targetAssessmentForModal, setTargetAssessmentForModal] = useState(null);
   const [isModalSelfMode, setIsModalSelfMode] = useState(false);
+
+  // PDF Preview Modal State
+  const [previewPersonnelForModal, setPreviewPersonnelForModal] = useState(null);
+  const [previewAssessmentForModal, setPreviewAssessmentForModal] = useState(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Filter out Executive personnel (บุคลากรที่ต้องทำการประเมิน ไม่รวม ผู้บริหาร)
   const staffList = useMemo(() => {
@@ -239,13 +245,25 @@ export default function IDPSkillMapPage() {
     setIsRadarModalOpen(true);
   };
 
+  // Handle Open PDF Preview Modal
+  const handleOpenPreviewPDF = (pers) => {
+    const evalRec = assessments.find((a) => a.personnelId === pers.id) || null;
+    setPreviewPersonnelForModal(pers);
+    setPreviewAssessmentForModal(evalRec);
+    setIsPreviewModalOpen(true);
+  };
+
   // Handle Assessment Save Success
   const handleAssessmentSaved = (savedPayload) => {
     loadYearData(fiscalYear);
   };
 
-  // Handle Excel Export
+  // Handle Excel Export (Admin/HR only)
   const handleExportExcel = () => {
+    if (!isHrOrAdmin) {
+      alert('เฉพาะผู้ดูแลระบบและเจ้าหน้าที่ HR เท่านั้นที่สามารถส่งออกข้อมูล Excel ได้');
+      return;
+    }
     exportSkillMapToExcel({
       fiscalYear,
       workAreas,
@@ -458,30 +476,32 @@ export default function IDPSkillMapPage() {
                 <span>Radar &amp; AI ภาพรวมสำนักฯ</span>
               </button>
 
-              {/* Export to Excel Button */}
-              <button
-                type="button"
-                onClick={handleExportExcel}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  color: '#FFFFFF',
-                  padding: '5px 12px',
-                  borderRadius: '10px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(8px)',
-                  transition: 'all 0.15s ease',
-                }}
-                title="ส่งออกผลการประเมินทักษะทั้งหมดเป็นไฟล์ Excel (.xlsx)"
-              >
-                <FileSpreadsheet size={14} color="#4ADE80" />
-                <span>ส่งออก Excel</span>
-              </button>
+              {/* Export to Excel Button (Admin/HR only) */}
+              {isHrOrAdmin && (
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#FFFFFF',
+                    padding: '5px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="ส่งออกผลการประเมินทักษะทั้งหมดเป็นไฟล์ Excel (.xlsx)"
+                >
+                  <FileSpreadsheet size={14} color="#4ADE80" />
+                  <span>ส่งออก Excel</span>
+                </button>
+              )}
 
               {/* HR Config Button */}
               {isHrOrAdmin && (
@@ -1055,6 +1075,30 @@ export default function IDPSkillMapPage() {
                               <span>ดูผล &amp; Radar</span>
                             </button>
                           )}
+
+                          {/* Preview PDF Button for Every Item */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPreviewPDF(pers)}
+                            style={{
+                              backgroundColor: '#F8FAFC',
+                              color: '#475569',
+                              border: '1px solid #CBD5E1',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title="ดูรายงานฉบับสมบูรณ์ (PDF) และพิมพ์เอกสาร A4"
+                          >
+                            <Printer size={13} color="#64748B" />
+                            <span>Export to PDF</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1108,7 +1152,7 @@ export default function IDPSkillMapPage() {
         workAreas={workAreas}
         personnelList={staffList}
         assessments={assessments}
-        onExportExcel={handleExportExcel}
+        onExportExcel={isHrOrAdmin ? handleExportExcel : null}
       />
 
       {/* 5. HR Config Modal */}
@@ -1120,6 +1164,18 @@ export default function IDPSkillMapPage() {
         personnelList={staffList}
         onConfigSaved={() => loadYearData(fiscalYear)}
       />
+
+      {/* 6. Individual PDF Preview & Print Modal */}
+      {previewPersonnelForModal && (
+        <SkillMapPreviewModal
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          personnel={previewPersonnelForModal}
+          assessment={previewAssessmentForModal}
+          workAreas={workAreas}
+          fiscalYear={fiscalYear}
+        />
+      )}
     </div>
   );
 }

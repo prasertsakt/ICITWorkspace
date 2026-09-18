@@ -237,7 +237,6 @@ export default function ImsActivityLogModal({
         padding: '1rem',
         animation: 'fadeIn 0.2s ease-out',
       }}
-      onClick={onClose}
     >
       <div
         style={{

@@ -598,7 +598,7 @@ function TimeAttendanceContent() {
     <div className="main-container">
       {/* 1-Click Action Confirmation Modal */}
       {oneClickData && (
-        <div className="modal-overlay" onClick={() => setOneClickData(null)} style={{ zIndex: 1000 }}>
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}

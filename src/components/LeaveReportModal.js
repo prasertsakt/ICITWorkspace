@@ -223,7 +223,7 @@ export default function LeaveReportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1000, padding: '1rem' }}>
+    <div className="modal-overlay" style={{ zIndex: 1000, padding: '1rem' }}>
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}

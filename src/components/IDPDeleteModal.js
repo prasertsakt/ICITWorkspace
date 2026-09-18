@@ -29,7 +29,7 @@ export default function IDPDeleteModal({ isOpen, onClose, record, onDeleted }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={isDeleting ? undefined : onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}

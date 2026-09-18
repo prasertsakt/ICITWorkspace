@@ -177,17 +177,6 @@ export default function ImsAuditTopicsModal({ isOpen, onClose, actor }) {
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          if (hasUnsavedChanges) {
-            if (window.confirm('คุณมีรายการที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกหรือไม่?')) {
-              onClose();
-            }
-          } else {
-            onClose();
-          }
-        }
-      }}
     >
       <div
         style={{

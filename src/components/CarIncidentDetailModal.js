@@ -71,7 +71,6 @@ export default function CarIncidentDetailModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{

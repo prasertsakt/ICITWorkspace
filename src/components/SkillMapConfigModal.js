@@ -133,7 +133,6 @@ export default function SkillMapConfigModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{

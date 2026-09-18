@@ -163,7 +163,7 @@ export default function ServiceCardModal({
   const SelectedIcon = PORTAL_ICON_COMPONENTS[formData.iconName] || Laptop;
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1050 }}>
+    <div className="modal-overlay" style={{ zIndex: 1050 }}>
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}

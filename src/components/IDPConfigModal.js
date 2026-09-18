@@ -246,7 +246,6 @@ export default function IDPConfigModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{

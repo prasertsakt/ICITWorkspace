@@ -306,7 +306,6 @@ export default function IDPModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{

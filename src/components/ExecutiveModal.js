@@ -92,7 +92,7 @@ export default function ExecutiveModal({
   const selectedPerson = personnelList.find((p) => p.id === formData.personnelId);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}

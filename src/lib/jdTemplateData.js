@@ -130,7 +130,7 @@ export function createBlankJD(personnel = null) {
     positionLevel: personnel?.positionLevel || 'ปฏิบัติการ',
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
     division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-    department: personnel?.department || 'สำนักงานผู้อำนวยการ',
+    department: personnel?.department || '',
     
     // Supervision
     supervisorName: '',
@@ -139,24 +139,24 @@ export function createBlankJD(personnel = null) {
     orgChartUrl: '',
 
     // Job Summary
-    jobSummaryStandard: 'ปฏิบัติงานในฐานะผู้ปฏิบัติงานระดับต้นที่ต้องใช้ความรู้ความสามารถทางวิชาการในการทำงาน ปฏิบัติงานเกี่ยวกับการบริหารงานทรัพยากรบุคคล ภายใต้การกำกับ แนะนำ ตรวจสอบ และปฏิบัติงานอื่นตามที่ได้รับมอบหมาย',
-    jobSummaryActual: 'ปฏิบัติงานบริหารจัดการทรัพยากรบุคคล ซึ่งมีลักษณะงานที่ปฏิบัติเกี่ยวกับการศึกษาวิเคราะห์เพื่อกำหนดความต้องการอัตรากำลัง การจัดทำแผนบริหารและพัฒนาบุคลากร การบริหารงานบุคคลต่างๆ',
+    jobSummaryStandard: '',
+    jobSummaryActual: '',
 
     // Main Responsibilities
-    mainResponsibilities: JSON.parse(JSON.stringify(DEFAULT_MAIN_RESPONSIBILITIES)),
+    mainResponsibilities: [],
 
     // Relationships
-    internalRelationships: JSON.parse(JSON.stringify(DEFAULT_INTERNAL_RELATIONSHIPS)),
-    externalRelationships: JSON.parse(JSON.stringify(DEFAULT_EXTERNAL_RELATIONSHIPS)),
+    internalRelationships: [],
+    externalRelationships: [],
 
     // Qualifications
-    educationAndMajor: 'ปริญญาตรี ด้านการบริหารจัดการ บริหารงานบุคคล รัฐศาสตร์ นิติศาสตร์ หรือสาขาอื่นที่เกี่ยวข้อง',
-    experience: 'ประสบการณ์ด้านการบริหารจัดการ การวางแผน การวิเคราะห์ การติดต่อประสานงาน และการสื่อสาร',
-    specialQualifications: 'การสื่อสารด้านจิตวิทยา การพูดในที่สาธารณะ และการนำเสนอหรืออธิบาย รวมถึงความสามารถอื่นๆ ด้านเทคโนโลยีสารสนเทศ',
+    educationAndMajor: '',
+    experience: '',
+    specialQualifications: '',
     skills: {
       english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
       otherLanguage: '-',
-      computer: 'Microsoft Word, Excel, PowerPoint, Microsoft Form, Google Form, Canva, การจัดทำสื่อประชาสัมพันธ์ (Infographic)',
+      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
       otherSkills: '-',
     },
 
@@ -166,10 +166,10 @@ export function createBlankJD(personnel = null) {
       name: c.name,
       targetLevel: c.defaultLevel,
     })),
-    functionalCompetencies: JSON.parse(JSON.stringify(DEFAULT_FUNCTIONAL_COMPETENCIES)),
+    functionalCompetencies: [],
 
     // Training
-    trainings: [...DEFAULT_REQUIRED_TRAININGS],
+    trainings: [],
 
     // Signatures
     signatures: {

@@ -76,6 +76,7 @@ export default function JDModal({
   onSave,
   onConfirm,
   jdToEdit = null,
+  existingJDs = [],
   personnelList = [],
   departmentList = [],
   executiveList = [],
@@ -88,6 +89,41 @@ export default function JDModal({
   const [formData, setFormData] = useState(() => createBlankJD());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const initializedKeyRef = useRef(null);
+
+  // Helper to check if a personnel is an executive
+  const isExecutivePerson = (p) => {
+    if (!p) return false;
+    const pos = (p.position || p.adminPosition || '').trim();
+    const isExecPos =
+      pos.includes('ผู้บริหาร') ||
+      pos.includes('ผู้อำนวยการ') ||
+      pos.includes('รองผู้อำนวยการ');
+    const inExecList = executiveList.some(
+      (e) => (e.id && e.id === p.id) || (e.name && p.name && e.name.trim() === p.name.trim())
+    );
+    return isExecPos || inExecList;
+  };
+
+  // Available non-executive personnel for JD
+  const availablePersonnel = useMemo(() => {
+    return personnelList.filter((p) => !isExecutivePerson(p));
+  }, [personnelList, executiveList]);
+
+  // Helper to check if personnel already has a JD
+  const isPersonnelHasJD = (p) => {
+    if (!p) return false;
+    return (existingJDs || []).some((j) => {
+      if (jdToEdit && (j.id === jdToEdit.id || j.id === formData.id)) return false;
+      const matchId = p.id && j.personnelId && j.personnelId === p.id;
+      const matchEmail =
+        p.email &&
+        j.personnelEmail &&
+        j.personnelEmail.toLowerCase().trim() === p.email.toLowerCase().trim();
+      const matchName = p.name && j.personnelName && j.personnelName.trim() === p.name.trim();
+      return matchId || matchEmail || matchName;
+    });
+  };
 
   // Navigation helpers & modal scroll ref
   const modalBodyRef = useRef(null);
@@ -315,15 +351,20 @@ export default function JDModal({
     );
   }, [isAdmin, jdToEdit, currentPersonnel, currentUser, formData.signatures?.preparedBy?.name, formData.personnelName]);
 
-  // Reset form on open/change with auto-selected signatures
+  // Reset form on open/change with auto-selected signatures (guarded against mid-edit wipe)
   useEffect(() => {
     if (isOpen) {
+      const currentKey = jdToEdit ? jdToEdit.id || `edit-${jdToEdit.personnelId || 'custom'}` : 'new-jd';
+      if (initializedKeyRef.current === currentKey) {
+        return; // Prevent wiping user inputs while typing
+      }
+      initializedKeyRef.current = currentKey;
+
       let initialData;
       if (jdToEdit) {
         initialData = JSON.parse(JSON.stringify(jdToEdit));
       } else {
-        const defaultPerson = isAdmin ? personnelList[0] || null : currentPersonnel;
-        initialData = createBlankJD(defaultPerson);
+        initialData = createBlankJD(null);
       }
 
       if (!initialData.signatures) initialData.signatures = {};
@@ -337,7 +378,7 @@ export default function JDModal({
 
       const resolvedPerson = initialData.personnelId
         ? personnelList.find((p) => p.id === initialData.personnelId)
-        : personnelList.find((p) => p.name === initialData.personnelName) || currentPersonnel || { name: loginUserName };
+        : personnelList.find((p) => p.name === initialData.personnelName) || (isAdmin ? null : currentPersonnel) || { name: loginUserName };
 
       const supervisor = getSupervisorInfo(initialData.department, resolvedPerson);
       const director = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
@@ -376,8 +417,10 @@ export default function JDModal({
       setActiveTab('job_info');
       setErrorMsg('');
       setIsSubmitting(false);
+    } else {
+      initializedKeyRef.current = null;
     }
-  }, [isOpen, jdToEdit, currentPersonnel, currentUser, personnelList, isAdmin, autoDirector, departmentList, executiveList]);
+  }, [isOpen, jdToEdit]);
 
   if (!isOpen) return null;
 
@@ -385,6 +428,18 @@ export default function JDModal({
   const handleSelectPersonnel = (pId) => {
     const selected = personnelList.find((p) => p.id === pId);
     if (!selected) return;
+
+    if (isExecutivePerson(selected)) {
+      setErrorMsg('ตำแหน่งผู้บริหาร (ผู้อำนวยการ / รองผู้อำนวยการ) ไม่ต้องจัดทำแบบบรรยายลักษณะงาน (JD)');
+      return;
+    }
+
+    if (isPersonnelHasJD(selected)) {
+      setErrorMsg(`มีแบบบรรยายลักษณะงาน (JD) ของ ${selected.name} อยู่ในระบบแล้ว ไม่สามารถสร้างซ้ำได้ (กรุณาแก้ไขจากฉบับเดิม)`);
+    } else {
+      setErrorMsg('');
+    }
+
     const supervisorForSelected = getSupervisorInfo(selected.department, selected);
     setFormData((prev) => ({
       ...prev,
@@ -633,6 +688,37 @@ export default function JDModal({
       if (!formData.personnelName) {
         throw new Error('กรุณาระบุชื่อ-นามสกุล บุคลากรเจ้าของตำแหน่ง');
       }
+
+      if (
+        isExecutivePerson({
+          name: formData.personnelName,
+          position: formData.position,
+          adminPosition: formData.adminPosition,
+          id: formData.personnelId,
+        })
+      ) {
+        throw new Error('ตำแหน่งผู้บริหาร (ผู้อำนวยการ / รองผู้อำนวยการ) ไม่ต้องจัดทำแบบบรรยายลักษณะงาน (JD)');
+      }
+
+      const duplicate = (existingJDs || []).find((j) => {
+        if (jdToEdit && (j.id === jdToEdit.id || j.id === formData.id)) return false;
+        const matchId = formData.personnelId && j.personnelId && j.personnelId === formData.personnelId;
+        const matchEmail =
+          formData.personnelEmail &&
+          j.personnelEmail &&
+          j.personnelEmail.toLowerCase().trim() === formData.personnelEmail.toLowerCase().trim();
+        const matchName =
+          formData.personnelName &&
+          j.personnelName &&
+          j.personnelName.trim() === formData.personnelName.trim();
+        return matchId || matchEmail || matchName;
+      });
+      if (duplicate) {
+        throw new Error(
+          `มีแบบบรรยายลักษณะงาน (JD) ของ ${formData.personnelName} อยู่ในระบบแล้ว ไม่สามารถสร้างซ้ำได้ (กรุณาแก้ไขจากฉบับเดิม)`
+        );
+      }
+
       const dataToSave = enforceLockedData(formData);
       await onSave(dataToSave);
       onClose();
@@ -651,6 +737,37 @@ export default function JDModal({
       if (!formData.personnelName) {
         throw new Error('กรุณาระบุชื่อ-นามสกุล บุคลากรเจ้าของตำแหน่ง');
       }
+
+      if (
+        isExecutivePerson({
+          name: formData.personnelName,
+          position: formData.position,
+          adminPosition: formData.adminPosition,
+          id: formData.personnelId,
+        })
+      ) {
+        throw new Error('ตำแหน่งผู้บริหาร (ผู้อำนวยการ / รองผู้อำนวยการ) ไม่ต้องจัดทำแบบบรรยายลักษณะงาน (JD)');
+      }
+
+      const duplicate = (existingJDs || []).find((j) => {
+        if (jdToEdit && (j.id === jdToEdit.id || j.id === formData.id)) return false;
+        const matchId = formData.personnelId && j.personnelId && j.personnelId === formData.personnelId;
+        const matchEmail =
+          formData.personnelEmail &&
+          j.personnelEmail &&
+          j.personnelEmail.toLowerCase().trim() === formData.personnelEmail.toLowerCase().trim();
+        const matchName =
+          formData.personnelName &&
+          j.personnelName &&
+          j.personnelName.trim() === formData.personnelName.trim();
+        return matchId || matchEmail || matchName;
+      });
+      if (duplicate) {
+        throw new Error(
+          `มีแบบบรรยายลักษณะงาน (JD) ของ ${formData.personnelName} อยู่ในระบบแล้ว ไม่สามารถสร้างซ้ำได้ (กรุณาแก้ไขจากฉบับเดิม)`
+        );
+      }
+
       const dataToConfirm = enforceLockedData(formData);
       const updated = {
         ...dataToConfirm,
@@ -681,7 +798,7 @@ export default function JDModal({
   const orgChartPreview = formData.orgChartUrl ? formatImageDisplayUrl(formData.orgChartUrl) : null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
@@ -810,57 +927,30 @@ export default function JDModal({
             </div>
           </div>
 
-          {/* Right: Quick jump dropdown + mini Prev/Next buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>ไปยังส่วนที่:</span>
-              <select
-                value={activeTab}
-                onChange={(e) => goToTab(e.target.value)}
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#1E293B',
-                  cursor: 'pointer',
-                  outline: 'none',
-                }}
-              >
-                {TABS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Quick Prev / Next Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                type="button"
-                onClick={handlePrevTab}
-                disabled={!prevTab}
-                title={prevTab ? `ย้อนกลับ: ${prevTab.label}` : 'อยู่ที่แท็บแรกแล้ว'}
-                style={{
-                  padding: '0.25rem 0.6rem',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  background: prevTab ? '#FFFFFF' : '#F1F5F9',
-                  color: prevTab ? '#1E293B' : '#94A3B8',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: prevTab ? 'pointer' : 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                }}
-              >
-                <ChevronLeft size={13} />
-                <span>ก่อนหน้า</span>
-              </button>
+          {/* Right: Prev / Next Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={handlePrevTab}
+              disabled={!prevTab}
+              title={prevTab ? `ย้อนกลับ: ${prevTab.label}` : 'อยู่ที่แท็บแรกแล้ว'}
+              style={{
+                padding: '0.25rem 0.6rem',
+                borderRadius: '6px',
+                border: '1px solid #CBD5E1',
+                background: prevTab ? '#FFFFFF' : '#F1F5F9',
+                color: prevTab ? '#1E293B' : '#94A3B8',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: prevTab ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <ChevronLeft size={13} />
+              <span>ก่อนหน้า</span>
+            </button>
 
               <button
                 type="button"
@@ -886,7 +976,6 @@ export default function JDModal({
               </button>
             </div>
           </div>
-        </div>
 
         {/* Modal Body: Scrollable Tab Content */}
         <div
@@ -924,7 +1013,7 @@ export default function JDModal({
           {/* ============================================================ */}
           {activeTab === 'job_info' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {isAdmin && personnelList.length > 0 && (
+              {isAdmin && availablePersonnel.length > 0 && (
                 <div style={{ background: 'var(--bg-card-subtle)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                   <label className="form-label" style={{ fontWeight: 700, color: 'var(--primary-700)' }}>
                     🏢 ดึงข้อมูลอัตโนมัติจากทำเนียบบุคลากร (Admin Quick Select)
@@ -935,11 +1024,14 @@ export default function JDModal({
                     onChange={(e) => handleSelectPersonnel(e.target.value)}
                   >
                     <option value="">-- เลือกบุคลากรเพื่อกรอกข้อมูลเริ่มต้นอัตโนมัติ --</option>
-                    {personnelList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.position || 'ไม่ระบุตำแหน่ง'} - เลขที่ {p.positionNumber || '-'})
-                      </option>
-                    ))}
+                    {availablePersonnel.map((p) => {
+                      const hasJD = isPersonnelHasJD(p);
+                      return (
+                        <option key={p.id} value={p.id} disabled={hasJD}>
+                          {p.name} ({p.position || 'ไม่ระบุตำแหน่ง'} - เลขที่ {p.positionNumber || '-'}){hasJD ? ' [มี JD ในระบบแล้ว]' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               )}

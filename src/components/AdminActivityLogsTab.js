@@ -575,7 +575,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
 
       {/* Log Detail Modal */}
       {selectedLogForDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedLogForDetail(null)}>
+        <div className="modal-overlay">
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}

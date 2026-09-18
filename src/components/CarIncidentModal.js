@@ -691,7 +691,6 @@ export default function CarIncidentModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -2659,7 +2658,6 @@ export default function CarIncidentModal({
             justifyContent: 'center',
             padding: '1rem',
           }}
-          onClick={() => setShowNcImportModal(false)}
         >
           <div
             style={{
@@ -2894,7 +2892,6 @@ export default function CarIncidentModal({
             justifyContent: 'center',
             padding: '1rem',
           }}
-          onClick={() => setShowRevisionModal(false)}
         >
           <div
             style={{
@@ -3032,7 +3029,6 @@ export default function CarIncidentModal({
             justifyContent: 'center',
             padding: '1rem',
           }}
-          onClick={() => setShowCommentsHistoryModal(false)}
         >
           <div
             style={{
@@ -3151,7 +3147,6 @@ export default function CarIncidentModal({
             justifyContent: 'center',
             padding: '1rem',
           }}
-          onClick={() => setShowFollowUpHistoryModal(false)}
         >
           <div
             style={{

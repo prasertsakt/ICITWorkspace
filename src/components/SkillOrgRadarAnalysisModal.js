@@ -14,6 +14,7 @@ import {
   Layers,
   BookOpen,
   FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 import SkillRadarChart from '@/components/SkillRadarChart';
 import {
@@ -200,7 +201,6 @@ export default function SkillOrgRadarAnalysisModal({
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -294,6 +294,28 @@ export default function SkillOrgRadarAnalysisModal({
                 <span>ส่งออก Excel</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              title="พิมพ์รายงานหรือบันทึกเป็น PDF"
+            >
+              <Printer size={15} />
+              <span>พิมพ์ / PDF</span>
+            </button>
 
             <button
               type="button"

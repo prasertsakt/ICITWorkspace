@@ -20,7 +20,6 @@ export default function SkillRatingScaleModal({ isOpen, onClose }) {
         justifyContent: 'center',
         padding: '1rem',
       }}
-      onClick={onClose}
     >
       <div
         style={{

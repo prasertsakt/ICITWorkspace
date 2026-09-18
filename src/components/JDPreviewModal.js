@@ -37,7 +37,7 @@ export default function JDPreviewModal({
   );
 
   return (
-    <div className="modal-overlay jd-preview-overlay" onClick={onClose}>
+    <div className="modal-overlay jd-preview-overlay">
       <div
         className="modal-content jd-preview-modal-content"
         onClick={(e) => e.stopPropagation()}
