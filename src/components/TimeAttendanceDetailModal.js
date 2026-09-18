@@ -23,7 +23,7 @@ import {
   Check,
 } from 'lucide-react';
 import { TIME_ATTENDANCE_STEP_CONFIG } from '@/lib/constants';
-import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime, formatThaiDateTime } from '@/lib/dateUtils';
 import { formatImageDisplayUrl, isGoogleDriveUrl } from '@/lib/driveUtils';
 import {
   getNotificationRecipientForStep,
@@ -837,46 +837,48 @@ export default function TimeAttendanceDetailModal({
               />
 
               {record.activityLog && record.activityLog.length > 0 ? (
-                record.activityLog.map((act, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      position: 'relative',
-                      marginBottom: '1.5rem',
-                    }}
-                  >
-                    {/* Dot */}
+                [...record.activityLog]
+                  .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+                  .map((act, idx) => (
                     <div
+                      key={idx}
                       style={{
-                        position: 'absolute',
-                        left: '-1.5rem',
-                        top: '4px',
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        background: 'var(--primary-600)',
-                        border: '3px solid white',
-                        boxShadow: '0 0 0 1px var(--primary-200)',
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        background: 'white',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '1rem 1.25rem',
-                        boxShadow: 'var(--shadow-sm)',
+                        position: 'relative',
+                        marginBottom: '1.5rem',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                          {act.action}
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                          {new Date(act.timestamp).toLocaleString('th-TH')}
-                        </span>
-                      </div>
+                      {/* Dot */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: '-1.5rem',
+                          top: '4px',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          background: 'var(--primary-600)',
+                          border: '3px solid white',
+                          boxShadow: '0 0 0 1px var(--primary-200)',
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          background: 'white',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '1rem 1.25rem',
+                          boxShadow: 'var(--shadow-sm)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                            {act.action}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            {formatThaiDateTime(act.timestamp)}
+                          </span>
+                        </div>
 
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: act.comment && act.comment !== '-' ? '6px' : '0' }}>
                         โดย: <strong>{act.actorName}</strong> {act.actorEmail ? `(${act.actorEmail})` : ''}
