@@ -650,7 +650,7 @@ export default function JDModal({
       (currentUser?.email ? currentUser.email.split('@')[0] : '') ||
       data.personnelName ||
       '';
-    const deptHead = getDeptHeadInfo(data.department);
+    const deptHead = getSupervisorInfo(data.department, targetPreparerPerson || data);
     const directorName = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
 
     // If admin is editing, do NOT auto-select Admin; keep the JD owner/preparer
