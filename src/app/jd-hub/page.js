@@ -1011,7 +1011,7 @@ export default function JDHubPage() {
             setEditingJD(null);
           }}
           onConfirm={async (confirmed) => {
-            await confirmJDVersion(confirmed.id, currentPersonnel, isAdmin);
+            await saveJDRecord(confirmed, currentPersonnel, isAdmin);
             setEditingJD(null);
           }}
         />

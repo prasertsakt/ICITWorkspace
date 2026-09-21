@@ -361,10 +361,19 @@ export async function saveJDRecord(jdData, actorPersonnel, isAdmin = false) {
 /**
  * Confirm JD Version by Owner or Admin
  */
-export async function confirmJDVersion(id, actorPersonnel, isAdmin = false) {
+export async function confirmJDVersion(idOrData, actorPersonnel, isAdmin = false) {
   initJDLocalStorage();
   const list = getJDList();
-  const item = list.find((j) => j.id === id);
+  let item = null;
+  if (typeof idOrData === 'object' && idOrData !== null) {
+    item = idOrData.id ? list.find((j) => j.id === idOrData.id) : null;
+    if (!item) {
+      item = idOrData;
+    }
+  } else if (typeof idOrData === 'string') {
+    item = list.find((j) => j.id === idOrData);
+  }
+
   if (!item) throw new Error('ไม่พบข้อมูลแบบบรรยายลักษณะงานที่ระบุ');
 
   if (!isAdmin) {
@@ -385,7 +394,7 @@ export async function confirmJDVersion(id, actorPersonnel, isAdmin = false) {
     ...item,
     userConfirmed: true,
     confirmedAt: nowIso,
-    confirmedByEmail: actorPersonnel?.email || '',
+    confirmedByEmail: actorPersonnel?.email || item.confirmedByEmail || '',
     status: 'CONFIRMED',
     updatedAt: nowIso,
     lastUpdatedBy: actorPersonnel?.name || 'ผู้ใช้งาน',
