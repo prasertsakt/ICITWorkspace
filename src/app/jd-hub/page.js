@@ -775,6 +775,14 @@ export default function JDHubPage() {
             const respCount = (jd.mainResponsibilities || jd.responsibilities || []).length;
             const fcCount = (jd.functionalCompetencies || []).length;
 
+            const matchedPerson = (personnelList || []).find((p) => {
+              if (jd.personnelId && p.id === jd.personnelId) return true;
+              if (jd.personnelEmail && p.email && p.email.toLowerCase().trim() === jd.personnelEmail.toLowerCase().trim()) return true;
+              if (jd.personnelName && p.name && p.name.trim() === jd.personnelName.trim()) return true;
+              return false;
+            });
+            const avatarUrl = jd.avatarUrl || jd.imageUrl || matchedPerson?.avatarUrl || matchedPerson?.imageUrl || null;
+
             return (
               <div
                 key={jd.id}
@@ -853,23 +861,39 @@ export default function JDHubPage() {
                       gap: '0.75rem',
                     }}
                   >
-                    <div
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
-                        color: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {jd.personnelName ? jd.personnelName.charAt(0) : <UserIcon size={18} />}
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={jd.personnelName || 'บุคลากร'}
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '1.5px solid var(--peach-200, #FED7AA)',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+                          color: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {jd.personnelName ? jd.personnelName.charAt(0) : <UserIcon size={18} />}
+                      </div>
+                    )}
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -446,6 +446,7 @@ export default function JDModal({
       personnelId: selected.id,
       personnelName: selected.name,
       personnelEmail: selected.email || prev.personnelEmail,
+      avatarUrl: selected.avatarUrl || prev.avatarUrl || '',
       positionNumber: selected.positionNumber || prev.positionNumber,
       position: selected.position || prev.position,
       department: selected.department || prev.department,
