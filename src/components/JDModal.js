@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { KMUTNB_CORE_COMPETENCIES, createBlankJD } from '@/lib/jdTemplateData';
+import { KMUTNB_CORE_COMPETENCIES, createBlankJD, getCoreCompetenciesForLevel } from '@/lib/jdTemplateData';
 import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
+import { getCurrentThaiFiscalYear } from '@/lib/dateUtils';
+import { subscribeIdpConfig } from '@/lib/idpService';
 import {
   X,
   Check,
@@ -28,6 +30,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ListOrdered,
+  RotateCcw,
 } from 'lucide-react';
 
 const TABS = [
@@ -85,10 +88,22 @@ export default function JDModal({
   isRevisionOpen = true,
 }) {
   const [activeTab, setActiveTab] = useState('job_info');
-  const [formData, setFormData] = useState(() => createBlankJD());
+  const currentFiscalYear = useMemo(() => String(getCurrentThaiFiscalYear()), []);
+  const [idpConfig, setIdpConfig] = useState(null);
+  const [formData, setFormData] = useState(() => createBlankJD(null, currentFiscalYear, null));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const initializedKeyRef = useRef(null);
+
+  // Real-time subscription to IDP Competency Config for the current fiscal year
+  useEffect(() => {
+    const unsubscribe = subscribeIdpConfig(currentFiscalYear, (cfg) => {
+      setIdpConfig(cfg);
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [currentFiscalYear]);
 
   // Helper to check if a personnel is an executive
   const isExecutivePerson = (p) => {
@@ -404,7 +419,8 @@ export default function JDModal({
           };
         }
       } else {
-        initialData = createBlankJD(null);
+        const userPerson = isAdmin ? null : currentPersonnel;
+        initialData = createBlankJD(userPerson, currentFiscalYear, idpConfig);
         initialData.signatures = {
           preparedBy: { name: '', date: '' },
           reviewedBy: { name: '', date: '' },
@@ -440,6 +456,7 @@ export default function JDModal({
     }
 
     const supervisorForSelected = getSupervisorInfo(selected.department, selected);
+    const selectedLevel = selected.positionLevel || selected.level || 'ปฏิบัติการ';
     setFormData((prev) => ({
       ...prev,
       personnelId: selected.id,
@@ -449,10 +466,11 @@ export default function JDModal({
       positionNumber: selected.positionNumber || prev.positionNumber,
       position: selected.position || prev.position,
       department: selected.department || prev.department,
-      positionLevel: selected.positionLevel || prev.positionLevel,
+      positionLevel: selectedLevel,
       positionType: selected.personnelType || prev.positionType,
       supervisorName: supervisorForSelected?.name || prev.supervisorName,
       supervisorPosition: supervisorForSelected?.position || prev.supervisorPosition,
+      coreCompetencies: jdToEdit ? prev.coreCompetencies : getCoreCompetenciesForLevel(selectedLevel, currentFiscalYear, idpConfig),
       signatures: jdToEdit
         ? {
             ...prev.signatures,
@@ -532,6 +550,14 @@ export default function JDModal({
   // Field change helpers
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePositionLevelChange = (newLvl) => {
+    setFormData((prev) => ({
+      ...prev,
+      positionLevel: newLvl,
+      coreCompetencies: getCoreCompetenciesForLevel(newLvl, currentFiscalYear, idpConfig),
+    }));
   };
 
   const handleNestedChange = (parent, field, value) => {
@@ -1106,7 +1132,7 @@ export default function JDModal({
                   <select
                     className="form-input"
                     value={formData.positionLevel}
-                    onChange={(e) => handleChange('positionLevel', e.target.value)}
+                    onChange={(e) => handlePositionLevelChange(e.target.value)}
                   >
                     {POSITION_LEVELS.map((lvl) => (
                       <option key={lvl} value={lvl}>{lvl}</option>
@@ -1665,13 +1691,29 @@ export default function JDModal({
           {activeTab === 'core_competencies' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies ของ มจพ.)
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    กำหนดระดับความสามารถที่คาดหวังตามเกณฑ์มาตรฐานมหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ระดับ 1 - 5)
-                  </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies ของ มจพ.)
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      กำหนดระดับความสามารถที่คาดหวังตามเกณฑ์มาตรฐาน IDP ปีงบประมาณ {currentFiscalYear} ({formData.positionLevel || 'ปฏิบัติการ'}) (ระดับ 1 - 5)
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        coreCompetencies: getCoreCompetenciesForLevel(prev.positionLevel || 'ปฏิบัติการ', currentFiscalYear, idpConfig),
+                      }));
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ gap: '4px', fontSize: '0.75rem' }}
+                    title="โหลดค่ามาตรฐานตามเกณฑ์ IDP ของปีงบประมาณปัจจุบัน"
+                  >
+                    <RotateCcw size={13} /> ดึงเกณฑ์ IDP ปี {currentFiscalYear}
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

@@ -1,5 +1,7 @@
 // KMUTNB Job Description (JD Hub) Template & Default Definitions
 // Based on ICIT-FM-COMMON-006 (Version 2.0)
+import { DEFAULT_IDP_CORE_COMPETENCIES } from './constants';
+import { getCurrentThaiFiscalYear } from './dateUtils';
 
 export const KMUTNB_CORE_COMPETENCIES = [
   {
@@ -7,38 +9,158 @@ export const KMUTNB_CORE_COMPETENCIES = [
     name: '1. ความใฝ่เรียนรู้ (K)',
     desc: 'ความกระตือรือร้นในการแสวงหาความรู้ พัฒนาตนเองอย่างสม่ำเสมอ',
     defaultLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 4,
+    },
   },
   {
     code: 'M',
     name: '2. คุณธรรมและความซื่อสัตย์ (M)',
     desc: 'การยึดมั่นในความถูกต้อง โปร่งใส มีจริยธรรมในการปฏิบัติงาน',
     defaultLevel: 5,
+    expectedLevels: {
+      'ปฏิบัติการ': 5,
+      'ชำนาญการ': 5,
+      'ชำนาญการพิเศษ': 5,
+    },
   },
   {
     code: 'U',
     name: '3. ความมุ่งมั่นให้เกิดผลสำเร็จของงาน (U)',
     desc: 'ความตั้งใจทำงานให้บรรลุเป้าหมายอย่างมีประสิทธิภาพและประสิทธิผล',
     defaultLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 4,
+    },
   },
   {
     code: 'T',
     name: '4. การทำงานเป็นทีม (T)',
     desc: 'การร่วมมือ ช่วยเหลือ และประสานงานกับเพื่อนร่วมงานอย่างราบรื่น',
     defaultLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 4,
+    },
   },
   {
     code: 'N',
     name: '5. จิตสำนึกรักองค์กร (N)',
     desc: 'ความภาคภูมิใจ หวงแหน และทุ่มเทเพื่อชื่อเสียงและความก้าวหน้าของ มจพ.',
     defaultLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 4,
+    },
   },
   {
     code: 'B',
     name: '6. การพัฒนางานอย่างต่อเนื่อง (B)',
     desc: 'การคิดค้น ปรับปรุงกระบวนการทำงานให้ทันสมัยและมีประสิทธิภาพยิ่งขึ้น',
     defaultLevel: 3,
+    expectedLevels: {
+      'ปฏิบัติการ': 3,
+      'ชำนาญการ': 4,
+      'ชำนาญการพิเศษ': 4,
+    },
   },
 ];
+
+/**
+ * Resolves standard Core Competencies target levels from IDP competency configuration
+ * based on position level ('ปฏิบัติการ' | 'ชำนาญการ' | 'ชำนาญการพิเศษ')
+ * and the current Thai Fiscal Year (ปีงบประมาณ).
+ */
+export function getCoreCompetenciesForLevel(positionLevel = 'ปฏิบัติการ', fiscalYear = null, customConfig = null) {
+  let normalizedLevel = 'ปฏิบัติการ';
+  const str = String(positionLevel || '').trim();
+  if (str.includes('ชำนาญการพิเศษ') || str.includes('ชำนาญงานพิเศษ') || str.includes('พิเศษ')) {
+    normalizedLevel = 'ชำนาญการพิเศษ';
+  } else if (str.includes('ชำนาญการ') || str.includes('ชำนาญงาน')) {
+    normalizedLevel = 'ชำนาญการ';
+  } else if (str.includes('ปฏิบัติการ') || str.includes('ปฏิบัติงาน') || str.includes('ต้น')) {
+    normalizedLevel = 'ปฏิบัติการ';
+  } else if (str.includes('เชี่ยวชาญ')) {
+    normalizedLevel = 'ชำนาญการพิเศษ';
+  }
+
+  const currentYear = String(fiscalYear || getCurrentThaiFiscalYear());
+
+  // Check if custom config is directly provided or stored in localStorage
+  let idpCoreList = DEFAULT_IDP_CORE_COMPETENCIES;
+
+  if (Array.isArray(customConfig?.coreCompetencies) && customConfig.coreCompetencies.length > 0) {
+    idpCoreList = customConfig.coreCompetencies;
+  } else if (typeof window !== 'undefined') {
+    try {
+      // 1. Try to read from specific current fiscal year config: icit_idp_config_{fiscalYear}
+      const specificRaw = localStorage.getItem(`icit_idp_config_${currentYear}`);
+      if (specificRaw) {
+        const parsed = JSON.parse(specificRaw);
+        if (Array.isArray(parsed?.coreCompetencies) && parsed.coreCompetencies.length > 0) {
+          idpCoreList = parsed.coreCompetencies;
+        }
+      } else {
+        // 2. Fallback search across any icit_idp_config in localStorage
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('icit_idp_config')) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed?.coreCompetencies) && parsed.coreCompetencies.length > 0) {
+                idpCoreList = parsed.coreCompetencies;
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback to DEFAULT_IDP_CORE_COMPETENCIES
+    }
+  }
+
+  return KMUTNB_CORE_COMPETENCIES.map((c, idx) => {
+    const idpItem =
+      idpCoreList[idx] ||
+      idpCoreList.find((item) => {
+        const title = item.title || item.name || '';
+        return (
+          title.includes(c.code) ||
+          (c.code === 'K' && title.includes('ความใฝ่เรียนรู้')) ||
+          (c.code === 'M' && title.includes('คุณธรรม')) ||
+          (c.code === 'U' && title.includes('ความมุ่งมั่น')) ||
+          (c.code === 'T' && title.includes('การทำงานเป็นทีม')) ||
+          (c.code === 'N' && title.includes('จิตสำนึก')) ||
+          (c.code === 'B' && title.includes('การพัฒนางาน'))
+        );
+      });
+
+    let targetLevel = 3;
+    if (idpItem?.expectedLevels?.[normalizedLevel] !== undefined) {
+      targetLevel = Number(idpItem.expectedLevels[normalizedLevel]);
+    } else if (idpItem?.expectedLevel !== undefined && normalizedLevel === 'ชำนาญการ') {
+      targetLevel = Number(idpItem.expectedLevel);
+    } else if (c.expectedLevels?.[normalizedLevel] !== undefined) {
+      targetLevel = Number(c.expectedLevels[normalizedLevel]);
+    } else {
+      targetLevel = c.defaultLevel || 3;
+    }
+
+    return {
+      code: c.code,
+      name: c.name,
+      targetLevel,
+    };
+  });
+}
 
 export const STANDARD_CORE_NAMES = {
   K: '1. ความใฝ่เรียนรู้ (K)',
@@ -198,8 +320,9 @@ export const DEFAULT_JD_TEMPLATE = {
 /**
  * Creates an empty/initial JD record structure
  */
-export function createBlankJD(personnel = null) {
+export function createBlankJD(personnel = null, fiscalYear = null, customConfig = null) {
   const now = new Date().toISOString();
+  const positionLevel = personnel?.positionLevel || personnel?.level || 'ปฏิบัติการ';
   return {
     id: `jd-${Date.now()}`,
     personnelId: personnel?.id || '',
@@ -208,7 +331,7 @@ export function createBlankJD(personnel = null) {
     positionNumber: personnel?.positionNumber || '',
     position: personnel?.position || '',
     adminPosition: '-',
-    positionLevel: personnel?.positionLevel || 'ปฏิบัติการ',
+    positionLevel: positionLevel,
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
     division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
     department: personnel?.department || '',
@@ -241,8 +364,8 @@ export function createBlankJD(personnel = null) {
       otherSkills: '',
     },
 
-    // ส่วนที่ 6: สมรรถนะ (Core Competencies & Functional Competencies)
-    coreCompetencies: normalizeCoreCompetencies(KMUTNB_CORE_COMPETENCIES),
+    // ส่วนที่ 6: สมรรถนะ (Core Competencies & Functional Competencies) จาก IDP Config
+    coreCompetencies: getCoreCompetenciesForLevel(positionLevel, fiscalYear, customConfig),
     functionalCompetencies: [],
 
     // ส่วนที่ 7: การฝึกอบรม (Trainings) -> Empty
