@@ -362,55 +362,55 @@ export default function JDModal({
       let initialData;
       if (jdToEdit) {
         initialData = JSON.parse(JSON.stringify(jdToEdit));
+        if (!initialData.signatures) initialData.signatures = {};
+
+        const loginUserName =
+          currentPersonnel?.name ||
+          currentUser?.displayName ||
+          (currentUser?.email ? currentUser.email.split('@')[0] : '') ||
+          initialData.personnelName ||
+          '';
+
+        const resolvedPerson = initialData.personnelId
+          ? personnelList.find((p) => p.id === initialData.personnelId)
+          : personnelList.find((p) => p.name === initialData.personnelName) || (isAdmin ? null : currentPersonnel) || { name: loginUserName };
+
+        const supervisor = getSupervisorInfo(initialData.department, resolvedPerson);
+        const director = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
+
+        let preparerName;
+        if (isAdmin) {
+          preparerName = initialData.signatures.preparedBy?.name || initialData.personnelName || '';
+        } else {
+          preparerName = loginUserName;
+        }
+
+        initialData.signatures.preparedBy = {
+          name: preparerName,
+          date: initialData.signatures.preparedBy?.date || '',
+        };
+        if (supervisor && !initialData.signatures.reviewedBy?.name) {
+          initialData.supervisorName = supervisor.name;
+          initialData.supervisorPosition = supervisor.position;
+          initialData.signatures.reviewedBy = {
+            name: supervisor.name,
+            date: initialData.signatures.reviewedBy?.date || '',
+          };
+        }
+        if (!initialData.signatures.approvedBy?.name) {
+          initialData.signatures.approvedBy = {
+            name: director,
+            date: initialData.signatures.approvedBy?.date || '',
+          };
+        }
       } else {
         initialData = createBlankJD(null);
-      }
-
-      if (!initialData.signatures) initialData.signatures = {};
-
-      const loginUserName =
-        currentPersonnel?.name ||
-        currentUser?.displayName ||
-        (currentUser?.email ? currentUser.email.split('@')[0] : '') ||
-        initialData.personnelName ||
-        '';
-
-      const resolvedPerson = initialData.personnelId
-        ? personnelList.find((p) => p.id === initialData.personnelId)
-        : personnelList.find((p) => p.name === initialData.personnelName) || (isAdmin ? null : currentPersonnel) || { name: loginUserName };
-
-      const supervisor = getSupervisorInfo(initialData.department, resolvedPerson);
-      const director = autoDirector?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน';
-
-      // ผู้จัดทำ (Position By):
-      // - If Admin is editing an existing JD: do NOT auto-select Admin; keep the existing preparedBy name or JD owner
-      // - If Admin is creating a new JD: use the personnelName
-      // - If regular user: auto select from login user
-      let preparerName;
-      if (isAdmin && jdToEdit) {
-        preparerName = initialData.signatures.preparedBy?.name || initialData.personnelName || '';
-      } else if (isAdmin && !jdToEdit) {
-        preparerName = initialData.personnelName || '';
-      } else {
-        preparerName = loginUserName;
-      }
-
-      initialData.signatures.preparedBy = {
-        name: preparerName,
-        date: initialData.signatures.preparedBy?.date || '',
-      };
-      if (supervisor) {
-        initialData.supervisorName = supervisor.name;
-        initialData.supervisorPosition = supervisor.position;
-        initialData.signatures.reviewedBy = {
-          name: supervisor.name,
-          date: initialData.signatures.reviewedBy?.date || '',
+        initialData.signatures = {
+          preparedBy: { name: '', date: '' },
+          reviewedBy: { name: '', date: '' },
+          approvedBy: { name: '', date: '' },
         };
       }
-      initialData.signatures.approvedBy = {
-        name: director,
-        date: initialData.signatures.approvedBy?.date || '',
-      };
 
       setFormData(initialData);
       setActiveTab('job_info');
@@ -453,21 +453,27 @@ export default function JDModal({
       positionType: selected.personnelType || prev.positionType,
       supervisorName: supervisorForSelected?.name || prev.supervisorName,
       supervisorPosition: supervisorForSelected?.position || prev.supervisorPosition,
-      signatures: {
-        ...prev.signatures,
-        preparedBy: {
-          name: selected.name,
-          date: prev.signatures?.preparedBy?.date || '',
-        },
-        reviewedBy: {
-          name: supervisorForSelected?.name || prev.signatures?.reviewedBy?.name || '',
-          date: prev.signatures?.reviewedBy?.date || '',
-        },
-        approvedBy: {
-          name: autoDirector.name,
-          date: prev.signatures?.approvedBy?.date || '',
-        },
-      },
+      signatures: jdToEdit
+        ? {
+            ...prev.signatures,
+            preparedBy: {
+              name: selected.name,
+              date: prev.signatures?.preparedBy?.date || '',
+            },
+            reviewedBy: {
+              name: supervisorForSelected?.name || prev.signatures?.reviewedBy?.name || '',
+              date: prev.signatures?.reviewedBy?.date || '',
+            },
+            approvedBy: {
+              name: autoDirector.name,
+              date: prev.signatures?.approvedBy?.date || '',
+            },
+          }
+        : {
+            preparedBy: { name: '', date: '' },
+            reviewedBy: { name: '', date: '' },
+            approvedBy: { name: '', date: '' },
+          },
     }));
   };
 

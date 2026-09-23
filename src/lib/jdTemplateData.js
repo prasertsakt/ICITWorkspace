@@ -198,8 +198,7 @@ export const DEFAULT_JD_TEMPLATE = {
 /**
  * Creates an empty/initial JD record structure
  */
-export function createBlankJD(personnel = null, template = null) {
-  const tmpl = template || DEFAULT_JD_TEMPLATE;
+export function createBlankJD(personnel = null) {
   const now = new Date().toISOString();
   return {
     id: `jd-${Date.now()}`,
@@ -211,7 +210,7 @@ export function createBlankJD(personnel = null, template = null) {
     adminPosition: '-',
     positionLevel: personnel?.positionLevel || 'ปฏิบัติการ',
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
-    division: tmpl.division || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
+    division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
     department: personnel?.department || '',
     
     // Supervision
@@ -224,51 +223,35 @@ export function createBlankJD(personnel = null, template = null) {
     jobSummaryStandard: '',
     jobSummaryActual: '',
 
-    // Main Responsibilities
-    mainResponsibilities: Array.isArray(tmpl.mainResponsibilities) && tmpl.mainResponsibilities.length > 0
-      ? JSON.parse(JSON.stringify(tmpl.mainResponsibilities))
-      : [],
+    // ส่วนที่ 3: หน้าที่ความรับผิดชอบหลัก (Main Responsibilities) -> Empty
+    mainResponsibilities: [],
 
-    // Relationships
-    internalRelationships: Array.isArray(tmpl.internalRelationships) && tmpl.internalRelationships.length > 0
-      ? JSON.parse(JSON.stringify(tmpl.internalRelationships))
-      : [],
-    externalRelationships: Array.isArray(tmpl.externalRelationships) && tmpl.externalRelationships.length > 0
-      ? JSON.parse(JSON.stringify(tmpl.externalRelationships))
-      : [],
+    // ส่วนที่ 4: ความสัมพันธ์ในการทำงาน (Relationships) -> Empty
+    internalRelationships: [],
+    externalRelationships: [],
 
-    // Qualifications
-    educationAndMajor: tmpl.qualifications?.educationAndMajor || '',
-    experience: tmpl.qualifications?.experience || '',
-    specialQualifications: tmpl.qualifications?.specialQualifications || '',
-    skills: tmpl.qualifications?.skills
-      ? JSON.parse(JSON.stringify(tmpl.qualifications.skills))
-      : {
-          english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
-          otherLanguage: '-',
-          computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
-          otherSkills: '-',
-        },
+    // ส่วนที่ 5: คุณสมบัติเฉพาะตำแหน่ง (Qualifications) -> Empty
+    educationAndMajor: '',
+    experience: '',
+    specialQualifications: '',
+    skills: {
+      english: '',
+      otherLanguage: '',
+      computer: '',
+      otherSkills: '',
+    },
 
-    // Competencies
-    coreCompetencies: normalizeCoreCompetencies(
-      tmpl.coreCompetencies && tmpl.coreCompetencies.length > 0
-        ? tmpl.coreCompetencies
-        : KMUTNB_CORE_COMPETENCIES
-    ),
-    functionalCompetencies: Array.isArray(tmpl.functionalCompetencies) && tmpl.functionalCompetencies.length > 0
-      ? JSON.parse(JSON.stringify(tmpl.functionalCompetencies))
-      : [],
+    // ส่วนที่ 6: สมรรถนะ (Core Competencies & Functional Competencies)
+    coreCompetencies: normalizeCoreCompetencies(KMUTNB_CORE_COMPETENCIES),
+    functionalCompetencies: [],
 
-    // Training
-    trainings: Array.isArray(tmpl.trainings) && tmpl.trainings.length > 0
-      ? [...tmpl.trainings]
-      : [],
+    // ส่วนที่ 7: การฝึกอบรม (Trainings) -> Empty
+    trainings: [],
 
-    // Signatures
+    // ส่วนที่ 8: การลงนามรับทราบและอนุมัติ (Signatures) -> Empty
     signatures: {
       preparedBy: {
-        name: personnel?.name || '',
+        name: '',
         date: '',
       },
       reviewedBy: {
@@ -276,15 +259,15 @@ export function createBlankJD(personnel = null, template = null) {
         date: '',
       },
       approvedBy: {
-        name: tmpl.approvedByName || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
+        name: '',
         date: '',
       },
     },
 
     // Metadata
-    docCode: tmpl.docCode || 'ICIT-FM-COMMON-006',
-    version: tmpl.version || '2.0',
-    securityClassification: tmpl.securityClassification || 'ปกปิด (Restricted)',
+    docCode: 'ICIT-FM-COMMON-006',
+    version: '2.0',
+    securityClassification: 'ปกปิด (Restricted)',
     status: 'DRAFT', // 'DRAFT' | 'CONFIRMED' | 'REVISED'
     userConfirmed: false,
     confirmedAt: null,
