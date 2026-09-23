@@ -445,7 +445,7 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
     division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
     department: personnel?.department || '',
-    
+
     // Supervision
     supervisorName: '',
     supervisorPosition: '',
@@ -468,7 +468,7 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     experience: '',
     specialQualifications: '',
     skills: {
-      english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
+      english: 'CEFR ไม่ต่ำกว่า B1',
       otherLanguage: '',
       computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams',
       otherSkills: '',
@@ -476,7 +476,7 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
 
     // ส่วนที่ 6: สมรรถนะหลัก (Core Competencies) จาก IDP Config
     coreCompetencies: getCoreCompetenciesForLevel(positionLevel, fiscalYear, customConfig),
-    
+
     // ส่วนที่ 7: สมรรถนะประจำตำแหน่ง (Functional Competencies) จาก IDP Config
     functionalCompetencies: getFunctionalCompetenciesForPosition(position, fiscalYear, customConfig),
 
