@@ -417,7 +417,7 @@ export const DEFAULT_JD_TEMPLATE = {
     skills: {
       english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
       otherLanguage: '-',
-      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
+      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams',
       otherSkills: '-',
     },
   },
@@ -463,14 +463,14 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     internalRelationships: [],
     externalRelationships: [],
 
-    // ส่วนที่ 5: คุณสมบัติเฉพาะตำแหน่ง (Qualifications) -> Empty
+    // ส่วนที่ 5: คุณสมบัติเฉพาะตำแหน่ง (Qualifications)
     educationAndMajor: '',
     experience: '',
     specialQualifications: '',
     skills: {
-      english: '',
+      english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
       otherLanguage: '',
-      computer: '',
+      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams',
       otherSkills: '',
     },
 

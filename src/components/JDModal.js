@@ -1681,7 +1681,7 @@ export default function JDModal({
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="เช่น Microsoft Word, Excel, PowerPoint, Google Form, Canva..."
+                    placeholder="เช่น Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams"
                     value={formData.skills?.computer || ''}
                     onChange={(e) => handleNestedChange('skills', 'computer', e.target.value)}
                   />
