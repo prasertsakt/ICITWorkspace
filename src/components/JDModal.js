@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { KMUTNB_CORE_COMPETENCIES, createBlankJD, getCoreCompetenciesForLevel } from '@/lib/jdTemplateData';
+import {
+  KMUTNB_CORE_COMPETENCIES,
+  createBlankJD,
+  getCoreCompetenciesForLevel,
+  getFunctionalCompetenciesForPosition,
+} from '@/lib/jdTemplateData';
 import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
 import { getCurrentThaiFiscalYear } from '@/lib/dateUtils';
 import { subscribeIdpConfig } from '@/lib/idpService';
@@ -471,6 +476,7 @@ export default function JDModal({
       supervisorName: supervisorForSelected?.name || prev.supervisorName,
       supervisorPosition: supervisorForSelected?.position || prev.supervisorPosition,
       coreCompetencies: jdToEdit ? prev.coreCompetencies : getCoreCompetenciesForLevel(selectedLevel, currentFiscalYear, idpConfig),
+      functionalCompetencies: jdToEdit ? prev.functionalCompetencies : getFunctionalCompetenciesForPosition(selected.position || prev.position || '', currentFiscalYear, idpConfig),
       signatures: jdToEdit
         ? {
             ...prev.signatures,
@@ -557,6 +563,16 @@ export default function JDModal({
       ...prev,
       positionLevel: newLvl,
       coreCompetencies: getCoreCompetenciesForLevel(newLvl, currentFiscalYear, idpConfig),
+    }));
+  };
+
+  const handlePositionChange = (newPos) => {
+    setFormData((prev) => ({
+      ...prev,
+      position: newPos,
+      functionalCompetencies: !jdToEdit || (!prev.functionalCompetencies || prev.functionalCompetencies.length === 0)
+        ? getFunctionalCompetenciesForPosition(newPos, currentFiscalYear, idpConfig)
+        : prev.functionalCompetencies,
     }));
   };
 
@@ -1093,7 +1109,7 @@ export default function JDModal({
                     className="form-input"
                     placeholder="เช่น บุคลากร, นักวิชาการคอมพิวเตอร์"
                     value={formData.position}
-                    onChange={(e) => handleChange('position', e.target.value)}
+                    onChange={(e) => handlePositionChange(e.target.value)}
                   />
                 </div>
 
@@ -1774,17 +1790,33 @@ export default function JDModal({
                       ส่วนที่ 7 คุณสมบัติประจำตำแหน่ง (Functional Competencies)
                     </h4>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      ระบุสมรรถนะเฉพาะตามลักษณะงานและความเชี่ยวชาญของตำแหน่ง พร้อมระดับที่ต้องการ (1 - 5)
+                      กำหนดระดับความสามารถที่คาดหวังตามเกณฑ์มาตรฐาน IDP ปีงบประมาณ {currentFiscalYear} ({formData.position || 'ตามตำแหน่งงาน'}) (ระดับ 1 - 5)
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddFunctionalCompetency}
-                    className="btn btn-secondary btn-sm"
-                    style={{ gap: '4px' }}
-                  >
-                    <Plus size={14} /> เพิ่มสมรรถนะประจำตำแหน่ง
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          functionalCompetencies: getFunctionalCompetenciesForPosition(prev.position || '', currentFiscalYear, idpConfig),
+                        }));
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ gap: '4px', fontSize: '0.75rem' }}
+                      title="โหลดค่ามาตรฐานตามเกณฑ์ IDP ของตำแหน่งงานในปีงบประมาณปัจจุบัน"
+                    >
+                      <RotateCcw size={13} /> ดึงเกณฑ์ IDP ปี {currentFiscalYear}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddFunctionalCompetency}
+                      className="btn btn-primary btn-sm"
+                      style={{ gap: '4px', fontSize: '0.75rem' }}
+                    >
+                      <Plus size={14} /> เพิ่มสมรรถนะประจำตำแหน่ง
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

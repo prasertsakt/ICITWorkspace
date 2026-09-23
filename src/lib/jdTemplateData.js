@@ -1,6 +1,8 @@
-// KMUTNB Job Description (JD Hub) Template & Default Definitions
-// Based on ICIT-FM-COMMON-006 (Version 2.0)
-import { DEFAULT_IDP_CORE_COMPETENCIES } from './constants';
+import {
+  DEFAULT_IDP_CORE_COMPETENCIES,
+  DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
+  DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
+} from './constants';
 import { getCurrentThaiFiscalYear } from './dateUtils';
 
 export const KMUTNB_CORE_COMPETENCIES = [
@@ -220,6 +222,113 @@ export const DEFAULT_FUNCTIONAL_COMPETENCIES = [
   { name: '6. การมีจิตบริการ', targetLevel: 4 },
 ];
 
+/**
+ * Resolves standard Functional Competencies from IDP competency configuration
+ * based on position name ('บุคลากร', 'นักวิชาการคอมพิวเตอร์', etc.)
+ * and the current Thai Fiscal Year (ปีงบประมาณ).
+ */
+export function getFunctionalCompetenciesForPosition(position = '', fiscalYear = null, customConfig = null) {
+  const currentYear = String(fiscalYear || getCurrentThaiFiscalYear());
+  const posStr = String(position || '').trim();
+
+  let byPositionMap = DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION;
+  let generalList = DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL;
+
+  if (customConfig?.functionalCompetenciesByPosition) {
+    byPositionMap = customConfig.functionalCompetenciesByPosition;
+    if (Array.isArray(customConfig.functionalCompetenciesGeneral)) {
+      generalList = customConfig.functionalCompetenciesGeneral;
+    }
+  } else if (typeof window !== 'undefined') {
+    try {
+      const specificRaw = localStorage.getItem(`icit_idp_config_${currentYear}`);
+      if (specificRaw) {
+        const parsed = JSON.parse(specificRaw);
+        if (parsed?.functionalCompetenciesByPosition) {
+          byPositionMap = parsed.functionalCompetenciesByPosition;
+        }
+        if (Array.isArray(parsed?.functionalCompetenciesGeneral)) {
+          generalList = parsed.functionalCompetenciesGeneral;
+        }
+      } else {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('icit_idp_config')) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.functionalCompetenciesByPosition) {
+                byPositionMap = parsed.functionalCompetenciesByPosition;
+                if (Array.isArray(parsed.functionalCompetenciesGeneral)) {
+                  generalList = parsed.functionalCompetenciesGeneral;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  let matchedList = null;
+  if (posStr && byPositionMap[posStr]) {
+    matchedList = byPositionMap[posStr];
+  } else if (posStr) {
+    for (const key of Object.keys(byPositionMap)) {
+      if (posStr.includes(key) || key.includes(posStr)) {
+        matchedList = byPositionMap[key];
+        break;
+      }
+    }
+  }
+
+  // Fallback matching
+  if (!matchedList || matchedList.length === 0) {
+    if (posStr.includes('คอมพิวเตอร์') || posStr.includes('โปรแกรมเมอร์') || posStr.includes('ระบบ') || posStr.includes('สารสนเทศ')) {
+      matchedList = byPositionMap['นักวิชาการคอมพิวเตอร์'];
+    } else if (posStr.includes('พัสดุ') || posStr.includes('จัดซื้อ')) {
+      matchedList = byPositionMap['นักวิชาการพัสดุ'];
+    } else if (posStr.includes('บริหารงานทั่วไป') || posStr.includes('ธุรการ') || posStr.includes('สารบรรณ')) {
+      matchedList = byPositionMap['เจ้าหน้าที่บริหารงานทั่วไป'];
+    } else if (posStr.includes('บุคคล') || posStr.includes('HR') || posStr.includes('ทรัพยากรบุคคล')) {
+      matchedList = byPositionMap['บุคลากร'];
+    } else if (posStr.includes('แผน') || posStr.includes('นโยบาย')) {
+      matchedList = byPositionMap['นักวิเคราะห์นโยบายและแผน'];
+    } else if (posStr.includes('เงิน') || posStr.includes('บัญชี')) {
+      matchedList = byPositionMap['นักวิชาการเงินและบัญชี'];
+    } else if (posStr.includes('วิศวกร')) {
+      matchedList = byPositionMap['วิศวกร'];
+    } else if (posStr.includes('ช่างเครื่อง')) {
+      matchedList = byPositionMap['ช่างเครื่องคอมพิวเตอร์'];
+    } else if (posStr.includes('ช่าง')) {
+      matchedList = byPositionMap['ช่างเทคนิค'];
+    } else if (posStr.includes('ผู้บริหาร') || posStr.includes('ผู้อำนวยการ')) {
+      matchedList = byPositionMap['ผู้บริหาร'];
+    } else {
+      matchedList = generalList;
+    }
+  }
+
+  if (!Array.isArray(matchedList) || matchedList.length === 0) {
+    matchedList = generalList || DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL;
+  }
+
+  return matchedList.map((item, idx) => {
+    let name = (item.title || item.name || '').trim();
+    if (name && !/^\d+\./.test(name)) {
+      name = `${idx + 1}. ${name}`;
+    }
+    const targetLevel = Number(item.expectedLevel || item.targetLevel || 3);
+    return {
+      name,
+      targetLevel: isNaN(targetLevel) || targetLevel < 1 ? 3 : Math.min(5, Math.max(1, targetLevel)),
+    };
+  });
+}
+
 export const DEFAULT_MAIN_RESPONSIBILITIES = [
   {
     category: 'ด้านการปฏิบัติการ',
@@ -323,13 +432,14 @@ export const DEFAULT_JD_TEMPLATE = {
 export function createBlankJD(personnel = null, fiscalYear = null, customConfig = null) {
   const now = new Date().toISOString();
   const positionLevel = personnel?.positionLevel || personnel?.level || 'ปฏิบัติการ';
+  const position = personnel?.position || '';
   return {
     id: `jd-${Date.now()}`,
     personnelId: personnel?.id || '',
     personnelName: personnel?.name || '',
     personnelEmail: personnel?.email || '',
     positionNumber: personnel?.positionNumber || '',
-    position: personnel?.position || '',
+    position: position,
     adminPosition: '-',
     positionLevel: positionLevel,
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
@@ -364,9 +474,11 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
       otherSkills: '',
     },
 
-    // ส่วนที่ 6: สมรรถนะ (Core Competencies & Functional Competencies) จาก IDP Config
+    // ส่วนที่ 6: สมรรถนะหลัก (Core Competencies) จาก IDP Config
     coreCompetencies: getCoreCompetenciesForLevel(positionLevel, fiscalYear, customConfig),
-    functionalCompetencies: [],
+    
+    // ส่วนที่ 7: สมรรถนะประจำตำแหน่ง (Functional Competencies) จาก IDP Config
+    functionalCompetencies: getFunctionalCompetenciesForPosition(position, fiscalYear, customConfig),
 
     // ส่วนที่ 7: การฝึกอบรม (Trainings) -> Empty
     trainings: [],
