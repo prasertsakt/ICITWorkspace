@@ -22,7 +22,6 @@ import {
   User as UserIcon,
   ChevronRight,
   ArrowLeft,
-  SlidersHorizontal,
 } from 'lucide-react';
 import {
   subscribeJDList,
@@ -30,7 +29,6 @@ import {
   isRevisionWindowOpen,
   saveJDRecord,
   confirmJDVersion,
-  getJDTemplateConfig,
 } from '@/lib/jdService';
 import {
   subscribePersonnelList,
@@ -41,7 +39,6 @@ import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
 import JDConfigModal from '@/components/JDConfigModal';
-import JDTemplateModal from '@/components/JDTemplateModal';
 import JDDeleteModal from '@/components/JDDeleteModal';
 
 export default function JDHubPage() {
@@ -65,7 +62,6 @@ export default function JDHubPage() {
   const [previewJD, setPreviewJD] = useState(null);
   const [editingJD, setEditingJD] = useState(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [deletingJD, setDeletingJD] = useState(null);
 
   // Real-time subscriptions
@@ -173,8 +169,7 @@ export default function JDHubPage() {
   };
 
   const handleCreateNew = () => {
-    const template = getJDTemplateConfig();
-    const newJD = createBlankJD(null, template);
+    const newJD = createBlankJD(null);
     setEditingJD(newJD);
   };
 
@@ -354,20 +349,6 @@ export default function JDHubPage() {
                 >
                   <Settings size={15} style={{ color: '#FB923C' }} />
                   <span>ตั้งค่าช่วงเวลาแก้ไข</span>
-                </button>
-                <button
-                  onClick={() => setIsTemplateModalOpen(true)}
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.12)',
-                    color: '#FFFFFF',
-                    borderColor: 'rgba(255, 255, 255, 0.25)',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                  title="จัดการแม่แบบ Job Description มาตรฐานสำหรับ Admin"
-                >
-                  <SlidersHorizontal size={15} style={{ color: '#FB923C' }} />
-                  <span>แก้ไขแม่แบบ JD</span>
                 </button>
                 <button
                   onClick={handleCreateNew}
@@ -1067,17 +1048,6 @@ export default function JDHubPage() {
           onClose={() => setIsConfigOpen(false)}
           currentConfig={config}
           onSaved={(newCfg) => setConfig(newCfg)}
-        />
-      )}
-
-      {isTemplateModalOpen && (
-        <JDTemplateModal
-          isOpen={isTemplateModalOpen}
-          onClose={() => setIsTemplateModalOpen(false)}
-          actorPersonnel={currentPersonnel}
-          onTemplateUpdated={(tmpl) => {
-            // Updated template will auto-refresh via real-time listeners
-          }}
         />
       )}
 

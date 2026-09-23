@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { KMUTNB_CORE_COMPETENCIES, createBlankJD } from '@/lib/jdTemplateData';
-import { getJDTemplateConfig } from '@/lib/jdService';
 import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
 import {
   X,
@@ -86,7 +85,7 @@ export default function JDModal({
   isRevisionOpen = true,
 }) {
   const [activeTab, setActiveTab] = useState('job_info');
-  const [formData, setFormData] = useState(() => createBlankJD(null, getJDTemplateConfig()));
+  const [formData, setFormData] = useState(() => createBlankJD());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const initializedKeyRef = useRef(null);
@@ -364,7 +363,7 @@ export default function JDModal({
       if (jdToEdit) {
         initialData = JSON.parse(JSON.stringify(jdToEdit));
       } else {
-        initialData = createBlankJD(null, getJDTemplateConfig());
+        initialData = createBlankJD(null);
       }
 
       if (!initialData.signatures) initialData.signatures = {};

@@ -1,6 +1,6 @@
 // Real-Time JD Hub Service: Synchronized with Firebase Firestore & Offline Fallback
 import { db, isFirebaseConfigured } from './firebase';
-import { SAMPLE_SEED_JD, normalizeCoreCompetencies, DEFAULT_JD_TEMPLATE } from './jdTemplateData';
+import { SAMPLE_SEED_JD, normalizeCoreCompetencies } from './jdTemplateData';
 import { formatLocalDate } from './dateUtils';
 import {
   collection,
@@ -14,7 +14,6 @@ import {
 
 const LOCAL_KEY_JDS = 'icit_job_descriptions';
 const LOCAL_KEY_JD_CONFIG = 'icit_jd_hub_config';
-const LOCAL_KEY_JD_TEMPLATE = 'icit_jd_template_config';
 
 export const DEFAULT_JD_CONFIG = {
   isRevisionOpen: true,
@@ -28,7 +27,6 @@ export const DEFAULT_JD_CONFIG = {
 // Internal pub/sub subscribers
 let jdSubscribers = [];
 let jdConfigSubscribers = [];
-let jdTemplateSubscribers = [];
 
 function notifyJDSubscribers(data) {
   jdSubscribers.forEach((cb) => {
@@ -50,16 +48,6 @@ function notifyJDConfigSubscribers(data) {
   });
 }
 
-function notifyJDTemplateSubscribers(data) {
-  jdTemplateSubscribers.forEach((cb) => {
-    try {
-      cb(data);
-    } catch (e) {
-      console.error('JD template subscriber error:', e);
-    }
-  });
-}
-
 /**
  * Initialize local storage with seed data if empty
  */
@@ -70,9 +58,6 @@ function initJDLocalStorage() {
   }
   if (!localStorage.getItem(LOCAL_KEY_JD_CONFIG)) {
     localStorage.setItem(LOCAL_KEY_JD_CONFIG, JSON.stringify(DEFAULT_JD_CONFIG));
-  }
-  if (!localStorage.getItem(LOCAL_KEY_JD_TEMPLATE)) {
-    localStorage.setItem(LOCAL_KEY_JD_TEMPLATE, JSON.stringify(DEFAULT_JD_TEMPLATE));
   }
 }
 
@@ -217,175 +202,6 @@ export function subscribeJDConfig(callback) {
   };
 }
 
-/**
- * Get cached JD Template config
- */
-export function getJDTemplateConfig() {
-  initJDLocalStorage();
-  if (typeof window === 'undefined') return DEFAULT_JD_TEMPLATE;
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY_JD_TEMPLATE);
-    if (!raw) return DEFAULT_JD_TEMPLATE;
-    const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_JD_TEMPLATE,
-      ...parsed,
-      coreCompetencies: normalizeCoreCompetencies(parsed.coreCompetencies || DEFAULT_JD_TEMPLATE.coreCompetencies),
-    };
-  } catch {
-    return DEFAULT_JD_TEMPLATE;
-  }
-}
-
-/**
- * Save JD Template configuration (Admin only)
- */
-export async function saveJDTemplateConfig(newTemplate, actorPersonnel) {
-  initJDLocalStorage();
-  const current = getJDTemplateConfig();
-  const updated = {
-    ...current,
-    ...newTemplate,
-    coreCompetencies: normalizeCoreCompetencies(newTemplate.coreCompetencies || current.coreCompetencies),
-    updatedAt: new Date().toISOString(),
-    updatedBy: actorPersonnel?.name || 'ผู้ดูแลระบบ',
-  };
-
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_JD_TEMPLATE, JSON.stringify(updated));
-  }
-  notifyJDTemplateSubscribers(updated);
-
-  if (isFirebaseConfigured && db) {
-    try {
-      await setDoc(doc(db, 'settings', 'jd_template_config'), updated, { merge: true });
-    } catch (e) {
-      console.error('Failed to sync JD Template to Firestore', e);
-    }
-  }
-
-  return { success: true, template: updated };
-}
-
-/**
- * Subscribe to JD Template changes
- */
-export function subscribeJDTemplateConfig(callback) {
-  initJDLocalStorage();
-  jdTemplateSubscribers.push(callback);
-
-  // Emit cached template immediately
-  const cached = getJDTemplateConfig();
-  callback(cached);
-
-  // Real-time Firestore listener
-  let unsubscribeFirestore = () => {};
-  if (isFirebaseConfigured && db) {
-    try {
-      unsubscribeFirestore = onSnapshot(
-        doc(db, 'settings', 'jd_template_config'),
-        (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            const normalized = {
-              ...DEFAULT_JD_TEMPLATE,
-              ...data,
-              coreCompetencies: normalizeCoreCompetencies(data.coreCompetencies || DEFAULT_JD_TEMPLATE.coreCompetencies),
-            };
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(LOCAL_KEY_JD_TEMPLATE, JSON.stringify(normalized));
-            }
-            callback(normalized);
-          }
-        },
-        (err) => {
-          console.warn('Firestore JD Template onSnapshot error, fallback to local', err);
-        }
-      );
-    } catch (e) {
-      console.error('Failed to attach JD Template listener', e);
-    }
-  }
-
-  return () => {
-    jdTemplateSubscribers = jdTemplateSubscribers.filter((cb) => cb !== callback);
-    unsubscribeFirestore();
-  };
-}
-
-/**
- * Apply updated template settings to ALL existing JD records in Firestore and LocalStorage
- */
-export async function applyJDTemplateToAllJDs(templateData, actorPersonnel, options = {}) {
-  initJDLocalStorage();
-  // 1. First save template config itself
-  await saveJDTemplateConfig(templateData, actorPersonnel);
-
-  const tmpl = getJDTemplateConfig();
-  const list = getJDList();
-  const now = new Date().toISOString();
-  const updaterName = actorPersonnel?.name || 'ผู้ดูแลระบบ';
-
-  const updatedList = list.map((jd) => {
-    // Merge template updates while keeping individual identity & personalized responsibilities
-    const updated = {
-      ...jd,
-      docCode: tmpl.docCode || jd.docCode || 'ICIT-FM-COMMON-006',
-      version: tmpl.version || jd.version || '2.0',
-      securityClassification: tmpl.securityClassification || jd.securityClassification || 'ปกปิด (Restricted)',
-      division: tmpl.division || jd.division || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-      coreCompetencies: normalizeCoreCompetencies(
-        tmpl.coreCompetencies && tmpl.coreCompetencies.length > 0
-          ? tmpl.coreCompetencies
-          : jd.coreCompetencies
-      ),
-      signatures: {
-        ...jd.signatures,
-        approvedBy: {
-          name: tmpl.approvedByName || jd.signatures?.approvedBy?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
-          date: jd.signatures?.approvedBy?.date || '',
-        },
-      },
-      updatedAt: now,
-      lastUpdatedBy: updaterName,
-    };
-
-    // If options specify to also overwrite functional competencies or trainings if empty:
-    if (options.overwriteFunctionalCompetencies && Array.isArray(tmpl.functionalCompetencies)) {
-      updated.functionalCompetencies = JSON.parse(JSON.stringify(tmpl.functionalCompetencies));
-    } else if ((!updated.functionalCompetencies || updated.functionalCompetencies.length === 0) && Array.isArray(tmpl.functionalCompetencies)) {
-      updated.functionalCompetencies = JSON.parse(JSON.stringify(tmpl.functionalCompetencies));
-    }
-
-    if (options.overwriteTrainings && Array.isArray(tmpl.trainings)) {
-      updated.trainings = [...tmpl.trainings];
-    } else if ((!updated.trainings || updated.trainings.length === 0) && Array.isArray(tmpl.trainings)) {
-      updated.trainings = [...tmpl.trainings];
-    }
-
-    return updated;
-  });
-
-  // 2. Update localStorage & notify
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_KEY_JDS, JSON.stringify(updatedList));
-  }
-  notifyJDSubscribers(updatedList);
-
-  // 3. Batch/Parallel update in Firestore
-  if (isFirebaseConfigured && db) {
-    try {
-      const updatePromises = updatedList.map((jd) =>
-        setDoc(doc(db, 'job_descriptions', jd.id), jd, { merge: true })
-      );
-      await Promise.all(updatePromises);
-    } catch (e) {
-      console.error('Failed to batch update JDs in Firestore', e);
-    }
-  }
-
-  return { success: true, count: updatedList.length, template: tmpl };
-}
 
 /**
  * Helper to normalize a JD record's coreCompetencies
