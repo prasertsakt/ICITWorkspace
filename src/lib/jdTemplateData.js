@@ -163,10 +163,43 @@ export const DEFAULT_REQUIRED_TRAININGS = [
   'พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล (PDPA) สำหรับบุคลากรทางการศึกษา',
 ];
 
+export const DEFAULT_JD_TEMPLATE = {
+  docCode: 'ICIT-FM-COMMON-006',
+  version: '2.0',
+  securityClassification: 'ปกปิด (Restricted)',
+  approvedByName: 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
+  division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
+  coreCompetencies: KMUTNB_CORE_COMPETENCIES.map((c) => ({
+    code: c.code,
+    name: c.name,
+    targetLevel: c.defaultLevel,
+    desc: c.desc || '',
+  })),
+  functionalCompetencies: DEFAULT_FUNCTIONAL_COMPETENCIES,
+  mainResponsibilities: DEFAULT_MAIN_RESPONSIBILITIES,
+  internalRelationships: DEFAULT_INTERNAL_RELATIONSHIPS,
+  externalRelationships: DEFAULT_EXTERNAL_RELATIONSHIPS,
+  qualifications: {
+    educationAndMajor: 'ปริญญาตรี ในสาขาที่เกี่ยวข้องกับตำแหน่งงาน',
+    experience: 'มีประสบการณ์และความชำนาญในงานที่รับผิดชอบ',
+    specialQualifications: 'การสื่อสาร การติดต่อประสานงาน การนำเสนอ และการประยุกต์ใช้เทคโนโลยีสารสนเทศ',
+    skills: {
+      english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
+      otherLanguage: '-',
+      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
+      otherSkills: '-',
+    },
+  },
+  trainings: DEFAULT_REQUIRED_TRAININGS,
+  updatedAt: new Date().toISOString(),
+  updatedBy: 'ระบบเริ่มต้น',
+};
+
 /**
  * Creates an empty/initial JD record structure
  */
-export function createBlankJD(personnel = null) {
+export function createBlankJD(personnel = null, template = null) {
+  const tmpl = template || DEFAULT_JD_TEMPLATE;
   const now = new Date().toISOString();
   return {
     id: `jd-${Date.now()}`,
@@ -178,7 +211,7 @@ export function createBlankJD(personnel = null) {
     adminPosition: '-',
     positionLevel: personnel?.positionLevel || 'ปฏิบัติการ',
     positionType: personnel?.personnelType || 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
-    division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
+    division: tmpl.division || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
     department: personnel?.department || '',
     
     // Supervision
@@ -192,33 +225,45 @@ export function createBlankJD(personnel = null) {
     jobSummaryActual: '',
 
     // Main Responsibilities
-    mainResponsibilities: [],
+    mainResponsibilities: Array.isArray(tmpl.mainResponsibilities) && tmpl.mainResponsibilities.length > 0
+      ? JSON.parse(JSON.stringify(tmpl.mainResponsibilities))
+      : [],
 
     // Relationships
-    internalRelationships: [],
-    externalRelationships: [],
+    internalRelationships: Array.isArray(tmpl.internalRelationships) && tmpl.internalRelationships.length > 0
+      ? JSON.parse(JSON.stringify(tmpl.internalRelationships))
+      : [],
+    externalRelationships: Array.isArray(tmpl.externalRelationships) && tmpl.externalRelationships.length > 0
+      ? JSON.parse(JSON.stringify(tmpl.externalRelationships))
+      : [],
 
     // Qualifications
-    educationAndMajor: '',
-    experience: '',
-    specialQualifications: '',
-    skills: {
-      english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
-      otherLanguage: '-',
-      computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
-      otherSkills: '-',
-    },
+    educationAndMajor: tmpl.qualifications?.educationAndMajor || '',
+    experience: tmpl.qualifications?.experience || '',
+    specialQualifications: tmpl.qualifications?.specialQualifications || '',
+    skills: tmpl.qualifications?.skills
+      ? JSON.parse(JSON.stringify(tmpl.qualifications.skills))
+      : {
+          english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
+          otherLanguage: '-',
+          computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace',
+          otherSkills: '-',
+        },
 
     // Competencies
-    coreCompetencies: KMUTNB_CORE_COMPETENCIES.map((c) => ({
-      code: c.code,
-      name: c.name,
-      targetLevel: c.defaultLevel,
-    })),
-    functionalCompetencies: [],
+    coreCompetencies: normalizeCoreCompetencies(
+      tmpl.coreCompetencies && tmpl.coreCompetencies.length > 0
+        ? tmpl.coreCompetencies
+        : KMUTNB_CORE_COMPETENCIES
+    ),
+    functionalCompetencies: Array.isArray(tmpl.functionalCompetencies) && tmpl.functionalCompetencies.length > 0
+      ? JSON.parse(JSON.stringify(tmpl.functionalCompetencies))
+      : [],
 
     // Training
-    trainings: [],
+    trainings: Array.isArray(tmpl.trainings) && tmpl.trainings.length > 0
+      ? [...tmpl.trainings]
+      : [],
 
     // Signatures
     signatures: {
@@ -231,15 +276,15 @@ export function createBlankJD(personnel = null) {
         date: '',
       },
       approvedBy: {
-        name: 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
+        name: tmpl.approvedByName || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน',
         date: '',
       },
     },
 
     // Metadata
-    docCode: 'ICIT-FM-COMMON-006',
-    version: '2.0',
-    securityClassification: 'ปกปิด (Restricted)',
+    docCode: tmpl.docCode || 'ICIT-FM-COMMON-006',
+    version: tmpl.version || '2.0',
+    securityClassification: tmpl.securityClassification || 'ปกปิด (Restricted)',
     status: 'DRAFT', // 'DRAFT' | 'CONFIRMED' | 'REVISED'
     userConfirmed: false,
     confirmedAt: null,

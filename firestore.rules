@@ -96,9 +96,9 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'settings' collection (Portal Configurations, Service Order, JD Config, etc.)
+    // Rules for 'settings' collection (Portal Configurations, Service Order, JD Hub Revision Period, JD Template Config, etc.)
     match /settings/{settingId} {
-      allow read: if true; // Any visitor can read portal card order & public configs
+      allow read: if true; // Any visitor/user can read portal configs & JD templates
       allow write: if isAuthenticated(); // Only logged-in users / admins can save
     }
 
