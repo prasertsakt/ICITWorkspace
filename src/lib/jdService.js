@@ -1,6 +1,6 @@
 // Real-Time JD Hub Service: Synchronized with Firebase Firestore & Offline Fallback
 import { db, isFirebaseConfigured } from './firebase';
-import { SAMPLE_SEED_JD } from './jdTemplateData';
+import { SAMPLE_SEED_JD, normalizeCoreCompetencies } from './jdTemplateData';
 import { formatLocalDate } from './dateUtils';
 import {
   collection,
@@ -203,16 +203,29 @@ export function subscribeJDConfig(callback) {
 }
 
 /**
+ * Helper to normalize a JD record's coreCompetencies
+ */
+function sanitizeJDRecord(jd) {
+  if (!jd) return jd;
+  const coreCompetencies = normalizeCoreCompetencies(jd.coreCompetencies);
+  return {
+    ...jd,
+    coreCompetencies,
+  };
+}
+
+/**
  * Get all JDs (local / cached)
  */
 export function getJDList() {
   initJDLocalStorage();
-  if (typeof window === 'undefined') return [SAMPLE_SEED_JD];
+  if (typeof window === 'undefined') return [sanitizeJDRecord(SAMPLE_SEED_JD)];
   try {
     const raw = localStorage.getItem(LOCAL_KEY_JDS);
-    return raw ? JSON.parse(raw) : [SAMPLE_SEED_JD];
+    const parsed = raw ? JSON.parse(raw) : [SAMPLE_SEED_JD];
+    return Array.isArray(parsed) ? parsed.map(sanitizeJDRecord) : [sanitizeJDRecord(SAMPLE_SEED_JD)];
   } catch {
-    return [SAMPLE_SEED_JD];
+    return [sanitizeJDRecord(SAMPLE_SEED_JD)];
   }
 }
 
@@ -228,14 +241,14 @@ export async function getJDById(id) {
     try {
       const snap = await getDoc(doc(db, 'job_descriptions', id));
       if (snap.exists()) {
-        return { id: snap.id, ...snap.data() };
+        return sanitizeJDRecord({ id: snap.id, ...snap.data() });
       }
     } catch (e) {
       console.error('Error fetching JD from Firestore', e);
     }
   }
 
-  return localItem || null;
+  return localItem ? sanitizeJDRecord(localItem) : null;
 }
 
 /**
@@ -258,8 +271,22 @@ export function subscribeJDList(callback) {
         jdCollection,
         (snapshot) => {
           const remoteList = [];
+          let hasOutdatedRecords = false;
+
           snapshot.forEach((docSnap) => {
-            remoteList.push({ id: docSnap.id, ...docSnap.data() });
+            const rawData = { id: docSnap.id, ...docSnap.data() };
+            const sanitized = sanitizeJDRecord(rawData);
+            
+            // Check if any core competency was updated during sanitization
+            const rawNames = JSON.stringify(rawData.coreCompetencies?.map((c) => c.name) || []);
+            const cleanNames = JSON.stringify(sanitized.coreCompetencies?.map((c) => c.name) || []);
+            if (rawNames !== cleanNames) {
+              hasOutdatedRecords = true;
+              // Auto-fix the document in Firestore
+              setDoc(doc(db, 'job_descriptions', docSnap.id), { coreCompetencies: sanitized.coreCompetencies }, { merge: true }).catch(() => {});
+            }
+
+            remoteList.push(sanitized);
           });
 
           if (remoteList.length > 0) {
@@ -269,9 +296,9 @@ export function subscribeJDList(callback) {
             callback(remoteList);
           } else {
             // Seed sample if Firestore collection is empty
-            const seed = [SAMPLE_SEED_JD];
+            const seed = [sanitizeJDRecord(SAMPLE_SEED_JD)];
             callback(seed);
-            setDoc(doc(db, 'job_descriptions', SAMPLE_SEED_JD.id), SAMPLE_SEED_JD).catch(() => {});
+            setDoc(doc(db, 'job_descriptions', SAMPLE_SEED_JD.id), seed[0]).catch(() => {});
           }
         },
         (error) => {
@@ -323,13 +350,13 @@ export async function saveJDRecord(jdData, actorPersonnel, isAdmin = false) {
 
   const nowIso = new Date().toISOString();
   const id = jdData.id || `jd-${Date.now()}`;
-  const fullRecord = {
+  const fullRecord = sanitizeJDRecord({
     ...jdData,
     id,
     lastUpdatedBy: actorPersonnel?.name || 'ผู้ใช้งาน',
     updatedAt: nowIso,
     createdAt: jdData.createdAt || nowIso,
-  };
+  });
 
   // Optimistic update in localStorage
   const list = getJDList();

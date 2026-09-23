@@ -4,41 +4,90 @@
 export const KMUTNB_CORE_COMPETENCIES = [
   {
     code: 'K',
-    name: '1. ความใฝ่เรียนรู้ (K - Keen to learn)',
+    name: '1. ความใฝ่เรียนรู้ (K)',
     desc: 'ความกระตือรือร้นในการแสวงหาความรู้ พัฒนาตนเองอย่างสม่ำเสมอ',
     defaultLevel: 3,
   },
   {
     code: 'M',
-    name: '2. คุณธรรมและความซื่อสัตย์ (M - Moral & Integrity)',
+    name: '2. คุณธรรมและความซื่อสัตย์ (M)',
     desc: 'การยึดมั่นในความถูกต้อง โปร่งใส มีจริยธรรมในการปฏิบัติงาน',
     defaultLevel: 5,
   },
   {
     code: 'U',
-    name: '3. ความมุ่งมั่นให้เกิดผลสำเร็จของงาน (U - Urge for achievement)',
+    name: '3. ความมุ่งมั่นให้เกิดผลสำเร็จของงาน (U)',
     desc: 'ความตั้งใจทำงานให้บรรลุเป้าหมายอย่างมีประสิทธิภาพและประสิทธิผล',
     defaultLevel: 3,
   },
   {
     code: 'T',
-    name: '4. การทำงานเป็นทีม (T - Teamwork)',
+    name: '4. การทำงานเป็นทีม (T)',
     desc: 'การร่วมมือ ช่วยเหลือ และประสานงานกับเพื่อนร่วมงานอย่างราบรื่น',
     defaultLevel: 3,
   },
   {
     code: 'N',
-    name: '5. จิตสำนึกรักองค์กร (N - Network & Belonging)',
+    name: '5. จิตสำนึกรักองค์กร (N)',
     desc: 'ความภาคภูมิใจ หวงแหน และทุ่มเทเพื่อชื่อเสียงและความก้าวหน้าของ มจพ.',
     defaultLevel: 3,
   },
   {
     code: 'B',
-    name: '6. การพัฒนางานอย่างต่อเนื่อง (B - Best practice / Continuous improvement)',
+    name: '6. การพัฒนางานอย่างต่อเนื่อง (B)',
     desc: 'การคิดค้น ปรับปรุงกระบวนการทำงานให้ทันสมัยและมีประสิทธิภาพยิ่งขึ้น',
     defaultLevel: 3,
   },
 ];
+
+export const STANDARD_CORE_NAMES = {
+  K: '1. ความใฝ่เรียนรู้ (K)',
+  M: '2. คุณธรรมและความซื่อสัตย์ (M)',
+  U: '3. ความมุ่งมั่นให้เกิดผลสำเร็จของงาน (U)',
+  T: '4. การทำงานเป็นทีม (T)',
+  N: '5. จิตสำนึกรักองค์กร (N)',
+  B: '6. การพัฒนางานอย่างต่อเนื่อง (B)',
+};
+
+export function normalizeCoreCompetencies(coreCompetencies = []) {
+  if (!Array.isArray(coreCompetencies) || coreCompetencies.length === 0) {
+    return KMUTNB_CORE_COMPETENCIES.map((c) => ({
+      code: c.code,
+      name: c.name,
+      targetLevel: c.defaultLevel,
+    }));
+  }
+
+  return coreCompetencies.map((item, idx) => {
+    let code = item.code;
+    let name = item.name || '';
+
+    if (!code) {
+      if (name.includes('(K') || name.includes('ความใฝ่เรียนรู้')) code = 'K';
+      else if (name.includes('(M') || name.includes('คุณธรรม')) code = 'M';
+      else if (name.includes('(U') || name.includes('ความมุ่งมั่น')) code = 'U';
+      else if (name.includes('(T') || name.includes('การทำงานเป็นทีม')) code = 'T';
+      else if (name.includes('(N') || name.includes('จิตสำนึก')) code = 'N';
+      else if (name.includes('(B') || name.includes('การพัฒนางาน')) code = 'B';
+      else {
+        const codes = ['K', 'M', 'U', 'T', 'N', 'B'];
+        code = codes[idx] || '';
+      }
+    }
+
+    if (code && STANDARD_CORE_NAMES[code]) {
+      name = STANDARD_CORE_NAMES[code];
+    } else {
+      name = name.replace(/\(([KMUTNB])\s*-[^)]+\)/gi, '($1)');
+    }
+
+    return {
+      ...item,
+      code: code || item.code,
+      name,
+    };
+  });
+}
 
 export const DEFAULT_FUNCTIONAL_COMPETENCIES = [
   { name: '1. ความรู้ด้านการบริหารทรัพยากรบุคคล / วิชาชีพ', targetLevel: 4 },
