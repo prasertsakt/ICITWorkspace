@@ -7,7 +7,7 @@ import {
   getCoreCompetenciesForLevel,
   getFunctionalCompetenciesForPosition,
 } from '@/lib/jdTemplateData';
-import { PREDEFINED_DEPARTMENTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
+import { MAIN_6_DEPTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
 import { getCurrentThaiFiscalYear } from '@/lib/dateUtils';
 import { subscribeIdpConfig } from '@/lib/idpService';
 import {
@@ -1186,7 +1186,7 @@ export default function JDModal({
                     value={formData.department}
                     onChange={(e) => handleDepartmentChange(e.target.value)}
                   >
-                    {PREDEFINED_DEPARTMENTS.map((d) => (
+                    {MAIN_6_DEPTS.map((d) => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>

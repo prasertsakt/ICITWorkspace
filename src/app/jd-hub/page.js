@@ -36,7 +36,7 @@ import {
   subscribeExecutiveList,
 } from '@/lib/storageService';
 import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
-import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
+import { MAIN_6_DEPTS } from '@/lib/constants';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
 import JDConfigModal from '@/components/JDConfigModal';
@@ -152,8 +152,8 @@ export default function JDHubPage() {
       const deptA = a.department || '';
       const deptB = b.department || '';
 
-      const idxA = PREDEFINED_DEPARTMENTS.indexOf(deptA);
-      const idxB = PREDEFINED_DEPARTMENTS.indexOf(deptB);
+      const idxA = MAIN_6_DEPTS.indexOf(deptA);
+      const idxB = MAIN_6_DEPTS.indexOf(deptB);
 
       if (idxA !== -1 && idxB !== -1) {
         if (idxA !== idxB) return idxA - idxB;
@@ -181,18 +181,10 @@ export default function JDHubPage() {
     });
   }, [jds, searchQuery, selectedDept, statusFilter, myJdOnly, userEmail]);
 
-  // Department list sorted in organizational order
+  // Department list sorted in organizational order (6 main departments)
   const departments = useMemo(() => {
-    const list = Array.from(new Set(jds.map((j) => j.department).filter(Boolean)));
-    return list.sort((a, b) => {
-      const idxA = PREDEFINED_DEPARTMENTS.indexOf(a);
-      const idxB = PREDEFINED_DEPARTMENTS.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b, 'th');
-    });
-  }, [jds]);
+    return MAIN_6_DEPTS;
+  }, []);
 
   // Minimal dashboard stats
   const stats = useMemo(() => {

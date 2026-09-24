@@ -527,7 +527,7 @@ export const SAMPLE_SEED_JD = {
   positionLevel: 'ปฏิบัติการ',
   positionType: 'พนักงานมหาวิทยาลัย สายสนับสนุนวิชาการ',
   division: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-  department: 'ฝ่ายสำนักงานผู้อำนวยการ',
+  department: 'สำนักงานผู้อำนวยการ',
 
   // Supervision
   supervisorName: 'นางสาวชาลินทร์ เกรียงสินยศ',
