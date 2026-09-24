@@ -19,6 +19,7 @@ import {
   FileText,
   Target,
   Compass,
+  Award,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -146,6 +147,14 @@ export default function Navbar() {
                 >
                   <ShieldCheck size={16} />
                   <span>ระบบ IMS</span>
+                </Link>
+
+                <Link
+                  href="/tqa"
+                  className={`nav-link-item ${pathname.startsWith('/tqa') ? 'active' : ''}`}
+                >
+                  <Award size={16} />
+                  <span>ระบบ TQA</span>
                 </Link>
 
                 <Link
@@ -360,6 +369,18 @@ export default function Navbar() {
                       <ShieldCheck size={18} />
                     </div>
                     <span style={{ flex: 1 }}>ระบบบริหารงาน IMS</span>
+                    <ChevronRight size={16} opacity={0.4} />
+                  </Link>
+
+                  <Link
+                    href="/tqa"
+                    className={`mobile-drawer-link ${pathname.startsWith('/tqa') ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="drawer-icon-box" style={{ color: '#8B5CF6' }}>
+                      <Award size={18} />
+                    </div>
+                    <span style={{ flex: 1 }}>ระบบบริหารงาน TQA</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 
