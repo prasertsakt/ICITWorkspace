@@ -118,7 +118,7 @@ export default function TqaOfiTrackingPage() {
     };
   }, []);
 
-  // Dashboard calculations
+  // Dashboard calculations for 3-round tracking architecture
   const stats = useMemo(() => {
     const total = ofiItems.length;
     const completed = ofiItems.filter((i) => i.status === 'COMPLETED').length;
@@ -126,24 +126,62 @@ export default function TqaOfiTrackingPage() {
     const pending = ofiItems.filter((i) => i.status === 'PENDING' || !i.status).length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+    // Per-round calculations
+    const round1Items = ofiItems.map((i) => normalizeTqaRounds(i).round1);
+    const round2Items = ofiItems.map((i) => normalizeTqaRounds(i).round2);
+    const round3Items = ofiItems.map((i) => normalizeTqaRounds(i).round3);
+
+    const calcRoundStats = (roundList) => {
+      const reported = roundList.filter((r) => !!r?.actionReport).length;
+      const comp = roundList.filter((r) => r?.status === 'COMPLETED').length;
+      const inProg = roundList.filter((r) => r?.status === 'IN_PROGRESS').length;
+      const pend = roundList.filter((r) => r?.status === 'PENDING' || !r?.status).length;
+      const reportedPct = total > 0 ? Math.round((reported / total) * 100) : 0;
+      const compPct = total > 0 ? Math.round((comp / total) * 100) : 0;
+      return { reported, reportedPct, completed: comp, inProgress: inProg, pending: pend, completedPct: compPct };
+    };
+
+    const round1 = calcRoundStats(round1Items);
+    const round2 = calcRoundStats(round2Items);
+    const round3 = calcRoundStats(round3Items);
+
+    const totalReportsRequired = total * 3;
+    const totalReportsSubmitted = round1.reported + round2.reported + round3.reported;
+    const overallFulfillmentPct = totalReportsRequired > 0 ? Math.round((totalReportsSubmitted / totalReportsRequired) * 100) : 0;
+
     // By category counts
     const byCategory = {};
     TQA_CATEGORIES.forEach((c) => {
       byCategory[c.name] = ofiItems.filter((i) => i.category === c.name || i.categoryNum === c.num).length;
     });
 
-    return { total, completed, inProgress, pending, percentage, byCategory };
+    return {
+      total,
+      completed,
+      inProgress,
+      pending,
+      percentage,
+      round1,
+      round2,
+      round3,
+      totalReportsRequired,
+      totalReportsSubmitted,
+      overallFulfillmentPct,
+      byCategory,
+    };
   }, [ofiItems]);
 
-  // Filtered OFIs
+  // Filtered OFIs with 3-round support
   const filteredOfiItems = useMemo(() => {
     return ofiItems.filter((item) => {
+      const itemRounds = normalizeTqaRounds(item);
+
       // 1. Category Filter
       if (selectedCategory !== 'ALL' && item.category !== selectedCategory && String(item.categoryNum) !== selectedCategory) {
         return false;
       }
 
-      // 2. Status Filter
+      // 2. Status & Round Filter
       if (selectedStatus === 'MY_ASSIGNED') {
         const userEmail = (currentUser?.email || currentPersonnel?.email || '').trim().toLowerCase();
         const userId = currentPersonnel?.id || '';
@@ -151,6 +189,16 @@ export default function TqaOfiTrackingPage() {
           return (userEmail && p.email && userEmail === p.email.toLowerCase()) || (userId && p.id && userId === p.id);
         });
         if (!isAssigned) return false;
+      } else if (selectedStatus === 'ROUND1_UNREPORTED') {
+        if (itemRounds.round1?.actionReport) return false;
+      } else if (selectedStatus === 'ROUND2_UNREPORTED') {
+        if (itemRounds.round2?.actionReport) return false;
+      } else if (selectedStatus === 'ROUND3_UNREPORTED') {
+        if (itemRounds.round3?.actionReport) return false;
+      } else if (selectedStatus === 'ALL_ROUNDS_REPORTED') {
+        if (!itemRounds.round1?.actionReport || !itemRounds.round2?.actionReport || !itemRounds.round3?.actionReport) {
+          return false;
+        }
       } else if (selectedStatus !== 'ALL') {
         const itemStat = item.status || 'PENDING';
         if (itemStat !== selectedStatus) return false;
@@ -363,16 +411,16 @@ export default function TqaOfiTrackingPage() {
 
       {/* Main Container */}
       <div style={{ maxWidth: '1360px', margin: '-1.5rem auto 0', padding: '0 1.5rem', position: 'relative', zIndex: 3 }}>
-        {/* Minimal Dashboard Cards */}
+        {/* 3-Round Tracking Architecture Dashboard */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '1rem',
-            marginBottom: '1.5rem',
+            marginBottom: '1.25rem',
           }}
         >
-          {/* Card 1: Total */}
+          {/* Card 1: Total OFIs */}
           <div
             style={{
               background: '#FFFFFF',
@@ -380,120 +428,206 @@ export default function TqaOfiTrackingPage() {
               padding: '1.25rem',
               border: '1px solid #E2E8F0',
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B' }}>OFI ทั้งหมด</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Target size={18} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B' }}>OFI ทั้งหมด (ปี {fiscalYear})</span>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Target size={18} />
+                </div>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', marginTop: '6px', letterSpacing: '-0.02em' }}>
+                {stats.total} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
               </div>
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
-              {stats.total} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#6D28D9', fontWeight: 600 }}>
-              ปีงบประมาณ {fiscalYear}
+
+            <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: '#059669', fontWeight: 700 }}>🟢 เสร็จสิ้น {stats.completed} ข้อ</span>
+              <span style={{ color: '#6D28D9', fontWeight: 700 }}>ปิดแล้ว {stats.percentage}%</span>
             </div>
           </div>
 
-          {/* Card 2: Completed */}
+          {/* Card 2: Round 1 Progress */}
           <div
             style={{
               background: '#FFFFFF',
               borderRadius: '14px',
               padding: '1.25rem',
               border: '1px solid #E2E8F0',
+              borderTop: '3px solid #10B981',
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#059669' }}>เสร็จสิ้นแล้ว</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle2 size={18} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>1</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>ติดตามรอบที่ 1</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '999px' }}>
+                  {stats.round1.reportedPct}% รายงานแล้ว
+                </span>
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#059669', marginTop: '6px' }}>
+                {stats.round1.reported} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ข้อ</span>
               </div>
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#059669', marginTop: '6px' }}>
-              {stats.completed} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
-              คิดเป็น {stats.percentage}% ของทั้งหมด
+
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ width: `${stats.round1.reportedPct}%`, height: '100%', background: '#10B981', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B' }}>
+                <span style={{ color: '#059669', fontWeight: 600 }}>เสร็จ {stats.round1.completed}</span>
+                <span style={{ color: '#2563EB', fontWeight: 600 }}>ทำอยู่ {stats.round1.inProgress}</span>
+                <span style={{ color: '#D97706', fontWeight: 600 }}>รอ {stats.round1.pending}</span>
+              </div>
             </div>
           </div>
 
-          {/* Card 3: In Progress */}
+          {/* Card 3: Round 2 Progress */}
           <div
             style={{
               background: '#FFFFFF',
               borderRadius: '14px',
               padding: '1.25rem',
               border: '1px solid #E2E8F0',
+              borderTop: '3px solid #3B82F6',
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2563EB' }}>กำลังดำเนินการ</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Clock size={18} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>2</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>ติดตามรอบที่ 2</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563EB', background: '#EFF6FF', padding: '2px 8px', borderRadius: '999px' }}>
+                  {stats.round2.reportedPct}% รายงานแล้ว
+                </span>
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563EB', marginTop: '6px' }}>
+                {stats.round2.reported} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ข้อ</span>
               </div>
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2563EB', marginTop: '6px' }}>
-              {stats.inProgress} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#2563EB', fontWeight: 600 }}>
-              อยู่ระหว่างขับเคลื่อน
+
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ width: `${stats.round2.reportedPct}%`, height: '100%', background: '#3B82F6', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B' }}>
+                <span style={{ color: '#059669', fontWeight: 600 }}>เสร็จ {stats.round2.completed}</span>
+                <span style={{ color: '#2563EB', fontWeight: 600 }}>ทำอยู่ {stats.round2.inProgress}</span>
+                <span style={{ color: '#D97706', fontWeight: 600 }}>รอ {stats.round2.pending}</span>
+              </div>
             </div>
           </div>
 
-          {/* Card 4: Pending */}
+          {/* Card 4: Round 3 Progress */}
           <div
             style={{
               background: '#FFFFFF',
               borderRadius: '14px',
               padding: '1.25rem',
               border: '1px solid #E2E8F0',
+              borderTop: '3px solid #8B5CF6',
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#D97706' }}>รอดำเนินการ</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertCircle size={18} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>3</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>ติดตามรอบที่ 3</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7C3AED', background: '#FAF5FF', padding: '2px 8px', borderRadius: '999px' }}>
+                  {stats.round3.reportedPct}% รายงานแล้ว
+                </span>
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#7C3AED', marginTop: '6px' }}>
+                {stats.round3.reported} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ข้อ</span>
               </div>
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#D97706', marginTop: '6px' }}>
-              {stats.pending} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#D97706', fontWeight: 600 }}>
-              รอเริ่มจัดทำแผนงาน
+
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ width: `${stats.round3.reportedPct}%`, height: '100%', background: '#8B5CF6', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B' }}>
+                <span style={{ color: '#059669', fontWeight: 600 }}>เสร็จ {stats.round3.completed}</span>
+                <span style={{ color: '#2563EB', fontWeight: 600 }}>ทำอยู่ {stats.round3.inProgress}</span>
+                <span style={{ color: '#D97706', fontWeight: 600 }}>รอ {stats.round3.pending}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Progress Bar */}
+        {/* 3-Round Pipeline Summary Banner */}
         {stats.total > 0 && (
           <div
             style={{
               background: '#FFFFFF',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
+              borderRadius: '14px',
+              padding: '1.15rem 1.35rem',
               border: '1px solid #E2E8F0',
               marginBottom: '1.5rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
-              <span style={{ color: '#334155' }}>ความคืบหน้าการปิดข้อเสนอแนะ TQA OFI รวม:</span>
-              <span style={{ color: '#6D28D9' }}>{stats.completed} / {stats.total} รายการ ({stats.percentage}%)</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EDE9FE', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>
+                    ความก้าวหน้าการรายงานผลรวมทั้ง 3 รอบ (3 Tracking Rounds Fulfillment)
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    บันทึกผลแล้ว {stats.totalReportsSubmitted} จากเป้าหมาย {stats.totalReportsRequired} รายงาน ({stats.overallFulfillmentPct}%)
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                  อัตราปิดข้อค้นพบสำเร็จ: <strong style={{ color: '#059669' }}>{stats.completed}/{stats.total} ({stats.percentage}%)</strong>
+                </div>
+              </div>
             </div>
-            <div style={{ width: '100%', height: '10px', background: '#E2E8F0', borderRadius: '999px', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${stats.percentage}%`,
-                  background: 'linear-gradient(90deg, #6D28D9 0%, #10B981 100%)',
-                  borderRadius: '999px',
-                  transition: 'width 0.4s ease',
-                }}
-              />
+
+            {/* 3 Phase Segmented Progress Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px', paddingTop: '6px' }}>
+              {[
+                { round: 1, label: 'รอบที่ 1', color: '#10B981', bg: '#ECFDF5', data: stats.round1 },
+                { round: 2, label: 'รอบที่ 2', color: '#3B82F6', bg: '#EFF6FF', data: stats.round2 },
+                { round: 3, label: 'รอบที่ 3', color: '#8B5CF6', bg: '#FAF5FF', data: stats.round3 },
+              ].map((ph) => (
+                <div key={ph.round} style={{ background: '#F8FAFC', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.78rem' }}>
+                    <span style={{ fontWeight: 800, color: ph.color }}>{ph.label}</span>
+                    <span style={{ fontWeight: 700, color: '#334155' }}>
+                      {ph.data.reported}/{stats.total} ข้อ ({ph.data.reportedPct}%)
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#E2E8F0', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{ width: `${ph.data.reportedPct}%`, height: '100%', background: ph.color, borderRadius: '999px', transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -621,15 +755,19 @@ export default function TqaOfiTrackingPage() {
             })}
           </div>
 
-          {/* Quick Status Filter Buttons */}
+          {/* Quick Status & 3-Round Filter Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B' }}>สถานะ:</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B' }}>ตัวกรองสถานะ & รอบ:</span>
             {[
               { id: 'ALL', label: 'ทั้งหมด' },
               { id: 'MY_ASSIGNED', label: '👤 ที่ฉันรับผิดชอบ' },
-              { id: 'PENDING', label: '🟡 รอดำเนินการ' },
+              { id: 'COMPLETED', label: '🟢 เสร็จสิ้นภาพรวม' },
               { id: 'IN_PROGRESS', label: '🔵 กำลังดำเนินการ' },
-              { id: 'COMPLETED', label: '🟢 เสร็จสิ้นแล้ว' },
+              { id: 'PENDING', label: '🟡 รอดำเนินการ' },
+              { id: 'ROUND1_UNREPORTED', label: '⏳ ค้างรายงานรอบ 1' },
+              { id: 'ROUND2_UNREPORTED', label: '⏳ ค้างรายงานรอบ 2' },
+              { id: 'ROUND3_UNREPORTED', label: '⏳ ค้างรายงานรอบ 3' },
+              { id: 'ALL_ROUNDS_REPORTED', label: '✅ รายงานครบ 3 รอบ' },
             ].map((st) => (
               <button
                 key={st.id}
@@ -644,6 +782,7 @@ export default function TqaOfiTrackingPage() {
                   color: selectedStatus === st.id ? '#FFFFFF' : '#475569',
                   border: 'none',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 {st.label}
