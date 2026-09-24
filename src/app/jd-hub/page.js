@@ -36,6 +36,7 @@ import {
   subscribeExecutiveList,
 } from '@/lib/storageService';
 import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
+import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
 import JDConfigModal from '@/components/JDConfigModal';
@@ -108,9 +109,9 @@ export default function JDHubPage() {
   // Current logged in user's email
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
 
-  // Filtered JDs
+  // Filtered & Sorted JDs: เรียงตามฝ่าย / กลุ่มงาน (Department) แล้วตามด้วยชื่อตำแหน่ง (Position)
   const filteredJDs = useMemo(() => {
-    return jds.filter((item) => {
+    const list = jds.filter((item) => {
       const posTitle = item.position || item.positionTitle || '';
       const posNum = item.positionNumber || item.positionNo || '';
       const persName = item.personnelName || '';
@@ -143,12 +144,54 @@ export default function JDHubPage() {
 
       return true;
     });
+
+    // 1. เรียงตาม ฝ่าย / กลุ่มงาน (Department)
+    // 2. เรียงตาม ชื่อตำแหน่ง (Position Title)
+    // 3. เรียงตาม เลขที่ตำแหน่ง (Position Number)
+    return list.sort((a, b) => {
+      const deptA = a.department || '';
+      const deptB = b.department || '';
+
+      const idxA = PREDEFINED_DEPARTMENTS.indexOf(deptA);
+      const idxB = PREDEFINED_DEPARTMENTS.indexOf(deptB);
+
+      if (idxA !== -1 && idxB !== -1) {
+        if (idxA !== idxB) return idxA - idxB;
+      } else if (idxA !== -1) {
+        return -1;
+      } else if (idxB !== -1) {
+        return 1;
+      } else if (deptA !== deptB) {
+        const comp = deptA.localeCompare(deptB, 'th');
+        if (comp !== 0) return comp;
+      }
+
+      // Then by Position Title
+      const posA = a.position || a.positionTitle || '';
+      const posB = b.position || b.positionTitle || '';
+      if (posA !== posB) {
+        const comp = posA.localeCompare(posB, 'th');
+        if (comp !== 0) return comp;
+      }
+
+      // Then by Position Number
+      const numA = String(a.positionNumber || a.positionNo || '');
+      const numB = String(b.positionNumber || b.positionNo || '');
+      return numA.localeCompare(numB, 'th', { numeric: true });
+    });
   }, [jds, searchQuery, selectedDept, statusFilter, myJdOnly, userEmail]);
 
-  // Department list
+  // Department list sorted in organizational order
   const departments = useMemo(() => {
     const list = Array.from(new Set(jds.map((j) => j.department).filter(Boolean)));
-    return list.sort();
+    return list.sort((a, b) => {
+      const idxA = PREDEFINED_DEPARTMENTS.indexOf(a);
+      const idxB = PREDEFINED_DEPARTMENTS.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b, 'th');
+    });
   }, [jds]);
 
   // Minimal dashboard stats
