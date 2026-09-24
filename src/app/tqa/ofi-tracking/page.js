@@ -318,12 +318,21 @@ export default function TqaOfiTrackingPage() {
                     fontSize: '0.85rem',
                     fontWeight: 700,
                     backdropFilter: 'blur(6px)',
+                    maxWidth: '480px',
                   }}
-                  title="เปิดอ่านเอกสารรายงานผลการประเมินตนเอง (Feedback Report)"
+                  title={reportConfig.reportTitle || `Feedback Report (${fiscalYear})`}
                 >
-                  <BookOpen size={16} color="#FDE047" />
-                  <span>เปิดอ่านรายงาน Feedback Report ({fiscalYear})</span>
-                  <ExternalLink size={14} />
+                  <BookOpen size={16} color="#FDE047" style={{ flexShrink: 0 }} />
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {reportConfig.reportTitle || `Feedback Report (${fiscalYear})`}
+                  </span>
+                  <ExternalLink size={14} style={{ flexShrink: 0 }} />
                 </a>
               )}
 

@@ -585,7 +585,7 @@ export default function TqaLandingPage() {
                   }}
                 >
                   <ExternalLink size={16} />
-                  <span>เปิดอ่านรายงานฉบับเต็ม (PDF / Drive)</span>
+                  <span>{reportConfig.reportTitle || 'เปิดอ่านรายงาน Feedback Report ฉบับเต็ม (PDF / Drive)'}</span>
                 </a>
               ) : (
                 <div
