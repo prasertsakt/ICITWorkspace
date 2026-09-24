@@ -9,6 +9,7 @@ import {
   saveTqaOfiItem,
   subscribeTqaReportConfig,
   canEditTqaOfiProgress,
+  normalizeTqaRounds,
 } from '@/lib/tqaOfiService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
@@ -81,6 +82,7 @@ export default function TqaOfiTrackingPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingOfi, setEditingOfi] = useState(null);
   const [actionModalOfi, setActionModalOfi] = useState(null);
+  const [actionModalRound, setActionModalRound] = useState('round1');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [deletingOfi, setDeletingOfi] = useState(null);
 
@@ -723,8 +725,14 @@ export default function TqaOfiTrackingPage() {
             {filteredOfiItems.map((item, idx) => {
               const isExpanded = expandedRowId === item.id;
               const canEdit = canEditTqaOfiProgress(item, currentUser, currentPersonnel, isAdmin);
+              const itemRounds = normalizeTqaRounds(item);
               const statusCfg = TQA_STATUS_CONFIG[item.status || 'PENDING'] || TQA_STATUS_CONFIG.PENDING;
               const catObj = TQA_CATEGORIES.find((c) => c.name === item.category || c.num === item.categoryNum) || TQA_CATEGORIES[0];
+
+              // Count completed and reported rounds
+              const reportedRoundsCount = [itemRounds.round1, itemRounds.round2, itemRounds.round3].filter(
+                (r) => !!r?.actionReport
+              ).length;
 
               return (
                 <div
@@ -795,7 +803,7 @@ export default function TqaOfiTrackingPage() {
                             }}
                             value={item.status || 'PENDING'}
                             onChange={(e) => handleQuickStatusChange(item, e.target.value)}
-                            title="คลิกเพื่อเปลี่ยนสถานะการดำเนินงาน"
+                            title="คลิกเพื่อเปลี่ยนสถานะภาพรวมของข้อเสนอแนะนี้"
                           >
                             <option value="PENDING">🟡 รอดำเนินการ</option>
                             <option value="IN_PROGRESS">🔵 กำลังดำเนินการ</option>
@@ -850,6 +858,91 @@ export default function TqaOfiTrackingPage() {
                       {item.finding}
                     </div>
 
+                    {/* 3-Round Tracking Bar (การติดตามผล 3 รอบ) */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                        gap: '8px',
+                        background: '#F8FAFC',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                      }}
+                    >
+                      {[
+                        { key: 'round1', num: 1, label: 'รอบที่ 1' },
+                        { key: 'round2', num: 2, label: 'รอบที่ 2' },
+                        { key: 'round3', num: 3, label: 'รอบที่ 3' },
+                      ].map((r) => {
+                        const rData = itemRounds[r.key] || {};
+                        const rStatus = rData.status || 'PENDING';
+                        const rCfg = TQA_STATUS_CONFIG[rStatus] || TQA_STATUS_CONFIG.PENDING;
+                        const hasReport = !!rData.actionReport;
+
+                        return (
+                          <button
+                            key={r.key}
+                            type="button"
+                            onClick={() => {
+                              setActionModalRound(r.key);
+                              setActionModalOfi(item);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              border: `1px solid ${hasReport ? rCfg.border : '#E2E8F0'}`,
+                              background: '#FFFFFF',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title={`คลิกเพื่อดูหรือรายงานผล ${r.label}`}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  background: hasReport ? '#6D28D9' : '#E2E8F0',
+                                  color: hasReport ? '#FFFFFF' : '#64748B',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {r.num}
+                              </span>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155' }}>
+                                {r.label}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span
+                                style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: rCfg.bg,
+                                  color: rCfg.color,
+                                }}
+                              >
+                                {rCfg.label}
+                              </span>
+                              {hasReport && <CheckCircle2 size={12} color="#10B981" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     {/* Assigned Persons & Action Report Button Bar */}
                     <div
                       style={{
@@ -858,7 +951,7 @@ export default function TqaOfiTrackingPage() {
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
                         gap: '10px',
-                        paddingTop: '8px',
+                        paddingTop: '6px',
                         borderTop: '1px solid #F1F5F9',
                       }}
                     >
@@ -908,33 +1001,40 @@ export default function TqaOfiTrackingPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          <span>{isExpanded ? 'ซ่อนหลักฐาน & ผลกระทบ' : 'ดูหลักฐาน & ผลกระทบ'}</span>
+                          <span>{isExpanded ? 'ซ่อนรายละเอียด & ผล 3 รอบ' : 'ดูหลักฐาน & รายงาน 3 รอบ'}</span>
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
 
                         {/* Open Action Report Modal Button */}
                         <button
                           type="button"
-                          onClick={() => setActionModalOfi(item)}
+                          onClick={() => {
+                            setActionModalRound('round1');
+                            setActionModalOfi(item);
+                          }}
                           className="btn btn-primary btn-sm"
                           style={{
-                            background: item.actionReport
+                            background: reportedRoundsCount > 0
                               ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
                               : 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                            borderColor: item.actionReport ? '#059669' : '#6D28D9',
+                            borderColor: reportedRoundsCount > 0 ? '#059669' : '#6D28D9',
                             gap: '6px',
                             fontSize: '0.8rem',
                             fontWeight: 700,
                           }}
                         >
                           <Edit3 size={14} />
-                          <span>{item.actionReport ? 'ดู/อัปเดตรายงานผล' : 'บันทึกผลการดำเนินงาน'}</span>
+                          <span>
+                            {reportedRoundsCount > 0
+                              ? `รายงานผลแล้ว (${reportedRoundsCount}/3 รอบ)`
+                              : 'บันทึกผลการดำเนินงาน 3 รอบ'}
+                          </span>
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Expandable Evidence & Potential Impact Panel */}
+                  {/* Expandable Evidence, Potential Impact & 3-Round Progress Reports */}
                   {isExpanded && (
                     <div
                       style={{
@@ -943,7 +1043,7 @@ export default function TqaOfiTrackingPage() {
                         borderTop: '1px solid #E2E8F0',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '1rem',
+                        gap: '1.25rem',
                         fontSize: '0.875rem',
                       }}
                     >
@@ -969,29 +1069,111 @@ export default function TqaOfiTrackingPage() {
                         </div>
                       )}
 
-                      {item.actionReport && (
-                        <div style={{ borderTop: '1px solid #CBD5E1', paddingTop: '8px' }}>
-                          <div style={{ fontWeight: 700, color: '#6D28D9', marginBottom: '4px' }}>
-                            📝 รายงานผลการดำเนินงานล่าสุด:
+                      {/* 3-Round Detailed Action Reports Section */}
+                      <div style={{ borderTop: '1px solid #CBD5E1', paddingTop: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                          <div style={{ fontWeight: 800, color: '#6D28D9', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Layers size={16} />
+                            <span>รายงานผลการดำเนินงาน 3 รอบ (3 Tracking Rounds):</span>
                           </div>
-                          <div
-                            style={{
-                              background: '#FFFFFF',
-                              padding: '0.85rem',
-                              borderRadius: '8px',
-                              border: '1px solid #E2E8F0',
-                              color: '#1E293B',
-                              lineHeight: 1.6,
-                            }}
-                            dangerouslySetInnerHTML={{ __html: item.actionReport }}
-                          />
-                          {item.lastReportedAt && (
-                            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-                              รายงานเมื่อ {new Date(item.lastReportedAt).toLocaleString('th-TH')} โดย {item.lastReportedBy || 'ผู้รับผิดชอบ'}
-                            </div>
-                          )}
                         </div>
-                      )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                          {[
+                            { key: 'round1', num: 1, label: 'รอบที่ 1 (ครั้งที่ 1)' },
+                            { key: 'round2', num: 2, label: 'รอบที่ 2 (ครั้งที่ 2)' },
+                            { key: 'round3', num: 3, label: 'รอบที่ 3 (ครั้งที่ 3)' },
+                          ].map((r) => {
+                            const rData = itemRounds[r.key] || {};
+                            const rStatus = rData.status || 'PENDING';
+                            const rCfg = TQA_STATUS_CONFIG[rStatus] || TQA_STATUS_CONFIG.PENDING;
+                            const hasReport = !!rData.actionReport;
+
+                            return (
+                              <div
+                                key={r.key}
+                                style={{
+                                  background: '#FFFFFF',
+                                  borderRadius: '10px',
+                                  border: '1px solid #E2E8F0',
+                                  padding: '1rem',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontWeight: 800, color: '#1E293B', fontSize: '0.85rem' }}>
+                                      {r.label}
+                                    </span>
+                                    <span
+                                      style={{
+                                        padding: '2px 8px',
+                                        borderRadius: '999px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
+                                        background: rCfg.bg,
+                                        color: rCfg.color,
+                                        border: `1px solid ${rCfg.border}`,
+                                      }}
+                                    >
+                                      {rCfg.label}
+                                    </span>
+                                  </div>
+
+                                  {hasReport ? (
+                                    <div
+                                      style={{
+                                        fontSize: '0.825rem',
+                                        lineHeight: 1.5,
+                                        color: '#334155',
+                                        maxHeight: '140px',
+                                        overflowY: 'auto',
+                                        padding: '6px 8px',
+                                        background: '#F8FAFC',
+                                        borderRadius: '6px',
+                                        border: '1px solid #F1F5F9',
+                                      }}
+                                      dangerouslySetInnerHTML={{ __html: rData.actionReport }}
+                                    />
+                                  ) : (
+                                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', fontStyle: 'italic', padding: '10px 0' }}>
+                                      ยังไม่มีการบันทึกรายงานผลในรอบนี้
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                                    {rData.reportedBy ? `โดย ${rData.reportedBy}` : '-'}
+                                  </span>
+
+                                  {canEdit && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActionModalRound(r.key);
+                                        setActionModalOfi(item);
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#6D28D9',
+                                        fontWeight: 700,
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {hasReport ? 'แก้ไขผลรอบนี้' : '+ รายงานผล'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1013,12 +1195,16 @@ export default function TqaOfiTrackingPage() {
 
       <TqaOfiActionModal
         isOpen={Boolean(actionModalOfi)}
-        onClose={() => setActionModalOfi(null)}
+        onClose={() => {
+          setActionModalOfi(null);
+          setActionModalRound('round1');
+        }}
         ofiItem={actionModalOfi}
         fiscalYear={fiscalYear}
         currentUser={currentUser}
         currentPersonnel={currentPersonnel}
         isAdmin={isAdmin}
+        initialRound={actionModalRound}
         onSaved={() => {
           // Real-time listener will refresh
         }}

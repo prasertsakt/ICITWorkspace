@@ -47,6 +47,55 @@ export function canEditTqaOfiProgress(ofiItem, currentUser, currentPersonnel, is
 }
 
 /**
+ * Helper: Normalize 3 Tracking Rounds for a TQA OFI Item
+ * Supports 3 evaluation rounds (รอบที่ 1, รอบที่ 2, รอบที่ 3)
+ */
+export function normalizeTqaRounds(item) {
+  const createDefaultRound = (roundNum) => ({
+    round: roundNum,
+    status: 'PENDING',
+    actionReport: '',
+    reportedBy: '',
+    reportedAt: '',
+  });
+
+  const existingRounds = item?.rounds || {};
+
+  // Backwards compatibility: Map existing single report to round 1 if not defined
+  const r1 = existingRounds.round1 || {
+    round: 1,
+    status: item?.status || 'PENDING',
+    actionReport: item?.actionReport || '',
+    reportedBy: item?.lastReportedBy || '',
+    reportedAt: item?.lastReportedAt || '',
+  };
+
+  const r2 = existingRounds.round2 || createDefaultRound(2);
+  const r3 = existingRounds.round3 || createDefaultRound(3);
+
+  return {
+    round1: { ...createDefaultRound(1), ...r1 },
+    round2: { ...createDefaultRound(2), ...r2 },
+    round3: { ...createDefaultRound(3), ...r3 },
+  };
+}
+
+/**
+ * Helper: Compute overall status and action report preview from 3 rounds
+ */
+export function computeOverallStatus(rounds, currentStatus = 'PENDING') {
+  if (!rounds) return currentStatus;
+  // If round 3 has report or non-pending status, it represents current cycle
+  if (rounds.round3?.actionReport || rounds.round3?.status === 'COMPLETED' || rounds.round3?.status === 'IN_PROGRESS') {
+    return rounds.round3.status || 'PENDING';
+  }
+  if (rounds.round2?.actionReport || rounds.round2?.status === 'COMPLETED' || rounds.round2?.status === 'IN_PROGRESS') {
+    return rounds.round2.status || 'PENDING';
+  }
+  return rounds.round1?.status || currentStatus || 'PENDING';
+}
+
+/**
  * Real-Time Subscription to TQA OFI Items for a specific Fiscal Year
  * Default: 2568 is pre-seeded with Feedback Report data.
  * Other / future years start completely empty unless populated by admin.
@@ -165,10 +214,15 @@ export async function saveTqaOfiItem(itemData, fiscalYear = String(getCurrentTha
   const id = itemData.id || `tqa-${fy}-${Date.now()}`;
   const now = new Date().toISOString();
 
+  const normalizedRounds = normalizeTqaRounds(itemData);
+  const status = itemData.status || computeOverallStatus(normalizedRounds, 'PENDING');
+
   const payload = {
     ...itemData,
     id,
     fiscalYear: fy,
+    status,
+    rounds: normalizedRounds,
     updatedAt: now,
     updatedBy: updatedByName || itemData.updatedBy || 'Admin',
   };

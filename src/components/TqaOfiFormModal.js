@@ -114,6 +114,7 @@ export default function TqaOfiFormModal({
         potentialImpact: potentialImpact.trim(),
         assignedPersons,
         status,
+        rounds: ofiToEdit?.rounds || undefined,
         actionReport: ofiToEdit?.actionReport || '',
       };
 
