@@ -304,7 +304,7 @@ export default function ImsLandingPage() {
               lineHeight: 1.2,
             }}
           >
-            ระบบบริหารงาน IMS & TQA
+            ระบบบริหารงาน IMS
           </h1>
 
           <p
@@ -316,7 +316,7 @@ export default function ImsLandingPage() {
               margin: '0 0 2rem 0',
             }}
           >
-            ศูนย์กลางการกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ & TQA
+            ศูนย์กลางการกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ
           </p>
 
           {/* Quick Stat Counters */}
@@ -415,7 +415,7 @@ export default function ImsLandingPage() {
             }}
           >
             <Layers size={15} />
-            <span>IMS & TQA SERVICES</span>
+            <span>IMS SERVICES</span>
           </div>
           <h2
             style={{
@@ -426,7 +426,7 @@ export default function ImsLandingPage() {
               lineHeight: 1.3,
             }}
           >
-            บริการย่อยภายใต้ระบบบริหารงาน IMS & TQA
+            บริการย่อยภายใต้ระบบบริหารงาน IMS
           </h2>
           <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748B' }}>
             เลือกบริการที่ต้องการเข้าใช้งานและกำกับดูแลมาตรฐานคุณภาพ
