@@ -154,10 +154,10 @@ export default function ImsLandingPage() {
           </div>
 
           <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
-            ระบบบริหารงาน IMS & TQA
+            ระบบบริหารงาน IMS
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
-            ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) & TQA สำนักคอมพิวเตอร์ฯ มจพ.
+            ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) สำนักคอมพิวเตอร์ฯ มจพ.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

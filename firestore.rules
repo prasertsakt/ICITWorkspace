@@ -200,5 +200,23 @@ service cloud.firestore {
         userEmail() == "jarucha.j@icit.kmutnb.ac.th"
       );
     }
+
+    // Rules for 'tqa_ofi_items' collection (Thailand Quality Award - TQA OFI Tracking)
+    match /tqa_ofi_items/{ofiId} {
+      // All visitors and staff can view TQA OFI items
+      allow read: if true;
+
+      // Authenticated users (Admin, Assigned Persons) can create and update OFI items / action reports
+      allow create, update: if isAuthenticated();
+
+      // Deletion restricted to authenticated Admins
+      allow delete: if isAuthenticated();
+    }
+
+    // Rules for 'tqa_reports' collection (TQA Feedback Report URLs per Fiscal Year)
+    match /tqa_reports/{reportId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
   }
 }
