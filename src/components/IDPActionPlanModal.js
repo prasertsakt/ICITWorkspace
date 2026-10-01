@@ -178,15 +178,21 @@ export default function IDPActionPlanModal({
     return list;
   }, [strategyConfig]);
 
-  // Skill Map items list for Multi-select
+  // Skill Map items list for Multi-select — list individual sub-skills (ทักษะย่อย) not main competency categories
   const availableSkills = useMemo(() => {
     const list = [];
     if (skillMapConfig?.workAreas) {
       skillMapConfig.workAreas.forEach((area) => {
-        (area.competencies || []).forEach((c) => {
-          list.push({
-            id: c.id,
-            title: `${area.shortName || area.name} : ${c.name}`,
+        (area.competencies || []).forEach((comp) => {
+          (comp.subSkills || []).forEach((sub) => {
+            list.push({
+              id: sub.id,
+              title: sub.name,
+              description: sub.description || '',
+              competencyName: comp.name,
+              areaName: area.shortName || area.name,
+              areaColor: area.color || '#4F46E5',
+            });
           });
         });
       });
@@ -3166,7 +3172,7 @@ export default function IDPActionPlanModal({
                 {alignTab === 'STRATEGY' && (
                   <>
                     {availableStrategies
-                      .filter((st) => !alignSearch || (st.title || '').toLowerCase().includes(alignSearch.toLowerCase()) || (st.code || '').toLowerCase().includes(alignSearch.toLowerCase()))
+                      .filter((st) => !alignSearch || (st.title || '').toLowerCase().includes(alignSearch.toLowerCase()) || (st.code || '').toLowerCase().includes(alignSearch.toLowerCase()) || (st.sfaName || '').toLowerCase().includes(alignSearch.toLowerCase()) || (st.sfaCode || '').toLowerCase().includes(alignSearch.toLowerCase()))
                       .map((st) => {
                         const isSelected = (targetAlignmentItem.alignments?.strategyIds || []).includes(st.id);
                         return (
@@ -3174,32 +3180,76 @@ export default function IDPActionPlanModal({
                             key={st.id}
                             onClick={() => toggleAlignmentMulti(targetAlignmentItem.id, 'strategy', st.id, st.code || st.title)}
                             style={{
-                              padding: '0.75rem 1rem',
-                              borderRadius: '10px',
+                              padding: '0.85rem 1rem',
+                              borderRadius: '12px',
                               border: `1.5px solid ${isSelected ? '#3B82F6' : '#E2E8F0'}`,
                               background: isSelected ? '#EFF6FF' : '#FFFFFF',
                               cursor: 'pointer',
                               display: 'flex',
-                              alignItems: 'center',
+                              alignItems: 'flex-start',
                               justifyContent: 'space-between',
                               gap: '12px',
                               transition: 'all 0.15s',
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => {}}
                                 style={{ accentColor: '#2563EB', marginTop: '3px', cursor: 'pointer' }}
                               />
-                              <div>
+                              <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isSelected ? '#1E40AF' : '#1E293B' }}>
                                   {st.title}
                                 </div>
-                                {st.desc && (
-                                  <div style={{ fontSize: '0.775rem', color: '#64748B', marginTop: '2px' }}>
-                                    {st.desc}
+                                {/* SFA Badge with full name */}
+                                {st.sfaCode && (
+                                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '3px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.73rem',
+                                        fontWeight: 700,
+                                        background: st.sfaBg || '#EFF6FF',
+                                        color: st.sfaColor || '#2563EB',
+                                        border: `1px solid ${st.sfaBorder || '#BFDBFE'}`,
+                                      }}
+                                    >
+                                      📌 {st.sfaCode}
+                                    </span>
+                                    {st.sfaName && (
+                                      <span style={{ fontSize: '0.73rem', color: '#475569', fontWeight: 600, lineHeight: 1.3 }}>
+                                        {st.sfaName}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {/* SKPIs list */}
+                                {(st.skpis || []).length > 0 && (
+                                  <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    {st.skpis.slice(0, 3).map((skpi, sIdx) => (
+                                      <div key={skpi.id || sIdx} style={{ fontSize: '0.72rem', color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: '4px', lineHeight: 1.35 }}>
+                                        <span style={{ color: '#94A3B8', flexShrink: 0 }}>📊</span>
+                                        <span>{skpi.title}</span>
+                                      </div>
+                                    ))}
+                                    {st.skpis.length > 3 && (
+                                      <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>
+                                        ...อีก {st.skpis.length - 3} ตัวชี้วัด
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Responsible Roles */}
+                                {(st.responsibleRoles || []).length > 0 && (
+                                  <div style={{ marginTop: '5px', fontSize: '0.7rem', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                    <span>👤</span>
+                                    <span>{st.responsibleRoles.join(', ')}</span>
                                   </div>
                                 )}
                               </div>
@@ -3210,12 +3260,12 @@ export default function IDPActionPlanModal({
                                 borderRadius: '6px',
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
-                                background: st.type === 'SFA' ? '#FEF3C7' : st.type === 'SO' ? '#E0E7FF' : '#DCFCE7',
-                                color: st.type === 'SFA' ? '#92400E' : st.type === 'SO' ? '#3730A3' : '#166534',
+                                background: '#E0E7FF',
+                                color: '#3730A3',
                                 flexShrink: 0,
                               }}
                             >
-                              {st.type || 'STRATEGY'}
+                              {st.code}
                             </span>
                           </div>
                         );
@@ -3223,43 +3273,75 @@ export default function IDPActionPlanModal({
                   </>
                 )}
 
-                {alignTab === 'SKILL_MAP' && (
-                  <>
-                    {availableSkills
-                      .filter((sk) => !alignSearch || (sk.title || '').toLowerCase().includes(alignSearch.toLowerCase()) || (sk.group || '').toLowerCase().includes(alignSearch.toLowerCase()))
-                      .map((sk) => {
+                {alignTab === 'SKILL_MAP' && (() => {
+                  // Group sub-skills by competency name for organized display
+                  const filteredSkills = availableSkills.filter(
+                    (sk) => !alignSearch ||
+                      (sk.title || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
+                      (sk.competencyName || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
+                      (sk.areaName || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
+                      (sk.description || '').toLowerCase().includes(alignSearch.toLowerCase())
+                  );
+
+                  // Group by areaName -> competencyName
+                  const grouped = [];
+                  let lastAreaComp = '';
+                  filteredSkills.forEach((sk) => {
+                    const key = `${sk.areaName}||${sk.competencyName}`;
+                    if (key !== lastAreaComp) {
+                      grouped.push({ type: 'header', areaName: sk.areaName, competencyName: sk.competencyName, areaColor: sk.areaColor });
+                      lastAreaComp = key;
+                    }
+                    grouped.push({ type: 'skill', ...sk });
+                  });
+
+                  return (
+                    <>
+                      {grouped.map((entry, gIdx) => {
+                        if (entry.type === 'header') {
+                          return (
+                            <div key={`hdr-${gIdx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0 2px 0' }}>
+                              <div style={{ width: '4px', height: '18px', borderRadius: '2px', background: entry.areaColor || '#4F46E5', flexShrink: 0 }} />
+                              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1E293B' }}>{entry.areaName}</span>
+                              <span style={{ fontSize: '0.73rem', color: '#64748B', fontWeight: 600 }}>›</span>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>{entry.competencyName}</span>
+                            </div>
+                          );
+                        }
+                        const sk = entry;
                         const isSelected = (targetAlignmentItem.alignments?.skillMapIds || []).includes(sk.id);
                         return (
                           <div
                             key={sk.id}
                             onClick={() => toggleAlignmentMulti(targetAlignmentItem.id, 'skillMap', sk.id, sk.title)}
                             style={{
-                              padding: '0.75rem 1rem',
+                              padding: '0.65rem 0.85rem 0.65rem 1.25rem',
+                              marginLeft: '12px',
                               borderRadius: '10px',
                               border: `1.5px solid ${isSelected ? '#6366F1' : '#E2E8F0'}`,
                               background: isSelected ? '#EEF2FF' : '#FFFFFF',
                               cursor: 'pointer',
                               display: 'flex',
-                              alignItems: 'center',
+                              alignItems: 'flex-start',
                               justifyContent: 'space-between',
                               gap: '12px',
                               transition: 'all 0.15s',
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => {}}
                                 style={{ accentColor: '#4F46E5', marginTop: '3px', cursor: 'pointer' }}
                               />
-                              <div>
-                                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isSelected ? '#3730A3' : '#1E293B' }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: isSelected ? '#3730A3' : '#1E293B' }}>
                                   {sk.title}
                                 </div>
-                                {sk.group && (
-                                  <div style={{ fontSize: '0.775rem', color: '#64748B', marginTop: '2px' }}>
-                                    หมวดหมู่: {sk.group}
+                                {sk.description && (
+                                  <div style={{ fontSize: '0.73rem', color: '#64748B', marginTop: '3px', lineHeight: 1.35 }}>
+                                    {sk.description}
                                   </div>
                                 )}
                               </div>
@@ -3270,18 +3352,19 @@ export default function IDPActionPlanModal({
                                 borderRadius: '6px',
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
-                                background: '#EDE9FE',
-                                color: '#5B21B6',
+                                background: isSelected ? '#EDE9FE' : '#F1F5F9',
+                                color: isSelected ? '#5B21B6' : '#64748B',
                                 flexShrink: 0,
                               }}
                             >
-                              SKILL
+                              ทักษะย่อย
                             </span>
                           </div>
                         );
                       })}
-                  </>
-                )}
+                    </>
+                  );
+                })()}
 
                 {alignTab === 'MISSION' && (
                   <>
