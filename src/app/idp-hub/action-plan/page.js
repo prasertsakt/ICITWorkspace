@@ -21,6 +21,7 @@ import {
   User as UserIcon,
   ChevronRight,
   ArrowLeft,
+  ArrowRight,
   Copy,
   Layers,
   Sparkles,
