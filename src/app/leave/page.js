@@ -268,7 +268,7 @@ function LeaveContent() {
               className="btn btn-primary btn-sm"
               style={{ width: '100%', padding: '0.65rem', justifyContent: 'center' }}
             >
-              <LogIn size={18} />
+              <LogIn size={20} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
             <Link
