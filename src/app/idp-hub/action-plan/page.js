@@ -75,10 +75,6 @@ export default function IDPActionPlanPage() {
   const [activePlan, setActivePlan] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // Selected Personnel for new plan
-  const [selectedPersonnelIdForCreate, setSelectedPersonnelIdForCreate] = useState('');
 
   const isHR = isHrOfficer(currentUser, currentPersonnel, isAdmin);
 
@@ -205,108 +201,6 @@ export default function IDPActionPlanPage() {
     }
   };
 
-  // Create new plan handler (with automatic import of Gap != 0 from Need Analysis if available)
-  const handleCreateNewPlan = async () => {
-    if (!selectedPersonnelIdForCreate) {
-      await showAlert({
-        type: 'warning',
-        title: 'กรุณาเลือกบุคลากร',
-        message: 'โปรดเลือกบุคลากรที่ต้องการจัดทำแผนพัฒนา IDP Action Plan',
-      });
-      return;
-    }
-
-    const targetPerson = personnelList.find((p) => p.id === selectedPersonnelIdForCreate);
-    if (!targetPerson) return;
-
-    // Check if plan already exists for this person in this year
-    const existing = actionPlans.find(
-      (p) => p.personnelId === targetPerson.id || p.personnelEmail === targetPerson.email
-    );
-    if (existing) {
-      setActivePlan(existing);
-      setIsCreateModalOpen(false);
-      setIsEditModalOpen(true);
-      return;
-    }
-
-    // Check Need Analysis record to auto-import competencies with gap !== 0
-    const needRecord = idpRecords.find(
-      (r) => r.personnelId === targetPerson.id || r.personnelEmail === targetPerson.email
-    );
-
-    const gapCompetencies = [];
-    if (needRecord) {
-      (needRecord.coreCompetencies || []).forEach((c) => {
-        if (c.gap !== 0 && c.gap !== undefined) {
-          gapCompetencies.push({
-            ...c,
-            type: 'CORE',
-            competencyType: 'CORE',
-          });
-        }
-      });
-      (needRecord.functionalCompetencies || []).forEach((f) => {
-        if (f.gap !== 0 && f.gap !== undefined) {
-          gapCompetencies.push({
-            ...f,
-            type: 'FUNCTIONAL',
-            competencyType: 'FUNCTIONAL',
-          });
-        }
-      });
-    }
-
-    const initialItems = createActionPlanItemsFromNeedAnalysis(gapCompetencies);
-
-    const newPlanPayload = {
-      id: `action-plan-${fiscalYear}-${targetPerson.id}`,
-      fiscalYear: String(fiscalYear),
-      personnelId: targetPerson.id,
-      personnelName: targetPerson.name,
-      personnelEmail: targetPerson.email || '',
-      position: targetPerson.position || 'บุคลากร',
-      department: targetPerson.department || 'สำนักคอมพิวเตอร์ฯ',
-      items: initialItems,
-      signatures: {
-        acknowledgement: {
-          trainee: { name: targetPerson.name, email: targetPerson.email || '', signed: false, signedAt: '' },
-          supervisor: { name: '', email: '', signed: false, signedAt: '' },
-        },
-        evaluation: {
-          resultType: 'COMPLETED',
-          percent: 100,
-          reason: '',
-          supervisor: { name: '', email: '', position: 'รองผู้อำนวยการฝ่ายบริหาร', signed: false, signedAt: '' },
-          trainee: { name: targetPerson.name, email: targetPerson.email || '', position: targetPerson.position || '', signed: false, signedAt: '' },
-        },
-      },
-      status: IDP_ACTION_PLAN_STATUSES.DRAFT.key,
-      createdAt: new Date().toISOString(),
-      createdBy: currentPersonnel?.name || currentUser?.displayName || 'ผู้จัดทำแผน',
-    };
-
-    try {
-      const actor = {
-        name: currentPersonnel?.name || currentUser?.displayName || 'ผู้จัดทำแผน',
-      };
-      const saved = await saveActionPlan(newPlanPayload, actor);
-      setIsCreateModalOpen(false);
-      setActivePlan(saved);
-      setIsEditModalOpen(true);
-      if (gapCompetencies.length > 0) {
-        await showAlert({
-          type: 'success',
-          title: 'ดึงข้อมูลสำเร็จ',
-          message: `ดึงสมรรถนะที่มี Gap จำนวน ${gapCompetencies.length} รายการจาก IDP Need Analysis เข้าสู่แผนพัฒนาเรียบร้อยแล้ว`,
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      await showAlert({ type: 'error', title: 'เกิดข้อผิดพลาด', message: e.message });
-    }
-  };
-
   if (!currentUser && !isAuthLoading) {
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
@@ -378,34 +272,37 @@ export default function IDPActionPlanPage() {
               </div>
             </div>
 
-            {/* Fiscal Year Selector & Create Button */}
+            {/* Fiscal Year Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   background: 'rgba(255, 255, 255, 0.12)',
-                  backdropFilter: 'blur(8px)',
-                  padding: '5px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                  padding: '6px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.22)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                 }}
               >
                 <Calendar size={16} color="#FB923C" />
-                <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#CBD5E1' }}>ปีงบประมาณ:</span>
+                <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#E2E8F0' }}>ปีงบประมาณ:</span>
                 <select
                   value={fiscalYear}
                   onChange={(e) => setFiscalYear(e.target.value)}
                   style={{
                     background: '#FFFFFF',
-                    color: '#1E293B',
+                    color: '#0F172A',
                     border: 'none',
-                    borderRadius: '6px',
-                    padding: '3px 8px',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
                     fontSize: '0.85rem',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     cursor: 'pointer',
+                    outline: 'none',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   }}
                 >
                   {getAvailableFiscalYears().map((y) => (
@@ -415,28 +312,6 @@ export default function IDPActionPlanPage() {
                   ))}
                 </select>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                style={{
-                  padding: '0.55rem 1.25rem',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
-                }}
-              >
-                <Plus size={16} />
-                <span>สร้างแผนพัฒนา IDP ใหม่</span>
-              </button>
             </div>
           </div>
 
@@ -497,29 +372,90 @@ export default function IDPActionPlanPage() {
         <div
           style={{
             background: '#FFFFFF',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
+            borderRadius: '1.25rem',
+            padding: '1.25rem 1.5rem',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
             border: '1px solid #E2E8F0',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '12px',
+            gap: '14px',
           }}
         >
-          {/* Search Box */}
-          <div style={{ position: 'relative', flex: '1 1 280px' }}>
-            <Search size={18} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          {/* Enhanced Search Box */}
+          <div style={{ position: 'relative', flex: '1 1 320px', minWidth: '260px' }}>
+            <div
+              style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#94A3B8',
+                display: 'flex',
+                alignItems: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <Search size={18} />
+            </div>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาชื่อบุคลากร, ตำแหน่ง, ฝ่าย..."
-              className="form-control"
-              style={{ paddingLeft: '38px', borderRadius: '10px', fontSize: '0.875rem' }}
+              placeholder="ค้นหาชื่อบุคลากร, ตำแหน่ง, หรือฝ่ายงาน..."
+              style={{
+                width: '100%',
+                padding: '0.65rem 1rem 0.65rem 2.6rem',
+                borderRadius: '12px',
+                border: '1.5px solid #E2E8F0',
+                background: '#F8FAFC',
+                fontSize: '0.875rem',
+                color: '#1E293B',
+                fontWeight: 500,
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#EA580C';
+                e.target.style.background = '#FFFFFF';
+                e.target.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E2E8F0';
+                e.target.style.background = '#F8FAFC';
+                e.target.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.02)';
+              }}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: '#E2E8F0',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  fontSize: '11px',
+                  padding: 0,
+                }}
+                title="ล้างคำค้นหา"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Dept & Status Filter */}
@@ -527,8 +463,18 @@ export default function IDPActionPlanPage() {
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="form-control"
-              style={{ borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, padding: '0.5rem 0.85rem' }}
+              style={{
+                borderRadius: '12px',
+                border: '1.5px solid #E2E8F0',
+                background: '#F8FAFC',
+                color: '#334155',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                padding: '0.65rem 1rem',
+                outline: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
             >
               <option value="ALL">ทุกฝ่าย (6 ฝ่าย)</option>
               {MAIN_6_DEPTS.map((d) => (
@@ -541,8 +487,18 @@ export default function IDPActionPlanPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="form-control"
-              style={{ borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, padding: '0.5rem 0.85rem' }}
+              style={{
+                borderRadius: '12px',
+                border: '1.5px solid #E2E8F0',
+                background: '#F8FAFC',
+                color: '#334155',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                padding: '0.65rem 1rem',
+                outline: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
             >
               <option value="ALL">ทุกสถานะ</option>
               <option value="DRAFT">ฉบับร่าง</option>
@@ -564,37 +520,51 @@ export default function IDPActionPlanPage() {
               padding: '4rem 1.5rem',
               textAlign: 'center',
               background: '#FFFFFF',
-              borderRadius: '1rem',
+              borderRadius: '1.25rem',
               border: '1.5px dashed #CBD5E1',
             }}
           >
-            <Target size={48} color="#94A3B8" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0' }}>
-              ไม่พบข้อมูลแผนพัฒนา IDP Action Plan ในปีงบประมาณ {fiscalYear}
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 1.5rem' }}>
-              สามารถกดปุ่มสร้างแผนพัฒนาใหม่ เพื่อดึงสมรรถนะที่มี Gap จาก IDP Need Analysis เข้ามาสร้างแผนได้ทันที
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
+            <div
               style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: '10px',
-                background: '#EA580C',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
+                width: '64px',
+                height: '64px',
+                borderRadius: '16px',
+                background: '#FFF7ED',
+                color: '#EA580C',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem',
               }}
             >
-              <Plus size={16} />
-              <span>สร้างแผนพัฒนา IDP ใหม่</span>
-            </button>
+              <Target size={32} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0' }}>
+              ไม่พบข้อมูลแผนพัฒนา IDP Action Plan ในปีงบประมาณ {fiscalYear}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#64748B', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+              แผนพัฒนา IDP Action Plan จะถูกสร้างขึ้นโดยอัตโนมัติจาก <strong>แบบวิเคราะห์ความต้องการจำเป็น (IDP Need Analysis)</strong> เมื่อหัวหน้าฝ่ายหรือรองผู้อำนวยการทำการเลือกสมรรถนะที่มี Gap
+            </p>
+            <Link
+              href="/idp-hub/need-analysis"
+              style={{
+                padding: '0.65rem 1.35rem',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)',
+              }}
+            >
+              <Layers size={16} />
+              <span>ไปยังแบบวิเคราะห์ IDP Need Analysis</span>
+              <ArrowRight size={16} />
+            </Link>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -829,115 +799,6 @@ export default function IDPActionPlanPage() {
         plan={activePlan}
         fiscalYear={fiscalYear}
       />
-
-      {/* Modal 3: Create Plan for Personnel */}
-      {isCreateModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(6px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '1.25rem',
-              maxWidth: '540px',
-              width: '100%',
-              padding: '1.75rem',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: '#FFF7ED',
-                    color: '#EA580C',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Plus size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
-                    สร้างแผนพัฒนา IDP Action Plan
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '2px 0 0 0' }}>
-                    ปีงบประมาณ พ.ศ. {fiscalYear}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                เลือกบุคลากรผู้จัดทำแผน:
-              </label>
-              <select
-                value={selectedPersonnelIdForCreate}
-                onChange={(e) => setSelectedPersonnelIdForCreate(e.target.value)}
-                className="form-control"
-                style={{ width: '100%', borderRadius: '10px', padding: '0.6rem 0.85rem', fontSize: '0.9rem' }}
-              >
-                <option value="">-- กรุณาเลือกบุคลากร --</option>
-                {staffList.map((p) => {
-                  const hasPlan = actionPlans.some(
-                    (plan) => plan.personnelId === p.id || plan.personnelEmail === p.email
-                  );
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.position || 'บุคลากร'} • {p.department || 'สำนักคอมพิวเตอร์ฯ'}) {hasPlan ? '• มีแผนแล้ว' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-              <p style={{ fontSize: '0.775rem', color: '#64748B', marginTop: '6px' }}>
-                💡 ระบบจะดึงสมรรถนะที่มี Gap ≠ 0 จาก IDP Need Analysis ของบุคลากรคนดังกล่าวเข้ามาในแผนให้อัตโนมัติ
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateNewPlan}
-                className="btn btn-primary"
-                style={{ padding: '0.5rem 1.5rem', fontSize: '0.85rem', background: '#EA580C', border: 'none', fontWeight: 700 }}
-              >
-                สร้างแผนพัฒนา
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

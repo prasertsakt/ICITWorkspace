@@ -1395,23 +1395,23 @@ export default function IDPModal({
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  gap: '12px',
                   background: '#FFFFFF',
-                  padding: '12px',
+                  padding: '14px',
                   borderRadius: '10px',
                   border: '1px solid #FED7AA',
-                  maxHeight: '220px',
+                  maxHeight: '340px',
                   overflowY: 'auto',
                 }}
               >
                 {/* 1. Core Competencies */}
                 {allGapItems.some((g) => g.type === 'CORE') && (
                   <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1D4ED8', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#EFF6FF', fontSize: '0.7rem' }}>ส่วนที่ 1</span>
+                    <div style={{ fontSize: '0.825rem', fontWeight: 800, color: '#1D4ED8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#EFF6FF', fontSize: '0.725rem' }}>ส่วนที่ 1</span>
                       <span>สมรรถนะหลัก (Core Competencies)</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '8px' }}>
                       {allGapItems
                         .filter((g) => g.type === 'CORE')
                         .map((g) => {
@@ -1421,43 +1421,45 @@ export default function IDPModal({
                               key={g.key}
                               style={{
                                 display: 'flex',
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                                 justifyContent: 'space-between',
-                                gap: '8px',
-                                padding: '8px 10px',
-                                borderRadius: '8px',
+                                gap: '10px',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
                                 background: isChecked ? '#EFF6FF' : '#F8FAFC',
                                 border: `1.5px solid ${isChecked ? '#93C5FD' : '#E2E8F0'}`,
                                 cursor: canEditActionPlan ? 'pointer' : 'default',
-                                fontSize: '0.825rem',
+                                fontSize: '0.85rem',
+                                transition: 'all 0.15s ease',
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1, minWidth: 0 }}>
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => canEditActionPlan && toggleGapItem(g.key)}
                                   disabled={!canEditActionPlan}
-                                  style={{ accentColor: '#2563EB', width: '16px', height: '16px', cursor: canEditActionPlan ? 'pointer' : 'default' }}
+                                  style={{ accentColor: '#2563EB', width: '18px', height: '18px', marginTop: '2px', cursor: canEditActionPlan ? 'pointer' : 'default', flexShrink: 0 }}
                                 />
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.title}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                                  <span style={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.45, wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                     {g.title}
                                   </span>
-                                  <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                                  <span style={{ fontSize: '0.725rem', color: '#64748B' }}>
                                     คาดหวัง {g.expectedTotal} / ได้ {g.evaluatedTotal}
                                   </span>
                                 </div>
                               </div>
                               <span
                                 style={{
-                                  fontSize: '0.75rem',
+                                  fontSize: '0.775rem',
                                   fontWeight: 800,
-                                  padding: '2px 8px',
+                                  padding: '3px 8px',
                                   borderRadius: '6px',
                                   background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
                                   color: g.gap < 0 ? '#DC2626' : '#15803D',
                                   flexShrink: 0,
+                                  alignSelf: 'center',
                                 }}
                               >
                                 Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
@@ -1472,11 +1474,11 @@ export default function IDPModal({
                 {/* 2. Functional Competencies */}
                 {allGapItems.some((g) => g.type === 'FUNCTIONAL') && (
                   <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#A21CAF', marginBottom: '6px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#FDF4FF', fontSize: '0.7rem' }}>ส่วนที่ 2</span>
+                    <div style={{ fontSize: '0.825rem', fontWeight: 800, color: '#A21CAF', marginBottom: '8px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#FDF4FF', fontSize: '0.725rem' }}>ส่วนที่ 2</span>
                       <span>สมรรถนะตามตำแหน่งงาน (Functional Competencies)</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '8px' }}>
                       {allGapItems
                         .filter((g) => g.type === 'FUNCTIONAL')
                         .map((g) => {
@@ -1486,43 +1488,45 @@ export default function IDPModal({
                               key={g.key}
                               style={{
                                 display: 'flex',
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                                 justifyContent: 'space-between',
-                                gap: '8px',
-                                padding: '8px 10px',
-                                borderRadius: '8px',
+                                gap: '10px',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
                                 background: isChecked ? '#FDF4FF' : '#F8FAFC',
                                 border: `1.5px solid ${isChecked ? '#F5D0FE' : '#E2E8F0'}`,
                                 cursor: canEditActionPlan ? 'pointer' : 'default',
-                                fontSize: '0.825rem',
+                                fontSize: '0.85rem',
+                                transition: 'all 0.15s ease',
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1, minWidth: 0 }}>
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => canEditActionPlan && toggleGapItem(g.key)}
                                   disabled={!canEditActionPlan}
-                                  style={{ accentColor: '#C026D3', width: '16px', height: '16px', cursor: canEditActionPlan ? 'pointer' : 'default' }}
+                                  style={{ accentColor: '#C026D3', width: '18px', height: '18px', marginTop: '2px', cursor: canEditActionPlan ? 'pointer' : 'default', flexShrink: 0 }}
                                 />
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.title}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                                  <span style={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.45, wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                     {g.title}
                                   </span>
-                                  <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                                  <span style={{ fontSize: '0.725rem', color: '#64748B' }}>
                                     คาดหวัง {g.expectedTotal} / ได้ {g.evaluatedTotal}
                                   </span>
                                 </div>
                               </div>
                               <span
                                 style={{
-                                  fontSize: '0.75rem',
+                                  fontSize: '0.775rem',
                                   fontWeight: 800,
-                                  padding: '2px 8px',
+                                  padding: '3px 8px',
                                   borderRadius: '6px',
                                   background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
                                   color: g.gap < 0 ? '#DC2626' : '#15803D',
                                   flexShrink: 0,
+                                  alignSelf: 'center',
                                 }}
                               >
                                 Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
