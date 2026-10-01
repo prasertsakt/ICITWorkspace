@@ -59,6 +59,8 @@ import {
   BookOpen,
   Award,
   Pause,
+  Play,
+  Loader2,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -91,6 +93,7 @@ export default function TqaOfiTrackingPage() {
   const [actionModalRound, setActionModalRound] = useState('round1');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [deletingOfi, setDeletingOfi] = useState(null);
+  const [trackingConfirmState, setTrackingConfirmState] = useState(null); // { item, nextTracked, isSaving }
 
   // 1. Subscribe to OFI Items for the chosen fiscal year
   useEffect(() => {
@@ -238,8 +241,8 @@ export default function TqaOfiTrackingPage() {
     });
   }, [ofiItems, scopeFilter, selectedCategory, selectedStatus, searchQuery, currentUser, currentPersonnel]);
 
-  // Toggle Tracking Execution Status (ดำเนินการ <-> ยังไม่ดำเนินการ)
-  const handleToggleTracking = async (item) => {
+  // Open custom modal for toggling tracking execution status (ดำเนินการ <-> ยังไม่ดำเนินการ)
+  const handleToggleTracking = (item) => {
     const canEdit = canEditTqaOfiProgress(item, currentUser, currentPersonnel, isAdmin);
     if (!canEdit) {
       alert('คุณไม่มีสิทธิ์เปลี่ยนสถานะการติดตามของข้อเสนอแนะนี้ (ต้องเป็น Admin หรือผู้รายงานผลที่ได้รับมอบหมาย)');
@@ -248,12 +251,19 @@ export default function TqaOfiTrackingPage() {
 
     const currentTracked = isTqaOfiTracked(item);
     const nextTracked = !currentTracked;
-    const confirmMsg = nextTracked
-      ? `ต้องการนำข้อเสนอแนะ "${item.itemRef || 'OFI'}" กลับเข้าสู่แผน "ดำเนินการ" (ติดตามผล 3 รอบ) ใช่หรือไม่?`
-      : `ต้องการเปลี่ยนข้อเสนอแนะ "${item.itemRef || 'OFI'}" เป็น "ยังไม่ดำเนินการ" (ซ่อนจากการติดตามปกติ และไม่ต้องรายงานผล) ใช่หรือไม่?`;
+    setTrackingConfirmState({
+      item,
+      nextTracked,
+      isSaving: false,
+    });
+  };
 
-    if (!window.confirm(confirmMsg)) return;
+  // Execute toggle tracking after modal confirmation
+  const handleExecuteToggleTracking = async () => {
+    if (!trackingConfirmState || !trackingConfirmState.item) return;
+    const { item, nextTracked } = trackingConfirmState;
 
+    setTrackingConfirmState((prev) => ({ ...prev, isSaving: true }));
     try {
       const updatedByName = currentPersonnel?.name || currentUser?.displayName || currentUser?.email || 'Admin';
       await saveTqaOfiItem(
@@ -267,8 +277,10 @@ export default function TqaOfiTrackingPage() {
         fiscalYear,
         updatedByName
       );
+      setTrackingConfirmState(null);
     } catch (e) {
       alert(e.message || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะการติดตาม');
+      setTrackingConfirmState((prev) => ({ ...prev, isSaving: false }));
     }
   };
 
@@ -1616,6 +1628,207 @@ export default function TqaOfiTrackingPage() {
           // Real-time listener will refresh
         }}
       />
+
+      {/* Tracking Scope Confirmation Modal */}
+      {trackingConfirmState && trackingConfirmState.item && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !trackingConfirmState.isSaving) {
+              setTrackingConfirmState(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '1.25rem',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '2rem 1.75rem 1.75rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              textAlign: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Top colored accent bar */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '5px',
+                background: trackingConfirmState.nextTracked
+                  ? 'linear-gradient(90deg, #10B981, #059669)'
+                  : 'linear-gradient(90deg, #F59E0B, #D97706)',
+              }}
+            />
+
+            {/* Icon Header */}
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: trackingConfirmState.nextTracked ? '#ECFDF5' : '#FEF3C7',
+                color: trackingConfirmState.nextTracked ? '#059669' : '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem',
+                border: `3px solid ${trackingConfirmState.nextTracked ? '#A7F3D0' : '#FDE68A'}`,
+                boxShadow: `0 8px 16px -4px ${trackingConfirmState.nextTracked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
+              }}
+            >
+              {trackingConfirmState.nextTracked ? <Play size={28} /> : <Pause size={28} />}
+            </div>
+
+            {/* Title */}
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0' }}>
+              {trackingConfirmState.nextTracked
+                ? 'ยืนยันนำกลับเข้าสู่แผน "ดำเนินการ"'
+                : 'ยืนยันเปลี่ยนเป็น "ยังไม่ดำเนินการ"'}
+            </h3>
+
+            {/* OFI Item Context Card */}
+            <div
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '0.75rem',
+                padding: '0.875rem 1rem',
+                margin: '1rem 0 1.25rem',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.35rem' }}>
+                <span
+                  style={{
+                    background: '#6D28D9',
+                    color: '#FFFFFF',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {trackingConfirmState.item.itemRef || 'OFI'}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: trackingConfirmState.nextTracked ? '#059669' : '#D97706',
+                    background: trackingConfirmState.nextTracked ? '#ECFDF5' : '#FEF3C7',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {trackingConfirmState.nextTracked ? 'สถานะใหม่: ดำเนินการ (ติดตามผล)' : 'สถานะใหม่: ยังไม่ดำเนินการ (พักไว้)'}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: '0.85rem',
+                  color: '#334155',
+                  margin: 0,
+                  fontWeight: 500,
+                  lineHeight: 1.45,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {trackingConfirmState.item.finding || 'ข้อเสนอแนะในการปรับปรุง'}
+              </p>
+            </div>
+
+            {/* Description Text */}
+            <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.55, margin: '0 0 1.5rem 0' }}>
+              {trackingConfirmState.nextTracked ? (
+                <>
+                  ข้อเสนอแนะนี้จะถูกนำกลับเข้าสู่กระบวนการติดตามผล <strong>(3 รอบ)</strong>{' '}
+                  และผู้รายงานผลจะสามารถบันทึกความก้าวหน้าได้ตามปกติ
+                </>
+              ) : (
+                <>
+                  ข้อเสนอแนะนี้จะถูกเปลี่ยนสถานะเป็น <strong>&quot;ยังไม่ดำเนินการ&quot;</strong>{' '}
+                  ซึ่งจะถูกซ่อนจากมุมมองติดตามปกติ และผู้รายงานผลไม่ต้องรายงานความก้าวหน้า
+                </>
+              )}
+            </p>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                disabled={trackingConfirmState.isSaving}
+                onClick={() => setTrackingConfirmState(null)}
+                className="btn btn-secondary"
+                style={{ flex: 1, padding: '0.65rem 1rem', borderRadius: '0.65rem', fontWeight: 600 }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={trackingConfirmState.isSaving}
+                onClick={handleExecuteToggleTracking}
+                className="btn btn-primary"
+                style={{
+                  flex: 1.3,
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '0.65rem',
+                  fontWeight: 700,
+                  border: 'none',
+                  background: trackingConfirmState.nextTracked
+                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                    : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  boxShadow: trackingConfirmState.nextTracked
+                    ? '0 4px 12px rgba(16, 185, 129, 0.35)'
+                    : '0 4px 12px rgba(245, 158, 11, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                {trackingConfirmState.isSaving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> กำลังบันทึก...
+                  </>
+                ) : trackingConfirmState.nextTracked ? (
+                  <>
+                    <CheckCircle2 size={16} /> ยืนยันเป็น &quot;ดำเนินการ&quot;
+                  </>
+                ) : (
+                  <>
+                    <Pause size={16} /> ยืนยันเป็น &quot;ยังไม่ดำเนินการ&quot;
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deletingOfi && (
