@@ -56,7 +56,7 @@ export default function JDPreviewModal({
       >
         {/* Modal Top Bar (Screen Only) */}
         <div
-          className="modal-header-screen-only"
+          className="modal-header-screen-only no-print"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -397,10 +397,18 @@ export default function JDPreviewModal({
               <tbody>
                 {(jd.internalRelationships || []).map((item, idx) => (
                   <tr key={idx}>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', fontWeight: 600 }}>{item.unitName}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{item.topics}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top' }}>{item.contactMethod}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', textAlign: 'center' }}>{item.frequency}</td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', fontWeight: 600, whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.unitName || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.topics || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.contactMethod || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', textAlign: 'center', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.frequency || '-'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -421,10 +429,18 @@ export default function JDPreviewModal({
               <tbody>
                 {(jd.externalRelationships || []).map((item, idx) => (
                   <tr key={idx}>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', fontWeight: 600 }}>{item.unitName}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{item.topics}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top' }}>{item.contactMethod}</td>
-                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', textAlign: 'center' }}>{item.frequency}</td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', fontWeight: 600, whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.unitName || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.topics || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.contactMethod || '-'}
+                    </td>
+                    <td style={{ border: '1px solid #94A3B8', padding: '6px 8px', verticalAlign: 'top', textAlign: 'center', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {item.frequency || '-'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -439,34 +455,46 @@ export default function JDPreviewModal({
               ส่วนที่ 5 คุณสมบัติมาตรฐานของตำแหน่ง (Job Specification)
             </h2>
 
-            <div style={{ marginBottom: '0.65rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <strong style={{ fontSize: '0.925rem' }}>5.1 การศึกษา (ระดับการศึกษา และสาขาวิชา) (Education and Major)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px' }}>
+              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.educationAndMajor || '-'}
               </div>
             </div>
 
-            <div style={{ marginBottom: '0.65rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <strong style={{ fontSize: '0.925rem' }}>5.2 ประสบการณ์ที่จำเป็นในการทำงาน (Experience)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px' }}>
+              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.experience || '-'}
               </div>
             </div>
 
-            <div style={{ marginBottom: '0.65rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <strong style={{ fontSize: '0.925rem' }}>5.3 คุณสมบัติพิเศษที่เกี่ยวกับงาน (Special Qualifications)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px' }}>
+              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.specialQualifications || '-'}
               </div>
             </div>
 
-            <div style={{ marginBottom: '0.65rem' }}>
-              <strong style={{ fontSize: '0.925rem' }}>5.4 ทักษะที่จำเป็นสำหรับงาน (Skill)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.875rem', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <div>• <strong>ภาษาอังกฤษ (English):</strong> {jd.skills?.english || '-'}</div>
-                <div>• <strong>ภาษาอื่น (Other):</strong> {jd.skills?.otherLanguage || '-'}</div>
-                <div>• <strong>คอมพิวเตอร์ (Computer):</strong> {jd.skills?.computer || '-'}</div>
-                <div>• <strong>อื่น ๆ โปรดระบุ:</strong> {jd.skills?.otherSkills || '-'}</div>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <strong style={{ fontSize: '0.925rem' }}>5.4 ทักษะที่จำเป็นสำหรับงาน (Skills)</strong>
+              <div style={{ paddingLeft: '1rem', fontSize: '0.875rem', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  <strong>• ภาษาอังกฤษ (English):</strong>{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>{jd.skills?.english || '-'}</span>
+                </div>
+                <div style={{ lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  <strong>• ภาษาอื่น (Other Languages):</strong>{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>{jd.skills?.otherLanguage || '-'}</span>
+                </div>
+                <div style={{ lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  <strong>• คอมพิวเตอร์ (Computer):</strong>{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>{jd.skills?.computer || '-'}</span>
+                </div>
+                <div style={{ lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  <strong>• อื่น ๆ โปรดระบุ (Other Skills):</strong>{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>{jd.skills?.otherSkills || '-'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -619,6 +647,59 @@ export default function JDPreviewModal({
           </div>
         </div>
       </div>
+
+      {/* Global Print Style Injection */}
+      <style jsx global>{`
+        @media print {
+          /* Hide non-printable elements */
+          body * {
+            visibility: hidden;
+          }
+          .no-print,
+          .modal-overlay,
+          header,
+          footer,
+          nav {
+            display: none !important;
+          }
+          .jd-preview-overlay {
+            display: block !important;
+            position: static !important;
+            background: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .jd-preview-modal-content {
+            box-shadow: none !important;
+            border: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .jd-print-container,
+          .jd-print-container * {
+            visibility: visible;
+          }
+          .jd-print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            padding: 10mm 15mm !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 10mm 12mm;
+          }
+        }
+      `}</style>
     </div>
   );
 }

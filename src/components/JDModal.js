@@ -1462,13 +1462,18 @@ export default function JDModal({
           {/* TAB 4: การทำงานร่วมหน่วยงานอื่น */}
           {/* ============================================================ */}
           {activeTab === 'relationships' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               {/* Internal Relationships */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
-                    1. หน่วยงานภายใน (Internal Relationships)
-                  </h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
+                      1. หน่วยงานภายใน (Internal Relationships)
+                    </h4>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      หน่วยงานภายในมหาวิทยาลัย หรือภายในสำนักที่ต้องประสานงานด้วย (รองรับการขึ้นบรรทัดใหม่)
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleAddRelationship('internal')}
@@ -1479,66 +1484,102 @@ export default function JDModal({
                   </button>
                 </div>
 
+                {/* Table Column Headers */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.3fr 2fr 1.3fr 1.1fr 36px',
+                    gap: '8px',
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg-card-subtle)',
+                    borderRadius: '6px 6px 0 0',
+                    border: '1px solid var(--border-subtle)',
+                    borderBottom: 'none',
+                  }}
+                >
+                  <div>ชื่อหน่วยงาน</div>
+                  <div>เรื่องที่ประสาน</div>
+                  <div>วิธีการติดต่อ</div>
+                  <div>ความถี่ในการติดต่อ</div>
+                  <div></div>
+                </div>
+
                 {(formData.internalRelationships || []).map((item, idx) => (
                   <div
                     key={idx}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.5fr 2fr 1.5fr 1.2fr auto',
+                      gridTemplateColumns: '1.3fr 2fr 1.3fr 1.1fr 36px',
                       gap: '8px',
-                      alignItems: 'center',
-                      background: 'var(--bg-card-subtle)',
-                      padding: '0.65rem',
-                      borderRadius: '6px',
-                      marginBottom: '6px',
+                      alignItems: 'start',
+                      background: '#FFFFFF',
+                      padding: '8px 10px',
+                      borderRadius: idx === (formData.internalRelationships.length - 1) ? '0 0 6px 6px' : '0',
+                      border: '1px solid var(--border-subtle)',
+                      borderTop: idx > 0 ? 'none' : undefined,
                     }}
                   >
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="ชื่อหน่วยงาน"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น ฝ่ายพัฒนาระบบสารสนเทศ..."
                       value={item.unitName}
                       onChange={(e) => handleUpdateRelationship('internal', idx, 'unitName', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="เรื่องที่ประสาน"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="ระบุเรื่องที่ประสานงาน..."
                       value={item.topics}
                       onChange={(e) => handleUpdateRelationship('internal', idx, 'topics', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="วิธีการติดต่อ"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น เอกสาร, อีเมล, ประชุม..."
                       value={item.contactMethod}
                       onChange={(e) => handleUpdateRelationship('internal', idx, 'contactMethod', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="ความถี่"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น สัปดาห์ละ 1 ครั้ง, ประจำวัน..."
                       value={item.frequency}
                       onChange={(e) => handleUpdateRelationship('internal', idx, 'frequency', e.target.value)}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRelationship('internal', idx)}
-                      className="btn btn-ghost btn-icon"
-                      style={{ color: 'var(--rose-500)' }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRelationship('internal', idx)}
+                        className="btn btn-ghost btn-icon"
+                        style={{ color: 'var(--rose-500)', padding: '4px' }}
+                        title="ลบรายการนี้"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* External Relationships */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
-                    2. หน่วยงานภายนอก (External Relationships)
-                  </h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
+                      2. หน่วยงานภายนอก (External Relationships)
+                    </h4>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      หน่วยงานภายนอกมหาวิทยาลัย บริษัทเอกชน หรือหน่วยงานภาครัฐที่ต้องประสานงาน (รองรับการขึ้นบรรทัดใหม่)
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleAddRelationship('external')}
@@ -1549,56 +1590,87 @@ export default function JDModal({
                   </button>
                 </div>
 
+                {/* Table Column Headers */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.3fr 2fr 1.3fr 1.1fr 36px',
+                    gap: '8px',
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg-card-subtle)',
+                    borderRadius: '6px 6px 0 0',
+                    border: '1px solid var(--border-subtle)',
+                    borderBottom: 'none',
+                  }}
+                >
+                  <div>ชื่อหน่วยงาน</div>
+                  <div>เรื่องที่ประสาน</div>
+                  <div>วิธีการติดต่อ</div>
+                  <div>ความถี่ในการติดต่อ</div>
+                  <div></div>
+                </div>
+
                 {(formData.externalRelationships || []).map((item, idx) => (
                   <div
                     key={idx}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.5fr 2fr 1.5fr 1.2fr auto',
+                      gridTemplateColumns: '1.3fr 2fr 1.3fr 1.1fr 36px',
                       gap: '8px',
-                      alignItems: 'center',
-                      background: 'var(--bg-card-subtle)',
-                      padding: '0.65rem',
-                      borderRadius: '6px',
-                      marginBottom: '6px',
+                      alignItems: 'start',
+                      background: '#FFFFFF',
+                      padding: '8px 10px',
+                      borderRadius: idx === (formData.externalRelationships.length - 1) ? '0 0 6px 6px' : '0',
+                      border: '1px solid var(--border-subtle)',
+                      borderTop: idx > 0 ? 'none' : undefined,
                     }}
                   >
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="ชื่อหน่วยงาน"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น บริษัทคู่สัญญา, กระทรวง อว...."
                       value={item.unitName}
                       onChange={(e) => handleUpdateRelationship('external', idx, 'unitName', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="เรื่องที่ประสาน"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="ระบุเรื่องที่ประสานงาน..."
                       value={item.topics}
                       onChange={(e) => handleUpdateRelationship('external', idx, 'topics', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="วิธีการติดต่อ"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น หนังสือราชการ, อีเมล, ประชุม..."
                       value={item.contactMethod}
                       onChange={(e) => handleUpdateRelationship('external', idx, 'contactMethod', e.target.value)}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       className="form-input"
-                      placeholder="ความถี่"
+                      style={{ resize: 'vertical', fontSize: '0.825rem', lineHeight: 1.45 }}
+                      placeholder="เช่น เดือนละ 1 ครั้ง, ตามรอบสัญญา..."
                       value={item.frequency}
                       onChange={(e) => handleUpdateRelationship('external', idx, 'frequency', e.target.value)}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRelationship('external', idx)}
-                      className="btn btn-ghost btn-icon"
-                      style={{ color: 'var(--rose-500)' }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRelationship('external', idx)}
+                        className="btn btn-ghost btn-icon"
+                        style={{ color: 'var(--rose-500)', padding: '4px' }}
+                        title="ลบรายการนี้"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1615,8 +1687,9 @@ export default function JDModal({
                   5.1 การศึกษา (ระดับการศึกษา และสาขาวิชา) (Education and Major)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   className="form-input"
+                  style={{ resize: 'vertical' }}
                   placeholder="เช่น ปริญญาตรี ด้านการบริหารจัดการ บริหารงานบุคคล รัฐศาสตร์..."
                   value={formData.educationAndMajor}
                   onChange={(e) => handleChange('educationAndMajor', e.target.value)}
@@ -1628,8 +1701,9 @@ export default function JDModal({
                   5.2 ประสบการณ์ที่จำเป็นในการทำงาน (Experience)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   className="form-input"
+                  style={{ resize: 'vertical' }}
                   placeholder="เช่น ประสบการณ์ด้านการบริหารจัดการ การวางแผน การวิเคราะห์..."
                   value={formData.experience}
                   onChange={(e) => handleChange('experience', e.target.value)}
@@ -1641,8 +1715,9 @@ export default function JDModal({
                   5.3 คุณสมบัติพิเศษที่เกี่ยวกับงาน (Special Qualifications)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   className="form-input"
+                  style={{ resize: 'vertical' }}
                   placeholder="เช่น การสื่อสารด้านจิตวิทยา การพูดในที่สาธารณะ..."
                   value={formData.specialQualifications}
                   onChange={(e) => handleChange('specialQualifications', e.target.value)}
@@ -1655,10 +1730,11 @@ export default function JDModal({
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 <div>
-                  <label className="form-label">ภาษาอังกฤษ (English)</label>
-                  <input
-                    type="text"
+                  <label className="form-label" style={{ fontWeight: 600 }}>ภาษาอังกฤษ (English)</label>
+                  <textarea
+                    rows={2}
                     className="form-input"
+                    style={{ resize: 'vertical' }}
                     placeholder="เช่น ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1"
                     value={formData.skills?.english || ''}
                     onChange={(e) => handleNestedChange('skills', 'english', e.target.value)}
@@ -1666,10 +1742,11 @@ export default function JDModal({
                 </div>
 
                 <div>
-                  <label className="form-label">ภาษาอื่น (Other Languages)</label>
-                  <input
-                    type="text"
+                  <label className="form-label" style={{ fontWeight: 600 }}>ภาษาอื่น (Other Languages)</label>
+                  <textarea
+                    rows={2}
                     className="form-input"
+                    style={{ resize: 'vertical' }}
                     placeholder="เช่น - หรือ ภาษาจีนระดับพื้นฐาน"
                     value={formData.skills?.otherLanguage || ''}
                     onChange={(e) => handleNestedChange('skills', 'otherLanguage', e.target.value)}
@@ -1677,10 +1754,11 @@ export default function JDModal({
                 </div>
 
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label className="form-label">คอมพิวเตอร์ (Computer)</label>
-                  <input
-                    type="text"
+                  <label className="form-label" style={{ fontWeight: 600 }}>คอมพิวเตอร์ (Computer)</label>
+                  <textarea
+                    rows={3}
                     className="form-input"
+                    style={{ resize: 'vertical' }}
                     placeholder="เช่น Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams"
                     value={formData.skills?.computer || ''}
                     onChange={(e) => handleNestedChange('skills', 'computer', e.target.value)}
@@ -1688,10 +1766,11 @@ export default function JDModal({
                 </div>
 
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label className="form-label">อื่น ๆ โปรดระบุ (Other Skills)</label>
-                  <input
-                    type="text"
+                  <label className="form-label" style={{ fontWeight: 600 }}>อื่น ๆ โปรดระบุ (Other Skills)</label>
+                  <textarea
+                    rows={3}
                     className="form-input"
+                    style={{ resize: 'vertical' }}
                     placeholder="เช่น ทักษะการประสานงาน, ทักษะการเจรจาต่อรอง..."
                     value={formData.skills?.otherSkills || ''}
                     onChange={(e) => handleNestedChange('skills', 'otherSkills', e.target.value)}
