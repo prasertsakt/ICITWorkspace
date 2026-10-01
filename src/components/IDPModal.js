@@ -33,6 +33,14 @@ import {
   confirmDeptHeadSignature,
   confirmDeputyDirectorSignature,
 } from '../lib/idpService';
+import {
+  saveActionPlan,
+  getActionPlanById,
+  createActionPlanItemsFromNeedAnalysis,
+} from '@/lib/idpActionPlanService';
+import IDPActionPlanModal from '@/components/IDPActionPlanModal';
+import { useModal } from '@/context/ModalContext';
+import { Target, ArrowRight } from 'lucide-react';
 
 export default function IDPModal({
   isOpen,
@@ -81,6 +89,12 @@ export default function IDPModal({
   const [status, setStatus] = useState(record?.status || IDP_STATUSES.DRAFT.key);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // IDP Action Plan Modal State
+  const [isActionPlanModalOpen, setIsActionPlanModalOpen] = useState(false);
+  const [actionPlanData, setActionPlanData] = useState(null);
+  const [selectedGapKeys, setSelectedGapKeys] = useState(new Set());
+  const { showAlert, showConfirm } = useModal();
 
   // Auto populate on personnel selection (when creating new)
   const handleSelectPersonnel = (pId) => {
@@ -247,6 +261,114 @@ export default function IDPModal({
       currentPersonnel
     );
     setSignatures(updated.signatures);
+  };
+
+  // Gap Items for IDP Action Plan
+  const allGapItems = useMemo(() => {
+    const list = [];
+    (liveSummary.coreCompetencies || []).forEach((c) => {
+      if (c.gap !== 0 && c.gap !== undefined) {
+        list.push({ ...c, type: 'CORE', key: `core-${c.id || c.name}` });
+      }
+    });
+    (liveSummary.functionalCompetencies || []).forEach((f) => {
+      if (f.gap !== 0 && f.gap !== undefined) {
+        list.push({ ...f, type: 'FUNCTIONAL', key: `func-${f.id || f.name}` });
+      }
+    });
+    return list;
+  }, [liveSummary]);
+
+  // Pre-select all gap items when gap items change
+  useEffect(() => {
+    if (allGapItems.length > 0) {
+      setSelectedGapKeys(new Set(allGapItems.map((g) => g.key)));
+    }
+  }, [allGapItems.length]);
+
+  const toggleGapItem = (key) => {
+    setSelectedGapKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSendToIDPActionPlan = async () => {
+    const selectedList = allGapItems.filter((g) => selectedGapKeys.has(g.key));
+    if (selectedList.length === 0) {
+      await showAlert({
+        type: 'warning',
+        title: 'ไม่ได้เลือกสมรรถนะ',
+        message: 'กรุณาเลือกสมรรถนะที่มี Gap อย่างน้อย 1 รายการเพื่อส่งไปยัง IDP Action Plan',
+      });
+      return;
+    }
+
+    const pId = selectedPersonnelId || record?.personnelId || currentPersonnel?.id;
+    if (!pId) return;
+
+    try {
+      const existingPlan = await getActionPlanById(`action-plan-${fiscalYear}-${pId}`, fiscalYear);
+      const newItems = createActionPlanItemsFromNeedAnalysis(selectedList);
+
+      let updatedPlan;
+      if (existingPlan) {
+        // Merge or replace items
+        const existingItemNames = new Set((existingPlan.items || []).map((it) => it.competencyName));
+        const itemsToAppend = newItems.filter((it) => !existingItemNames.has(it.competencyName));
+        const mergedItems = [...(existingPlan.items || []), ...itemsToAppend].map((it, idx) => ({
+          ...it,
+          order: idx + 1,
+        }));
+        updatedPlan = {
+          ...existingPlan,
+          items: mergedItems,
+        };
+      } else {
+        updatedPlan = {
+          id: `action-plan-${fiscalYear}-${pId}`,
+          fiscalYear: String(fiscalYear),
+          personnelId: pId,
+          personnelName: personnelName || record?.personnelName || currentPersonnel?.name,
+          personnelEmail: personnelEmail || record?.personnelEmail || currentPersonnel?.email || '',
+          position: position || 'บุคลากร',
+          department: department || 'สำนักคอมพิวเตอร์ฯ',
+          items: newItems,
+          signatures: {
+            acknowledgement: {
+              trainee: { name: personnelName, email: personnelEmail || '', signed: false, signedAt: '' },
+              supervisor: { name: '', email: '', signed: false, signedAt: '' },
+            },
+            evaluation: {
+              resultType: 'COMPLETED',
+              percent: 100,
+              reason: '',
+              supervisor: { name: '', email: '', position: 'รองผู้อำนวยการฝ่ายบริหาร', signed: false, signedAt: '' },
+              trainee: { name: personnelName, email: personnelEmail || '', position: position || '', signed: false, signedAt: '' },
+            },
+          },
+          status: 'DRAFT',
+          createdAt: new Date().toISOString(),
+          createdBy: currentPersonnel?.name || currentUser?.displayName || 'ผู้จัดทำแผน',
+        };
+      }
+
+      const actor = {
+        name: currentPersonnel?.name || currentUser?.displayName || 'ผู้ใช้งาน',
+      };
+      const saved = await saveActionPlan(updatedPlan, actor);
+      setActionPlanData(saved);
+      setIsActionPlanModalOpen(true);
+    } catch (e) {
+      console.error('Error sending to IDP Action Plan:', e);
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        message: e.message || 'ไม่สามารถสร้าง IDP Action Plan ได้',
+      });
+    }
   };
 
   // Submit Save
@@ -1114,6 +1236,135 @@ export default function IDPModal({
             <div>* <strong>สูตรช่องว่าง (Gap)</strong> = ค่าคะแนนที่ประเมินได้(6) - ค่าคะแนนคาดหวัง(5)</div>
           </div>
 
+          {/* ==================== IDP Action Plan Integration Box ==================== */}
+          {allGapItems.length > 0 && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+                border: '1.5px solid #FDBA74',
+                borderRadius: '14px',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      background: '#EA580C',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Target size={20} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#9A3412', margin: 0 }}>
+                      ส่งต่อสมรรถนะที่มีช่องว่าง (Gap ≠ 0) ไปยัง IDP Action Plan
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: '#C2410C', margin: '2px 0 0 0' }}>
+                      พบสมรรถนะที่มี Gap ทั้งหมด {allGapItems.length} รายการ สามารถเลือกรายการเพื่อจัดทำแผนพัฒนาต่อได้ทันที
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSendToIDPActionPlan}
+                  style={{
+                    padding: '0.55rem 1.25rem',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
+                  }}
+                >
+                  <Target size={16} />
+                  <span>สร้าง / อัปเดต IDP Action Plan</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
+              {/* Gap Competencies Checklist */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '8px',
+                  background: '#FFFFFF',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  border: '1px solid #FED7AA',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                }}
+              >
+                {allGapItems.map((g) => {
+                  const isChecked = selectedGapKeys.has(g.key);
+                  return (
+                    <label
+                      key={g.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        background: isChecked ? '#FFF7ED' : '#F8FAFC',
+                        border: `1px solid ${isChecked ? '#FDBA74' : '#E2E8F0'}`,
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: isChecked ? 700 : 500,
+                        color: isChecked ? '#C2410C' : '#334155',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleGapItem(g.key)}
+                          style={{ accentColor: '#EA580C' }}
+                        />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.name}>
+                          {g.name}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.725rem',
+                          fontWeight: 800,
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
+                          color: g.gap < 0 ? '#DC2626' : '#15803D',
+                          flexShrink: 0,
+                        }}
+                      >
+                        Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* ==================== Signatures Section (3 Separate Sign Buttons) ==================== */}
           <div
             style={{
@@ -1433,6 +1684,19 @@ export default function IDPModal({
           </div>
         </div>
       </div>
+
+      {/* IDP Action Plan Modal (Embedded for immediate transition) */}
+      <IDPActionPlanModal
+        isOpen={isActionPlanModalOpen}
+        onClose={() => setIsActionPlanModalOpen(false)}
+        plan={actionPlanData}
+        fiscalYear={fiscalYear}
+        currentUser={currentUser}
+        currentPersonnel={currentPersonnel}
+        personnelList={personnelList}
+        isAdmin={isAdmin}
+        onSaved={(updated) => setActionPlanData(updated)}
+      />
     </div>
   );
 }

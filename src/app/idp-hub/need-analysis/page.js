@@ -935,6 +935,16 @@ export default function IDPNeedAnalysisPage() {
                       {/* Actions */}
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {/* Go to IDP Action Plan */}
+                          <Link
+                            href="/idp-hub/action-plan"
+                            className="btn btn-ghost btn-icon"
+                            style={{ padding: '6px', color: '#EA580C', textDecoration: 'none' }}
+                            title="แผนพัฒนาบุคลากร (IDP Action Plan)"
+                          >
+                            <Target size={16} />
+                          </Link>
+
                           {/* Print / Preview */}
                           <button
                             type="button"

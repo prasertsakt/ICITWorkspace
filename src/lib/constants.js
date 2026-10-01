@@ -1033,3 +1033,42 @@ export const DEFAULT_IDP_STRATEGY_CONFIG_2569 = {
     },
   ],
 };
+
+// 12. ตัวเลือกวิธีการพัฒนา 10 รูปแบบสำหรับ IDP Action Plan
+export const IDP_DEVELOPMENT_METHODS = [
+  { id: 1, code: '1', title: 'ศึกษาด้วยตนเอง', shortTitle: '1 = ศึกษาด้วยตนเอง' },
+  { id: 2, code: '2', title: 'เรียนรู้จากการปฏิบัติงาน', shortTitle: '2 = เรียนรู้จากการปฏิบัติงาน' },
+  { id: 3, code: '3', title: 'แลกเปลี่ยนเรียนรู้', shortTitle: '3 = แลกเปลี่ยนเรียนรู้' },
+  { id: 4, code: '4', title: 'พี่เลี้ยง', shortTitle: '4 = พี่เลี้ยง' },
+  { id: 5, code: '5', title: 'การสอนงาน', shortTitle: '5 = การสอนงาน' },
+  { id: 6, code: '6', title: 'ฝึกอบรม', shortTitle: '6 = ฝึกอบรม' },
+  { id: 7, code: '7', title: 'การให้คำปรึกษา', shortTitle: '7 = การให้คำปรึกษา' },
+  { id: 8, code: '8', title: 'การมอบหมายงาน', shortTitle: '8 = การมอบหมายงาน' },
+  { id: 9, code: '9', title: 'ติดตามผู้มีประสบการณ์', shortTitle: '9 = ติดตามผู้มีประสบการณ์' },
+  { id: 10, code: '10', title: 'วิธีพัฒนาอื่น ๆ', shortTitle: '10 = วิธีพัฒนาอื่น ๆ' },
+];
+
+// 13. ตัวเลือก 5 พันธกิจของสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ
+export const IDP_MISSIONS_5 = [
+  { id: 'm-1', num: '01', title: 'พัฒนาโครงสร้างพื้นฐานระบบเทคโนโลยีสารสนเทศและการสื่อสารทางดิจิทัลของมหาวิทยาลัย' },
+  { id: 'm-2', num: '02', title: 'พัฒนาระบบเทคโนโลยีสารสนเทศเพื่อสนับสนุนการบริหารจัดการงานของมหาวิทยาลัย' },
+  { id: 'm-3', num: '03', title: 'บริการเทคโนโลยีสารสนเทศเพื่อสนับสนุนการเรียนการสอน การค้นคว้าวิจัย และการปฏิบัติงานในมหาวิทยาลัย' },
+  { id: 'm-4', num: '04', title: 'บริการวิชาการด้านเทคโนโลยีสารสนเทศ เพื่อการพัฒนาทักษะทางดิจิทัลแก่นักศึกษาและบุคลากร' },
+  { id: 'm-5', num: '05', title: 'บริการพื้นที่แลกเปลี่ยนเรียนรู้และห้องปฏิบัติการเพื่อการเรียนการสอนและการอบรม' },
+];
+
+// 14. ข้อมูลรอบไตรมาสสำหรับ IDP Action Plan
+export const IDP_ACTION_PLAN_QUARTERS = [
+  { key: 'q1', label: 'Q1', period: 'ต.ค.-ธ.ค.', fullLabel: 'Q1 (ต.ค.-ธ.ค.)' },
+  { key: 'q2', label: 'Q2', period: 'ม.ค.-มี.ค.', fullLabel: 'Q2 (ม.ค.-มี.ค.)' },
+  { key: 'q3', label: 'Q3', period: 'เม.ย.-มิ.ย.', fullLabel: 'Q3 (เม.ย.-มิ.ย.)' },
+  { key: 'q4', label: 'Q4', period: 'ก.ค.-ก.ย.', fullLabel: 'Q4 (ก.ค.-ก.ย.)' },
+];
+
+// 15. สถานะของ IDP Action Plan
+export const IDP_ACTION_PLAN_STATUSES = {
+  DRAFT: { key: 'DRAFT', label: 'ฉบับร่าง', color: '#64748B', bg: '#F1F5F9' },
+  PLANNED: { key: 'PLANNED', label: 'รับทราบแผนแล้ว', color: '#2563EB', bg: '#EFF6FF' },
+  IN_PROGRESS: { key: 'IN_PROGRESS', label: 'อยู่ระหว่างดำเนินการ', color: '#D97706', bg: '#FEF3C7' },
+  EVALUATED: { key: 'EVALUATED', label: 'ประเมินผลแล้ว', color: '#16A34A', bg: '#DCFCE7' },
+};

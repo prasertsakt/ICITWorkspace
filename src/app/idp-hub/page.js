@@ -823,75 +823,111 @@ export default function IDPHubLandingPage() {
             </div>
           </Link>
 
-          {/* Sub-Service 2: Individual Development Plan (Coming Soon) */}
-          <div
-            className="card"
+          {/* Sub-Service 2: Individual Development Plan (Active) */}
+          <Link
+            href="/idp-hub/action-plan"
             style={{
-              background: '#FFFFFF',
-              borderRadius: '1.25rem',
-              border: '1px solid #E2E8F0',
-              padding: '1.75rem',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              opacity: 0.85,
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'block',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <div
+              className="card"
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '1.25rem',
+                border: '1.5px solid #E2E8F0',
+                padding: '1.75rem',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.25s ease',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#EA580C';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(234, 88, 12, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                  <div
+                    style={{
+                      width: '54px',
+                      height: '54px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 8px 16px -4px rgba(234, 88, 12, 0.35)',
+                    }}
+                  >
+                    <Target size={26} />
+                  </div>
+                  <span
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '999px',
+                      background: '#DCFCE7',
+                      color: '#15803D',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      border: '1px solid #BBF7D0',
+                    }}
+                  >
+                    เปิดให้บริการ
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1E293B', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+                  แผนพัฒนาบุคลากรรายบุคคล (IDP Action Plan)
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
+                  จัดทำแผนพัฒนาสมรรถนะที่มี Gap กำหนดเป้าหมาย วิธีการพัฒนา 10 รูปแบบ รายงานผลรายไตรมาส (Q1-Q4) และประเมินผลสัมฤทธิ์
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #F1F5F9',
+                  color: '#EA580C',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                }}
+              >
+                <span>เข้าสู่แผนพัฒนา IDP Action Plan</span>
                 <div
                   style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '16px',
-                    background: '#F1F5F9',
-                    color: '#64748B',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#FFF7ED',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    color: '#EA580C',
                   }}
                 >
-                  <Compass size={26} />
+                  <ArrowRight size={16} />
                 </div>
-                <span
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: '999px',
-                    background: '#F1F5F9',
-                    color: '#64748B',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  กำลังพัฒนา (Coming Soon)
-                </span>
               </div>
-
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#334155', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
-                แผนพัฒนาบุคลากรรายบุคคล (IDP Action Plan)
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: '#94A3B8', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
-                จัดทำแผนปฏิบัติการพัฒนาตนเองรายบุคคล กำหนดเป้าหมายการเรียนรู้ กิจกรรมพัฒนา และระยะเวลาดำเนินการตามผลช่องว่างสมรรถนะ
-              </p>
             </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '1rem',
-                borderTop: '1px solid #F1F5F9',
-                color: '#94A3B8',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-              }}
-            >
-              <span>โมดูลระยะถัดไป</span>
-              <Lock size={16} />
-            </div>
-          </div>
+          </Link>
 
           {/* Sub-Service 3: IDP Tracking & Evaluation (Coming Soon) */}
           <div

@@ -273,5 +273,18 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'idp_action_plans' collection (IDP Action Plans & Quarterly Progress Tracking)
+    match /idp_action_plans/{planId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
+        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
+        userEmail() == "tiawongsombat@gmail.com"
+      );
+    }
   }
 }
+
