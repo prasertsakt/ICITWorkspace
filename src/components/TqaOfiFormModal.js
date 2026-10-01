@@ -32,6 +32,7 @@ export default function TqaOfiFormModal({
   const [potentialImpact, setPotentialImpact] = useState('');
   const [selectedPersonnelIds, setSelectedPersonnelIds] = useState([]);
   const [status, setStatus] = useState('PENDING');
+  const [isTracking, setIsTracking] = useState(true);
 
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -46,6 +47,7 @@ export default function TqaOfiFormModal({
         setEvidence(ofiToEdit.evidence || '');
         setPotentialImpact(ofiToEdit.potentialImpact || '');
         setStatus(ofiToEdit.status || 'PENDING');
+        setIsTracking(ofiToEdit.isTracking !== false && ofiToEdit.executionStatus !== 'NOT_TRACKED');
         const assignedIds = Array.isArray(ofiToEdit.assignedPersons)
           ? ofiToEdit.assignedPersons.map((p) => p.id || p.email)
           : [];
@@ -59,6 +61,7 @@ export default function TqaOfiFormModal({
         setPotentialImpact('');
         setSelectedPersonnelIds([]);
         setStatus('PENDING');
+        setIsTracking(true);
       }
       setErrorMsg('');
     }
@@ -114,6 +117,8 @@ export default function TqaOfiFormModal({
         potentialImpact: potentialImpact.trim(),
         assignedPersons,
         status,
+        isTracking,
+        executionStatus: isTracking ? 'TRACKED' : 'NOT_TRACKED',
         rounds: ofiToEdit?.rounds || undefined,
         actionReport: ofiToEdit?.actionReport || '',
       };
@@ -383,25 +388,69 @@ export default function TqaOfiFormModal({
             </div>
           </div>
 
+          {/* Tracking Scope (ดำเนินการ / ยังไม่ดำเนินการ) */}
           <div>
             <label className="form-label" style={{ fontWeight: 700 }}>
-              สถานะเริ่มต้น (Status)
+              การติดตามผลการดำเนินงาน (Tracking Scope)
             </label>
-            <select
-              className="form-input"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={{
-                fontWeight: 700,
-                color: TQA_STATUS_CONFIG[status]?.color || '#334155',
-                background: TQA_STATUS_CONFIG[status]?.bg || '#FFFFFF',
-                width: 'auto',
-              }}
-            >
-              <option value="PENDING">🟡 รอดำเนินการ (PENDING)</option>
-              <option value="IN_PROGRESS">🔵 กำลังดำเนินการ (IN_PROGRESS)</option>
-              <option value="COMPLETED">🟢 เสร็จสิ้นแล้ว (COMPLETED)</option>
-            </select>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
+              <label
+                onClick={() => setIsTracking(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: isTracking ? '1.5px solid #059669' : '1px solid #CBD5E1',
+                  background: isTracking ? '#ECFDF5' : '#FFFFFF',
+                  color: isTracking ? '#065F46' : '#64748B',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="modalIsTracking"
+                  checked={isTracking}
+                  onChange={() => setIsTracking(true)}
+                  style={{ accentColor: '#059669' }}
+                />
+                <span>🟢 ดำเนินการ (ติดตามผล 3 รอบ)</span>
+              </label>
+
+              <label
+                onClick={() => setIsTracking(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: !isTracking ? '1.5px solid #D97706' : '1px solid #CBD5E1',
+                  background: !isTracking ? '#FEF3C7' : '#FFFFFF',
+                  color: !isTracking ? '#92400E' : '#64748B',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="modalIsTracking"
+                  checked={!isTracking}
+                  onChange={() => setIsTracking(false)}
+                  style={{ accentColor: '#D97706' }}
+                />
+                <span>⏸️ ยังไม่ดำเนินการ (ยกเว้นการรายงาน)</span>
+              </label>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#64748B' }}>
+              * หากเลือก &ldquo;ยังไม่ดำเนินการ&rdquo; ข้อนี้จะถูกซ่อนจากมุมมองติดตามผลปกติ และผู้รายงานผลไม่ต้องรายงานความก้าวหน้า
+            </p>
           </div>
 
           {/* Footer Buttons */}

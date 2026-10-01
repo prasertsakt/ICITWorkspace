@@ -47,6 +47,18 @@ export function canEditTqaOfiProgress(ofiItem, currentUser, currentPersonnel, is
 }
 
 /**
+ * Helper: Check if an OFI item is actively tracked ("ดำเนินการ") or excluded/on-hold ("ยังไม่ดำเนินการ")
+ * Defaults to true for all standard items. Returns false if explicitly marked not tracked or excluded.
+ */
+export function isTqaOfiTracked(item) {
+  if (!item) return true;
+  if (item.isTracking === false) return false;
+  if (item.executionStatus === 'NOT_TRACKED' || item.executionStatus === 'INACTIVE') return false;
+  if (item.isExcluded === true) return false;
+  return true;
+}
+
+/**
  * Helper: Normalize 3 Tracking Rounds for a TQA OFI Item
  * Supports 3 evaluation rounds (รอบที่ 1, รอบที่ 2, รอบที่ 3)
  */

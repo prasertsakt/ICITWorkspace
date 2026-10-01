@@ -9,6 +9,7 @@ import {
   saveTqaOfiItem,
   subscribeTqaReportConfig,
   canEditTqaOfiProgress,
+  isTqaOfiTracked,
   normalizeTqaRounds,
   normalizeActionReportHtml,
 } from '@/lib/tqaOfiService';
@@ -57,6 +58,9 @@ import {
   Copy,
   BookOpen,
   Award,
+  Pause,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export default function TqaOfiTrackingPage() {
@@ -74,6 +78,7 @@ export default function TqaOfiTrackingPage() {
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
+  const [scopeFilter, setScopeFilter] = useState('TRACKED'); // 'TRACKED' (ดำเนินการ) | 'NOT_TRACKED' (ยังไม่ดำเนินการ) | 'ALL' (ทั้งหมด)
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL'); // 'ALL' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'MY_ASSIGNED'
   const [expandedRowId, setExpandedRowId] = useState(null);
@@ -121,19 +126,22 @@ export default function TqaOfiTrackingPage() {
 
   // Dashboard calculations for 3-round tracking architecture
   const stats = useMemo(() => {
-    const total = ofiItems.length;
-    const completed = ofiItems.filter((i) => i.status === 'COMPLETED').length;
-    const inProgress = ofiItems.filter((i) => i.status === 'IN_PROGRESS').length;
-    const pending = ofiItems.filter((i) => i.status === 'PENDING' || !i.status).length;
+    const totalAll = ofiItems.length;
+    const trackedItems = ofiItems.filter((i) => isTqaOfiTracked(i));
+    const untrackedItems = ofiItems.filter((i) => !isTqaOfiTracked(i));
+    const total = trackedItems.length;
+    const completed = trackedItems.filter((i) => i.status === 'COMPLETED').length;
+    const inProgress = trackedItems.filter((i) => i.status === 'IN_PROGRESS').length;
+    const pending = trackedItems.filter((i) => i.status === 'PENDING' || !i.status).length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    // Per-round calculations
-    const round1Items = ofiItems.map((i) => normalizeTqaRounds(i).round1);
-    const round2Items = ofiItems.map((i) => normalizeTqaRounds(i).round2);
-    const round3Items = ofiItems.map((i) => normalizeTqaRounds(i).round3);
+    // Per-round calculations (based on active tracked items)
+    const round1Items = trackedItems.map((i) => normalizeTqaRounds(i).round1);
+    const round2Items = trackedItems.map((i) => normalizeTqaRounds(i).round2);
+    const round3Items = trackedItems.map((i) => normalizeTqaRounds(i).round3);
 
     const calcRoundStats = (roundList) => {
-      const reported = roundList.filter((r) => !!r?.actionReport).length;
+      const reported = roundList.filter((r) => !!(r?.actionReport && r.actionReport.replace(/<[^>]*>/g, '').trim())).length;
       const comp = roundList.filter((r) => r?.status === 'COMPLETED').length;
       const inProg = roundList.filter((r) => r?.status === 'IN_PROGRESS').length;
       const pend = roundList.filter((r) => r?.status === 'PENDING' || !r?.status).length;
@@ -150,14 +158,16 @@ export default function TqaOfiTrackingPage() {
     const totalReportsSubmitted = round1.reported + round2.reported + round3.reported;
     const overallFulfillmentPct = totalReportsRequired > 0 ? Math.round((totalReportsSubmitted / totalReportsRequired) * 100) : 0;
 
-    // By category counts
+    // By category counts (based on tracked items)
     const byCategory = {};
     TQA_CATEGORIES.forEach((c) => {
-      byCategory[c.name] = ofiItems.filter((i) => i.category === c.name || i.categoryNum === c.num).length;
+      byCategory[c.name] = trackedItems.filter((i) => i.category === c.name || i.categoryNum === c.num).length;
     });
 
     return {
+      totalAll,
       total,
+      untrackedCount: untrackedItems.length,
       completed,
       inProgress,
       pending,
@@ -172,9 +182,15 @@ export default function TqaOfiTrackingPage() {
     };
   }, [ofiItems]);
 
-  // Filtered OFIs with 3-round support
+  // Filtered OFIs with 3-round and tracking scope support
   const filteredOfiItems = useMemo(() => {
     return ofiItems.filter((item) => {
+      const isTracked = isTqaOfiTracked(item);
+
+      // 0. Scope Filter ("ดำเนินการ" vs "ยังไม่ดำเนินการ")
+      if (scopeFilter === 'TRACKED' && !isTracked) return false;
+      if (scopeFilter === 'NOT_TRACKED' && isTracked) return false;
+
       const itemRounds = normalizeTqaRounds(item);
 
       // 1. Category Filter
@@ -220,22 +236,31 @@ export default function TqaOfiTrackingPage() {
 
       return true;
     });
-  }, [ofiItems, selectedCategory, selectedStatus, searchQuery, currentUser, currentPersonnel]);
+  }, [ofiItems, scopeFilter, selectedCategory, selectedStatus, searchQuery, currentUser, currentPersonnel]);
 
-  // Quick Status Toggle Handler
-  const handleQuickStatusChange = async (item, newStatus) => {
+  // Toggle Tracking Execution Status (ดำเนินการ <-> ยังไม่ดำเนินการ)
+  const handleToggleTracking = async (item) => {
     const canEdit = canEditTqaOfiProgress(item, currentUser, currentPersonnel, isAdmin);
     if (!canEdit) {
-      alert('คุณไม่มีสิทธิ์เปลี่ยนสถานะข้อเสนอแนะนี้ (ต้องเป็น Admin หรือผู้รายงานผลที่ได้รับมอบหมาย)');
+      alert('คุณไม่มีสิทธิ์เปลี่ยนสถานะการติดตามของข้อเสนอแนะนี้ (ต้องเป็น Admin หรือผู้รายงานผลที่ได้รับมอบหมาย)');
       return;
     }
+
+    const currentTracked = isTqaOfiTracked(item);
+    const nextTracked = !currentTracked;
+    const confirmMsg = nextTracked
+      ? `ต้องการนำข้อเสนอแนะ "${item.itemRef || 'OFI'}" กลับเข้าสู่แผน "ดำเนินการ" (ติดตามผล 3 รอบ) ใช่หรือไม่?`
+      : `ต้องการเปลี่ยนข้อเสนอแนะ "${item.itemRef || 'OFI'}" เป็น "ยังไม่ดำเนินการ" (ซ่อนจากการติดตามปกติ และไม่ต้องรายงานผล) ใช่หรือไม่?`;
+
+    if (!window.confirm(confirmMsg)) return;
 
     try {
       const updatedByName = currentPersonnel?.name || currentUser?.displayName || currentUser?.email || 'Admin';
       await saveTqaOfiItem(
         {
           ...item,
-          status: newStatus,
+          isTracking: nextTracked,
+          executionStatus: nextTracked ? 'TRACKED' : 'NOT_TRACKED',
           lastReportedAt: new Date().toISOString(),
           lastReportedBy: updatedByName,
         },
@@ -243,7 +268,7 @@ export default function TqaOfiTrackingPage() {
         updatedByName
       );
     } catch (e) {
-      alert(e.message || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
+      alert(e.message || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะการติดตาม');
     }
   };
 
@@ -436,19 +461,44 @@ export default function TqaOfiTrackingPage() {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B' }}>OFI ทั้งหมด (ปี {fiscalYear})</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B' }}>OFI ที่ติดตามดำเนินการ (ปี {fiscalYear})</span>
                 <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Target size={18} />
                 </div>
               </div>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', marginTop: '6px', letterSpacing: '-0.02em' }}>
-                {stats.total} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>รายการ</span>
+                {stats.total} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.totalAll} ข้อ</span>
               </div>
             </div>
 
-            <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+            <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', fontSize: '0.75rem' }}>
               <span style={{ color: '#059669', fontWeight: 700 }}>🟢 เสร็จสิ้น {stats.completed} ข้อ</span>
-              <span style={{ color: '#6D28D9', fontWeight: 700 }}>ปิดแล้ว {stats.percentage}%</span>
+              {stats.untrackedCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter(scopeFilter === 'NOT_TRACKED' ? 'TRACKED' : 'NOT_TRACKED')}
+                  style={{
+                    border: 'none',
+                    background: scopeFilter === 'NOT_TRACKED' ? '#FEF3C7' : '#F8FAFC',
+                    color: '#B45309',
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: '0.72rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: '1px solid #FDE68A',
+                  }}
+                  title="คลิกเพื่อสลับดูรายการที่ยังไม่ดำเนินการ"
+                >
+                  <Pause size={10} color="#D97706" />
+                  <span>ยังไม่ทำ {stats.untrackedCount} ข้อ</span>
+                </button>
+              ) : (
+                <span style={{ color: '#6D28D9', fontWeight: 700 }}>ปิดแล้ว {stats.percentage}%</span>
+              )}
             </div>
           </div>
 
@@ -700,6 +750,107 @@ export default function TqaOfiTrackingPage() {
             )}
           </div>
 
+          {/* Tracking Scope Filter Tabs (ดำเนินการ vs ยังไม่ดำเนินการ vs ทั้งหมด) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              paddingBottom: '10px',
+              borderBottom: '1px solid #F1F5F9',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.825rem', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <SlidersHorizontal size={15} color="#6D28D9" />
+                <span>ขอบเขตการติดตาม:</span>
+              </span>
+
+              <div style={{ display: 'flex', background: '#F1F5F9', padding: '3px', borderRadius: '10px', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter('TRACKED')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: scopeFilter === 'TRACKED' ? 800 : 600,
+                    background: scopeFilter === 'TRACKED' ? '#FFFFFF' : 'transparent',
+                    color: scopeFilter === 'TRACKED' ? '#059669' : '#64748B',
+                    boxShadow: scopeFilter === 'TRACKED' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="แสดงเฉพาะข้อเสนอแนะที่อยู่ในแผนดำเนินการ (ติดตามผล 3 รอบ)"
+                >
+                  <CheckCircle2 size={14} color={scopeFilter === 'TRACKED' ? '#059669' : '#94A3B8'} />
+                  <span>ดำเนินการ ({stats.total})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter('NOT_TRACKED')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: scopeFilter === 'NOT_TRACKED' ? 800 : 600,
+                    background: scopeFilter === 'NOT_TRACKED' ? '#FFFFFF' : 'transparent',
+                    color: scopeFilter === 'NOT_TRACKED' ? '#D97706' : '#64748B',
+                    boxShadow: scopeFilter === 'NOT_TRACKED' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="แสดงรายการที่ยังไม่ดำเนินการ (ซ่อนจากการติดตามปกติ และไม่ต้องรายงานผล)"
+                >
+                  <Pause size={14} color={scopeFilter === 'NOT_TRACKED' ? '#D97706' : '#94A3B8'} />
+                  <span>ยังไม่ดำเนินการ ({stats.untrackedCount})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter('ALL')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: scopeFilter === 'ALL' ? 800 : 600,
+                    background: scopeFilter === 'ALL' ? '#FFFFFF' : 'transparent',
+                    color: scopeFilter === 'ALL' ? '#6D28D9' : '#64748B',
+                    boxShadow: scopeFilter === 'ALL' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="แสดงทุกรายการรวมทั้งที่ดำเนินการและยังไม่ดำเนินการ"
+                >
+                  <Layers size={14} color={scopeFilter === 'ALL' ? '#6D28D9' : '#94A3B8'} />
+                  <span>ทั้งหมด ({stats.totalAll})</span>
+                </button>
+              </div>
+            </div>
+
+            {scopeFilter === 'NOT_TRACKED' && (
+              <span style={{ fontSize: '0.78rem', color: '#B45309', background: '#FEF3C7', padding: '4px 10px', borderRadius: '6px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Pause size={12} />
+                <span>มุมมองรายการ &ldquo;ยังไม่ดำเนินการ&rdquo; — ผู้รายงานผลไม่ต้องบันทึกผลการดำเนินงาน</span>
+              </span>
+            )}
+          </div>
+
           {/* Category Chips Bar */}
           <div
             style={{
@@ -726,7 +877,7 @@ export default function TqaOfiTrackingPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              ทุกหมวด ({stats.total})
+              ทุกหมวด ({scopeFilter === 'ALL' ? stats.totalAll : scopeFilter === 'NOT_TRACKED' ? stats.untrackedCount : stats.total})
             </button>
 
             {TQA_CATEGORIES.map((cat) => {
@@ -865,23 +1016,24 @@ export default function TqaOfiTrackingPage() {
             {filteredOfiItems.map((item, idx) => {
               const isExpanded = expandedRowId === item.id;
               const canEdit = canEditTqaOfiProgress(item, currentUser, currentPersonnel, isAdmin);
+              const isTracked = isTqaOfiTracked(item);
               const itemRounds = normalizeTqaRounds(item);
               const statusCfg = TQA_STATUS_CONFIG[item.status || 'PENDING'] || TQA_STATUS_CONFIG.PENDING;
               const catObj = TQA_CATEGORIES.find((c) => c.name === item.category || c.num === item.categoryNum) || TQA_CATEGORIES[0];
 
               // Count completed and reported rounds
               const reportedRoundsCount = [itemRounds.round1, itemRounds.round2, itemRounds.round3].filter(
-                (r) => !!r?.actionReport
+                (r) => !!(r?.actionReport && r.actionReport.replace(/<[^>]*>/g, '').trim())
               ).length;
 
               return (
                 <div
                   key={item.id || idx}
                   style={{
-                    background: '#FFFFFF',
+                    background: isTracked ? '#FFFFFF' : '#F8FAFC',
                     borderRadius: '14px',
-                    border: '1px solid #E2E8F0',
-                    borderLeft: `5px solid ${catObj.color}`,
+                    border: `1px solid ${isTracked ? '#E2E8F0' : '#CBD5E1'}`,
+                    borderLeft: isTracked ? `5px solid ${catObj.color}` : '5px solid #94A3B8',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
                     overflow: 'hidden',
                     transition: 'all 0.2s ease',
@@ -889,15 +1041,15 @@ export default function TqaOfiTrackingPage() {
                 >
                   {/* Item Main Row */}
                   <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {/* Top line: Category, Item Ref, Theme, and Status */}
+                    {/* Top line: Category, Item Ref, Theme, Scope Toggle, and Status */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span
                           style={{
                             padding: '3px 10px',
                             borderRadius: '6px',
-                            background: `${catObj.color}15`,
-                            color: catObj.color,
+                            background: isTracked ? `${catObj.color}15` : '#F1F5F9',
+                            color: isTracked ? catObj.color : '#64748B',
                             fontSize: '0.8rem',
                             fontWeight: 800,
                           }}
@@ -925,8 +1077,65 @@ export default function TqaOfiTrackingPage() {
                         )}
                       </div>
 
-                      {/* Status Progress Badge */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Right Header: Tracking Toggle & Status Progress Badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Tracking Scope Toggle Button (ผู้รายงานผล & Admin กดได้) */}
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTracking(item)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: isTracked ? '#ECFDF5' : '#FEF3C7',
+                              color: isTracked ? '#047857' : '#B45309',
+                              border: `1px solid ${isTracked ? '#A7F3D0' : '#FDE68A'}`,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title={
+                              isTracked
+                                ? "คลิกเพื่อเปลี่ยนเป็น 'ยังไม่ดำเนินการ' (ซ่อนจากการติดตามปกติ & ไม่ต้องรายงานผล)"
+                                : "คลิกเพื่อนำกลับเข้าสู่แผน 'ดำเนินการ' (ติดตามผล 3 รอบ)"
+                            }
+                          >
+                            {isTracked ? (
+                              <>
+                                <CheckCircle2 size={13} color="#059669" />
+                                <span>ดำเนินการ</span>
+                              </>
+                            ) : (
+                              <>
+                                <Pause size={13} color="#D97706" />
+                                <span>ยังไม่ดำเนินการ</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: isTracked ? '#ECFDF5' : '#F1F5F9',
+                              color: isTracked ? '#059669' : '#64748B',
+                              border: `1px solid ${isTracked ? '#A7F3D0' : '#E2E8F0'}`,
+                            }}
+                          >
+                            {isTracked ? '🟢 ดำเนินการ' : '⏸️ ยังไม่ดำเนินการ'}
+                          </span>
+                        )}
+
+                        {/* Progress Status Badge */}
                         <span
                           style={{
                             display: 'inline-flex',
@@ -936,9 +1145,9 @@ export default function TqaOfiTrackingPage() {
                             borderRadius: '999px',
                             fontSize: '0.78rem',
                             fontWeight: 800,
-                            color: statusCfg.color,
-                            background: statusCfg.bg,
-                            border: `1px solid ${statusCfg.border}`,
+                            color: isTracked ? statusCfg.color : '#64748B',
+                            background: isTracked ? statusCfg.bg : '#F1F5F9',
+                            border: `1px solid ${isTracked ? statusCfg.border : '#E2E8F0'}`,
                           }}
                         >
                           <span
@@ -946,10 +1155,12 @@ export default function TqaOfiTrackingPage() {
                               width: '7px',
                               height: '7px',
                               borderRadius: '50%',
-                              background: statusCfg.color,
+                              background: isTracked ? statusCfg.color : '#94A3B8',
                             }}
                           />
-                          {item.status === 'COMPLETED'
+                          {!isTracked
+                            ? 'พักการติดตาม'
+                            : item.status === 'COMPLETED'
                             ? 'เสร็จสิ้นแล้ว'
                             : reportedRoundsCount > 0
                             ? `กำลังดำเนินการ (${reportedRoundsCount}/3 รอบ)`
@@ -984,8 +1195,51 @@ export default function TqaOfiTrackingPage() {
                       </div>
                     </div>
 
+                    {/* Untracked Notice Banner */}
+                    {!isTracked && (
+                      <div
+                        style={{
+                          background: '#FEF3C7',
+                          border: '1px solid #FDE68A',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          fontSize: '0.8rem',
+                          color: '#92400E',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Pause size={15} color="#D97706" style={{ flexShrink: 0 }} />
+                          <span>รายการนี้อยู่ในสถานะ &ldquo;ยังไม่ดำเนินการ&rdquo; — ผู้รายงานผลไม่ต้องบันทึกผลการดำเนินงาน</span>
+                        </div>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTracking(item)}
+                            style={{
+                              background: '#FFFFFF',
+                              border: '1px solid #D97706',
+                              color: '#B45309',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            เปลี่ยนเป็น &ldquo;ดำเนินการ&rdquo;
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Finding Content */}
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.55 }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: isTracked ? '#0F172A' : '#475569', lineHeight: 1.55 }}>
                       {item.finding}
                     </div>
 
