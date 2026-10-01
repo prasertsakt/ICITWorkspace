@@ -192,7 +192,7 @@ export default function IDPActionPlanModal({
     return items.filter((it) => (it.competencyType || 'CORE') === competencyFilter);
   }, [items, competencyFilter]);
 
-  const alignmentTargetItem = useMemo(() => {
+  const targetAlignmentItem = useMemo(() => {
     if (!alignmentTargetItemId) return null;
     return items.find((it) => it.id === alignmentTargetItemId) || null;
   }, [items, alignmentTargetItemId]);
@@ -857,28 +857,6 @@ export default function IDPActionPlanModal({
                     </span>
                   </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleAddNewCustomItem}
-                  style={{
-                    padding: '0.45rem 0.9rem',
-                    borderRadius: '8px',
-                    background: '#EA580C',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 2px 6px rgba(234, 88, 12, 0.25)',
-                  }}
-                >
-                  <Plus size={14} />
-                  <span>เพิ่มสมรรถนะ</span>
-                </button>
               </div>
 
               {/* Items List */}
@@ -1080,24 +1058,6 @@ export default function IDPActionPlanModal({
                                 <span>บรรลุแล้ว</span>
                               </span>
                             )}
-
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteItem(item.id)}
-                              style={{
-                                background: '#FEE2E2',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '6px 8px',
-                                color: '#DC2626',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                              title="ลบรายการ"
-                            >
-                              <Trash2 size={16} />
-                            </button>
                             {isExpanded ? <ChevronUp size={20} color="#64748B" /> : <ChevronDown size={20} color="#64748B" />}
                           </div>
                         </div>
@@ -1573,29 +1533,6 @@ export default function IDPActionPlanModal({
                       </div>
                     );
                   })}
-
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={handleAddNewCustomItem}
-                      style={{
-                        padding: '0.6rem 1.25rem',
-                        borderRadius: '10px',
-                        background: '#FFF7ED',
-                        color: '#EA580C',
-                        border: '1px solid #FDBA74',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <Plus size={16} />
-                      <span>เพิ่มรายการสมรรถนะใหม่</span>
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
