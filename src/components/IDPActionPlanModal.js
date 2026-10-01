@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Save,
   Plus,
-  Trash2,
   ArrowUp,
   ArrowDown,
   CheckCircle2,
@@ -31,6 +30,23 @@ import {
   Search,
   Check,
   RotateCcw,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  List,
+  ListOrdered,
+  Link2,
+  Heading2,
+  Heading3,
+  Minus,
+  PenTool,
+  FileText,
+  Eye,
+  FileCheck2,
 } from 'lucide-react';
 import {
   IDP_DEVELOPMENT_METHODS,
@@ -90,6 +106,15 @@ export default function IDPActionPlanModal({
   const [alignTab, setAlignTab] = useState('STRATEGY'); // 'STRATEGY' | 'SKILL_MAP' | 'MISSION'
   const [alignSearch, setAlignSearch] = useState('');
 
+  // Methods Selector Modal State
+  const [methodModalItemId, setMethodModalItemId] = useState(null);
+
+  // WYSIWYG Progress Editor Modal State
+  const [wysiwygModalState, setWysiwygModalState] = useState(null); // { itemId, quarterKey }
+  const [wysiwygHtml, setWysiwygHtml] = useState('');
+  const [wysiwygActiveTab, setWysiwygActiveTab] = useState('edit'); // 'edit' | 'preview'
+  const editorRef = useRef(null);
+
   const isHR = isHrOfficer(currentUser, currentPersonnel, isAdmin);
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').trim().toLowerCase();
   const planOwnerEmail = (plan?.personnelEmail || '').trim().toLowerCase();
@@ -121,30 +146,34 @@ export default function IDPActionPlanModal({
     }
   }, [isOpen, plan]);
 
-  // Strategy items list for Multi-select (Fix CKPI undefined)
+  // Strategy items list: Show ONLY SO (Strategic Objectives) of that fiscal year, enriched with SFA & CKPI correlation details
   const availableStrategies = useMemo(() => {
     const list = [];
-    if (strategyConfig?.sos) {
-      strategyConfig.sos.forEach((so) => {
-        list.push({
-          id: so.id || so.code,
-          code: so.code,
-          title: `[${so.code}] ${so.title || so.name || ''}`.trim(),
-          category: 'SO',
-        });
+    const sos = strategyConfig?.sos || [];
+    const sfas = strategyConfig?.sfas || [];
+    const ckpis = strategyConfig?.ckpis || [];
+
+    sos.forEach((so) => {
+      const sfa = sfas.find((s) => s.id === so.sfaId || s.code === so.sfaCode) || null;
+      list.push({
+        id: so.id || so.code,
+        code: so.code,
+        title: `[${so.code}] ${so.title || so.name || ''}`.trim(),
+        rawTitle: so.title || so.name || '',
+        category: 'SO',
+        sfa: sfa,
+        sfaCode: sfa?.code || so.sfaCode || 'SFA',
+        sfaName: sfa?.name || '',
+        sfaColor: sfa?.color || '#2563EB',
+        sfaBg: sfa?.bg || '#EFF6FF',
+        sfaBorder: sfa?.border || '#BFDBFE',
+        ckpiList: ckpis,
+        skpis: so.skpis || [],
+        alignmentCodes: so.alignmentCodes || [],
+        responsibleRoles: so.responsibleRoles || [],
       });
-    }
-    if (strategyConfig?.ckpis) {
-      strategyConfig.ckpis.forEach((ckpi) => {
-        const ckpiName = ckpi.name || ckpi.title || '';
-        list.push({
-          id: ckpi.id || ckpi.code,
-          code: ckpi.code,
-          title: `[${ckpi.code}] ${ckpiName}`.trim(),
-          category: 'CKPI',
-        });
-      });
-    }
+    });
+
     return list;
   }, [strategyConfig]);
 
@@ -196,6 +225,69 @@ export default function IDPActionPlanModal({
     if (!alignmentTargetItemId) return null;
     return items.find((it) => it.id === alignmentTargetItemId) || null;
   }, [items, alignmentTargetItemId]);
+
+  const targetMethodItem = useMemo(() => {
+    if (!methodModalItemId) return null;
+    return items.find((it) => it.id === methodModalItemId) || null;
+  }, [items, methodModalItemId]);
+
+  const targetWysiwygItem = useMemo(() => {
+    if (!wysiwygModalState?.itemId) return null;
+    return items.find((it) => it.id === wysiwygModalState.itemId) || null;
+  }, [items, wysiwygModalState]);
+
+  // Sync editor innerHTML when opening or switching modal
+  useEffect(() => {
+    if (wysiwygModalState && editorRef.current) {
+      editorRef.current.innerHTML = wysiwygHtml;
+    }
+  }, [wysiwygModalState?.itemId, wysiwygModalState?.quarterKey]);
+
+  const openWysiwygModal = (itemId, quarterKey) => {
+    const item = items.find((it) => it.id === itemId);
+    const existingProgress = item?.quarters?.[quarterKey]?.progress || '';
+    setWysiwygHtml(existingProgress);
+    setWysiwygActiveTab('edit');
+    setWysiwygModalState({ itemId, quarterKey });
+  };
+
+  const handleSwitchWysiwygQuarter = (newQuarterKey) => {
+    if (!wysiwygModalState) return;
+    const currentHtml = editorRef.current ? editorRef.current.innerHTML : wysiwygHtml;
+    // Auto-save current quarter
+    updateQuarterProgress(wysiwygModalState.itemId, wysiwygModalState.quarterKey, 'progress', currentHtml);
+    // Switch to new quarter
+    const item = items.find((it) => it.id === wysiwygModalState.itemId);
+    const nextProgress = item?.quarters?.[newQuarterKey]?.progress || '';
+    setWysiwygHtml(nextProgress);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = nextProgress;
+    }
+    setWysiwygModalState((prev) => ({ ...prev, quarterKey: newQuarterKey }));
+  };
+
+  const handleSaveWysiwyg = () => {
+    if (!wysiwygModalState) return;
+    const finalHtml = editorRef.current ? editorRef.current.innerHTML : wysiwygHtml;
+    updateQuarterProgress(wysiwygModalState.itemId, wysiwygModalState.quarterKey, 'progress', finalHtml);
+    setWysiwygModalState(null);
+  };
+
+  const executeEditorCommand = (command, value = null) => {
+    if (typeof document !== 'undefined') {
+      document.execCommand(command, false, value);
+      if (editorRef.current) {
+        setWysiwygHtml(editorRef.current.innerHTML);
+      }
+    }
+  };
+
+  const handleAddEditorLink = () => {
+    const url = prompt('กรุณาระบุ URL ของลิงก์ (เช่น https://...):', 'https://');
+    if (url) {
+      executeEditorCommand('createLink', url);
+    }
+  };
 
   if (!isOpen || !plan) return null;
 
@@ -1096,67 +1188,100 @@ export default function IDPActionPlanModal({
                               </div>
                             </div>
 
-                            {/* Row 2: Development Methods (Multi-Select 1-10) */}
+                            {/* Row 2: Development Methods (Modal Selector + Badges) */}
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                                วิธีการพัฒนา (เลือกได้มากกว่า 1 วิธี):
-                              </label>
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                                  gap: '8px',
-                                  background: '#F8FAFC',
-                                  padding: '10px',
-                                  borderRadius: '10px',
-                                  border: '1px solid #E2E8F0',
-                                }}
-                              >
-                                {IDP_DEVELOPMENT_METHODS.map((method) => {
-                                  const isChecked = (item.methods || []).includes(method.id);
-                                  return (
-                                    <label
-                                      key={method.id}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                                <label style={{ fontSize: '0.825rem', fontWeight: 700, color: '#334155', margin: 0 }}>
+                                  วิธีการพัฒนา (Development Methods):
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setMethodModalItemId(item.id)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+                                    color: '#C2410C',
+                                    border: '1px solid #FDBA74',
+                                    borderRadius: '8px',
+                                    padding: '5px 12px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                    transition: 'all 0.15s',
+                                  }}
+                                >
+                                  <BookOpen size={15} />
+                                  <span>เลือกวิธีการพัฒนา</span>
+                                  {(item.methods || []).length > 0 && (
+                                    <span
                                       style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        fontSize: '0.825rem',
-                                        fontWeight: isChecked ? 700 : 500,
-                                        color: isChecked ? '#C2410C' : '#475569',
-                                        background: isChecked ? '#FFF7ED' : '#FFFFFF',
-                                        padding: '6px 10px',
-                                        borderRadius: '8px',
-                                        border: `1px solid ${isChecked ? '#FDBA74' : '#E2E8F0'}`,
-                                        cursor: 'pointer',
-                                        userSelect: 'none',
+                                        background: '#EA580C',
+                                        color: '#FFFFFF',
+                                        borderRadius: '999px',
+                                        padding: '1px 7px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 800,
                                       }}
                                     >
-                                      <input
-                                        type="checkbox"
-                                        checked={isChecked}
-                                        onChange={() => toggleItemMethod(item.id, method.id)}
-                                        style={{ accentColor: '#EA580C', cursor: 'pointer' }}
-                                      />
-                                      <span>{method.shortTitle}</span>
-                                    </label>
-                                  );
-                                })}
+                                      {(item.methods || []).length}
+                                    </span>
+                                  )}
+                                </button>
                               </div>
 
-                              {/* Custom text for Method 10 */}
-                              {(item.methods || []).includes(10) && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <input
-                                    type="text"
-                                    value={item.methodCustom || ''}
-                                    onChange={(e) => updateItemField(item.id, 'methodCustom', e.target.value)}
-                                    className="form-control"
-                                    placeholder="โปรดระบุวิธีการพัฒนาอื่น ๆ..."
-                                    style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                                  />
-                                </div>
-                              )}
+                              {/* Selected Method Badges */}
+                              <div
+                                style={{
+                                  background: '#F8FAFC',
+                                  padding: '10px 12px',
+                                  borderRadius: '10px',
+                                  border: '1px solid #E2E8F0',
+                                  minHeight: '44px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '6px',
+                                }}
+                              >
+                                {(item.methods || []).length === 0 ? (
+                                  <span style={{ fontSize: '0.8rem', color: '#94A3B8', fontStyle: 'italic' }}>
+                                    ยังไม่ได้เลือกวิธีการพัฒนา — คลิกปุ่ม "เลือกวิธีการพัฒนา" ด้านบนเพื่อเลือกจาก 10 รูปแบบ
+                                  </span>
+                                ) : (
+                                  item.methods.map((methodId) => {
+                                    const mObj = IDP_DEVELOPMENT_METHODS.find((m) => m.id === methodId);
+                                    if (!mObj) return null;
+                                    const isOther = methodId === 10;
+                                    return (
+                                      <span
+                                        key={methodId}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          background: isOther ? '#FEF3C7' : '#EFF6FF',
+                                          color: isOther ? '#92400E' : '#1E40AF',
+                                          border: `1px solid ${isOther ? '#FDE68A' : '#BFDBFE'}`,
+                                          borderRadius: '6px',
+                                          padding: '3px 8px',
+                                          fontSize: '0.785rem',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        <span style={{ fontWeight: 800 }}>{mObj.shortTitle}</span>
+                                        {isOther && item.methodCustom && (
+                                          <span style={{ color: '#78350F', fontWeight: 500 }}>
+                                            : {item.methodCustom}
+                                          </span>
+                                        )}
+                                      </span>
+                                    );
+                                  })
+                                )}
+                              </div>
                             </div>
 
                             {/* Row 3: Application to work */}
@@ -1174,57 +1299,118 @@ export default function IDPActionPlanModal({
                               />
                             </div>
 
-                            {/* Row 4: Quarterly Progress Reporting (Q1..Q4) */}
+                            {/* Row 4: Quarterly Progress Reporting (Q1..Q4) via WYSIWYG */}
                             <div>
                               <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                                 ช่วงเวลาที่พัฒนาและการรายงานผลรายไตรมาส (Q1 - Q4):
                               </label>
 
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                                 {IDP_ACTION_PLAN_QUARTERS.map((q) => {
-                                  const qData = item.quarters?.[q.key] || { planned: false, progress: '' };
+                                  const qProgress = item.quarters?.[q.key]?.progress || '';
+                                  const hasReport = Boolean(qProgress && qProgress.trim());
+                                  // Clean text preview from HTML for display
+                                  const plainTextPreview = qProgress.replace(/<[^>]*>?/gm, '').trim();
+
                                   return (
                                     <div
                                       key={q.key}
                                       style={{
-                                        borderRadius: '10px',
-                                        border: `1px solid ${qData.planned ? '#FB923C' : '#E2E8F0'}`,
-                                        background: qData.planned ? '#FFFBEB' : '#F8FAFC',
-                                        padding: '10px',
+                                        borderRadius: '12px',
+                                        border: `1.5px solid ${hasReport ? '#86EFAC' : '#E2E8F0'}`,
+                                        background: hasReport ? '#F0FDF4' : '#F8FAFC',
+                                        padding: '12px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
+                                        boxShadow: hasReport ? '0 2px 6px rgba(34, 197, 94, 0.08)' : 'none',
                                       }}
                                     >
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.825rem', fontWeight: 700, color: '#1E293B' }}>
-                                          <input
-                                            type="checkbox"
-                                            checked={Boolean(qData.planned)}
-                                            onChange={(e) => updateQuarterProgress(item.id, q.key, 'planned', e.target.checked)}
-                                            style={{ accentColor: '#EA580C', cursor: 'pointer' }}
-                                          />
-                                          <span>{q.fullLabel}</span>
-                                        </label>
-                                        {qData.progress && (
-                                          <span style={{ fontSize: '0.7rem', color: '#16A34A', fontWeight: 700 }}>
-                                            ✓ รายงานแล้ว
-                                          </span>
-                                        )}
+                                      <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                          <div style={{ fontSize: '0.825rem', fontWeight: 800, color: '#1E293B' }}>
+                                            {q.fullLabel}
+                                          </div>
+                                          {hasReport ? (
+                                            <span
+                                              style={{
+                                                fontSize: '0.7rem',
+                                                background: '#DCFCE7',
+                                                color: '#166534',
+                                                padding: '2px 8px',
+                                                borderRadius: '999px',
+                                                fontWeight: 800,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                              }}
+                                            >
+                                              <CheckCircle2 size={12} />
+                                              รายงานแล้ว
+                                            </span>
+                                          ) : (
+                                            <span
+                                              style={{
+                                                fontSize: '0.7rem',
+                                                background: '#E2E8F0',
+                                                color: '#64748B',
+                                                padding: '2px 8px',
+                                                borderRadius: '999px',
+                                                fontWeight: 600,
+                                              }}
+                                            >
+                                              ยังไม่มีรายงาน
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Progress Text Preview Box */}
+                                        <div
+                                          style={{
+                                            background: '#FFFFFF',
+                                            borderRadius: '8px',
+                                            border: '1px solid #E2E8F0',
+                                            padding: '8px 10px',
+                                            fontSize: '0.785rem',
+                                            color: hasReport ? '#334155' : '#94A3B8',
+                                            minHeight: '48px',
+                                            maxHeight: '75px',
+                                            overflowY: 'auto',
+                                            lineHeight: '1.4',
+                                          }}
+                                        >
+                                          {hasReport ? (
+                                            plainTextPreview || 'บันทึกรายงานผลเรียบร้อยแล้ว'
+                                          ) : (
+                                            <span style={{ fontStyle: 'italic' }}>ยังไม่มีข้อมูลรายงานผลในไตรมาสนี้</span>
+                                          )}
+                                        </div>
                                       </div>
 
-                                      <textarea
-                                        value={qData.progress || ''}
-                                        disabled={isAchieved}
-                                        onChange={(e) => updateQuarterProgress(item.id, q.key, 'progress', e.target.value)}
-                                        rows={2}
-                                        placeholder={isAchieved ? 'บรรลุเป้าหมายแล้ว' : `รายงานผลในรอบ ${q.label}...`}
+                                      <button
+                                        type="button"
+                                        onClick={() => openWysiwygModal(item.id, q.key)}
                                         style={{
                                           width: '100%',
-                                          padding: '0.4rem 0.6rem',
-                                          borderRadius: '6px',
-                                          border: '1px solid #CBD5E1',
-                                          fontSize: '0.8rem',
-                                          background: isAchieved ? '#F1F5F9' : '#FFFFFF',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          gap: '6px',
+                                          background: hasReport ? '#FFFFFF' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                                          color: hasReport ? '#15803D' : '#4338CA',
+                                          border: `1px solid ${hasReport ? '#86EFAC' : '#C7D2FE'}`,
+                                          borderRadius: '8px',
+                                          padding: '6px 10px',
+                                          fontSize: '0.775rem',
+                                          fontWeight: 700,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s',
                                         }}
-                                      />
+                                      >
+                                        <PenTool size={13} />
+                                        <span>{hasReport ? 'แก้ไขรายงานผล (WYSIWYG)' : 'เขียนรายงานผล (WYSIWYG)'}</span>
+                                      </button>
                                     </div>
                                   );
                                 })}
@@ -1896,6 +2082,571 @@ export default function IDPActionPlanModal({
           </div>
         </div>
       </div>
+
+      {/* 1. Development Methods Selection Modal */}
+      {methodModalItemId && targetMethodItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10005,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+          onClick={() => setMethodModalItemId(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1.25rem',
+              width: '100%',
+              maxWidth: '720px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #E2E8F0',
+                background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: '#EA580C',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)',
+                  }}
+                >
+                  <BookOpen size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7C2D12', margin: 0 }}>
+                    เลือกวิธีการพัฒนา (Development Methods)
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#9A3412', margin: '2px 0 0 0', fontWeight: 600 }}>
+                    สมรรถนะ: <span style={{ color: '#7C2D12', fontWeight: 800 }}>{targetMethodItem.competencyName}</span> (เลือกได้มากกว่า 1 วิธี)
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMethodModalItemId(null)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body - Method Cards */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                overflowY: 'auto',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '10px' }}>
+                {IDP_DEVELOPMENT_METHODS.map((method) => {
+                  const isChecked = (targetMethodItem.methods || []).includes(method.id);
+                  return (
+                    <div
+                      key={method.id}
+                      onClick={() => toggleItemMethod(targetMethodItem.id, method.id)}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: `1.5px solid ${isChecked ? '#EA580C' : '#E2E8F0'}`,
+                        background: isChecked ? '#FFF7ED' : '#FFFFFF',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        transition: 'all 0.15s ease-in-out',
+                        boxShadow: isChecked ? '0 2px 8px rgba(234, 88, 12, 0.12)' : 'none',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        style={{
+                          accentColor: '#EA580C',
+                          marginTop: '3px',
+                          cursor: 'pointer',
+                          width: '16px',
+                          height: '16px',
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isChecked ? '#9A3412' : '#1E293B', lineHeight: '1.3' }}>
+                          {method.shortTitle}
+                        </div>
+                        <div style={{ fontSize: '0.785rem', color: isChecked ? '#C2410C' : '#64748B', marginTop: '3px', lineHeight: '1.4' }}>
+                          {method.title}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Custom Input for Method 10 */}
+              {(targetMethodItem.methods || []).includes(10) && (
+                <div
+                  style={{
+                    marginTop: '8px',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    background: '#FEF3C7',
+                    border: '1.5px solid #FDE68A',
+                  }}
+                >
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>
+                    ระบุรายละเอียดสำหรับ "10. อื่น ๆ โปรดระบุ":
+                  </label>
+                  <input
+                    type="text"
+                    value={targetMethodItem.methodCustom || ''}
+                    onChange={(e) => updateItemField(targetMethodItem.id, 'methodCustom', e.target.value)}
+                    className="form-control"
+                    placeholder="เช่น เข้าร่วมโครงการศึกษาดูงาน, การทำวิจัยเฉพาะกิจ..."
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: '8px',
+                      border: '1px solid #FCD34D',
+                      fontSize: '0.875rem',
+                      backgroundColor: '#FFFFFF',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ fontSize: '0.825rem', color: '#64748B' }}>
+                เลือกแล้ว:{' '}
+                <span style={{ fontWeight: 800, color: '#EA580C' }}>
+                  {(targetMethodItem.methods || []).length}
+                </span>{' '}
+                วิธี
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMethodModalItemId(null)}
+                style={{
+                  padding: '0.55rem 1.5rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)',
+                }}
+              >
+                บันทึก & ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. WYSIWYG Quarterly Progress Modal */}
+      {wysiwygModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10010,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+          onClick={closeWysiwygModal}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1.25rem',
+              width: '100%',
+              maxWidth: '860px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #E2E8F0',
+                background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: '#4F46E5',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)',
+                  }}
+                >
+                  <PenTool size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
+                    บันทึกผลการพัฒนา (Progress Report) - {targetQuarterObj ? targetQuarterObj.fullLabel : wysiwygModal.quarterKey}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#4338CA', margin: '2px 0 0 0', fontWeight: 600 }}>
+                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetWysiwygItem ? targetWysiwygItem.competencyName : ''}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeWysiwygModal}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* WYSIWYG Toolbar */}
+            <div
+              style={{
+                padding: '8px 14px',
+                background: '#F8FAFC',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '6px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('bold')}
+                title="ตัวหนา (Bold)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Bold size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('italic')}
+                title="ตัวเอียง (Italic)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Italic size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('underline')}
+                title="ขีดเส้นใต้ (Underline)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Underline size={15} />
+              </button>
+
+              <div style={{ width: '1px', height: '20px', background: '#CBD5E1', margin: '0 4px' }} />
+
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('insertUnorderedList')}
+                title="รายการสัญลักษณ์ (Bullet List)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <List size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('insertOrderedList')}
+                title="รายการตัวเลข (Numbered List)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <ListOrdered size={15} />
+              </button>
+
+              <div style={{ width: '1px', height: '20px', background: '#CBD5E1', margin: '0 4px' }} />
+
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('formatBlock', '<h3>')}
+                title="หัวข้อหลัก (Heading 3)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Heading size={14} /> H3
+              </button>
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('formatBlock', '<p>')}
+                title="ย่อหน้าปกติ (Paragraph)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#334155',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                Paragraph
+              </button>
+
+              <div style={{ width: '1px', height: '20px', background: '#CBD5E1', margin: '0 4px' }} />
+
+              <button
+                type="button"
+                onClick={() => applyWysiwygFormat('removeFormat')}
+                title="ล้างรูปแบบ (Clear Formatting)"
+                style={{
+                  padding: '6px 9px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#EF4444',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Eraser size={14} /> Clear
+              </button>
+            </div>
+
+            {/* Editable Content Area */}
+            <div style={{ padding: '1.25rem 1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => setWysiwygContent(e.currentTarget.innerHTML)}
+                style={{
+                  flex: 1,
+                  minHeight: '260px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  border: '1.5px solid #CBD5E1',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  outline: 'none',
+                  fontSize: '0.925rem',
+                  lineHeight: '1.6',
+                  color: '#1E293B',
+                  backgroundColor: '#FFFFFF',
+                }}
+              />
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>💡 พิมพ์รายงานสรุปผลการอบรม/พัฒนา พร้อมระบุความก้าวหน้า ปัญหาอุปสรรค หรือใบประกาศนียบัตรที่ได้รับ</span>
+                <span>{wysiwygContent.replace(/<[^>]*>?/gm, '').length} ตัวอักษร</span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={closeWysiwygModal}
+                style={{
+                  padding: '0.55rem 1.25rem',
+                  borderRadius: '10px',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={saveWysiwygContent}
+                style={{
+                  padding: '0.55rem 1.5rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>บันทึกรายงานผล</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Alignment Selection Sub-Modal */}
       {alignmentTargetItemId && targetAlignmentItem && (
