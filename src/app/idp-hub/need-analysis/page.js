@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   Target,
@@ -58,11 +59,22 @@ import {
 import IDPActionPlanModal from '@/components/IDPActionPlanModal';
 import { useModal } from '@/context/ModalContext';
 
-export default function IDPNeedAnalysisPage() {
+function IDPNeedAnalysisContent() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
+  const searchParams = useSearchParams();
+  const yearFromUrl = searchParams.get('year') || searchParams.get('fiscalYear');
 
   // Fiscal Year
-  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
+  const [fiscalYear, setFiscalYear] = useState(() => {
+    return yearFromUrl ? String(yearFromUrl) : String(getCurrentThaiFiscalYear());
+  });
+
+  // Sync with URL query param
+  useEffect(() => {
+    if (yearFromUrl && yearFromUrl !== fiscalYear) {
+      setFiscalYear(String(yearFromUrl));
+    }
+  }, [yearFromUrl]);
 
   // Data states
   const [idpRecords, setIdpRecords] = useState([]);
@@ -1199,5 +1211,19 @@ export default function IDPNeedAnalysisPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function IDPNeedAnalysisPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#64748B' }}>
+          กำลังโหลดแบบวิเคราะห์ความต้องการจำเป็น (IDP Need Analysis)...
+        </div>
+      }
+    >
+      <IDPNeedAnalysisContent />
+    </React.Suspense>
   );
 }

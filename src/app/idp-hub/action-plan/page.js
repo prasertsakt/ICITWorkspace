@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Target,
   Plus,
@@ -54,12 +55,23 @@ import IDPActionPlanPrintModal from '@/components/IDPActionPlanPrintModal';
 import { getCurrentThaiFiscalYear, getAvailableFiscalYears, formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import { useModal } from '@/context/ModalContext';
 
-export default function IDPActionPlanPage() {
+function IDPActionPlanContent() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
   const { showAlert, showConfirm } = useModal();
+  const searchParams = useSearchParams();
+  const yearFromUrl = searchParams.get('year') || searchParams.get('fiscalYear');
 
   // Fiscal Year
-  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
+  const [fiscalYear, setFiscalYear] = useState(() => {
+    return yearFromUrl ? String(yearFromUrl) : String(getCurrentThaiFiscalYear());
+  });
+
+  // Sync with URL query param
+  useEffect(() => {
+    if (yearFromUrl && yearFromUrl !== fiscalYear) {
+      setFiscalYear(String(yearFromUrl));
+    }
+  }, [yearFromUrl]);
 
   // Data states
   const [actionPlans, setActionPlans] = useState([]);
@@ -547,7 +559,7 @@ export default function IDPActionPlanPage() {
               แผนพัฒนา IDP Action Plan จะถูกสร้างขึ้นโดยอัตโนมัติจาก <strong>แบบวิเคราะห์ความต้องการจำเป็น (IDP Need Analysis)</strong> เมื่อหัวหน้าฝ่ายหรือรองผู้อำนวยการทำการเลือกสมรรถนะที่มี Gap
             </p>
             <Link
-              href="/idp-hub/need-analysis"
+              href={`/idp-hub/need-analysis?year=${fiscalYear}`}
               style={{
                 padding: '0.65rem 1.35rem',
                 borderRadius: '10px',
@@ -801,5 +813,19 @@ export default function IDPActionPlanPage() {
         fiscalYear={fiscalYear}
       />
     </div>
+  );
+}
+
+export default function IDPActionPlanPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#64748B' }}>
+          กำลังโหลดแผนพัฒนาบุคลากรรายบุคคล (IDP Action Plan)...
+        </div>
+      }
+    >
+      <IDPActionPlanContent />
+    </React.Suspense>
   );
 }
