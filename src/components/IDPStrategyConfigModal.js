@@ -43,21 +43,32 @@ export default function IDPStrategyConfigModal({
   const [activeTab, setActiveTab] = useState('vision'); // 'vision' | 'sfa' | 'so'
 
   // Strategy Config States
-  const [title, setTitle] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.title);
-  const [approvalMeeting, setApprovalMeeting] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.approvalMeeting);
-  const [vision, setVision] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.vision);
+  const isInitYear2569 = String(currentFiscalYear) === '2569';
+  const [title, setTitle] = useState(
+    isInitYear2569
+      ? DEFAULT_IDP_STRATEGY_CONFIG_2569.title
+      : `แผนกลยุทธ์สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (พ.ศ. ${currentFiscalYear})`
+  );
+  const [approvalMeeting, setApprovalMeeting] = useState(
+    isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.approvalMeeting : ''
+  );
+  const [vision, setVision] = useState(isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.vision : '');
   const [visionMeaningCreate, setVisionMeaningCreate] = useState(
-    DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.create || ''
+    isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.create || '' : ''
   );
   const [visionMeaningLifestyle, setVisionMeaningLifestyle] = useState(
-    DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.lifestyle || ''
+    isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.lifestyle || '' : ''
   );
-  const [corePurpose, setCorePurpose] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.corePurpose);
-  const [ckpis, setCkpis] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.ckpis || []);
-  const [coreCompetencies, setCoreCompetencies] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.coreCompetencies || []);
-  const [missions, setMissions] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.missions || []);
-  const [sfas, setSfas] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.sfas || []);
-  const [sos, setSos] = useState(DEFAULT_IDP_STRATEGY_CONFIG_2569.sos || []);
+  const [corePurpose, setCorePurpose] = useState(
+    isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.corePurpose : ''
+  );
+  const [ckpis, setCkpis] = useState(isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.ckpis || [] : []);
+  const [coreCompetencies, setCoreCompetencies] = useState(
+    isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.coreCompetencies || [] : []
+  );
+  const [missions, setMissions] = useState(isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.missions || [] : []);
+  const [sfas, setSfas] = useState(isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.sfas || [] : []);
+  const [sos, setSos] = useState(isInitYear2569 ? DEFAULT_IDP_STRATEGY_CONFIG_2569.sos || [] : []);
 
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -76,17 +87,24 @@ export default function IDPStrategyConfigModal({
 
     const unsub = subscribeStrategyConfig(selectedYear, (cfg) => {
       if (cfg) {
-        setTitle(cfg.title || DEFAULT_IDP_STRATEGY_CONFIG_2569.title);
-        setApprovalMeeting(cfg.approvalMeeting || DEFAULT_IDP_STRATEGY_CONFIG_2569.approvalMeeting);
-        setVision(cfg.vision || DEFAULT_IDP_STRATEGY_CONFIG_2569.vision);
-        setVisionMeaningCreate(cfg.visionMeaning?.create || DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.create || '');
-        setVisionMeaningLifestyle(cfg.visionMeaning?.lifestyle || DEFAULT_IDP_STRATEGY_CONFIG_2569.visionMeaning?.lifestyle || '');
-        setCorePurpose(cfg.corePurpose || DEFAULT_IDP_STRATEGY_CONFIG_2569.corePurpose);
-        setCkpis(cfg.ckpis || DEFAULT_IDP_STRATEGY_CONFIG_2569.ckpis || []);
-        setCoreCompetencies(cfg.coreCompetencies || DEFAULT_IDP_STRATEGY_CONFIG_2569.coreCompetencies || []);
-        setMissions(cfg.missions || DEFAULT_IDP_STRATEGY_CONFIG_2569.missions || []);
-        setSfas(cfg.sfas || DEFAULT_IDP_STRATEGY_CONFIG_2569.sfas || []);
-        setSos(cfg.sos || DEFAULT_IDP_STRATEGY_CONFIG_2569.sos || []);
+        const isYear2569 = String(selectedYear) === '2569';
+        setTitle(
+          cfg.title !== undefined
+            ? cfg.title
+            : isYear2569
+            ? DEFAULT_IDP_STRATEGY_CONFIG_2569.title
+            : `แผนกลยุทธ์สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (พ.ศ. ${selectedYear})`
+        );
+        setApprovalMeeting(cfg.approvalMeeting || '');
+        setVision(cfg.vision || '');
+        setVisionMeaningCreate(cfg.visionMeaning?.create || '');
+        setVisionMeaningLifestyle(cfg.visionMeaning?.lifestyle || '');
+        setCorePurpose(cfg.corePurpose || '');
+        setCkpis(cfg.ckpis || []);
+        setCoreCompetencies(cfg.coreCompetencies || []);
+        setMissions(cfg.missions || []);
+        setSfas(cfg.sfas || []);
+        setSos(cfg.sos || []);
       }
     });
 

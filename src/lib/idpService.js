@@ -229,13 +229,22 @@ export function subscribeIdpConfig(fiscalYear = String(getCurrentThaiFiscalYear(
   const configDocId = `idp-config-${fiscalYear}`;
   const localConfigKey = `${LOCAL_KEY_IDP_CONFIG}_${fiscalYear}`;
 
-  const defaultResult = {
-    id: configDocId,
-    fiscalYear: String(fiscalYear),
-    coreCompetencies: DEFAULT_IDP_CORE_COMPETENCIES,
-    functionalCompetenciesByPosition: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
-    functionalCompetenciesGeneral: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
-  };
+  const isDefaultYear2569 = String(fiscalYear) === '2569';
+  const defaultResult = isDefaultYear2569
+    ? {
+        id: configDocId,
+        fiscalYear: String(fiscalYear),
+        coreCompetencies: DEFAULT_IDP_CORE_COMPETENCIES,
+        functionalCompetenciesByPosition: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
+        functionalCompetenciesGeneral: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
+      }
+    : {
+        id: configDocId,
+        fiscalYear: String(fiscalYear),
+        coreCompetencies: [],
+        functionalCompetenciesByPosition: {},
+        functionalCompetenciesGeneral: [],
+      };
 
   try {
     const raw = localStorage.getItem(localConfigKey);
@@ -428,11 +437,26 @@ export async function duplicateIdpConfig(fromYear, toYear, actor) {
     } catch (e) {}
   }
 
-  if (!sourceConfig) {
+  if (!sourceConfig && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(`${LOCAL_KEY_IDP_CONFIG}_${fromYear}`);
+      if (raw) sourceConfig = JSON.parse(raw);
+    } catch (e) {}
+  }
+
+  if (!sourceConfig && String(fromYear) === '2569') {
     sourceConfig = {
       coreCompetencies: DEFAULT_IDP_CORE_COMPETENCIES,
       functionalCompetenciesByPosition: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
       functionalCompetenciesGeneral: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
+    };
+  }
+
+  if (!sourceConfig) {
+    sourceConfig = {
+      coreCompetencies: [],
+      functionalCompetenciesByPosition: {},
+      functionalCompetenciesGeneral: [],
     };
   }
 
@@ -605,11 +629,28 @@ export function subscribeStrategyConfig(fiscalYear = String(getCurrentThaiFiscal
   const configDocId = `strategy-config-${fiscalYear}`;
   const localConfigKey = `${LOCAL_KEY_STRATEGY_CONFIG}_${fiscalYear}`;
 
-  const defaultResult = {
-    ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
-    id: configDocId,
-    fiscalYear: String(fiscalYear),
-  };
+  const isDefaultYear2569 = String(fiscalYear) === '2569';
+  const defaultResult = isDefaultYear2569
+    ? {
+        ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
+        id: configDocId,
+        fiscalYear: '2569',
+      }
+    : {
+        id: configDocId,
+        fiscalYear: String(fiscalYear),
+        title: `แผนกลยุทธ์สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (พ.ศ. ${fiscalYear})`,
+        approvalMeeting: '',
+        vision: '',
+        visionMeaning: { create: '', lifestyle: '' },
+        corePurpose: '',
+        ckpis: [],
+        coreCompetencies: [],
+        missions: [],
+        sfas: [],
+        sos: [],
+        initiatives: [],
+      };
 
   try {
     const raw = localStorage.getItem(localConfigKey);
@@ -662,7 +703,6 @@ export async function saveStrategyConfig(fiscalYear, configData, actor) {
   const now = new Date().toISOString();
 
   const payload = {
-    ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
     ...configData,
     id: configDocId,
     fiscalYear: String(fiscalYear),
@@ -713,10 +753,27 @@ export async function duplicateStrategyConfig(fromYear, toYear, actor) {
     } catch (e) {}
   }
 
-  if (!sourceConfig) {
+  if (!sourceConfig && String(fromYear) === '2569') {
     sourceConfig = {
       ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
+      fiscalYear: '2569',
+    };
+  }
+
+  if (!sourceConfig) {
+    sourceConfig = {
       fiscalYear: String(fromYear),
+      title: `แผนกลยุทธ์สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (พ.ศ. ${fromYear})`,
+      approvalMeeting: '',
+      vision: '',
+      visionMeaning: { create: '', lifestyle: '' },
+      corePurpose: '',
+      ckpis: [],
+      coreCompetencies: [],
+      missions: [],
+      sfas: [],
+      sos: [],
+      initiatives: [],
     };
   }
 

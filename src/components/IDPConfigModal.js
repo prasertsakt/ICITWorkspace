@@ -21,7 +21,7 @@ import {
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
 } from '../lib/constants';
-import { saveIdpConfig, duplicateIdpConfig } from '../lib/idpService';
+import { saveIdpConfig, duplicateIdpConfig, subscribeIdpConfig } from '../lib/idpService';
 import { getAvailableFiscalYears } from '../lib/dateUtils';
 
 export default function IDPConfigModal({
@@ -39,11 +39,12 @@ export default function IDPConfigModal({
 
   // Competency states
   const [coreCompetencies, setCoreCompetencies] = useState(
-    initialConfig?.coreCompetencies || DEFAULT_IDP_CORE_COMPETENCIES
+    initialConfig?.coreCompetencies || (String(currentFiscalYear) === '2569' ? DEFAULT_IDP_CORE_COMPETENCIES : [])
   );
 
   const [functionalByPosition, setFunctionalByPosition] = useState(
-    initialConfig?.functionalCompetenciesByPosition || DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION
+    initialConfig?.functionalCompetenciesByPosition ||
+      (String(currentFiscalYear) === '2569' ? DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION : {})
   );
 
   const [isSaving, setIsSaving] = useState(false);
@@ -55,14 +56,19 @@ export default function IDPConfigModal({
   const [duplicateFromYear, setDuplicateFromYear] = useState(String(Number(currentFiscalYear) - 1));
 
   useEffect(() => {
-    if (initialConfig) {
-      setSelectedYear(initialConfig.fiscalYear || currentFiscalYear);
-      setCoreCompetencies(initialConfig.coreCompetencies || DEFAULT_IDP_CORE_COMPETENCIES);
-      setFunctionalByPosition(
-        initialConfig.functionalCompetenciesByPosition || DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION
-      );
-    }
-  }, [initialConfig, currentFiscalYear, isOpen]);
+    if (!isOpen) return;
+
+    const unsub = subscribeIdpConfig(selectedYear, (cfg) => {
+      if (cfg) {
+        setCoreCompetencies(cfg.coreCompetencies || []);
+        setFunctionalByPosition(cfg.functionalCompetenciesByPosition || {});
+      }
+    });
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [selectedYear, isOpen]);
 
   if (!isOpen) return null;
 
@@ -591,7 +597,22 @@ export default function IDPConfigModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {coreCompetencies.map((item, idx) => {
+                    {coreCompetencies.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                            <Layers size={28} color="#94A3B8" />
+                            <span style={{ fontWeight: 700, color: '#334155' }}>
+                              ยังไม่มีการตั้งค่าสมรรถนะหลักสำหรับปีงบประมาณ {selectedYear}
+                            </span>
+                            <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                              ท่านสามารถคลิก &quot;เพิ่มหัวข้อสมรรถนะหลัก&quot; หรือคลิก &quot;คัดลอกจากปีก่อนหน้า&quot; ได้ทันที
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      coreCompetencies.map((item, idx) => {
                       const expLevels = item.expectedLevels || {
                         'ปฏิบัติการ': item.expectedLevel || 2,
                         'ชำนาญการ': item.expectedLevel || 3,
@@ -729,7 +750,7 @@ export default function IDPConfigModal({
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                   </tbody>
                   <tfoot>
                     <tr style={{ background: '#F8FAFC', fontWeight: 800 }}>
@@ -812,80 +833,96 @@ export default function IDPConfigModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {currentPosFuncList.map((item, idx) => (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '8px', textAlign: 'center', color: '#94A3B8', fontWeight: 700 }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: '6px 8px' }}>
-                          <input
-                            type="text"
-                            value={item.title}
-                            onChange={(e) => handleUpdateFuncItem(idx, 'title', e.target.value)}
-                            placeholder={`ระบุสมรรถนะของตำแหน่ง ${selectedPosition}...`}
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                          <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={item.weight}
-                            onChange={(e) => handleUpdateFuncItem(idx, 'weight', Number(e.target.value))}
-                            style={{
-                              width: '80px',
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                              textAlign: 'center',
-                              fontWeight: 700,
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                          <select
-                            value={item.expectedLevel}
-                            onChange={(e) => handleUpdateFuncItem(idx, 'expectedLevel', Number(e.target.value))}
-                            style={{
-                              padding: '5px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {[1, 2, 3, 4, 5].map((lvl) => (
-                              <option key={lvl} value={lvl}>
-                                ระดับ {lvl}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={{ padding: '6px', textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFuncItem(idx)}
-                            disabled={currentPosFuncList.length <= 1}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: currentPosFuncList.length <= 1 ? '#CBD5E1' : '#EF4444',
-                              cursor: currentPosFuncList.length <= 1 ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                    {currentPosFuncList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                            <Briefcase size={28} color="#94A3B8" />
+                            <span style={{ fontWeight: 700, color: '#334155' }}>
+                              ยังไม่มีการตั้งค่าสมรรถนะของตำแหน่ง &ldquo;{selectedPosition}&rdquo; สำหรับปีงบประมาณ {selectedYear}
+                            </span>
+                            <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                              ท่านสามารถคลิกปุ่ม &quot;เพิ่มสมรรถนะของตำแหน่ง&quot; หรือคลิก &quot;คัดลอกจากปีก่อนหน้า&quot;
+                            </span>
+                          </div>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      currentPosFuncList.map((item, idx) => (
+                        <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px', textAlign: 'center', color: '#94A3B8', fontWeight: 700 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => handleUpdateFuncItem(idx, 'title', e.target.value)}
+                              placeholder={`ระบุสมรรถนะของตำแหน่ง ${selectedPosition}...`}
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '0.8rem',
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={item.weight}
+                              onChange={(e) => handleUpdateFuncItem(idx, 'weight', Number(e.target.value))}
+                              style={{
+                                width: '80px',
+                                padding: '6px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '0.8rem',
+                                textAlign: 'center',
+                                fontWeight: 700,
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                            <select
+                              value={item.expectedLevel}
+                              onChange={(e) => handleUpdateFuncItem(idx, 'expectedLevel', Number(e.target.value))}
+                              style={{
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {[1, 2, 3, 4, 5].map((lvl) => (
+                                <option key={lvl} value={lvl}>
+                                  ระดับ {lvl}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ padding: '6px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFuncItem(idx)}
+                              disabled={currentPosFuncList.length <= 1}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: currentPosFuncList.length <= 1 ? '#CBD5E1' : '#EF4444',
+                                cursor: currentPosFuncList.length <= 1 ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                   <tfoot>
                     <tr style={{ background: '#F8FAFC', fontWeight: 800 }}>
