@@ -93,6 +93,7 @@ export default function IDPModal({
   // IDP Action Plan Modal State
   const [isActionPlanModalOpen, setIsActionPlanModalOpen] = useState(false);
   const [actionPlanData, setActionPlanData] = useState(null);
+  const [existingActionPlan, setExistingActionPlan] = useState(null);
   const [selectedGapKeys, setSelectedGapKeys] = useState(new Set());
   const { showAlert, showConfirm } = useModal();
 
@@ -188,6 +189,23 @@ export default function IDPModal({
     setErrorMsg('');
   }, [record, isOpen, fiscalYear]);
 
+  // Load existing action plan to verify if it is created
+  useEffect(() => {
+    const pId = selectedPersonnelId || record?.personnelId;
+    if (pId && isOpen) {
+      getActionPlanById(`action-plan-${fiscalYear}-${pId}`, fiscalYear)
+        .then((plan) => {
+          setExistingActionPlan(plan || null);
+          setActionPlanData(plan || null);
+        })
+        .catch(() => {
+          setExistingActionPlan(null);
+        });
+    } else {
+      setExistingActionPlan(null);
+    }
+  }, [selectedPersonnelId, record?.personnelId, fiscalYear, isOpen]);
+
   if (!isOpen) return null;
 
   // Permissions Evaluation (Strictly matches the person indicated)
@@ -219,13 +237,56 @@ export default function IDPModal({
   // - ONLY ผู้ประเมิน (หัวหน้าฝ่าย) and ผู้ประเมิน (รองผู้อำนวยการ) can input value in หัวหน้า (4)
   const canEditSupervisorScore = isDeptHead || isDeputyDirector;
 
-  // Strict signature permissions (only the name indicated can click that button):
-  const canSignSelf = isOwner;
-  const canSignDeptHead = isDeptHead;
-  const canSignDeputyDirector = isDeputyDirector;
+  // Action Plan editing permissions: ONLY หัวหน้าฝ่าย หรือ รอง ผอ. (or Admin / HR)
+  const canEditActionPlan = isDeptHead || isDeputyDirector || isHR || isAdmin;
 
   // Live Summary Calculation
   const liveSummary = calculateIdpSummary(coreCompetencies, functionalCompetencies);
+
+  // Gap Items for IDP Action Plan
+  const allGapItems = useMemo(() => {
+    const list = [];
+    (liveSummary.coreCompetencies || []).forEach((c, idx) => {
+      if (c.gap !== 0 && c.gap !== undefined) {
+        const itemTitle = c.title || c.name || c.competencyName || `สมรรถนะหลักที่ ${idx + 1}`;
+        list.push({
+          ...c,
+          title: itemTitle,
+          name: itemTitle,
+          competencyName: itemTitle,
+          type: 'CORE',
+          competencyType: 'CORE',
+          typeLabel: 'สมรรถนะหลัก (Core)',
+          key: `core-${c.id || itemTitle}`,
+        });
+      }
+    });
+    (liveSummary.functionalCompetencies || []).forEach((f, idx) => {
+      if (f.gap !== 0 && f.gap !== undefined) {
+        const itemTitle = f.title || f.name || f.competencyName || `สมรรถนะตามตำแหน่งงานที่ ${idx + 1}`;
+        list.push({
+          ...f,
+          title: itemTitle,
+          name: itemTitle,
+          competencyName: itemTitle,
+          type: 'FUNCTIONAL',
+          competencyType: 'FUNCTIONAL',
+          typeLabel: 'สมรรถนะตามตำแหน่งงาน (Functional)',
+          key: `func-${f.id || itemTitle}`,
+        });
+      }
+    });
+    return list;
+  }, [liveSummary]);
+
+  const hasGapItems = allGapItems.length > 0;
+  const isActionPlanCreated = Boolean(existingActionPlan && (existingActionPlan.items || []).length > 0);
+
+  // Strict signature permissions:
+  const canSignSelf = isOwner;
+  const canSignDeptHead = isDeptHead;
+  // Deputy Director CANNOT sign if there are gap items and Action Plan has not been created yet
+  const canSignDeputyDirector = isDeputyDirector && (!hasGapItems || isActionPlanCreated);
 
   // Update Core Row field
   const handleUpdateCoreScore = (index, field, val) => {
@@ -262,22 +323,6 @@ export default function IDPModal({
     );
     setSignatures(updated.signatures);
   };
-
-  // Gap Items for IDP Action Plan
-  const allGapItems = useMemo(() => {
-    const list = [];
-    (liveSummary.coreCompetencies || []).forEach((c) => {
-      if (c.gap !== 0 && c.gap !== undefined) {
-        list.push({ ...c, type: 'CORE', key: `core-${c.id || c.name}` });
-      }
-    });
-    (liveSummary.functionalCompetencies || []).forEach((f) => {
-      if (f.gap !== 0 && f.gap !== undefined) {
-        list.push({ ...f, type: 'FUNCTIONAL', key: `func-${f.id || f.name}` });
-      }
-    });
-    return list;
-  }, [liveSummary]);
 
   // Pre-select all gap items when gap items change
   useEffect(() => {
@@ -359,6 +404,7 @@ export default function IDPModal({
         name: currentPersonnel?.name || currentUser?.displayName || 'ผู้ใช้งาน',
       };
       const saved = await saveActionPlan(updatedPlan, actor);
+      setExistingActionPlan(saved);
       setActionPlanData(saved);
       setIsActionPlanModalOpen(true);
     } catch (e) {
@@ -1237,7 +1283,7 @@ export default function IDPModal({
           </div>
 
           {/* ==================== IDP Action Plan Integration Box ==================== */}
-          {allGapItems.length > 0 && (
+          {hasGapItems && (
             <div
               style={{
                 background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
@@ -1246,121 +1292,247 @@ export default function IDPModal({
                 padding: '1.25rem 1.5rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
+                gap: '12px',
                 flexShrink: 0,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div
                     style={{
-                      width: '36px',
-                      height: '36px',
+                      width: '40px',
+                      height: '40px',
                       borderRadius: '10px',
                       background: '#EA580C',
                       color: '#FFFFFF',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(234, 88, 12, 0.3)',
                     }}
                   >
-                    <Target size={20} />
+                    <Target size={22} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#9A3412', margin: 0 }}>
-                      ส่งต่อสมรรถนะที่มีช่องว่าง (Gap ≠ 0) ไปยัง IDP Action Plan
-                    </h4>
-                    <p style={{ fontSize: '0.8rem', color: '#C2410C', margin: '2px 0 0 0' }}>
-                      พบสมรรถนะที่มี Gap ทั้งหมด {allGapItems.length} รายการ สามารถเลือกรายการเพื่อจัดทำแผนพัฒนาต่อได้ทันที
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#9A3412', margin: 0 }}>
+                        จัดทำแผนพัฒนาบุคลากรรายบุคคล (IDP Action Plan) จากสมรรถนะที่มี Gap
+                      </h4>
+                      {isActionPlanCreated ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '999px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                          ✓ จัดทำแผนแล้ว ({(existingActionPlan.items || []).length} รายการ)
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '999px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                          ⏳ ยังไม่ได้จัดทำแผน
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: '#C2410C', margin: '3px 0 0 0' }}>
+                      พบสมรรถนะที่มีช่องว่าง (Gap ≠ 0) ทั้งหมด <strong>{allGapItems.length}</strong> รายการ • เฉพาะหัวหน้าฝ่าย หรือ รองผู้อำนวยการ เป็นผู้เลือกและจัดทำแผนพัฒนา
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSendToIDPActionPlan}
-                  style={{
-                    padding: '0.55rem 1.25rem',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
-                  }}
-                >
-                  <Target size={16} />
-                  <span>สร้าง / อัปเดต IDP Action Plan</span>
-                  <ArrowRight size={16} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {canEditActionPlan ? (
+                    <button
+                      type="button"
+                      onClick={handleSendToIDPActionPlan}
+                      style={{
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
+                      }}
+                    >
+                      <Target size={16} />
+                      <span>{isActionPlanCreated ? 'แก้ไข / ปรับปรุง IDP Action Plan' : 'สร้างแผนพัฒนา IDP Action Plan'}</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  ) : isActionPlanCreated ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionPlanData(existingActionPlan);
+                        setIsActionPlanModalOpen(true);
+                      }}
+                      style={{
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '10px',
+                        background: '#FFFFFF',
+                        color: '#EA580C',
+                        border: '1.5px solid #EA580C',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Target size={16} />
+                      <span>ดูแผนพัฒนา IDP Action Plan</span>
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: '#9A3412', fontWeight: 700, background: '#FFFFFF', padding: '6px 12px', borderRadius: '8px', border: '1px solid #FED7AA' }}>
+                      🔒 รอหัวหน้าฝ่าย / รอง ผอ. จัดทำแผน
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Gap Competencies Checklist */}
+              {/* Grouped Display by Category */}
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
                   background: '#FFFFFF',
-                  padding: '10px',
+                  padding: '12px',
                   borderRadius: '10px',
                   border: '1px solid #FED7AA',
-                  maxHeight: '160px',
+                  maxHeight: '220px',
                   overflowY: 'auto',
                 }}
               >
-                {allGapItems.map((g) => {
-                  const isChecked = selectedGapKeys.has(g.key);
-                  return (
-                    <label
-                      key={g.key}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        background: isChecked ? '#FFF7ED' : '#F8FAFC',
-                        border: `1px solid ${isChecked ? '#FDBA74' : '#E2E8F0'}`,
-                        cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        fontWeight: isChecked ? 700 : 500,
-                        color: isChecked ? '#C2410C' : '#334155',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleGapItem(g.key)}
-                          style={{ accentColor: '#EA580C' }}
-                        />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.name}>
-                          {g.name}
-                        </span>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: '0.725rem',
-                          fontWeight: 800,
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
-                          color: g.gap < 0 ? '#DC2626' : '#15803D',
-                          flexShrink: 0,
-                        }}
-                      >
-                        Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
-                      </span>
-                    </label>
-                  );
-                })}
+                {/* 1. Core Competencies */}
+                {allGapItems.some((g) => g.type === 'CORE') && (
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1D4ED8', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#EFF6FF', fontSize: '0.7rem' }}>ส่วนที่ 1</span>
+                      <span>สมรรถนะหลัก (Core Competencies)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px' }}>
+                      {allGapItems
+                        .filter((g) => g.type === 'CORE')
+                        .map((g) => {
+                          const isChecked = selectedGapKeys.has(g.key);
+                          return (
+                            <label
+                              key={g.key}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                background: isChecked ? '#EFF6FF' : '#F8FAFC',
+                                border: `1.5px solid ${isChecked ? '#93C5FD' : '#E2E8F0'}`,
+                                cursor: canEditActionPlan ? 'pointer' : 'default',
+                                fontSize: '0.825rem',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => canEditActionPlan && toggleGapItem(g.key)}
+                                  disabled={!canEditActionPlan}
+                                  style={{ accentColor: '#2563EB', width: '16px', height: '16px', cursor: canEditActionPlan ? 'pointer' : 'default' }}
+                                />
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.title}>
+                                    {g.title}
+                                  </span>
+                                  <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                                    คาดหวัง {g.expectedTotal} / ได้ {g.evaluatedTotal}
+                                  </span>
+                                </div>
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
+                                  color: g.gap < 0 ? '#DC2626' : '#15803D',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Functional Competencies */}
+                {allGapItems.some((g) => g.type === 'FUNCTIONAL') && (
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#A21CAF', marginBottom: '6px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#FDF4FF', fontSize: '0.7rem' }}>ส่วนที่ 2</span>
+                      <span>สมรรถนะตามตำแหน่งงาน (Functional Competencies)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px' }}>
+                      {allGapItems
+                        .filter((g) => g.type === 'FUNCTIONAL')
+                        .map((g) => {
+                          const isChecked = selectedGapKeys.has(g.key);
+                          return (
+                            <label
+                              key={g.key}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                background: isChecked ? '#FDF4FF' : '#F8FAFC',
+                                border: `1.5px solid ${isChecked ? '#F5D0FE' : '#E2E8F0'}`,
+                                cursor: canEditActionPlan ? 'pointer' : 'default',
+                                fontSize: '0.825rem',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => canEditActionPlan && toggleGapItem(g.key)}
+                                  disabled={!canEditActionPlan}
+                                  style={{ accentColor: '#C026D3', width: '16px', height: '16px', cursor: canEditActionPlan ? 'pointer' : 'default' }}
+                                />
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={g.title}>
+                                    {g.title}
+                                  </span>
+                                  <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                                    คาดหวัง {g.expectedTotal} / ได้ {g.evaluatedTotal}
+                                  </span>
+                                </div>
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: g.gap < 0 ? '#FEE2E2' : '#DCFCE7',
+                                  color: g.gap < 0 ? '#DC2626' : '#15803D',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Gap: {g.gap > 0 ? `+${g.gap}` : g.gap}
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1594,6 +1766,21 @@ export default function IDPModal({
                   >
                     ✍️ ลงชื่อผู้ประเมิน (รองผู้อำนวยการ)
                   </button>
+                ) : isDeputyDirector && hasGapItems && !isActionPlanCreated ? (
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#C2410C',
+                      background: '#FFF7ED',
+                      border: '1px solid #FED7AA',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      lineHeight: 1.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ ไม่สามารถลงชื่อได้: กรุณาจัดทำแผนพัฒนา (IDP Action Plan) จากสมรรถนะที่มี Gap ด้านบนให้เรียบร้อยก่อน
+                  </div>
                 ) : (
                   <div
                     style={{
