@@ -434,11 +434,12 @@ export default function IDPStrategyConfigModal({
                   fontWeight: 800,
                   cursor: 'pointer',
                   outline: 'none',
+                  minWidth: '80px',
                 }}
               >
                 {availableFiscalYears.map((yr) => (
-                  <option key={yr.year} value={String(yr.year)}>
-                    {yr.label}
+                  <option key={yr} value={String(yr)}>
+                    {yr}
                   </option>
                 ))}
               </select>
@@ -630,10 +631,10 @@ export default function IDPStrategyConfigModal({
                 }}
               >
                 {availableFiscalYears
-                  .filter((yr) => String(yr.year) !== String(selectedYear))
+                  .filter((yr) => String(yr) !== String(selectedYear))
                   .map((yr) => (
-                    <option key={yr.year} value={String(yr.year)}>
-                      ปีงบประมาณ {yr.year}
+                    <option key={yr} value={String(yr)}>
+                      ปีงบประมาณ {yr}
                     </option>
                   ))}
               </select>
