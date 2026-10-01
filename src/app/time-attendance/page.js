@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeTimeAttendanceList,
   subscribePersonnelList,
@@ -64,6 +65,7 @@ import { getNotificationRecipientForStep } from '@/lib/emailNotificationService'
 
 function TimeAttendanceContent() {
   const { currentPersonnel, isAdmin, handleGoogleSignIn, isLoading } = useAuth();
+  const { showConfirm } = useModal();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -1358,7 +1360,13 @@ function TimeAttendanceContent() {
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  if (confirm(`คุณต้องการลบคำขอของ ${item.requesterName} หรือไม่?`)) {
+                                  const confirmed = await showConfirm({
+                                    type: 'danger',
+                                    title: 'ยืนยันการลบคำขอ',
+                                    message: `คุณต้องการลบคำขอของ ${item.requesterName} หรือไม่?`,
+                                    confirmText: 'ลบรายการ',
+                                  });
+                                  if (confirmed) {
                                     await deleteTimeAttendanceRecord(item.id);
                                   }
                                 }}

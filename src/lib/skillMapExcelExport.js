@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYYBE } from './dateUtils';
 import { calculateAssessmentSummary } from './skillMapService';
+import { showAppAlert } from '../context/ModalContext';
 
 /**
  * Export Knowledge & Skill Map data to Excel (.xlsx)
@@ -211,6 +212,10 @@ export function exportSkillMapToExcel({ fiscalYear, workAreas = [], personnelLis
     XLSX.writeFile(wb, filename);
   } catch (err) {
     console.error('exportSkillMapToExcel error:', err);
-    alert('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel: ' + (err.message || 'Unknown error'));
+    showAppAlert({
+      type: 'error',
+      title: 'ส่งออกไฟล์ Excel ล้มเหลว',
+      message: 'เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel: ' + (err.message || 'Unknown error'),
+    });
   }
 }

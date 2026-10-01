@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribePersonnelList,
   subscribeDepartmentList,
@@ -51,6 +52,7 @@ import {
 
 export default function PortalLandingPage() {
   const { currentUser, currentPersonnel, isAdmin, handleGoogleSignIn } = useAuth();
+  const { showConfirm } = useModal();
   const [personnelList, setPersonnelList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [executiveList, setExecutiveList] = useState([]);
@@ -124,7 +126,13 @@ export default function PortalLandingPage() {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบการ์ด "${cardTitle}" นี้ออกจากหน้าหลัก?`)) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบการ์ดบริการ',
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบการ์ด "${cardTitle}" นี้ออกจากหน้าหลัก?`,
+      confirmText: 'ลบการ์ด',
+    });
+    if (confirmed) {
       await deletePortalServiceCard(cardId);
     }
   };
@@ -140,7 +148,13 @@ export default function PortalLandingPage() {
   };
 
   const handleResetOrder = async () => {
-    if (window.confirm('คุณต้องการรีเซ็ตการจัดเรียงการ์ดกลับเป็นค่าเริ่มต้นหรือไม่?')) {
+    const confirmed = await showConfirm({
+      type: 'warning',
+      title: 'รีเซ็ตลำดับการ์ดบริการ',
+      message: 'คุณต้องการรีเซ็ตการจัดเรียงการ์ดกลับเป็นค่าเริ่มต้นหรือไม่?',
+      confirmText: 'รีเซ็ตลำดับ',
+    });
+    if (confirmed) {
       await savePortalServicesOrder(DEFAULT_SERVICE_ORDER);
     }
   };

@@ -26,6 +26,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { saveTqaOfiItem, canEditTqaOfiProgress, normalizeTqaRounds, computeOverallStatus } from '@/lib/tqaOfiService';
+import { useModal } from '@/context/ModalContext';
 import { TQA_STATUS_CONFIG } from '@/lib/tqaSeedData';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
@@ -46,6 +47,7 @@ export default function TqaOfiActionModal({
   initialRound = 'round1',
   onSaved,
 }) {
+  const { showAlert } = useModal();
   const [activeRound, setActiveRound] = useState(initialRound || 'round1');
   const [roundsData, setRoundsData] = useState(() => normalizeTqaRounds(ofiItem));
   const [currentRoundStatus, setCurrentRoundStatus] = useState('PENDING');
@@ -208,7 +210,11 @@ export default function TqaOfiActionModal({
     if (!canEdit) return;
     const sourceReport = roundsData[sourceKey]?.actionReport || '';
     if (!sourceReport) {
-      alert('รอบก่อนหน้ายังไม่มีข้อมูลรายงานผล');
+      showAlert({
+        type: 'info',
+        title: 'ไม่พบข้อมูล',
+        message: 'รอบก่อนหน้ายังไม่มีข้อมูลรายงานผล',
+      });
       return;
     }
     if (editorRef.current) {

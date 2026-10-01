@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { ModalProvider } from '@/context/ModalContext';
 import Navbar from '@/components/Navbar';
 import MobileNav from '@/components/MobileNav';
 import UnauthorizedModal from '@/components/UnauthorizedModal';
@@ -25,12 +26,14 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>
-          <div className="app-layout">
-            <Navbar />
-            <main>{children}</main>
-            <MobileNav />
-            <UnauthorizedModal />
-          </div>
+          <ModalProvider>
+            <div className="app-layout">
+              <Navbar />
+              <main>{children}</main>
+              <MobileNav />
+              <UnauthorizedModal />
+            </div>
+          </ModalProvider>
         </AuthProvider>
       </body>
     </html>

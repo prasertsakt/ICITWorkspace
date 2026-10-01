@@ -26,6 +26,7 @@ import {
 import { getPersonnelListSync } from '@/lib/storageService';
 import { exportSkillMapToExcel } from '@/lib/skillMapExcelExport';
 import { getAvailableFiscalYears } from '@/lib/dateUtils';
+import { useModal } from '@/context/ModalContext';
 
 export default function SkillMapConfigModal({
   isOpen,
@@ -35,6 +36,7 @@ export default function SkillMapConfigModal({
   personnelList = [],
   onConfigSaved,
 }) {
+  const { showAlert } = useModal();
   const [fiscalYear, setFiscalYear] = useState(currentYear || 2569);
   const [workAreas, setWorkAreas] = useState([]);
   const [openAreaIdx, setOpenAreaIdx] = useState(0);
@@ -91,7 +93,11 @@ export default function SkillMapConfigModal({
       }, 3000);
     } catch (e) {
       console.error('Save config error', e);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+        message: e.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -108,7 +114,11 @@ export default function SkillMapConfigModal({
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (e) {
       console.error('Clone error', e);
-      alert('เกิดข้อผิดพลาดในการดึงข้อมูลจากปีก่อนหน้า');
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        message: 'เกิดข้อผิดพลาดในการดึงข้อมูลจากปีก่อนหน้า: ' + (e.message || ''),
+      });
     } finally {
       setIsSaving(false);
     }

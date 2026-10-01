@@ -14,6 +14,7 @@ import {
   resolveRoleEmailsFromDirectory,
 } from './emailNotificationService';
 import { DEFAULT_PORTAL_SERVICES, USER_ROLES, PERSONNEL_STATUS } from './constants';
+import { showAppAlert } from '../context/ModalContext';
 import {
   collection,
   doc,
@@ -968,11 +969,11 @@ export async function savePersonnelRecord(personnel) {
     } catch (e) {
       console.error('Firestore save personnel failed', e);
       if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
-        alert(
-          '⚠️ ข้อมูลถูกบันทึกใน Local Cache แต่ยังไม่สามารถส่งขึ้น Cloud Firestore ได้!\n\n' +
-          'สาเหตุ: Firestore ติด Security Rules (Permission Denied)\n' +
-          'วิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วเปลี่ยนกฎเป็น allow read, write: if true; แล้วกด Publish'
-        );
+        showAppAlert({
+          type: 'warning',
+          title: 'ข้อผิดพลาดเกี่ยวกับสิทธิ์ Firestore',
+          message: 'ข้อมูลถูกบันทึกใน Local Cache แต่ยังไม่สามารถส่งขึ้น Cloud Firestore ได้!\n\nสาเหตุ: Firestore ติด Security Rules (Permission Denied)\nวิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วเปลี่ยนกฎเป็น allow read, write: if true; แล้วกด Publish',
+        });
       }
     }
   }
@@ -1072,9 +1073,11 @@ export async function deletePersonnelRecord(id) {
     } catch (e) {
       console.error('Firestore delete personnel failed', e);
       if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
-        alert(
-          '⚠️ ลบจาก Local Cache แล้วแต่ไม่สามารถลบใน Firestore ได้เนื่องจากติด Firestore Security Rules (Permission Denied)'
-        );
+        showAppAlert({
+          type: 'warning',
+          title: 'ข้อผิดพลาดเกี่ยวกับสิทธิ์ Firestore',
+          message: 'ลบจาก Local Cache แล้วแต่ไม่สามารถลบใน Firestore ได้เนื่องจากติด Firestore Security Rules (Permission Denied)',
+        });
       }
     }
   }
@@ -1221,11 +1224,11 @@ export async function saveLeaveRecord(leave) {
     } catch (e) {
       console.error('Firestore save leave failed', e);
       if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
-        alert(
-          '⚠️ ข้อมูลการลาถูกบันทึกในแคชของเบราว์เซอร์ แต่ยังไม่สามารถบันทึกลง Cloud Firestore ได้!\n\n' +
-          'สาเหตุ: ติด Security Rules (Permission Denied)\n' +
-          'วิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วตรวจดูว่าอนุญาตคอลเลกชัน leaves หรือไม่'
-        );
+        showAppAlert({
+          type: 'warning',
+          title: 'ข้อผิดพลาดเกี่ยวกับสิทธิ์ Firestore',
+          message: 'ข้อมูลการลาถูกบันทึกในแคชของเบราว์เซอร์ แต่ยังไม่สามารถบันทึกลง Cloud Firestore ได้!\n\nสาเหตุ: ติด Security Rules (Permission Denied)\nวิธีแก้: ไปที่ Firebase Console > Firestore Database > แท็บ Rules แล้วตรวจดูว่าอนุญาตคอลเลกชัน leaves หรือไม่',
+        });
       }
     }
   }
@@ -1250,9 +1253,11 @@ export async function deleteLeaveRecord(id) {
     } catch (e) {
       console.error('Firestore delete leave failed', e);
       if (e?.code === 'permission-denied' && typeof window !== 'undefined') {
-        alert(
-          '⚠️ ข้อมูลถูกลบในแคช แต่ไม่สามารถลบจาก Cloud Firestore ได้เนื่องจากติดสิทธิ์ (Permission Denied)'
-        );
+        showAppAlert({
+          type: 'warning',
+          title: 'ข้อผิดพลาดเกี่ยวกับสิทธิ์ Firestore',
+          message: 'ข้อมูลถูกลบในแคช แต่ไม่สามารถลบจาก Cloud Firestore ได้เนื่องจากติดสิทธิ์ (Permission Denied)',
+        });
       }
     }
   }

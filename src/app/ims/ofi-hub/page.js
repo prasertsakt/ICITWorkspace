@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeOfiItems,
   importOfiFromAudits,
@@ -59,6 +60,7 @@ import {
 
 export default function OfiHubPage() {
   const { currentUser, currentPersonnel, isAdmin, handleGoogleSignIn } = useAuth();
+  const { showConfirm } = useModal();
 
   // Data states
   const [ofiItems, setOfiItems] = useState([]);
@@ -369,7 +371,13 @@ export default function OfiHubPage() {
       return;
     }
 
-    if (!window.confirm(`ยืนยันการลบ OFI: "${item.sourceAuditTopic || item.id}" หรือไม่?`)) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบ OFI',
+      message: `ยืนยันการลบ OFI: "${item.sourceAuditTopic || item.id}" หรือไม่?`,
+      confirmText: 'ลบรายการ',
+    });
+    if (!confirmed) {
       return;
     }
 

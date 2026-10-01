@@ -20,6 +20,7 @@ import {
   saveSkillMapAssessment,
 } from '@/lib/skillMapService';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { useModal } from '@/context/ModalContext';
 
 export default function SkillAssessmentFormModal({
   isOpen,
@@ -30,6 +31,7 @@ export default function SkillAssessmentFormModal({
   initialRatings = {},
   onSaveSuccess,
 }) {
+  const { showAlert } = useModal();
   const [ratings, setRatings] = useState({});
   const [activeAreaIdx, setActiveAreaIdx] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +93,11 @@ export default function SkillAssessmentFormModal({
       }, 3000);
     } catch (e) {
       console.error('Error saving assessment', e);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+        message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: ' + (e.message || ''),
+      });
     } finally {
       setIsSaving(false);
     }

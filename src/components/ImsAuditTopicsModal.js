@@ -21,8 +21,10 @@ import {
   saveImsAuditTopics,
   resetImsAuditTopicsToDefault,
 } from '@/lib/imsService';
+import { useModal } from '@/context/ModalContext';
 
 export default function ImsAuditTopicsModal({ isOpen, onClose, actor }) {
+  const { showConfirm } = useModal();
   const [topics, setTopics] = useState([]);
   const [newTopic, setNewTopic] = useState('');
   const [editingIndex, setEditingIndex] = useState(null);
@@ -89,9 +91,15 @@ export default function ImsAuditTopicsModal({ isOpen, onClose, actor }) {
     setEditingText('');
   };
 
-  const handleDelete = (idx) => {
+  const handleDelete = async (idx) => {
     const target = topics[idx];
-    if (window.confirm(`คุณต้องการลบหัวข้อ "${target}" หรือไม่?`)) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบหัวข้อ',
+      message: `คุณต้องการลบหัวข้อ "${target}" หรือไม่?`,
+      confirmText: 'ลบหัวข้อ',
+    });
+    if (confirmed) {
       const updated = topics.filter((_, i) => i !== idx);
       setTopics(updated);
       if (editingIndex === idx) {
@@ -137,11 +145,13 @@ export default function ImsAuditTopicsModal({ isOpen, onClose, actor }) {
   };
 
   const handleResetDefault = async () => {
-    if (
-      window.confirm(
-        'คุณแน่ใจหรือไม่ว่าต้องการคืนค่าเริ่มต้น 23 หัวข้อมาตรฐาน? ข้อมูลที่ปรับแต่งไว้จะถูกแทนที่ด้วยค่ามาตรฐาน'
-      )
-    ) {
+    const confirmed = await showConfirm({
+      type: 'warning',
+      title: 'คืนค่าเริ่มต้น 23 หัวข้อมาตรฐาน',
+      message: 'คุณแน่ใจหรือไม่ว่าต้องการคืนค่าเริ่มต้น 23 หัวข้อมาตรฐาน? ข้อมูลที่ปรับแต่งไว้จะถูกแทนที่ด้วยค่ามาตรฐาน',
+      confirmText: 'คืนค่าเริ่มต้น',
+    });
+    if (confirmed) {
       setIsSaving(true);
       try {
         const defaultList = await resetImsAuditTopicsToDefault(actor);
@@ -243,9 +253,16 @@ export default function ImsAuditTopicsModal({ isOpen, onClose, actor }) {
           </div>
 
           <button
-            onClick={() => {
+            onClick={async () => {
               if (hasUnsavedChanges) {
-                if (window.confirm('คุณมีรายการที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกหรือไม่?')) {
+                const confirmed = await showConfirm({
+                  type: 'warning',
+                  title: 'มีรายการที่ยังไม่ได้บันทึก',
+                  message: 'คุณมีรายการที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกหรือไม่?',
+                  confirmText: 'ปิดโดยไม่บันทึก',
+                  cancelText: 'กลับไปแก้ไข',
+                });
+                if (confirmed) {
                   onClose();
                 }
               } else {

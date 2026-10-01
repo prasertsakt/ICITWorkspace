@@ -230,5 +230,48 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // Rules for 'idp_records' collection (Individual Development Plan - IDP Hub)
+    match /idp_records/{recordId} {
+      // Authenticated personnel can view IDP records
+      allow read: if isAuthenticated();
+      // Authenticated users (Self, Supervisor, Deputy Director, HR Officer, Admin) can create and update
+      allow create, update: if isAuthenticated();
+      // Deletion restricted to Admin or HR Officer
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
+        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
+        userEmail() == "tiawongsombat@gmail.com"
+      );
+    }
+
+    // Rules for 'idp_config' collection (IDP Standard Competency Configuration per Fiscal Year)
+    match /idp_config/{configId} {
+      // All authenticated staff can read IDP competency config
+      allow read: if isAuthenticated();
+      // HR Officer and Admins can create, update, and manage
+      allow write: if isAuthenticated();
+    }
+
+    // Rules for 'idp_strategy_config' collection (Strategic Focus Areas, SO, CKPI Framework Configuration)
+    match /idp_strategy_config/{configId} {
+      // All authenticated staff can read Strategic Framework config
+      allow read: if isAuthenticated();
+      // HR Officer and Admins can create, update, and duplicate configuration
+      allow write: if isAuthenticated();
+    }
+
+    // Rules for 'skill_map_configs' collection (Skill Map Structure & Matrix Configuration)
+    match /skill_map_configs/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Rules for 'skill_map_assessments' collection (Skill Map Personnel Assessments)
+    match /skill_map_assessments/{assessmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }

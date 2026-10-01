@@ -24,8 +24,10 @@ import {
   Eye,
 } from 'lucide-react';
 import { ACTIVITY_CATEGORIES, clearAllActivityLogs } from '@/lib/activityLogService';
+import { useModal } from '@/context/ModalContext';
 
 export default function AdminActivityLogsTab({ logs = [], currentAdmin = null }) {
+  const { showAlert, showConfirm } = useModal();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,9 +159,19 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
   };
 
   const handleClearLogs = async () => {
-    if (confirm('คุณต้องการล้างประวัติกิจกรรมทั้งหมดในระบบใช่หรือไม่?')) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ล้างประวัติกิจกรรมทั้งหมด',
+      message: 'คุณต้องการล้างประวัติกิจกรรมทั้งหมดในระบบใช่หรือไม่? (การกระทำนี้ไม่สามารถย้อนกลับได้)',
+      confirmText: 'ล้างประวัติ',
+    });
+    if (confirmed) {
       await clearAllActivityLogs();
-      alert('ล้างประวัติกิจกรรมเรียบร้อยแล้ว');
+      await showAlert({
+        type: 'success',
+        title: 'สำเร็จ',
+        message: 'ล้างประวัติกิจกรรมเรียบร้อยแล้ว',
+      });
     }
   };
 

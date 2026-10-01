@@ -36,6 +36,7 @@ import {
   IMS_STANDARDS,
   IMS_AUDIT_TOPICS,
 } from '../lib/constants';
+import { useModal } from '../context/ModalContext';
 import { subscribeImsAuditTopics, isMrUser } from '../lib/imsService';
 import {
   CAR_INCIDENT_STATUS,
@@ -110,6 +111,7 @@ export default function CarIncidentModal({
   isAdmin,
   onSaved,
 }) {
+  const { showAlert, showConfirm } = useModal();
   const isEdit = Boolean(record && record.id);
   const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
 
@@ -443,7 +445,13 @@ export default function CarIncidentModal({
   };
 
   const handleAuditorApprove = async () => {
-    if (!window.confirm('ยืนยันการเห็นชอบและอนุมัติแผนปฏิบัติการแก้ไข (Correction & Action Plan)?\n\nระบบจะบันทึกการอนุมัติและส่งอีเมลแจ้งเตือนไปยัง MR เพื่อดำเนินการลงชื่อรับทราบ')) {
+    const confirmed = await showConfirm({
+      type: 'info',
+      title: 'อนุมัติแผนปฏิบัติการแก้ไข',
+      message: 'ยืนยันการเห็นชอบและอนุมัติแผนปฏิบัติการแก้ไข (Correction & Action Plan)?\n\nระบบจะบันทึกการอนุมัติและส่งอีเมลแจ้งเตือนไปยัง MR เพื่อดำเนินการลงชื่อรับทราบ',
+      confirmText: 'ยืนยันอนุมัติ',
+    });
+    if (!confirmed) {
       return;
     }
     setIsAuditorSubmitting(true);
@@ -472,7 +480,11 @@ export default function CarIncidentModal({
       if (isEdit && record?.id) {
         await approveActionPlanByAuditor(record.id, actor, yearlyConfig);
       }
-      alert('✅ บันทึกการเห็นชอบแผนงานเรียบร้อยแล้ว');
+      await showAlert({
+        type: 'success',
+        title: 'บันทึกสำเร็จ',
+        message: 'บันทึกการเห็นชอบแผนงานเรียบร้อยแล้ว',
+      });
     } catch (err) {
       console.error('Auditor approval error:', err);
       setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการอนุมัติแผนงาน');
@@ -483,7 +495,11 @@ export default function CarIncidentModal({
 
   const handleSubmitRevision = async () => {
     if (!revisionCommentInput.trim()) {
-      alert('กรุณาระบุข้อคิดเห็น/สิ่งที่ต้องการให้ปรับปรุงแก้ไข');
+      await showAlert({
+        type: 'warning',
+        title: 'กรุณากรอกข้อมูล',
+        message: 'กรุณาระบุข้อคิดเห็น/สิ่งที่ต้องการให้ปรับปรุงแก้ไข',
+      });
       return;
     }
     setIsAuditorSubmitting(true);
@@ -520,10 +536,18 @@ export default function CarIncidentModal({
 
       setShowRevisionModal(false);
       setRevisionCommentInput('');
-      alert('✉️ บันทึกข้อคิดเห็นและส่งแจ้งเตือนผู้รับการตรวจเพื่อแก้ไขเรียบร้อยแล้ว');
+      await showAlert({
+        type: 'success',
+        title: 'ส่งข้อคิดเห็นสำเร็จ',
+        message: 'บันทึกข้อคิดเห็นและส่งแจ้งเตือนผู้รับการตรวจเพื่อแก้ไขเรียบร้อยแล้ว',
+      });
     } catch (err) {
       console.error('Request revision error:', err);
-      alert(err.message || 'เกิดข้อผิดพลาดในการส่งข้อคิดเห็น');
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        message: err.message || 'เกิดข้อผิดพลาดในการส่งข้อคิดเห็น',
+      });
     } finally {
       setIsAuditorSubmitting(false);
     }
@@ -2752,7 +2776,11 @@ export default function CarIncidentModal({
                             key={audit.id}
                             onClick={() => {
                               if (isDuplicate) {
-                                alert(`⚠️ รายงานการตรวจนี้ (${audit.docNumber || audit.id}) ได้ถูกนำไปสร้างเอกสาร CAR หมายเลข ${audit.existingCarDocNumber} แล้ว`);
+                                showAlert({
+                                  type: 'warning',
+                                  title: 'เอกสารซ้ำซ้อน',
+                                  message: `รายงานการตรวจนี้ (${audit.docNumber || audit.id}) ได้ถูกนำไปสร้างเอกสาร CAR หมายเลข ${audit.existingCarDocNumber} แล้ว`,
+                                });
                                 return;
                               }
                               handleImportFromNc(audit);

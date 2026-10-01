@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeCarIncidents,
   deleteCarIncident,
@@ -59,6 +60,7 @@ import {
 
 export default function CarIncidentHubPage() {
   const { currentUser, currentPersonnel, isAdmin, handleGoogleSignIn } = useAuth();
+  const { showAlert, showConfirm } = useModal();
 
   // Data States
   const [carIncidents, setCarIncidents] = useState([]);
@@ -278,13 +280,20 @@ export default function CarIncidentHubPage() {
   const handleDelete = async (record) => {
     if (!record) return;
     if (record.status === CAR_INCIDENT_STATUS.CLOSED) {
-      alert('ไม่สามารถลบเอกสารที่ปิดสมบูรณ์แล้ว (Closed) ได้');
+      await showAlert({
+        type: 'warning',
+        title: 'ไม่สามารถลบเอกสารได้',
+        message: 'ไม่สามารถลบเอกสารที่ปิดสมบูรณ์แล้ว (Closed) ได้',
+      });
       return;
     }
 
-    const confirmed = window.confirm(
-      `ยืนยันการลบเอกสาร ${record.docNumber} (${record.docType}) หรือไม่?\nการกระทำนี้ไม่สามารถย้อนกลับได้`
-    );
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบเอกสาร',
+      message: `ยืนยันการลบเอกสาร ${record.docNumber} (${record.docType}) หรือไม่?\nการกระทำนี้ไม่สามารถย้อนกลับได้`,
+      confirmText: 'ลบเอกสาร',
+    });
     if (!confirmed) return;
 
     try {
@@ -438,7 +447,11 @@ export default function CarIncidentHubPage() {
                     if (handleGoogleSignIn) {
                       handleGoogleSignIn();
                     } else {
-                      alert('กรุณาเข้าสู่ระบบด้วยบัญชี Google เพื่อออกเอกสาร CAR/Incident');
+                      showAlert({
+                        type: 'info',
+                        title: 'กรุณาเข้าสู่ระบบ',
+                        message: 'กรุณาเข้าสู่ระบบด้วยบัญชี Google เพื่อออกเอกสาร CAR/Incident',
+                      });
                     }
                     return;
                   }

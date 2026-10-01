@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeTqaOfiItems,
   deleteTqaOfiItem,
@@ -67,6 +68,7 @@ import {
 
 export default function TqaOfiTrackingPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
+  const { showAlert } = useModal();
 
   // Fiscal Year State (Dynamic list including past and future years)
   const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
@@ -245,7 +247,11 @@ export default function TqaOfiTrackingPage() {
   const handleToggleTracking = (item) => {
     const canEdit = canEditTqaOfiProgress(item, currentUser, currentPersonnel, isAdmin);
     if (!canEdit) {
-      alert('คุณไม่มีสิทธิ์เปลี่ยนสถานะการติดตามของข้อเสนอแนะนี้ (ต้องเป็น Admin หรือผู้รายงานผลที่ได้รับมอบหมาย)');
+      showAlert({
+        type: 'warning',
+        title: 'ไม่มีสิทธิ์ดำเนินการ',
+        message: 'คุณไม่มีสิทธิ์เปลี่ยนสถานะการติดตามของข้อเสนอแนะนี้ (ต้องเป็น Admin หรือผู้รายงานผลที่ได้รับมอบหมาย)',
+      });
       return;
     }
 
@@ -279,7 +285,11 @@ export default function TqaOfiTrackingPage() {
       );
       setTrackingConfirmState(null);
     } catch (e) {
-      alert(e.message || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะการติดตาม');
+      showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        message: e.message || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะการติดตาม',
+      });
       setTrackingConfirmState((prev) => ({ ...prev, isSaving: false }));
     }
   };
@@ -291,7 +301,11 @@ export default function TqaOfiTrackingPage() {
       await deleteTqaOfiItem(deletingOfi.id, fiscalYear);
       setDeletingOfi(null);
     } catch (e) {
-      alert(e.message || 'เกิดข้อผิดพลาดในการลบรายการ');
+      showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาดในการลบรายการ',
+        message: e.message || 'เกิดข้อผิดพลาดในการลบรายการ',
+      });
     }
   };
 

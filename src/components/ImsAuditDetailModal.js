@@ -17,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { IMS_RESULT_TYPES, IMS_AUDIT_STATUSES } from '@/lib/constants';
+import { useModal } from '@/context/ModalContext';
 
 export default function ImsAuditDetailModal({
   isOpen,
@@ -31,6 +32,7 @@ export default function ImsAuditDetailModal({
   canEdit = true,
   canDelete = false,
 }) {
+  const { showAlert } = useModal();
   const [isReturnBoxOpen, setIsReturnBoxOpen] = React.useState(false);
   const [revisionComment, setRevisionComment] = React.useState('');
 
@@ -44,9 +46,13 @@ export default function ImsAuditDetailModal({
   const resultMeta = audit.result ? IMS_RESULT_TYPES[audit.result] : null;
   const statusMeta = IMS_AUDIT_STATUSES[audit.status] || IMS_AUDIT_STATUSES.PENDING_LEAD_APPROVAL;
 
-  const handleConfirmReturn = () => {
+  const handleConfirmReturn = async () => {
     if (!revisionComment.trim()) {
-      alert('กรุณาระบุข้อคิดเห็นหรือสิ่งที่ต้องการให้ผู้ตรวจแก้ไขเพิ่มเติม');
+      await showAlert({
+        type: 'warning',
+        title: 'กรุณากรอกข้อคิดเห็น',
+        message: 'กรุณาระบุข้อคิดเห็นหรือสิ่งที่ต้องการให้ผู้ตรวจแก้ไขเพิ่มเติม',
+      });
       return;
     }
     if (onReturn) {

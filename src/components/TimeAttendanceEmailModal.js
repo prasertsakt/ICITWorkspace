@@ -24,6 +24,7 @@ import {
   getNotificationRecipientForStep,
   resolveRoleEmailsFromDirectory,
 } from '@/lib/emailNotificationService';
+import { useModal } from '@/context/ModalContext';
 
 export default function TimeAttendanceEmailModal({
   isOpen,
@@ -33,6 +34,7 @@ export default function TimeAttendanceEmailModal({
   departmentList = [],
   executiveList = [],
 }) {
+  const { showAlert } = useModal();
   const [selectedStep, setSelectedStep] = useState('HR_REVIEW');
   const [activeTab, setActiveTab] = useState('preview'); // 'preview' | 'logs' | 'config'
   const [emailConfig, setEmailConfig] = useState(getEmailConfig());
@@ -129,7 +131,11 @@ export default function TimeAttendanceEmailModal({
       setSendSuccess(true);
       setTimeout(() => setSendSuccess(false), 5000);
     } catch (e) {
-      alert(`การส่งอีเมลไม่สำเร็จ: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'การส่งอีเมลไม่สำเร็จ',
+        message: `การส่งอีเมลไม่สำเร็จ: ${e.message}`,
+      });
     } finally {
       setIsSending(false);
     }
@@ -150,10 +156,14 @@ export default function TimeAttendanceEmailModal({
     setTimeout(() => setAutoSyncedToast(false), 3500);
   };
 
-  const handleSaveConfig = (e) => {
+  const handleSaveConfig = async (e) => {
     e.preventDefault();
     saveEmailConfig(emailConfig);
-    alert('บันทึกการตั้งค่าระบบอีเมล Google API สำเร็จเรียบร้อย');
+    await showAlert({
+      type: 'success',
+      title: 'บันทึกสำเร็จ',
+      message: 'บันทึกการตั้งค่าระบบอีเมล Google API สำเร็จเรียบร้อย',
+    });
   };
 
   return (

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeLeaveList,
   subscribePersonnelList,
@@ -43,6 +44,7 @@ import {
 
 function LeaveContent() {
   const { currentPersonnel, isAdmin, handleGoogleSignIn, isLoading: isAuthLoading } = useAuth();
+  const { showAlert, showConfirm } = useModal();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
@@ -157,16 +159,18 @@ function LeaveContent() {
         setSyncStatus(`ซิงก์สำเร็จ ${res.successCount} รายการ`);
         setTimeout(() => setSyncStatus(null), 4000);
       } else {
-        alert(
-          `⚠️ การซิงก์ขึ้น Firebase ยังไม่สำเร็จ (${res.errorCount} รายการล้มเหลว)\n\n` +
-          `สาเหตุ: ${res.lastError?.code || ''} ${res.lastError?.message || 'ติด Security Rules'}\n\n` +
-          `วิธีแก้:\n1. ไปที่ Firebase Console > Firestore Database > แท็บ Rules\n` +
-          `2. ตรวจสอบว่ากฎความปลอดภัยเปิดอนุญาตให้อ่าน/เขียนคอลเลกชัน leaves\n` +
-          `3. กด Publish แล้วลองกดซิงก์ใหม่อีกครั้ง`
-        );
+        await showAlert({
+          type: 'warning',
+          title: 'การซิงก์ขึ้น Firebase ไม่สมบูรณ์',
+          message: `การซิงก์ขึ้น Firebase ยังไม่สำเร็จ (${res.errorCount} รายการล้มเหลว)\n\nสาเหตุ: ${res.lastError?.code || ''} ${res.lastError?.message || 'ติด Security Rules'}\n\nวิธีแก้:\n1. ไปที่ Firebase Console > Firestore Database > แท็บ Rules\n2. ตรวจสอบว่ากฎความปลอดภัยเปิดอนุญาตให้อ่าน/เขียนคอลเลกชัน leaves\n3. กด Publish แล้วลองกดซิงก์ใหม่อีกครั้ง`,
+        });
       }
     } catch (e) {
-      alert(`เกิดข้อผิดพลาด: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาดในการซิงก์',
+        message: e.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์',
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -185,23 +189,37 @@ function LeaveContent() {
 
   const handleArchiveOldData = async () => {
     const cutoffYear = selectedYear - 1;
-    const confirm = window.confirm(
-      `คุณต้องการย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${cutoffYear + 543} (${cutoffYear}) เข้าสู่คลังประวัติ (leaves_archive) หรือไม่?\n\n` +
-      `การย้ายเข้าคลังประวัติจะช่วยให้คอลเลกชันปัจจุบันมีขนาดกะทัดรัด โหลดเร็ว และประหยัดโควตาการอ่าน`
-    );
-    if (!confirm) return;
+    const confirmed = await showConfirm({
+      type: 'info',
+      title: 'ย้ายข้อมูลวันลาเข้าคลังประวัติ',
+      message: `คุณต้องการย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${cutoffYear + 543} (${cutoffYear}) เข้าสู่คลังประวัติ (leaves_archive) หรือไม่?\n\nการย้ายเข้าคลังประวัติจะช่วยให้คอลเลกชันปัจจุบันมีขนาดกะทัดรัด โหลดเร็ว และประหยัดโควตาการอ่าน`,
+      confirmText: 'ยืนยันย้ายข้อมูล',
+    });
+    if (!confirmed) return;
 
     setIsArchiving(true);
     try {
       const res = await archiveOldLeaves(cutoffYear);
       if (res.success) {
         if (res.archivedCount > 0) {
-          alert(`✅ ย้ายข้อมูลเข้าคลังประวัติสำเร็จ ${res.archivedCount} รายการ`);
+          await showAlert({
+            type: 'success',
+            title: 'จัดเก็บข้อมูลสำเร็จ',
+            message: `ย้ายข้อมูลเข้าคลังประวัติสำเร็จ ${res.archivedCount} รายการ`,
+          });
         } else {
-          alert('ℹ️ ไม่พบข้อมูลวันลาเก่าที่เข้าเกณฑ์จัดเก็บ');
+          await showAlert({
+            type: 'info',
+            title: 'ไม่พบข้อมูลที่เข้าเกณฑ์',
+            message: 'ไม่พบข้อมูลวันลาเก่าที่เข้าเกณฑ์จัดเก็บในรอบปีที่เลือก',
+          });
         }
       } else {
-        alert(`⚠️ ไม่สามารถจัดเก็บได้: ${res.lastError?.message || 'โปรดตรวจสอบสิทธิ์'}`);
+        await showAlert({
+          type: 'warning',
+          title: 'ไม่สามารถจัดเก็บข้อมูลได้',
+          message: res.lastError?.message || 'โปรดตรวจสอบสิทธิ์การเข้าถึงข้อมูล',
+        });
       }
     } finally {
       setIsArchiving(false);

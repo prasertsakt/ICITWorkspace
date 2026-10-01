@@ -14,6 +14,7 @@ import {
   hasAnyAdmin,
 } from '@/lib/storageService';
 import { PERSONNEL_STATUS, USER_ROLES, SESSION_TIMEOUT_MS, SESSION_TIMEOUT_HOURS } from '@/lib/constants';
+import { showAppAlert } from './ModalContext';
 
 const AuthContext = createContext(null);
 
@@ -263,7 +264,11 @@ export function AuthProvider({ children }) {
     // Security Check: Prevent privilege escalation if an admin already exists
     const adminAlreadyExists = await hasAnyAdmin();
     if (adminAlreadyExists) {
-      alert('⚠️ ปฏิเสธคำขอ: มีผู้ดูแลระบบ (Admin) อยู่ในระบบแล้ว ไม่สามารถแต่งตั้งเพิ่มด้วยวิธีนี้ได้');
+      showAppAlert({
+        type: 'warning',
+        title: 'ปฏิเสธคำขอแต่งตั้งสิทธิ์',
+        message: 'มีผู้ดูแลระบบ (Admin) อยู่ในระบบแล้ว ไม่สามารถแต่งตั้งเพิ่มด้วยวิธีนี้ได้',
+      });
       setIsLoading(false);
       return false;
     }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   Compass,
   ArrowLeft,
@@ -54,6 +55,7 @@ import SkillMapPreviewModal from '@/components/SkillMapPreviewModal';
 
 export default function IDPSkillMapPage() {
   const { currentUser, currentPersonnel: authPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
+  const { showAlert } = useModal();
 
   // Fiscal Year
   const [fiscalYear, setFiscalYear] = useState(getDefaultFiscalYear());
@@ -229,7 +231,11 @@ export default function IDPSkillMapPage() {
   // Open Self Assessment Modal
   const handleOpenSelfAssessment = () => {
     if (!currentPersonnel) {
-      alert('กรุณาเข้าสู่ระบบก่อนทำการประเมินตนเอง');
+      showAlert({
+        type: 'warning',
+        title: 'กรุณาเข้าสู่ระบบ',
+        message: 'กรุณาเข้าสู่ระบบก่อนทำการประเมินตนเอง',
+      });
       return;
     }
     setTargetPersonnelForModal(currentPersonnel);
@@ -262,7 +268,11 @@ export default function IDPSkillMapPage() {
   // Handle Excel Export (Admin/HR only)
   const handleExportExcel = () => {
     if (!isHrOrAdmin) {
-      alert('เฉพาะผู้ดูแลระบบและเจ้าหน้าที่ HR เท่านั้นที่สามารถส่งออกข้อมูล Excel ได้');
+      showAlert({
+        type: 'warning',
+        title: 'สิทธิ์ไม่เพียงพอ',
+        message: 'เฉพาะผู้ดูแลระบบและเจ้าหน้าที่ HR เท่านั้นที่สามารถส่งออกข้อมูล Excel ได้',
+      });
       return;
     }
     exportSkillMapToExcel({

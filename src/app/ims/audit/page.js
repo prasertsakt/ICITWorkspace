@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribeImsAudits,
   saveImsAuditRecord,
@@ -61,6 +62,7 @@ import {
 
 export default function ImsAuditPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
+  const { showConfirm } = useModal();
 
   // Data states
   const [audits, setAudits] = useState([]);
@@ -263,7 +265,13 @@ export default function ImsAuditPage() {
   };
 
   const handleDeleteAudit = async (audit) => {
-    if (!window.confirm(`ยืนยันการลบรายงานการตรวจหัวข้อ "${audit.topic}"?`)) return;
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบรายงานการตรวจ',
+      message: `ยืนยันการลบรายงานการตรวจหัวข้อ "${audit.topic}"?`,
+      confirmText: 'ลบรายงาน',
+    });
+    if (!confirmed) return;
     const actor = {
       name: currentPersonnel?.name || currentUser?.displayName || 'Admin',
       email: currentUser?.email || '',

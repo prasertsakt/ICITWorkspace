@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { LEAVE_TYPE_CONFIG } from '@/lib/constants';
+import { useModal } from '@/context/ModalContext';
 
 function formatThaiDate(dateStr) {
   if (!dateStr) return '-';
@@ -38,6 +39,7 @@ export default function LeaveDeleteModal({
   leaveRecord,
   onConfirmDelete,
 }) {
+  const { showAlert } = useModal();
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -75,7 +77,11 @@ export default function LeaveDeleteModal({
       onClose();
     } catch (err) {
       console.error('Failed to delete leave:', err);
-      alert(`เกิดข้อผิดพลาดในการลบรายการ: ${err.message || 'โปรดลองอีกครั้ง'}`);
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาดในการลบรายการ',
+        message: err.message || 'โปรดลองอีกครั้ง',
+      });
       setIsDeleting(false);
     }
   };

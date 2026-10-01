@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useModal } from '@/context/ModalContext';
 import {
   subscribePersonnelList,
   subscribeDepartmentList,
@@ -59,6 +60,7 @@ import {
 
 export default function AdminPage() {
   const { currentPersonnel, isAdmin, isFirebaseConfigured } = useAuth();
+  const { showAlert, showConfirm } = useModal();
 
   const [activeTab, setActiveTab] = useState('personnel'); // 'personnel' | 'departments' | 'executives' | 'logs' | 'settings'
 
@@ -166,9 +168,14 @@ export default function AdminPage() {
   }, []);
 
   const handleSyncToFirestore = async () => {
-    if (!confirm('ต้องการตรวจสอบและซิงค์โครงสร้างฝ่ายงาน (6 ฝ่าย) ขึ้น Cloud Firestore ใช่หรือไม่?')) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      type: 'info',
+      title: 'ซิงค์โครงสร้างฝ่ายงาน',
+      message: 'ต้องการตรวจสอบและซิงค์โครงสร้างฝ่ายงาน (6 ฝ่าย) ขึ้น Cloud Firestore ใช่หรือไม่?',
+      confirmText: 'เริ่มซิงค์ข้อมูล',
+    });
+    if (!confirmed) return;
+
     setIsSyncing(true);
     try {
       await syncAllSeedDataToFirestore();
@@ -180,10 +187,18 @@ export default function AdminPage() {
         actorName: currentPersonnel?.name,
         actorEmail: currentPersonnel?.email,
       });
-      alert('✅ ซิงค์โครงสร้างฝ่ายงานขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!');
+      await showAlert({
+        type: 'success',
+        title: 'ซิงค์ข้อมูลสำเร็จ',
+        message: 'ซิงค์โครงสร้างฝ่ายงานขึ้น Firebase Firestore สำเร็จเรียบร้อยแล้ว!',
+      });
     } catch (err) {
       console.error('Sync failed', err);
-      alert('เกิดข้อผิดพลาดในการซิงค์ข้อมูล กรุณาตรวจสอบการตั้งค่า Firebase');
+      await showAlert({
+        type: 'error',
+        title: 'ซิงค์ข้อมูลล้มเหลว',
+        message: 'เกิดข้อผิดพลาดในการซิงค์ข้อมูล กรุณาตรวจสอบการตั้งค่า Firebase',
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -255,7 +270,13 @@ export default function AdminPage() {
   };
 
   const handleDeletePersonnel = async (id, name) => {
-    if (confirm(`คุณต้องการลบข้อมูล "${name}" ออกจากระบบใช่หรือไม่?`)) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบข้อมูลบุคลากร',
+      message: `คุณต้องการลบข้อมูล "${name}" ออกจากระบบใช่หรือไม่?`,
+      confirmText: 'ลบข้อมูล',
+    });
+    if (confirmed) {
       setPersonnelList((prev) => prev.filter((p) => p.id !== id));
       await deletePersonnelRecord(id);
       await logActivity({
@@ -334,7 +355,13 @@ export default function AdminPage() {
   };
 
   const handleDeleteExecutive = async (id, name) => {
-    if (confirm(`คุณต้องการลบผู้บริหาร "${name}" ใช่หรือไม่?`)) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ยืนยันการลบข้อมูลผู้บริหาร',
+      message: `คุณต้องการลบผู้บริหาร "${name}" ใช่หรือไม่?`,
+      confirmText: 'ลบผู้บริหาร',
+    });
+    if (confirmed) {
       setExecutiveList((prev) => prev.filter((e) => e.id !== id));
       await deleteExecutiveRecord(id);
       await logActivity({
@@ -375,11 +402,21 @@ export default function AdminPage() {
   };
 
   const handleClearDummyData = async () => {
-    if (confirm('คุณต้องการลบข้อมูลบุคลากรและฝ่ายบริหารตัวอย่างทั้งหมด เพื่อเริ่มต้นใส่ข้อมูลบุคลากรจริงใช่หรือไม่? (ระบบจะคงบัญชี Admin ปัจจุบันของคุณไว้)')) {
+    const confirmed = await showConfirm({
+      type: 'danger',
+      title: 'ล้างข้อมูลตัวอย่างทั้งหมด',
+      message: 'คุณต้องการลบข้อมูลบุคลากรและฝ่ายบริหารตัวอย่างทั้งหมด เพื่อเริ่มต้นใส่ข้อมูลบุคลากรจริงใช่หรือไม่? (ระบบจะคงบัญชี Admin ปัจจุบันของคุณไว้)',
+      confirmText: 'ยืนยันล้างข้อมูล',
+    });
+    if (confirmed) {
       const keepEmail = currentPersonnel?.email || '';
       await clearAllPersonnelData(keepEmail);
       await clearAllExecutivesData();
-      alert('ล้างข้อมูลตัวอย่างเรียบร้อยแล้ว! ตอนนี้ฐานข้อมูลว่างและพร้อมสำหรับการเพิ่มบุคลากรจริงแล้วครับ');
+      await showAlert({
+        type: 'success',
+        title: 'ล้างข้อมูลเรียบร้อย',
+        message: 'ล้างข้อมูลตัวอย่างเรียบร้อยแล้ว! ตอนนี้ฐานข้อมูลว่างและพร้อมสำหรับการเพิ่มบุคลากรจริงแล้วครับ',
+      });
     }
   };
 

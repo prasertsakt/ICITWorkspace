@@ -29,6 +29,7 @@ import {
   getNotificationRecipientForStep,
   resendNotificationEmail,
 } from '@/lib/emailNotificationService';
+import { useModal } from '@/context/ModalContext';
 import TimeAttendanceCancelModal from '@/components/TimeAttendanceCancelModal';
 
 export default function TimeAttendanceDetailModal({
@@ -42,6 +43,7 @@ export default function TimeAttendanceDetailModal({
   onCancelRequest,
   onOpenEmailPreview,
 }) {
+  const { showAlert } = useModal();
   const [activeTab, setActiveTab] = useState('form'); // 'form' | 'activity'
   const [commentInput, setCommentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -84,7 +86,11 @@ export default function TimeAttendanceDetailModal({
       setMailSentNotice(`ส่งอีเมลแจ้งเตือนถึง ${stepRecipient?.name || 'ผู้เกี่ยวข้อง'} สำเร็จ`);
       setTimeout(() => setMailSentNotice(''), 4000);
     } catch (e) {
-      alert(`การส่งอีเมลไม่สำเร็จ: ${e.message}`);
+      await showAlert({
+        type: 'error',
+        title: 'การส่งอีเมลไม่สำเร็จ',
+        message: `การส่งอีเมลไม่สำเร็จ: ${e.message}`,
+      });
     } finally {
       setIsResendingMail(false);
     }

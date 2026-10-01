@@ -23,6 +23,7 @@ import {
   saveSkillMapAssessment,
 } from '@/lib/skillMapService';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { useModal } from '@/context/ModalContext';
 
 export default function SkillRadarAnalysisModal({
   isOpen,
@@ -34,6 +35,7 @@ export default function SkillRadarAnalysisModal({
   isSelf = false,
   onAnalysisUpdated,
 }) {
+  const { showAlert } = useModal();
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [currentAnalysis, setCurrentAnalysis] = useState(assessment?.aiAnalysis || null);
 
@@ -61,7 +63,11 @@ export default function SkillRadarAnalysisModal({
 
   const handleRunAIAnalysis = async () => {
     if (summary.completedCount === 0) {
-      alert('กรุณาทำการประเมินทักษะอย่างน้อย 1 รายการก่อนขอรับบทวิเคราะห์');
+      await showAlert({
+        type: 'warning',
+        title: 'ยังไม่มีผลการประเมิน',
+        message: 'กรุณาทำการประเมินทักษะอย่างน้อย 1 รายการก่อนขอรับบทวิเคราะห์',
+      });
       return;
     }
 
@@ -106,11 +112,19 @@ export default function SkillRadarAnalysisModal({
           onAnalysisUpdated(updatedRecord);
         }
       } else {
-        alert('เกิดข้อผิดพลาดในการประมวลผลบทวิเคราะห์');
+        await showAlert({
+          type: 'error',
+          title: 'ประมวลผลล้มเหลว',
+          message: 'เกิดข้อผิดพลาดในการประมวลผลบทวิเคราะห์',
+        });
       }
     } catch (e) {
       console.error('Run AI Analysis error', e);
-      alert('ไม่สามารถเชื่อมต่อระบบวิเคราะห์ได้');
+      await showAlert({
+        type: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถเชื่อมต่อระบบวิเคราะห์ได้',
+      });
     } finally {
       setIsAnalyzingAI(false);
     }

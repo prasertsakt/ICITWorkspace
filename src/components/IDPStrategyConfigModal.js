@@ -25,6 +25,9 @@ import {
   Lightbulb,
   Check,
   BookOpen,
+  ArrowRight,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { DEFAULT_IDP_STRATEGY_CONFIG_2569 } from '../lib/constants';
 import { saveStrategyConfig, duplicateStrategyConfig, subscribeStrategyConfig } from '../lib/idpService';
@@ -77,6 +80,7 @@ export default function IDPStrategyConfigModal({
   // Duplicate states
   const [showDuplicateBox, setShowDuplicateBox] = useState(false);
   const [duplicateFromYear, setDuplicateFromYear] = useState(String(Number(currentFiscalYear) - 1));
+  const [isConfirmDuplicateModalOpen, setIsConfirmDuplicateModalOpen] = useState(false);
 
   // Dynamic fiscal year list
   const availableFiscalYears = useMemo(() => getAvailableFiscalYears(2568, 1, true), []);
@@ -304,15 +308,16 @@ export default function IDPStrategyConfigModal({
   // ------------------------------------
   // Duplicate Action
   // ------------------------------------
-  const handleDuplicate = async () => {
+  const handleDuplicate = () => {
     if (duplicateFromYear === selectedYear) {
       setErrorMsg('ปีงบประมาณต้นทางและปลายทางต้องไม่ตรงกัน');
       return;
     }
+    setErrorMsg('');
+    setIsConfirmDuplicateModalOpen(true);
+  };
 
-    const confirmMsg = `ยืนยันการคัดลอกการตั้งค่าประเด็นยุทธศาสตร์จากปีงบประมาณ ${duplicateFromYear} มายังปี ${selectedYear}?`;
-    if (!window.confirm(confirmMsg)) return;
-
+  const handleExecuteDuplicate = async () => {
     setIsSaving(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -323,11 +328,13 @@ export default function IDPStrategyConfigModal({
         selectedYear,
         currentPersonnel || currentUser
       );
-      setSuccessMsg(`คัดลอกการตั้งค่าจากปีงบประมาณ ${duplicateFromYear} มายังปี ${selectedYear} สำเร็จ`);
+      setSuccessMsg(`คัดลอกการตั้งค่าประเด็นยุทธศาสตร์จากปีงบประมาณ ${duplicateFromYear} มายังปี ${selectedYear} สำเร็จ`);
       setShowDuplicateBox(false);
+      setIsConfirmDuplicateModalOpen(false);
       if (typeof onSaved === 'function') {
         onSaved(duplicated);
       }
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (e) {
       setErrorMsg(e.message || 'เกิดข้อผิดพลาดในการคัดลอกข้อมูล');
     } finally {
@@ -1520,6 +1527,232 @@ export default function IDPStrategyConfigModal({
           </div>
         </div>
       </div>
+
+      {/* Custom Themed Confirmation Modal for Duplicating Configuration */}
+      {isConfirmDuplicateModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 10005,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+          onClick={() => {
+            if (!isSaving) setIsConfirmDuplicateModalOpen(false);
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9)',
+              overflow: 'hidden',
+              animation: 'modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Accent Gradient Bar */}
+            <div
+              style={{
+                height: '5px',
+                background: 'linear-gradient(90deg, #6366F1 0%, #4F46E5 50%, #4338CA 100%)',
+              }}
+            />
+
+            {/* Modal Content */}
+            <div style={{ padding: '1.75rem 1.75rem 1.5rem' }}>
+              {/* Icon & Title Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                    border: '1px solid #C7D2FE',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    color: '#4F46E5',
+                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.15)',
+                  }}
+                >
+                  <Copy size={24} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      color: '#1E1B4B',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    ยืนยันการคัดลอกประเด็นยุทธศาสตร์
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.825rem', color: '#64748B', lineHeight: 1.5 }}>
+                    คัดลอกโครงสร้างแผนกลยุทธ์และประเด็นยุทธศาสตร์
+                  </p>
+                </div>
+              </div>
+
+              {/* Transfer Flow Visual Box */}
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  border: '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '10px',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <Calendar size={14} color="#64748B" />
+                  <span>ปีงบประมาณ {duplicateFromYear}</span>
+                </div>
+
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: '#EEF2FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#4F46E5',
+                  }}
+                >
+                  <ArrowRight size={16} />
+                </div>
+
+                <div
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                    border: '1.5px solid #818CF8',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    color: '#312E81',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 4px rgba(79, 70, 229, 0.1)',
+                  }}
+                >
+                  <Calendar size={14} color="#4F46E5" />
+                  <span>ปีงบประมาณ {selectedYear}</span>
+                </div>
+              </div>
+
+              {/* Notice Alert */}
+              <div
+                style={{
+                  background: '#FEF3C7',
+                  border: '1px solid #FDE68A',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5 }}>
+                  <strong>คำเตือน:</strong> ข้อมูลวิสัยทัศน์, CKPI, SFA และ SO ของปีงบประมาณ{' '}
+                  <strong>{selectedYear}</strong> จะถูกแทนที่ด้วยข้อมูลจากปีงบประมาณ <strong>{duplicateFromYear}</strong> ทั้งหมด
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => setIsConfirmDuplicateModalOpen(false)}
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '10px',
+                    border: '1.5px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleExecuteDuplicate}
+                  style={{
+                    padding: '0.65rem 1.5rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '0.875rem',
+                    fontWeight: 700,
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>กำลังคัดลอก...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} />
+                      <span>ยืนยันการคัดลอก</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
