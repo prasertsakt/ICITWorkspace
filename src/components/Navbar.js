@@ -204,10 +204,11 @@ export default function Navbar() {
 
                 <button
                   onClick={handleSignOut}
-                  className="btn btn-ghost btn-icon desktop-only-action"
+                  className="navbar-logout-btn"
                   title="ออกจากระบบ"
+                  aria-label="ออกจากระบบ"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} />
                 </button>
               </div>
             ) : (

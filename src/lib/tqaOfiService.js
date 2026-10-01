@@ -96,6 +96,73 @@ export function computeOverallStatus(rounds, currentStatus = 'PENDING') {
 }
 
 /**
+ * Normalizes rich text HTML for TQA / IMS Action Reports:
+ * 1. Ensures all links with relative/missing protocol (e.g. href="kmutnb.link/..." or href="www.google.com") are converted to external absolute URLs (href="https://...")
+ * 2. Ensures all links have target="_blank" and rel="noopener noreferrer"
+ * 3. Auto-links plain text URLs if they are not already inside <a> tags
+ */
+export function normalizeActionReportHtml(html) {
+  if (!html || typeof html !== 'string') return '';
+
+  let processed = html;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${processed}</div>`, 'text/html');
+      const root = doc.body.firstElementChild;
+
+      if (root) {
+        // 1. Fix all existing <a> tags
+        root.querySelectorAll('a').forEach((a) => {
+          let h = (a.getAttribute('href') || '').trim();
+          if (
+            h &&
+            !/^https?:\/\//i.test(h) &&
+            !h.startsWith('mailto:') &&
+            !h.startsWith('tel:') &&
+            !h.startsWith('#')
+          ) {
+            // If it starts with relative pathname, fix it to https://
+            const clean = h.replace(/^\/+/, '');
+            a.setAttribute('href', `https://${clean}`);
+          }
+          a.setAttribute('target', '_blank');
+          a.setAttribute('rel', 'noopener noreferrer');
+        });
+
+        // 2. Auto-link plain text URLs inside text nodes (not inside <a>)
+        const urlRegex = /(?:\bhttps?:\/\/[\w.-]+(?:\.[\w\.-]+)+[\w\-._~:/?#[\]@!$&'()*+,;=]+|\b[a-zA-Z0-9-]+\.(?:link|com|org|net|edu|ac\.th|co\.th|in\.th|gov\.th|go\.th|io|app|dev)(?:\/[^\s<]*)?)/gi;
+
+        const walk = (node) => {
+          if (node.nodeType === 3) {
+            // Text node
+            const text = node.nodeValue;
+            if (urlRegex.test(text)) {
+              const span = document.createElement('span');
+              span.innerHTML = text.replace(urlRegex, (url) => {
+                const fullUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+                return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+              });
+              node.parentNode.replaceChild(span, node);
+            }
+          } else if (node.nodeType === 1 && node.nodeName.toLowerCase() !== 'a') {
+            Array.from(node.childNodes).forEach(walk);
+          }
+        };
+
+        Array.from(root.childNodes).forEach(walk);
+        return root.innerHTML;
+      }
+    } catch {
+      // Ignore DOM parser fallback
+    }
+  }
+
+  return processed;
+}
+
+/**
  * Real-Time Subscription to TQA OFI Items for a specific Fiscal Year
  * Default: 2568 is pre-seeded with Feedback Report data.
  * Other / future years start completely empty unless populated by admin.

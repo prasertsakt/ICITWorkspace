@@ -205,9 +205,67 @@ export default function AdminManualEmailModal({
   };
 
   const handleAddLink = () => {
-    const url = prompt('ระบุ URL ลิงก์ที่ต้องการแทรก (เช่น https://...):');
-    if (url) {
-      executeCommand('createLink', url);
+    const selection = window.getSelection();
+    let savedRange = null;
+    let selectedText = '';
+
+    if (selection && selection.rangeCount > 0) {
+      try {
+        savedRange = selection.getRangeAt(0).cloneRange();
+        selectedText = savedRange.toString().trim();
+      } catch {
+        savedRange = null;
+      }
+    }
+
+    let defaultUrl = 'https://';
+    if (selectedText.startsWith('http://') || selectedText.startsWith('https://')) {
+      defaultUrl = selectedText;
+    } else if (selectedText.includes('.') && !selectedText.includes(' ') && selectedText.length > 3) {
+      defaultUrl = `https://${selectedText}`;
+    }
+
+    const inputUrl = window.prompt('ระบุ URL ลิงก์ที่ต้องการแทรก (เช่น https://...):', defaultUrl);
+    if (!inputUrl || !inputUrl.trim() || inputUrl.trim() === 'https://' || inputUrl.trim() === 'http://') {
+      return;
+    }
+
+    let finalUrl = inputUrl.trim();
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`;
+    }
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+
+    if (savedRange && selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    }
+
+    if (savedRange && !savedRange.collapsed && selectedText.length > 0) {
+      executeCommand('createLink', finalUrl);
+    } else {
+      const linkText = selectedText || finalUrl;
+      const linkHtml = `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="color: #4F46E5; text-decoration: underline; font-weight: 500; word-break: break-all;">${linkText}</a>&nbsp;`;
+      executeCommand('insertHTML', linkHtml);
+    }
+
+    if (editorRef.current) {
+      const anchors = editorRef.current.querySelectorAll('a');
+      anchors.forEach((a) => {
+        let href = a.getAttribute('href') || '';
+        if (href && !/^https?:\/\//i.test(href) && !href.startsWith('mailto:') && !href.startsWith('#')) {
+          a.setAttribute('href', `https://${href}`);
+        }
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.style.color = '#4F46E5';
+        a.style.textDecoration = 'underline';
+        a.style.fontWeight = '500';
+      });
+      setContentHtml(editorRef.current.innerHTML);
     }
   };
 

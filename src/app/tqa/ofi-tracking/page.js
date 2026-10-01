@@ -10,6 +10,7 @@ import {
   subscribeTqaReportConfig,
   canEditTqaOfiProgress,
   normalizeTqaRounds,
+  normalizeActionReportHtml,
 } from '@/lib/tqaOfiService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
@@ -1263,6 +1264,7 @@ export default function TqaOfiTrackingPage() {
 
                                   {hasReport ? (
                                     <div
+                                      className="tqa-rich-content"
                                       style={{
                                         fontSize: '0.825rem',
                                         lineHeight: 1.5,
@@ -1274,7 +1276,7 @@ export default function TqaOfiTrackingPage() {
                                         borderRadius: '6px',
                                         border: '1px solid #F1F5F9',
                                       }}
-                                      dangerouslySetInnerHTML={{ __html: rData.actionReport }}
+                                      dangerouslySetInnerHTML={{ __html: normalizeActionReportHtml(rData.actionReport) }}
                                     />
                                   ) : (
                                     <div style={{ fontSize: '0.8rem', color: '#94A3B8', fontStyle: 'italic', padding: '10px 0' }}>

@@ -71,7 +71,7 @@ export default function TqaOfiActionModal({
       setSuccessMsg('');
 
       if (editorRef.current) {
-        editorRef.current.innerHTML = roundObj.actionReport || '';
+        editorRef.current.innerHTML = formatHtmlLinks(roundObj.actionReport || '');
       }
     }
   }, [isOpen, ofiItem, initialRound]);
@@ -99,7 +99,7 @@ export default function TqaOfiActionModal({
     setHtmlContent(newRoundObj.actionReport || '');
 
     if (editorRef.current) {
-      editorRef.current.innerHTML = newRoundObj.actionReport || '';
+      editorRef.current.innerHTML = formatHtmlLinks(newRoundObj.actionReport || '');
     }
     setErrorMsg('');
     setSuccessMsg('');
@@ -107,8 +107,35 @@ export default function TqaOfiActionModal({
 
   if (!isOpen || !ofiItem) return null;
 
+  const formatHtmlLinks = (html) => {
+    if (!html) return '';
+    if (typeof window !== 'undefined') {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const anchors = tempDiv.querySelectorAll('a');
+      anchors.forEach((a) => {
+        let href = a.getAttribute('href') || '';
+        if (href && !/^https?:\/\//i.test(href) && !href.startsWith('mailto:') && !href.startsWith('#')) {
+          href = `https://${href}`;
+          a.setAttribute('href', href);
+        }
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.style.color = '#2563EB';
+        a.style.textDecoration = 'underline';
+        a.style.fontWeight = '500';
+        a.style.wordBreak = 'break-all';
+      });
+      return tempDiv.innerHTML;
+    }
+    return html;
+  };
+
   const handleFormat = (command, value = null) => {
     if (!canEdit) return;
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
     document.execCommand(command, false, value);
     if (editorRef.current) {
       setHtmlContent(editorRef.current.innerHTML);
@@ -117,12 +144,63 @@ export default function TqaOfiActionModal({
 
   const handleInsertLink = () => {
     if (!canEdit) return;
-    const url = prompt('ระบุ URL ลิงก์:', 'https://');
-    if (url) {
-      document.execCommand('createLink', false, url);
-      if (editorRef.current) {
-        setHtmlContent(editorRef.current.innerHTML);
+
+    // 1. Get current selection from window
+    const selection = window.getSelection();
+    let savedRange = null;
+    let selectedText = '';
+
+    if (selection && selection.rangeCount > 0) {
+      try {
+        savedRange = selection.getRangeAt(0).cloneRange();
+        selectedText = savedRange.toString().trim();
+      } catch {
+        savedRange = null;
       }
+    }
+
+    // 2. Pre-fill default URL from selected text if it looks like a URL
+    let defaultUrl = 'https://';
+    if (selectedText.startsWith('http://') || selectedText.startsWith('https://')) {
+      defaultUrl = selectedText;
+    } else if (selectedText.includes('.') && !selectedText.includes(' ') && selectedText.length > 3) {
+      defaultUrl = `https://${selectedText}`;
+    }
+
+    const inputUrl = window.prompt('ระบุ URL ลิงก์ที่ต้องการแทรก (เช่น https://...):', defaultUrl);
+    if (!inputUrl || !inputUrl.trim() || inputUrl.trim() === 'https://' || inputUrl.trim() === 'http://') {
+      return;
+    }
+
+    let finalUrl = inputUrl.trim();
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`;
+    }
+
+    // 3. Restore focus & selection
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+
+    if (savedRange && selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    }
+
+    // 4. If text was selected, execute createLink. Otherwise insert HTML anchor element
+    if (savedRange && !savedRange.collapsed && selectedText.length > 0) {
+      document.execCommand('createLink', false, finalUrl);
+    } else {
+      const linkText = selectedText || finalUrl;
+      const linkHtml = `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563EB; text-decoration: underline; font-weight: 500; word-break: break-all;">${linkText}</a>&nbsp;`;
+      document.execCommand('insertHTML', false, linkHtml);
+    }
+
+    // 5. Ensure all <a> tags inside editor have target="_blank", rel="noopener noreferrer", and blue underline styling
+    if (editorRef.current) {
+      const formatted = formatHtmlLinks(editorRef.current.innerHTML);
+      editorRef.current.innerHTML = formatted;
+      setHtmlContent(formatted);
     }
   };
 
@@ -150,7 +228,8 @@ export default function TqaOfiActionModal({
     setSuccessMsg('');
 
     try {
-      const contentToSave = editorRef.current ? editorRef.current.innerHTML : htmlContent;
+      const rawContent = editorRef.current ? editorRef.current.innerHTML : htmlContent;
+      const contentToSave = formatHtmlLinks(rawContent);
       const updatedByName = currentPersonnel?.name || currentUser?.displayName || currentUser?.email || 'Admin';
       const nowIso = new Date().toISOString();
 
@@ -517,6 +596,7 @@ export default function TqaOfiActionModal({
               >
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('bold')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -526,6 +606,7 @@ export default function TqaOfiActionModal({
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('italic')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -535,6 +616,7 @@ export default function TqaOfiActionModal({
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('underline')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -547,6 +629,7 @@ export default function TqaOfiActionModal({
 
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('insertUnorderedList')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -556,6 +639,7 @@ export default function TqaOfiActionModal({
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('insertOrderedList')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -568,6 +652,7 @@ export default function TqaOfiActionModal({
 
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('formatBlock', '<h3>')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px', fontWeight: 800, fontSize: '0.8rem' }}
@@ -577,6 +662,7 @@ export default function TqaOfiActionModal({
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={handleInsertLink}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -586,6 +672,7 @@ export default function TqaOfiActionModal({
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat('removeFormat')}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
@@ -599,6 +686,7 @@ export default function TqaOfiActionModal({
             {/* Editable Content Area */}
             <div
               ref={editorRef}
+              className="tqa-rich-content"
               contentEditable={canEdit}
               suppressContentEditableWarning
               onInput={(e) => setHtmlContent(e.currentTarget.innerHTML)}
