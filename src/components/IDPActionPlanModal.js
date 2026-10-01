@@ -91,9 +91,7 @@ export default function IDPActionPlanModal({
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Evaluation Form State
-  const [evalResultType, setEvalResultType] = useState('COMPLETED'); // 'COMPLETED' | 'NEARLY_COMPLETED'
-  const [evalPercent, setEvalPercent] = useState(100);
+  // Evaluation Form State (percent & resultType are auto-calculated from items)
   const [evalReason, setEvalReason] = useState('');
 
   // Active item accordion for mobile / detailed editing
@@ -106,6 +104,7 @@ export default function IDPActionPlanModal({
   const [alignmentTargetItemId, setAlignmentTargetItemId] = useState(null);
   const [alignTab, setAlignTab] = useState('STRATEGY'); // 'STRATEGY' | 'SKILL_MAP' | 'MISSION'
   const [alignSearch, setAlignSearch] = useState('');
+  const [skillAreaFilter, setSkillAreaFilter] = useState('ALL'); // 'ALL' | area shortName
 
   // Methods Selector Modal State
   const [methodModalItemId, setMethodModalItemId] = useState(null);
@@ -137,8 +136,6 @@ export default function IDPActionPlanModal({
     if (isOpen && plan) {
       setItems(JSON.parse(JSON.stringify(plan.items || [])));
       const ev = plan.signatures?.evaluation || {};
-      setEvalResultType(ev.resultType || 'COMPLETED');
-      setEvalPercent(ev.percent !== undefined ? ev.percent : 100);
       setEvalReason(ev.reason || '');
       setHasUnsavedChanges(false);
       if (plan.items?.length > 0) {
@@ -200,6 +197,19 @@ export default function IDPActionPlanModal({
     return list;
   }, [skillMapConfig]);
 
+  // Unique work area tabs for Skill Map alignment filter
+  const skillWorkAreaTabs = useMemo(() => {
+    const seen = new Set();
+    const tabs = [];
+    availableSkills.forEach((sk) => {
+      if (!seen.has(sk.areaName)) {
+        seen.add(sk.areaName);
+        tabs.push({ name: sk.areaName, color: sk.areaColor });
+      }
+    });
+    return tabs;
+  }, [availableSkills]);
+
   // Missions list
   const availableMissions = useMemo(() => {
     if (strategyConfig?.missions && strategyConfig.missions.length > 0) {
@@ -227,6 +237,18 @@ export default function IDPActionPlanModal({
     if (competencyFilter === 'ALL') return items;
     return items.filter((it) => (it.competencyType || 'CORE') === competencyFilter);
   }, [items, competencyFilter]);
+
+  // Auto-calculate evaluation percentage from individual item achievement statuses
+  const evalPercent = useMemo(() => {
+    if (!items || items.length === 0) return 0;
+    const achievedCount = items.filter((it) => it.evaluation?.status === 'ACHIEVED').length;
+    return Math.round((achievedCount / items.length) * 100);
+  }, [items]);
+
+  // Auto-derive result type: 100% = COMPLETED, otherwise NEARLY_COMPLETED
+  const evalResultType = useMemo(() => {
+    return evalPercent >= 100 ? 'COMPLETED' : 'NEARLY_COMPLETED';
+  }, [evalPercent]);
 
   const targetAlignmentItem = useMemo(() => {
     if (!alignmentTargetItemId) return null;
@@ -1416,7 +1438,7 @@ export default function IDPActionPlanModal({
                                         }}
                                       >
                                         <PenTool size={13} />
-                                        <span>{hasReport ? 'แก้ไขรายงานผล (WYSIWYG)' : 'เขียนรายงานผล (WYSIWYG)'}</span>
+                                        <span>{hasReport ? 'แก้ไขรายงานผล' : 'เขียนรายงานผล'}</span>
                                       </button>
                                     </div>
                                   );
@@ -1863,27 +1885,27 @@ export default function IDPActionPlanModal({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {/* Evaluation Result Type */}
-                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700, color: '#1E293B', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700, color: evalResultType === 'COMPLETED' ? '#15803D' : '#94A3B8', cursor: 'default' }}>
                       <input
                         type="radio"
                         name="evalResultType"
                         value="COMPLETED"
                         checked={evalResultType === 'COMPLETED'}
-                        onChange={(e) => setEvalResultType(e.target.value)}
-                        style={{ accentColor: '#16A34A' }}
+                        readOnly
+                        style={{ accentColor: '#16A34A', pointerEvents: 'none' }}
                       />
                       <span>ดำเนินการพัฒนาตนเองสำเร็จตามแผน IDP</span>
                     </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700, color: '#1E293B', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 700, color: evalResultType === 'NEARLY_COMPLETED' ? '#EA580C' : '#94A3B8', cursor: 'default' }}>
                       <input
                         type="radio"
                         name="evalResultType"
                         value="NEARLY_COMPLETED"
                         checked={evalResultType === 'NEARLY_COMPLETED'}
-                        onChange={(e) => setEvalResultType(e.target.value)}
-                        style={{ accentColor: '#EA580C' }}
+                        readOnly
+                        style={{ accentColor: '#EA580C', pointerEvents: 'none' }}
                       />
                       <span>ดำเนินการพัฒนาตนเองเกือบสำเร็จตามแผน IDP</span>
                     </label>
@@ -1894,15 +1916,29 @@ export default function IDPActionPlanModal({
                       <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                         คิดเป็นร้อยละ (%):
                       </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={evalPercent}
-                        onChange={(e) => setEvalPercent(e.target.value)}
-                        className="form-control"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1' }}
-                      />
+                      <div
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: evalPercent >= 100 ? '#F0FDF4' : evalPercent >= 50 ? '#FFFBEB' : '#FEF2F2',
+                          fontSize: '1.1rem',
+                          fontWeight: 800,
+                          color: evalPercent >= 100 ? '#15803D' : evalPercent >= 50 ? '#92400E' : '#B91C1C',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>{evalPercent}%</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94A3B8' }}>
+                          ({items.filter((it) => it.evaluation?.status === 'ACHIEVED').length}/{items.length} รายการที่บรรลุ)
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.7rem', color: '#94A3B8', margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                        * คำนวณอัตโนมัติจากจำนวนสมรรถนะที่ประเมินว่า "บรรลุตามตัวชี้วัด"
+                      </p>
                     </div>
 
                     <div>
@@ -3141,31 +3177,76 @@ export default function IDPActionPlanModal({
               </button>
             </div>
 
-            {/* Modal Body & Search */}
+            {/* Modal Body & Search / Area Tabs */}
             <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Search Bar */}
-              <div style={{ position: 'relative' }}>
-                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="text"
-                  value={alignSearch}
-                  onChange={(e) => setAlignSearch(e.target.value)}
-                  placeholder={
-                    alignTab === 'STRATEGY'
-                      ? 'ค้นหาประเด็นยุทธศาสตร์ SFA, SO, ตัวชี้วัด CKPI...'
-                      : alignTab === 'SKILL_MAP'
-                      ? 'ค้นหาทักษะ Skill Map, รหัส, หมวดหมู่...'
-                      : 'ค้นหาพันธกิจของสำนักฯ...'
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem 0.55rem 2.25rem',
-                    borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.85rem',
-                  }}
-                />
-              </div>
+              {/* Skill Map: Work Area Tab Buttons | Others: Search Bar */}
+              {alignTab === 'SKILL_MAP' ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSkillAreaFilter('ALL')}
+                    style={{
+                      padding: '5px 14px',
+                      borderRadius: '999px',
+                      border: skillAreaFilter === 'ALL' ? '1.5px solid #4F46E5' : '1px solid #CBD5E1',
+                      background: skillAreaFilter === 'ALL' ? 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)' : '#FFFFFF',
+                      color: skillAreaFilter === 'ALL' ? '#FFFFFF' : '#475569',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: skillAreaFilter === 'ALL' ? '0 2px 6px rgba(79, 70, 229, 0.25)' : 'none',
+                    }}
+                  >
+                    ทั้งหมด
+                  </button>
+                  {skillWorkAreaTabs.map((tab) => {
+                    const isActive = skillAreaFilter === tab.name;
+                    return (
+                      <button
+                        key={tab.name}
+                        type="button"
+                        onClick={() => setSkillAreaFilter(tab.name)}
+                        style={{
+                          padding: '5px 14px',
+                          borderRadius: '999px',
+                          border: isActive ? `1.5px solid ${tab.color}` : '1px solid #CBD5E1',
+                          background: isActive ? tab.color : '#FFFFFF',
+                          color: isActive ? '#FFFFFF' : '#475569',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          boxShadow: isActive ? `0 2px 6px ${tab.color}40` : 'none',
+                        }}
+                      >
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ position: 'relative' }}>
+                  <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    value={alignSearch}
+                    onChange={(e) => setAlignSearch(e.target.value)}
+                    placeholder={
+                      alignTab === 'STRATEGY'
+                        ? 'ค้นหาประเด็นยุทธศาสตร์ SFA, SO, ตัวชี้วัด CKPI...'
+                        : 'ค้นหาพันธกิจของสำนักฯ...'
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem 0.55rem 2.25rem',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.85rem',
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Items List for active tab */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -3275,12 +3356,9 @@ export default function IDPActionPlanModal({
 
                 {alignTab === 'SKILL_MAP' && (() => {
                   // Group sub-skills by competency name for organized display
+                  // Filter by selected work area tab
                   const filteredSkills = availableSkills.filter(
-                    (sk) => !alignSearch ||
-                      (sk.title || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
-                      (sk.competencyName || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
-                      (sk.areaName || '').toLowerCase().includes(alignSearch.toLowerCase()) ||
-                      (sk.description || '').toLowerCase().includes(alignSearch.toLowerCase())
+                    (sk) => skillAreaFilter === 'ALL' || sk.areaName === skillAreaFilter
                   );
 
                   // Group by areaName -> competencyName
