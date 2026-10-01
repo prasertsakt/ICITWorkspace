@@ -925,45 +925,36 @@ export default function TqaOfiTrackingPage() {
                         )}
                       </div>
 
-                      {/* Status Action Dropdown / Badge */}
+                      {/* Status Progress Badge */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {canEdit ? (
-                          <select
-                            className="form-input"
-                            style={{
-                              padding: '4px 10px',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              borderRadius: '999px',
-                              color: statusCfg.color,
-                              background: statusCfg.bg,
-                              borderColor: statusCfg.border,
-                              cursor: 'pointer',
-                              width: 'auto',
-                            }}
-                            value={item.status || 'PENDING'}
-                            onChange={(e) => handleQuickStatusChange(item, e.target.value)}
-                            title="คลิกเพื่อเปลี่ยนสถานะภาพรวมของข้อเสนอแนะนี้"
-                          >
-                            <option value="PENDING">🟡 รอดำเนินการ</option>
-                            <option value="IN_PROGRESS">🔵 กำลังดำเนินการ</option>
-                            <option value="COMPLETED">🟢 เสร็จสิ้นแล้ว</option>
-                          </select>
-                        ) : (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 12px',
+                            borderRadius: '999px',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            color: statusCfg.color,
+                            background: statusCfg.bg,
+                            border: `1px solid ${statusCfg.border}`,
+                          }}
+                        >
                           <span
                             style={{
-                              padding: '4px 12px',
-                              borderRadius: '999px',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              color: statusCfg.color,
-                              background: statusCfg.bg,
-                              border: `1px solid ${statusCfg.border}`,
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: statusCfg.color,
                             }}
-                          >
-                            {statusCfg.label}
-                          </span>
-                        )}
+                          />
+                          {item.status === 'COMPLETED'
+                            ? 'เสร็จสิ้นแล้ว'
+                            : reportedRoundsCount > 0
+                            ? `กำลังดำเนินการ (${reportedRoundsCount}/3 รอบ)`
+                            : 'รอดำเนินการ'}
+                        </span>
 
                         {isAdmin && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1016,9 +1007,7 @@ export default function TqaOfiTrackingPage() {
                         { key: 'round3', num: 3, label: 'รอบที่ 3' },
                       ].map((r) => {
                         const rData = itemRounds[r.key] || {};
-                        const rStatus = rData.status || 'PENDING';
-                        const rCfg = TQA_STATUS_CONFIG[rStatus] || TQA_STATUS_CONFIG.PENDING;
-                        const hasReport = !!rData.actionReport;
+                        const hasReport = !!(rData.actionReport && rData.actionReport.trim());
 
                         return (
                           <button
@@ -1034,8 +1023,8 @@ export default function TqaOfiTrackingPage() {
                               justifyContent: 'space-between',
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              border: `1px solid ${hasReport ? rCfg.border : '#E2E8F0'}`,
-                              background: '#FFFFFF',
+                              border: `1px solid ${hasReport ? '#A7F3D0' : '#E2E8F0'}`,
+                              background: hasReport ? '#ECFDF5' : '#FFFFFF',
                               cursor: 'pointer',
                               textAlign: 'left',
                               transition: 'all 0.15s ease',
@@ -1048,7 +1037,7 @@ export default function TqaOfiTrackingPage() {
                                   width: '18px',
                                   height: '18px',
                                   borderRadius: '50%',
-                                  background: hasReport ? '#6D28D9' : '#E2E8F0',
+                                  background: hasReport ? '#059669' : '#E2E8F0',
                                   color: hasReport ? '#FFFFFF' : '#64748B',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -1059,24 +1048,24 @@ export default function TqaOfiTrackingPage() {
                               >
                                 {r.num}
                               </span>
-                              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: hasReport ? '#065F46' : '#334155' }}>
                                 {r.label}
                               </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <span
                                 style={{
-                                  padding: '2px 6px',
+                                  padding: '2px 7px',
                                   borderRadius: '999px',
                                   fontSize: '0.68rem',
                                   fontWeight: 700,
-                                  background: rCfg.bg,
-                                  color: rCfg.color,
+                                  background: hasReport ? '#D1FAE5' : '#F1F5F9',
+                                  color: hasReport ? '#047857' : '#64748B',
                                 }}
                               >
-                                {rCfg.label}
+                                {hasReport ? 'รายงานแล้ว' : 'ยังไม่รายงาน'}
                               </span>
-                              {hasReport && <CheckCircle2 size={12} color="#10B981" />}
+                              {hasReport && <CheckCircle2 size={13} color="#059669" />}
                             </div>
                           </button>
                         );
@@ -1225,9 +1214,7 @@ export default function TqaOfiTrackingPage() {
                             { key: 'round3', num: 3, label: 'รอบที่ 3 (ครั้งที่ 3)' },
                           ].map((r) => {
                             const rData = itemRounds[r.key] || {};
-                            const rStatus = rData.status || 'PENDING';
-                            const rCfg = TQA_STATUS_CONFIG[rStatus] || TQA_STATUS_CONFIG.PENDING;
-                            const hasReport = !!rData.actionReport;
+                            const hasReport = !!(rData.actionReport && rData.actionReport.trim());
 
                             return (
                               <div
@@ -1235,7 +1222,7 @@ export default function TqaOfiTrackingPage() {
                                 style={{
                                   background: '#FFFFFF',
                                   borderRadius: '10px',
-                                  border: '1px solid #E2E8F0',
+                                  border: `1px solid ${hasReport ? '#A7F3D0' : '#E2E8F0'}`,
                                   padding: '1rem',
                                   display: 'flex',
                                   flexDirection: 'column',
@@ -1253,12 +1240,12 @@ export default function TqaOfiTrackingPage() {
                                         borderRadius: '999px',
                                         fontSize: '0.7rem',
                                         fontWeight: 700,
-                                        background: rCfg.bg,
-                                        color: rCfg.color,
-                                        border: `1px solid ${rCfg.border}`,
+                                        background: hasReport ? '#D1FAE5' : '#F1F5F9',
+                                        color: hasReport ? '#047857' : '#64748B',
+                                        border: `1px solid ${hasReport ? '#A7F3D0' : '#E2E8F0'}`,
                                       }}
                                     >
-                                      {rCfg.label}
+                                      {hasReport ? '🟢 รายงานแล้ว' : '⚪ ยังไม่รายงาน'}
                                     </span>
                                   </div>
 

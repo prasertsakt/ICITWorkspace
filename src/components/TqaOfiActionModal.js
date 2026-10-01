@@ -230,23 +230,24 @@ export default function TqaOfiActionModal({
     try {
       const rawContent = editorRef.current ? editorRef.current.innerHTML : htmlContent;
       const contentToSave = formatHtmlLinks(rawContent);
+      const isReportFilled = !!(contentToSave && contentToSave.replace(/<[^>]*>/g, '').trim());
       const updatedByName = currentPersonnel?.name || currentUser?.displayName || currentUser?.email || 'Admin';
       const nowIso = new Date().toISOString();
 
-      // Build updated rounds
+      // Build updated rounds (step-based reporting)
       const updatedRounds = {
         ...roundsData,
         [activeRound]: {
           ...roundsData[activeRound],
           round: activeRound === 'round1' ? 1 : activeRound === 'round2' ? 2 : 3,
-          status: currentRoundStatus,
+          status: isReportFilled ? 'COMPLETED' : 'PENDING',
           actionReport: contentToSave,
-          reportedBy: updatedByName,
-          reportedAt: nowIso,
+          reportedBy: isReportFilled ? updatedByName : '',
+          reportedAt: isReportFilled ? nowIso : '',
         },
       };
 
-      const computedStatus = computeOverallStatus(updatedRounds, currentRoundStatus);
+      const computedStatus = computeOverallStatus(updatedRounds);
 
       const payload = {
         ...ofiItem,
@@ -259,7 +260,7 @@ export default function TqaOfiActionModal({
 
       await saveTqaOfiItem(payload, fiscalYear, updatedByName);
       setRoundsData(updatedRounds);
-      setSuccessMsg(`บันทึกผลการดำเนินงาน ${ROUND_TABS.find((r) => r.key === activeRound)?.label} เรียบร้อยแล้ว`);
+      setSuccessMsg(`บันทึกรายงานผล ${ROUND_TABS.find((r) => r.key === activeRound)?.label} เรียบร้อยแล้ว`);
       if (onSaved) onSaved(payload);
       setTimeout(() => {
         onClose();
@@ -425,23 +426,39 @@ export default function TqaOfiActionModal({
                 </div>
                 <span>{tab.label}</span>
 
-                {/* Status Dot / Pill */}
-                <span
-                  style={{
-                    padding: '2px 7px',
-                    borderRadius: '999px',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    background: statusMeta.bg,
-                    color: statusMeta.color,
-                    border: `1px solid ${statusMeta.border}`,
-                  }}
-                >
-                  {statusMeta.label}
-                </span>
-
-                {hasReport && (
-                  <CheckCircle2 size={14} color="#10B981" title="มีรายงานผลแล้ว" />
+                {/* Status Pill */}
+                {hasReport ? (
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: '#ECFDF5',
+                      color: '#059669',
+                      border: '1px solid #A7F3D0',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <CheckCircle2 size={12} color="#059669" />
+                    รายงานแล้ว
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      background: '#F1F5F9',
+                      color: '#64748B',
+                      border: '1px solid #E2E8F0',
+                    }}
+                  >
+                    ยังไม่รายงาน
+                  </span>
                 )}
               </button>
             );
@@ -501,28 +518,44 @@ export default function TqaOfiActionModal({
               )}
             </div>
 
-            {/* Status Selector for Active Round */}
+            {/* Reporting Status Indicator for Active Round */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
-                สถานะผลการดำเนินงาน ({activeTabObj.label}):
+                สถานะ ({activeTabObj.label}):
               </span>
-              <select
-                className="form-input"
-                style={{
-                  width: 'auto',
-                  fontWeight: 700,
-                  color: TQA_STATUS_CONFIG[currentRoundStatus]?.color || '#334155',
-                  background: TQA_STATUS_CONFIG[currentRoundStatus]?.bg || '#FFFFFF',
-                  borderColor: TQA_STATUS_CONFIG[currentRoundStatus]?.border || '#CBD5E1',
-                }}
-                value={currentRoundStatus}
-                onChange={(e) => setCurrentRoundStatus(e.target.value)}
-                disabled={!canEdit}
-              >
-                <option value="PENDING">🟡 รอดำเนินการ (PENDING)</option>
-                <option value="IN_PROGRESS">🔵 กำลังดำเนินการ (IN_PROGRESS)</option>
-                <option value="COMPLETED">🟢 เสร็จสิ้นแล้ว (COMPLETED)</option>
-              </select>
+              {currentRoundMeta.actionReport && currentRoundMeta.actionReport.replace(/<[^>]*>/g, '').trim() ? (
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    background: '#ECFDF5',
+                    color: '#059669',
+                    border: '1px solid #A7F3D0',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <CheckCircle2 size={13} color="#059669" />
+                  บันทึกรายงานผลแล้ว
+                </span>
+              ) : (
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    background: '#FEF3C7',
+                    color: '#D97706',
+                    border: '1px solid #FDE68A',
+                  }}
+                >
+                  🟡 กำลังกรอกรายงานผล
+                </span>
+              )}
             </div>
           </div>
 

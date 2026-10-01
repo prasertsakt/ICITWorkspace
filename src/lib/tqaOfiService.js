@@ -81,18 +81,32 @@ export function normalizeTqaRounds(item) {
 }
 
 /**
- * Helper: Compute overall status and action report preview from 3 rounds
+ * Helper: Count how many rounds have been reported (0, 1, 2, or 3)
  */
-export function computeOverallStatus(rounds, currentStatus = 'PENDING') {
-  if (!rounds) return currentStatus;
-  // If round 3 has report or non-pending status, it represents current cycle
-  if (rounds.round3?.actionReport || rounds.round3?.status === 'COMPLETED' || rounds.round3?.status === 'IN_PROGRESS') {
-    return rounds.round3.status || 'PENDING';
+export function getReportedRoundsCount(rounds) {
+  if (!rounds) return 0;
+  const hasR1 = !!(rounds.round1?.actionReport && rounds.round1.actionReport.replace(/<[^>]*>/g, '').trim());
+  const hasR2 = !!(rounds.round2?.actionReport && rounds.round2.actionReport.replace(/<[^>]*>/g, '').trim());
+  const hasR3 = !!(rounds.round3?.actionReport && rounds.round3.actionReport.replace(/<[^>]*>/g, '').trim());
+  return (hasR1 ? 1 : 0) + (hasR2 ? 1 : 0) + (hasR3 ? 1 : 0);
+}
+
+/**
+ * Helper: Compute overall status from 3 rounds based on step-based progress (0/3, 1-2/3, 3/3)
+ */
+export function computeOverallStatus(rounds, manualOverride = null) {
+  if (manualOverride && ['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(manualOverride)) {
+    return manualOverride;
   }
-  if (rounds.round2?.actionReport || rounds.round2?.status === 'COMPLETED' || rounds.round2?.status === 'IN_PROGRESS') {
-    return rounds.round2.status || 'PENDING';
+  if (!rounds) return 'PENDING';
+  const count = getReportedRoundsCount(rounds);
+  if (count === 3 || !!(rounds.round3?.actionReport && rounds.round3.actionReport.replace(/<[^>]*>/g, '').trim())) {
+    return 'COMPLETED';
   }
-  return rounds.round1?.status || currentStatus || 'PENDING';
+  if (count > 0) {
+    return 'IN_PROGRESS';
+  }
+  return 'PENDING';
 }
 
 /**
