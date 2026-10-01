@@ -28,6 +28,7 @@ import {
   Printer,
   TrendingUp,
   FileCheck,
+  Compass,
 } from 'lucide-react';
 import {
   subscribeIdpRecords,
@@ -44,6 +45,7 @@ import {
 import { IDP_STATUSES, POSITIONS, MAIN_6_DEPTS } from '@/lib/constants';
 import IDPModal from '@/components/IDPModal';
 import IDPConfigModal from '@/components/IDPConfigModal';
+import IDPStrategyConfigModal from '@/components/IDPStrategyConfigModal';
 import IDPPreviewModal from '@/components/IDPPreviewModal';
 import IDPDuplicateModal from '@/components/IDPDuplicateModal';
 import IDPDeleteModal from '@/components/IDPDeleteModal';
@@ -58,6 +60,7 @@ export default function IDPNeedAnalysisPage() {
   // Data states
   const [idpRecords, setIdpRecords] = useState([]);
   const [idpConfig, setIdpConfig] = useState(null);
+  const [isStrategyModalOpen, setIsStrategyModalOpen] = useState(false);
   const [personnelList, setPersonnelList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [executiveList, setExecutiveList] = useState([]);
@@ -385,6 +388,27 @@ export default function IDPNeedAnalysisPage() {
         {/* Action Buttons for HR / Admin */}
         {isHR && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setIsStrategyModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 700,
+                fontSize: '0.825rem',
+                padding: '0.5rem 0.9rem',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <Compass size={15} style={{ color: '#A5B4FC' }} />
+              <span>ตั้งค่าประเด็นยุทธศาสตร์</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsConfigModalOpen(true)}
@@ -1004,6 +1028,20 @@ export default function IDPNeedAnalysisPage() {
           onSaved={(cfg) => {
             setIdpConfig(cfg);
             setIsConfigModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* 3.1 Master Strategic Config Modal */}
+      {isStrategyModalOpen && (
+        <IDPStrategyConfigModal
+          isOpen={isStrategyModalOpen}
+          onClose={() => setIsStrategyModalOpen(false)}
+          currentFiscalYear={fiscalYear}
+          currentUser={currentUser}
+          currentPersonnel={currentPersonnel}
+          onSaved={() => {
+            setIsStrategyModalOpen(false);
           }}
         />
       )}

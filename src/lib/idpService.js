@@ -4,6 +4,7 @@ import {
   DEFAULT_IDP_CORE_COMPETENCIES,
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
   DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
+  DEFAULT_IDP_STRATEGY_CONFIG_2569,
   IDP_STATUSES,
   POSITIONS,
 } from './constants';
@@ -24,6 +25,7 @@ import {
 
 export const LOCAL_KEY_IDP_RECORDS = 'icit_idp_records';
 export const LOCAL_KEY_IDP_CONFIG = 'icit_idp_config';
+export const LOCAL_KEY_STRATEGY_CONFIG = 'icit_idp_strategy_config';
 
 /**
  * Check if the current user is an authorized HR Officer (e.g. jarucha.j@icit.kmutnb.ac.th or Admin)
@@ -592,4 +594,131 @@ export function confirmDeputyDirectorSignature(record, currentUser, currentPerso
       },
     },
   };
+}
+
+/**
+ * Real-Time Subscription to IDP Strategic Configuration per Fiscal Year
+ */
+export function subscribeStrategyConfig(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
+  if (typeof window === 'undefined') return () => {};
+
+  const configDocId = `strategy-config-${fiscalYear}`;
+  const localConfigKey = `${LOCAL_KEY_STRATEGY_CONFIG}_${fiscalYear}`;
+
+  const defaultResult = {
+    ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
+    id: configDocId,
+    fiscalYear: String(fiscalYear),
+  };
+
+  try {
+    const raw = localStorage.getItem(localConfigKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed) callback(parsed);
+    } else {
+      callback(defaultResult);
+    }
+  } catch (e) {
+    callback(defaultResult);
+  }
+
+  if (!isFirebaseConfigured || !db) {
+    return () => {};
+  }
+
+  try {
+    const docRef = doc(db, 'idp_strategy_config', configDocId);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = { id: docSnap.id, ...docSnap.data() };
+          try {
+            localStorage.setItem(localConfigKey, JSON.stringify(data));
+          } catch (e) {}
+          callback(data);
+        } else {
+          callback(defaultResult);
+        }
+      },
+      (err) => {
+        console.warn('Firestore idp_strategy_config subscription warning:', err);
+      }
+    );
+
+    return unsubscribe;
+  } catch (e) {
+    console.error('Failed to setup idp_strategy_config subscription:', e);
+    return () => {};
+  }
+}
+
+/**
+ * Save Master Strategic Configuration for a Fiscal Year
+ */
+export async function saveStrategyConfig(fiscalYear, configData, actor) {
+  const configDocId = `strategy-config-${fiscalYear}`;
+  const now = new Date().toISOString();
+
+  const payload = {
+    ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
+    ...configData,
+    id: configDocId,
+    fiscalYear: String(fiscalYear),
+    updatedAt: now,
+    updatedBy: actor?.name || actor?.displayName || actor?.email || 'เจ้าหน้าที่งานบุคคล / ผู้ดูแลระบบ',
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'idp_strategy_config', configDocId);
+      await setDoc(docRef, payload, { merge: true });
+    } catch (e) {
+      console.warn('Firestore setDoc idp_strategy_config warning:', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    const cacheKey = `${LOCAL_KEY_STRATEGY_CONFIG}_${fiscalYear}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(payload));
+    } catch (e) {}
+  }
+
+  return payload;
+}
+
+/**
+ * Duplicate Strategic Configuration from previous fiscal year
+ */
+export async function duplicateStrategyConfig(fromYear, toYear, actor) {
+  const fromDocId = `strategy-config-${fromYear}`;
+  let sourceConfig = null;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'idp_strategy_config', fromDocId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        sourceConfig = snap.data();
+      }
+    } catch (e) {}
+  }
+
+  if (!sourceConfig && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(`${LOCAL_KEY_STRATEGY_CONFIG}_${fromYear}`);
+      if (raw) sourceConfig = JSON.parse(raw);
+    } catch (e) {}
+  }
+
+  if (!sourceConfig) {
+    sourceConfig = {
+      ...DEFAULT_IDP_STRATEGY_CONFIG_2569,
+      fiscalYear: String(fromYear),
+    };
+  }
+
+  return await saveStrategyConfig(toYear, sourceConfig, actor);
 }

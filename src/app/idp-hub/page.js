@@ -29,6 +29,7 @@ import { subscribeIdpRecords, subscribeIdpConfig, isHrOfficer } from '@/lib/idpS
 import { useAuth } from '@/context/AuthContext';
 import { MAIN_6_DEPTS } from '@/lib/constants';
 import IDPConfigModal from '@/components/IDPConfigModal';
+import IDPStrategyConfigModal from '@/components/IDPStrategyConfigModal';
 import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function IDPHubLandingPage() {
@@ -38,6 +39,7 @@ export default function IDPHubLandingPage() {
   const [idpConfig, setIdpConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isStrategyModalOpen, setIsStrategyModalOpen] = useState(false);
 
   const isHR = isHrOfficer(currentUser, currentPersonnel, isAdmin);
 
@@ -340,28 +342,53 @@ export default function IDPHubLandingPage() {
               </div>
 
               {isHR && (
-                <button
-                  type="button"
-                  onClick={() => setIsConfigModalOpen(true)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.12)',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    color: '#FFFFFF',
-                    padding: '5px 12px',
-                    borderRadius: '10px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  <Settings size={14} style={{ color: '#FB923C' }} />
-                  <span>ตั้งค่าสมรรถนะมาตรฐาน</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsStrategyModalOpen(true)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#FFFFFF',
+                      padding: '5px 12px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <Compass size={14} style={{ color: '#A5B4FC' }} />
+                    <span>ตั้งค่าประเด็นยุทธศาสตร์</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsConfigModalOpen(true)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#FFFFFF',
+                      padding: '5px 12px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <Settings size={14} style={{ color: '#FB923C' }} />
+                    <span>ตั้งค่าสมรรถนะมาตรฐาน</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -950,6 +977,20 @@ export default function IDPHubLandingPage() {
           onSaved={(cfg) => {
             setIdpConfig(cfg);
             setIsConfigModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Master Strategy & SFA Config Modal for HR / Admin */}
+      {isStrategyModalOpen && (
+        <IDPStrategyConfigModal
+          isOpen={isStrategyModalOpen}
+          onClose={() => setIsStrategyModalOpen(false)}
+          currentFiscalYear={fiscalYear}
+          currentUser={currentUser}
+          currentPersonnel={currentPersonnel}
+          onSaved={() => {
+            setIsStrategyModalOpen(false);
           }}
         />
       )}
