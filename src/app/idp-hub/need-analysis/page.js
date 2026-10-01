@@ -246,9 +246,14 @@ function IDPNeedAnalysisContent() {
       setActionPlanSelectorRecord(null);
       setActionPlanModalData(saved);
       setIsActionPlanModalOpen(true);
+      await showAlert({
+        type: 'success',
+        title: 'ส่งต่อและบันทึกแผนสำเร็จ',
+        message: `ส่งข้อมูลสมรรถนะไปยังแผน IDP Action Plan ของ "${actionPlanSelectorRecord.personnelName}" และบันทึกลงระบบฐานข้อมูล Cloud Firestore เรียบร้อยแล้ว`,
+      });
     } catch (e) {
       console.error(e);
-      await showAlert({ type: 'error', title: 'เกิดข้อผิดพลาด', message: e.message });
+      await showAlert({ type: 'error', title: 'เกิดข้อผิดพลาด', message: e.message || 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้' });
     }
   };
 

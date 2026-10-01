@@ -99,6 +99,13 @@ export async function getActionPlanById(planId, fiscalYear) {
   return null;
 }
 
+function cleanPayload(data) {
+  if (data === undefined) return null;
+  return JSON.parse(
+    JSON.stringify(data, (key, value) => (value === undefined ? null : value))
+  );
+}
+
 /**
  * Save an IDP Action Plan
  */
@@ -107,7 +114,7 @@ export async function saveActionPlan(planData, actor) {
   const planId = planData.id || `action-plan-${fiscalYear}-${planData.personnelId || Date.now()}`;
   const now = new Date().toISOString();
 
-  const payload = {
+  const rawPayload = {
     ...planData,
     id: planId,
     fiscalYear,
@@ -115,6 +122,8 @@ export async function saveActionPlan(planData, actor) {
     updatedBy: actor?.name || actor?.displayName || actor?.email || 'ผู้จัดทำแผน',
     status: planData.status || IDP_ACTION_PLAN_STATUSES.DRAFT.key,
   };
+
+  const payload = cleanPayload(rawPayload);
 
   // 1. LocalStorage
   if (typeof window !== 'undefined') {
@@ -132,13 +141,15 @@ export async function saveActionPlan(planData, actor) {
     } catch (e) {}
   }
 
-  // 2. Firebase
+  // 2. Firebase Firestore
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'idp_action_plans', planId);
       await setDoc(docRef, payload, { merge: true });
+      console.log(`[IDP Action Plan] Saved & synced to Firestore: ${planId}`);
     } catch (e) {
-      console.warn('Firestore saveActionPlan warning:', e);
+      console.error('Firestore saveActionPlan error:', e);
+      throw e;
     }
   }
 
@@ -190,6 +201,7 @@ export function createActionPlanItemsFromNeedAnalysis(selectedCompetencies = [])
     
     // Form fields
     goal: '',
+    kpiCriteria: '', // Staff success criteria / KPI
     methods: [], // Multi-select array of method IDs (e.g. [1, 6])
     methodCustom: '', // If method 10 selected
     application: '',
@@ -412,6 +424,13 @@ export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
     const q3Val = item.quarters?.q3?.progress || (item.quarters?.q3?.planned ? '✓ (วางแผน)' : '-');
     const q4Val = item.quarters?.q4?.progress || (item.quarters?.q4?.planned ? '✓ (วางแผน)' : '-');
     const evalStatus = item.evaluation?.status === 'ACHIEVED' ? 'บรรลุ' : 'ไม่บรรลุ';
+    let evalText = evalStatus;
+    if (item.kpiCriteria) {
+      evalText = `KPI: ${item.kpiCriteria}\nผล: ${evalStatus}`;
+    }
+    if (item.evaluation?.comment) {
+      evalText += ` (${item.evaluation.comment})`;
+    }
 
     const compTypeLabel = item.competencyType === 'CORE' ? 'สมรรถนะหลัก' : 'สมรรถนะตามตำแหน่งงาน';
     const stratLabel = (item.alignments?.strategyTitles || []).join(', ') || '-';
@@ -427,7 +446,7 @@ export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
       q2Val,
       q3Val,
       q4Val,
-      evalStatus,
+      evalText,
       compTypeLabel,
       stratLabel,
       skillLabel,

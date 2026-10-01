@@ -28,6 +28,9 @@ import {
   Target,
   Edit3,
   Lock,
+  Search,
+  Check,
+  RotateCcw,
 } from 'lucide-react';
 import {
   IDP_DEVELOPMENT_METHODS,
@@ -79,6 +82,14 @@ export default function IDPActionPlanModal({
   // Active item accordion for mobile / detailed editing
   const [expandedItemId, setExpandedItemId] = useState(null);
 
+  // Competency Type Filter Tabs ('ALL' | 'CORE' | 'FUNCTIONAL')
+  const [competencyFilter, setCompetencyFilter] = useState('ALL');
+
+  // Alignment Modal State
+  const [alignmentTargetItemId, setAlignmentTargetItemId] = useState(null);
+  const [alignTab, setAlignTab] = useState('STRATEGY'); // 'STRATEGY' | 'SKILL_MAP' | 'MISSION'
+  const [alignSearch, setAlignSearch] = useState('');
+
   const isHR = isHrOfficer(currentUser, currentPersonnel, isAdmin);
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').trim().toLowerCase();
   const planOwnerEmail = (plan?.personnelEmail || '').trim().toLowerCase();
@@ -110,7 +121,7 @@ export default function IDPActionPlanModal({
     }
   }, [isOpen, plan]);
 
-  // Strategy items list for Multi-select
+  // Strategy items list for Multi-select (Fix CKPI undefined)
   const availableStrategies = useMemo(() => {
     const list = [];
     if (strategyConfig?.sos) {
@@ -118,17 +129,18 @@ export default function IDPActionPlanModal({
         list.push({
           id: so.id || so.code,
           code: so.code,
-          title: `[${so.code}] ${so.title}`,
+          title: `[${so.code}] ${so.title || so.name || ''}`.trim(),
           category: 'SO',
         });
       });
     }
     if (strategyConfig?.ckpis) {
       strategyConfig.ckpis.forEach((ckpi) => {
+        const ckpiName = ckpi.name || ckpi.title || '';
         list.push({
           id: ckpi.id || ckpi.code,
           code: ckpi.code,
-          title: `[${ckpi.code}] ${ckpi.title}`,
+          title: `[${ckpi.code}] ${ckpiName}`.trim(),
           category: 'CKPI',
         });
       });
@@ -165,6 +177,25 @@ export default function IDPActionPlanModal({
       title: `พันธกิจที่ ${m.num || ''}: ${m.title}`,
     }));
   }, [strategyConfig]);
+
+  // Derived counts for filters
+  const coreCount = useMemo(
+    () => items.filter((it) => (it.competencyType || 'CORE') === 'CORE').length,
+    [items]
+  );
+  const functionalCount = useMemo(
+    () => items.filter((it) => it.competencyType === 'FUNCTIONAL').length,
+    [items]
+  );
+  const displayedItems = useMemo(() => {
+    if (competencyFilter === 'ALL') return items;
+    return items.filter((it) => (it.competencyType || 'CORE') === competencyFilter);
+  }, [items, competencyFilter]);
+
+  const alignmentTargetItem = useMemo(() => {
+    if (!alignmentTargetItemId) return null;
+    return items.find((it) => it.id === alignmentTargetItemId) || null;
+  }, [items, alignmentTargetItemId]);
 
   if (!isOpen || !plan) return null;
 
@@ -709,6 +740,147 @@ export default function IDPActionPlanModal({
                 </div>
               </div>
 
+              {/* Filter Tabs: Core vs Functional Competencies */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  background: '#F1F5F9',
+                  padding: '6px 8px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCompetencyFilter('ALL')}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: competencyFilter === 'ALL' ? '#FFFFFF' : 'transparent',
+                      color: competencyFilter === 'ALL' ? '#0F172A' : '#64748B',
+                      fontWeight: competencyFilter === 'ALL' ? 800 : 600,
+                      fontSize: '0.825rem',
+                      cursor: 'pointer',
+                      boxShadow: competencyFilter === 'ALL' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span>ทั้งหมด</span>
+                    <span
+                      style={{
+                        background: competencyFilter === 'ALL' ? '#EA580C' : '#CBD5E1',
+                        color: '#FFFFFF',
+                        padding: '1px 6px',
+                        borderRadius: '999px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {items.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCompetencyFilter('CORE')}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: competencyFilter === 'CORE' ? '#FFFFFF' : 'transparent',
+                      color: competencyFilter === 'CORE' ? '#1D4ED8' : '#64748B',
+                      fontWeight: competencyFilter === 'CORE' ? 800 : 600,
+                      fontSize: '0.825rem',
+                      cursor: 'pointer',
+                      boxShadow: competencyFilter === 'CORE' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span>สมรรถนะหลัก (Core)</span>
+                    <span
+                      style={{
+                        background: competencyFilter === 'CORE' ? '#2563EB' : '#CBD5E1',
+                        color: '#FFFFFF',
+                        padding: '1px 6px',
+                        borderRadius: '999px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {coreCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCompetencyFilter('FUNCTIONAL')}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: competencyFilter === 'FUNCTIONAL' ? '#FFFFFF' : 'transparent',
+                      color: competencyFilter === 'FUNCTIONAL' ? '#A21CAF' : '#64748B',
+                      fontWeight: competencyFilter === 'FUNCTIONAL' ? 800 : 600,
+                      fontSize: '0.825rem',
+                      cursor: 'pointer',
+                      boxShadow: competencyFilter === 'FUNCTIONAL' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span>สมรรถนะตามตำแหน่งงาน (Functional)</span>
+                    <span
+                      style={{
+                        background: competencyFilter === 'FUNCTIONAL' ? '#C026D3' : '#CBD5E1',
+                        color: '#FFFFFF',
+                        padding: '1px 6px',
+                        borderRadius: '999px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {functionalCount}
+                    </span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddNewCustomItem}
+                  style={{
+                    padding: '0.45rem 0.9rem',
+                    borderRadius: '8px',
+                    background: '#EA580C',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 6px rgba(234, 88, 12, 0.25)',
+                  }}
+                >
+                  <Plus size={14} />
+                  <span>เพิ่มสมรรถนะ</span>
+                </button>
+              </div>
+
               {/* Items List */}
               {items.length === 0 ? (
                 <div
@@ -748,11 +920,27 @@ export default function IDPActionPlanModal({
                     <span>เพิ่มรายการสมรรถนะ</span>
                   </button>
                 </div>
+              ) : displayedItems.length === 0 ? (
+                <div
+                  style={{
+                    padding: '3rem 1rem',
+                    textAlign: 'center',
+                    background: '#F8FAFC',
+                    borderRadius: '1rem',
+                    border: '1px dashed #CBD5E1',
+                  }}
+                >
+                  <AlertCircle size={40} color="#94A3B8" style={{ margin: '0 auto 0.75rem' }} />
+                  <p style={{ fontSize: '0.9rem', color: '#64748B', margin: 0 }}>
+                    ไม่พบรายการสมรรถนะในหมวดหมู่นี้ ({competencyFilter === 'CORE' ? 'สมรรถนะหลัก' : 'สมรรถนะตามตำแหน่งงาน'})
+                  </p>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {items.map((item, idx) => {
+                  {displayedItems.map((item, idx) => {
                     const isExpanded = expandedItemId === item.id;
                     const isAchieved = item.evaluation?.status === 'ACHIEVED';
+                    const actualIdx = items.findIndex((it) => it.id === item.id);
 
                     return (
                       <div
@@ -797,20 +985,20 @@ export default function IDPActionPlanModal({
                                 justifyContent: 'center',
                               }}
                             >
-                              {idx + 1}
+                              {actualIdx >= 0 ? actualIdx + 1 : idx + 1}
                             </span>
 
                             {/* Move Up/Down Controls */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
-                                disabled={idx === 0}
-                                onClick={() => moveItem(idx, -1)}
+                                disabled={actualIdx <= 0}
+                                onClick={() => moveItem(actualIdx, -1)}
                                 style={{
                                   border: 'none',
                                   background: 'transparent',
-                                  cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                                  color: idx === 0 ? '#CBD5E1' : '#64748B',
+                                  cursor: actualIdx <= 0 ? 'not-allowed' : 'pointer',
+                                  color: actualIdx <= 0 ? '#CBD5E1' : '#64748B',
                                   padding: 0,
                                 }}
                                 title="เลื่อนขึ้น"
@@ -819,13 +1007,13 @@ export default function IDPActionPlanModal({
                               </button>
                               <button
                                 type="button"
-                                disabled={idx === items.length - 1}
-                                onClick={() => moveItem(idx, 1)}
+                                disabled={actualIdx >= items.length - 1}
+                                onClick={() => moveItem(actualIdx, 1)}
                                 style={{
                                   border: 'none',
                                   background: 'transparent',
-                                  cursor: idx === items.length - 1 ? 'not-allowed' : 'pointer',
-                                  color: idx === items.length - 1 ? '#CBD5E1' : '#64748B',
+                                  cursor: actualIdx >= items.length - 1 ? 'not-allowed' : 'pointer',
+                                  color: actualIdx >= items.length - 1 ? '#CBD5E1' : '#64748B',
                                   padding: 0,
                                 }}
                                 title="เลื่อนลง"
@@ -1083,246 +1271,303 @@ export default function IDPActionPlanModal({
                               </div>
                             </div>
 
-                            {/* Row 5: Evaluation by Supervisor / Deputy / HR / Admin */}
+                            {/* Row 5: Success Measurement & Evaluation */}
                             <div
                               style={{
-                                background: isAchieved ? '#DCFCE7' : '#F8FAFC',
+                                background: isAchieved ? '#F0FDF4' : '#F8FAFC',
                                 borderRadius: '12px',
-                                padding: '1rem',
-                                border: `1px solid ${isAchieved ? '#86EFAC' : '#E2E8F0'}`,
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                                <div>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
-                                    การวัดผลสำเร็จของการนำไปประยุกต์ใช้ในงาน (โดยผู้บังคับบัญชา / HR):
-                                  </span>
-                                  <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '2px 0 0 0' }}>
-                                    ประเมินผลสัมฤทธิ์ตามตัวชี้วัด (หากบรรลุแล้ว ไม่จำเป็นต้องรายงานในไตรมาสที่เหลือ)
-                                  </p>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <select
-                                    value={item.evaluation?.status || 'NOT_ACHIEVED'}
-                                    onChange={(e) => updateItemEvaluation(item.id, 'status', e.target.value)}
-                                    style={{
-                                      padding: '0.4rem 0.85rem',
-                                      borderRadius: '8px',
-                                      fontSize: '0.85rem',
-                                      fontWeight: 800,
-                                      background: isAchieved ? '#16A34A' : '#64748B',
-                                      color: '#FFFFFF',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <option value="NOT_ACHIEVED">⏳ ไม่บรรลุ (กำลังดำเนินการ)</option>
-                                    <option value="ACHIEVED">✅ บรรลุตามตัวชี้วัด</option>
-                                  </select>
-                                </div>
-                              </div>
-
-                              <input
-                                type="text"
-                                value={item.evaluation?.comment || ''}
-                                onChange={(e) => updateItemEvaluation(item.id, 'comment', e.target.value)}
-                                placeholder="ข้อคิดเห็นการประเมินผลสำเร็จจากผู้บังคับบัญชา..."
-                                style={{
-                                  width: '100%',
-                                  padding: '0.45rem 0.75rem',
-                                  borderRadius: '8px',
-                                  border: '1px solid #CBD5E1',
-                                  fontSize: '0.825rem',
-                                  background: '#FFFFFF',
-                                }}
-                              />
-                            </div>
-
-                            {/* Row 6: 4-Dimension Alignments (Multi-Select) */}
-                            <div
-                              style={{
-                                background: '#F8FAFC',
-                                borderRadius: '12px',
-                                padding: '1rem',
-                                border: '1px solid #E2E8F0',
+                                padding: '1.25rem',
+                                border: `1.5px solid ${isAchieved ? '#86EFAC' : '#E2E8F0'}`,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '10px',
+                                gap: '12px',
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 800, color: '#1E293B' }}>
-                                <Sparkles size={16} color="#4F46E5" />
-                                <span>ความสอดคล้อง 4 มิติ (Alignment Mapping):</span>
+                              {/* 5.1 Staff KPI / Success Criteria */}
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 800, color: '#1E293B', marginBottom: '4px' }}>
+                                  🎯 การวัดผลสำเร็จ / ตัวชี้วัดความสำเร็จ (KPI) (ระบุโดยเจ้าของผลงาน / ผู้รับการพัฒนา):
+                                </label>
+                                <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '0 0 6px 0' }}>
+                                  ระบุเกณฑ์ ตัวชี้วัด หรือผลลัพธ์ที่เป็นรูปธรรมในการวัดความสำเร็จของการนำความรู้/ทักษะไปประยุกต์ใช้ในงาน
+                                </p>
+                                <textarea
+                                  value={item.kpiCriteria || ''}
+                                  onChange={(e) => updateItemField(item.id, 'kpiCriteria', e.target.value)}
+                                  rows={2}
+                                  placeholder="เช่น มีระบบพร้อมใช้งานจริงภายใน Q3, ลดเวลาการทำงานลง 30%, ผ่านเกณฑ์การทดสอบ หรือจัดทำคู่มือการปฏิบัติงานสำเร็จ 1 เล่ม..."
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.55rem 0.85rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #CBD5E1',
+                                    fontSize: '0.85rem',
+                                    background: '#FFFFFF',
+                                  }}
+                                />
                               </div>
 
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
-                                {/* 1. Strategic Focus Areas / SO / CKPI */}
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                                    1. แผนกลยุทธ์ (SFA / SO / CKPI):
-                                  </label>
-                                  <div
-                                    style={{
-                                      maxHeight: '140px',
-                                      overflowY: 'auto',
-                                      background: '#FFFFFF',
-                                      borderRadius: '8px',
-                                      border: '1px solid #CBD5E1',
-                                      padding: '6px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    {availableStrategies.length === 0 ? (
-                                      <span style={{ fontSize: '0.75rem', color: '#94A3B8', padding: '4px' }}>
-                                        ไม่มีรายการยุทธศาสตร์ในปีนี้
-                                      </span>
-                                    ) : (
-                                      availableStrategies.map((strat) => {
-                                        const isSelected = (item.alignments?.strategyIds || []).includes(strat.id);
-                                        return (
-                                          <label
-                                            key={strat.id}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '6px',
-                                              fontSize: '0.75rem',
-                                              padding: '4px 6px',
-                                              borderRadius: '6px',
-                                              background: isSelected ? '#EFF6FF' : 'transparent',
-                                              cursor: 'pointer',
-                                              color: isSelected ? '#1D4ED8' : '#334155',
-                                              fontWeight: isSelected ? 700 : 500,
-                                            }}
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={isSelected}
-                                              onChange={() => toggleAlignmentMulti(item.id, 'strategy', strat.id, strat.code || strat.title)}
-                                              style={{ accentColor: '#2563EB' }}
-                                            />
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={strat.title}>
-                                              {strat.title}
-                                            </span>
-                                          </label>
-                                        );
-                                      })
-                                    )}
+                              {/* 5.2 Supervisor / HR Evaluation */}
+                              <div
+                                style={{
+                                  background: isAchieved ? '#DCFCE7' : '#FFFFFF',
+                                  borderRadius: '10px',
+                                  padding: '10px 12px',
+                                  border: `1px solid ${isAchieved ? '#86EFAC' : '#E2E8F0'}`,
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                                  <div>
+                                    <span style={{ fontSize: '0.825rem', fontWeight: 800, color: '#0F172A' }}>
+                                      📝 การประเมินผลสัมฤทธิ์ของการนำไปประยุกต์ใช้ในงาน (โดยผู้บังคับบัญชา / HR):
+                                    </span>
+                                    <p style={{ fontSize: '0.725rem', color: '#64748B', margin: '1px 0 0 0' }}>
+                                      *หากประเมินว่า &quot;บรรลุตามตัวชี้วัด&quot; แล้ว จะถือว่าเป้าหมายสำเร็จสมบูรณ์และไม่ต้องรายงานผลในไตรมาสที่เหลือ
+                                    </p>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <select
+                                      value={item.evaluation?.status || 'NOT_ACHIEVED'}
+                                      onChange={(e) => updateItemEvaluation(item.id, 'status', e.target.value)}
+                                      style={{
+                                        padding: '0.4rem 0.85rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.825rem',
+                                        fontWeight: 800,
+                                        background: isAchieved ? '#16A34A' : '#64748B',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <option value="NOT_ACHIEVED">⏳ ไม่บรรลุ (กำลังดำเนินการ)</option>
+                                      <option value="ACHIEVED">✅ บรรลุตามตัวชี้วัด</option>
+                                    </select>
                                   </div>
                                 </div>
 
-                                {/* 2. Knowledge & Skill (Skill Map) */}
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                                    2. Knowledge & Skill (Skill Map):
-                                  </label>
-                                  <div
-                                    style={{
-                                      maxHeight: '140px',
-                                      overflowY: 'auto',
-                                      background: '#FFFFFF',
-                                      borderRadius: '8px',
-                                      border: '1px solid #CBD5E1',
-                                      padding: '6px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    {availableSkills.length === 0 ? (
-                                      <span style={{ fontSize: '0.75rem', color: '#94A3B8', padding: '4px' }}>
-                                        ไม่มีข้อมูลโครงสร้าง Skill Map
-                                      </span>
-                                    ) : (
-                                      availableSkills.map((sk) => {
-                                        const isSelected = (item.alignments?.skillMapIds || []).includes(sk.id);
-                                        return (
-                                          <label
-                                            key={sk.id}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '6px',
-                                              fontSize: '0.75rem',
-                                              padding: '4px 6px',
-                                              borderRadius: '6px',
-                                              background: isSelected ? '#EEF2FF' : 'transparent',
-                                              cursor: 'pointer',
-                                              color: isSelected ? '#4338CA' : '#334155',
-                                              fontWeight: isSelected ? 700 : 500,
-                                            }}
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={isSelected}
-                                              onChange={() => toggleAlignmentMulti(item.id, 'skillMap', sk.id, sk.title)}
-                                              style={{ accentColor: '#4F46E5' }}
-                                            />
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sk.title}>
-                                              {sk.title}
-                                            </span>
-                                          </label>
-                                        );
-                                      })
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* 3. 5 Missions */}
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                                    3. พันธกิจของสำนักฯ (5 พันธกิจ):
-                                  </label>
-                                  <div
-                                    style={{
-                                      maxHeight: '140px',
-                                      overflowY: 'auto',
-                                      background: '#FFFFFF',
-                                      borderRadius: '8px',
-                                      border: '1px solid #CBD5E1',
-                                      padding: '6px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    {availableMissions.map((m) => {
-                                      const isSelected = (item.alignments?.missionIds || []).includes(m.id);
-                                      return (
-                                        <label
-                                          key={m.id}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            fontSize: '0.75rem',
-                                            padding: '4px 6px',
-                                            borderRadius: '6px',
-                                            background: isSelected ? '#ECFDF5' : 'transparent',
-                                            cursor: 'pointer',
-                                            color: isSelected ? '#047857' : '#334155',
-                                            fontWeight: isSelected ? 700 : 500,
-                                          }}
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => toggleAlignmentMulti(item.id, 'mission', m.id, m.title)}
-                                            style={{ accentColor: '#059669' }}
-                                          />
-                                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.title}>
-                                            {m.title}
-                                          </span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
+                                <input
+                                  type="text"
+                                  value={item.evaluation?.comment || ''}
+                                  onChange={(e) => updateItemEvaluation(item.id, 'comment', e.target.value)}
+                                  placeholder="ข้อคิดเห็นการประเมินผลสำเร็จจากผู้บังคับบัญชา..."
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.45rem 0.75rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #CBD5E1',
+                                    fontSize: '0.825rem',
+                                    background: '#FFFFFF',
+                                  }}
+                                />
                               </div>
                             </div>
+
+                            {/* Row 6: 4-Dimension Alignments (Button Trigger & Selection Display) */}
+                            {(() => {
+                              const stratCount = (item.alignments?.strategyIds || []).length;
+                              const skillCount = (item.alignments?.skillMapIds || []).length;
+                              const missionCount = (item.alignments?.missionIds || []).length;
+                              const totalCount = stratCount + skillCount + missionCount;
+
+                              return (
+                                <div
+                                  style={{
+                                    background: '#F8FAFC',
+                                    borderRadius: '12px',
+                                    padding: '1rem',
+                                    border: '1.5px solid #E2E8F0',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '10px',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <div
+                                        style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          borderRadius: '8px',
+                                          background: '#EEF2FF',
+                                          color: '#4F46E5',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                        }}
+                                      >
+                                        <Sparkles size={18} />
+                                      </div>
+                                      <div>
+                                        <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1E293B' }}>
+                                          ความสอดคล้อง 4 มิติ (Alignment Mapping)
+                                        </span>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                                          เชื่อมโยงแผนกลยุทธ์, ทักษะตามสายงาน (Skill Map), และพันธกิจของสำนักฯ
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setAlignmentTargetItemId(item.id);
+                                        setAlignTab('STRATEGY');
+                                        setAlignSearch('');
+                                      }}
+                                      style={{
+                                        padding: '0.5rem 1.15rem',
+                                        borderRadius: '10px',
+                                        background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.825rem',
+                                        fontWeight: 700,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+                                      }}
+                                    >
+                                      <Edit3 size={15} />
+                                      <span>เลือก / แก้ไขความสอดคล้อง</span>
+                                      {totalCount > 0 && (
+                                        <span
+                                          style={{
+                                            background: '#FFFFFF',
+                                            color: '#4338CA',
+                                            padding: '2px 8px',
+                                            borderRadius: '999px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                          }}
+                                        >
+                                          {totalCount}
+                                        </span>
+                                      )}
+                                    </button>
+                                  </div>
+
+                                  {/* Summary Badges of Selected Alignments */}
+                                  {totalCount === 0 ? (
+                                    <div
+                                      onClick={() => {
+                                        setAlignmentTargetItemId(item.id);
+                                        setAlignTab('STRATEGY');
+                                        setAlignSearch('');
+                                      }}
+                                      style={{
+                                        padding: '0.75rem',
+                                        borderRadius: '8px',
+                                        background: '#FFFFFF',
+                                        border: '1px dashed #CBD5E1',
+                                        color: '#94A3B8',
+                                        fontSize: '0.8rem',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      ⚠️ ยังไม่ได้เลือกความสอดคล้อง (คลิกปุ่ม &quot;เลือก / แก้ไขความสอดคล้อง&quot; เพื่อกำหนด)
+                                    </div>
+                                  ) : (
+                                    <div
+                                      style={{
+                                        background: '#FFFFFF',
+                                        borderRadius: '10px',
+                                        padding: '10px 12px',
+                                        border: '1px solid #E2E8F0',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '8px',
+                                      }}
+                                    >
+                                      {/* Strategy */}
+                                      {stratCount > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.8rem' }}>
+                                          <span style={{ fontWeight: 800, color: '#1E40AF', flexShrink: 0, minWidth: '95px' }}>
+                                            🏛️ แผนกลยุทธ์:
+                                          </span>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                            {(item.alignments?.strategyTitles || []).map((st, i) => (
+                                              <span
+                                                key={i}
+                                                style={{
+                                                  background: '#EFF6FF',
+                                                  color: '#1D4ED8',
+                                                  padding: '3px 8px',
+                                                  borderRadius: '6px',
+                                                  fontSize: '0.75rem',
+                                                  fontWeight: 600,
+                                                  border: '1px solid #BFDBFE',
+                                                }}
+                                              >
+                                                {st}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Skill Map */}
+                                      {skillCount > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.8rem' }}>
+                                          <span style={{ fontWeight: 800, color: '#047857', flexShrink: 0, minWidth: '95px' }}>
+                                            💡 Skill Map:
+                                          </span>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                            {(item.alignments?.skillMapTitles || []).map((sk, i) => (
+                                              <span
+                                                key={i}
+                                                style={{
+                                                  background: '#ECFDF5',
+                                                  color: '#047857',
+                                                  padding: '3px 8px',
+                                                  borderRadius: '6px',
+                                                  fontSize: '0.75rem',
+                                                  fontWeight: 600,
+                                                  border: '1px solid #A7F3D0',
+                                                }}
+                                              >
+                                                {sk}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Missions */}
+                                      {missionCount > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.8rem' }}>
+                                          <span style={{ fontWeight: 800, color: '#9333EA', flexShrink: 0, minWidth: '95px' }}>
+                                            🎯 พันธกิจ:
+                                          </span>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                            {(item.alignments?.missionTitles || []).map((ms, i) => (
+                                              <span
+                                                key={i}
+                                                style={{
+                                                  background: '#FAF5FF',
+                                                  color: '#9333EA',
+                                                  padding: '3px 8px',
+                                                  borderRadius: '6px',
+                                                  fontSize: '0.75rem',
+                                                  fontWeight: 600,
+                                                  border: '1px solid #E9D5FF',
+                                                }}
+                                              >
+                                                {ms}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -1714,6 +1959,460 @@ export default function IDPActionPlanModal({
           </div>
         </div>
       </div>
+
+      {/* Alignment Selection Sub-Modal */}
+      {alignmentTargetItemId && targetAlignmentItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10005,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+          onClick={() => setAlignmentTargetItemId(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '1.25rem',
+              width: '100%',
+              maxWidth: '760px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #E2E8F0',
+                background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: '#4F46E5',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)',
+                  }}
+                >
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
+                    กำหนดความสอดคล้อง 4 มิติ
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#4338CA', margin: '2px 0 0 0', fontWeight: 600 }}>
+                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetAlignmentItem.competencyName}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAlignmentTargetItemId(null)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                background: '#F8FAFC',
+                borderBottom: '1px solid #E2E8F0',
+                padding: '0 1rem',
+                gap: '8px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setAlignTab('STRATEGY');
+                  setAlignSearch('');
+                }}
+                style={{
+                  padding: '0.85rem 1rem',
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom: alignTab === 'STRATEGY' ? '3px solid #2563EB' : '3px solid transparent',
+                  color: alignTab === 'STRATEGY' ? '#1D4ED8' : '#64748B',
+                  fontWeight: alignTab === 'STRATEGY' ? 800 : 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>1. แผนกลยุทธ์ (SFA/SO)</span>
+                <span
+                  style={{
+                    background: (targetAlignmentItem.alignments?.strategyIds || []).length > 0 ? '#2563EB' : '#CBD5E1',
+                    color: '#FFFFFF',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    fontSize: '0.725rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {(targetAlignmentItem.alignments?.strategyIds || []).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAlignTab('SKILL_MAP');
+                  setAlignSearch('');
+                }}
+                style={{
+                  padding: '0.85rem 1rem',
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom: alignTab === 'SKILL_MAP' ? '3px solid #4F46E5' : '3px solid transparent',
+                  color: alignTab === 'SKILL_MAP' ? '#4338CA' : '#64748B',
+                  fontWeight: alignTab === 'SKILL_MAP' ? 800 : 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>2. Skill Map</span>
+                <span
+                  style={{
+                    background: (targetAlignmentItem.alignments?.skillMapIds || []).length > 0 ? '#4F46E5' : '#CBD5E1',
+                    color: '#FFFFFF',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    fontSize: '0.725rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {(targetAlignmentItem.alignments?.skillMapIds || []).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAlignTab('MISSION');
+                  setAlignSearch('');
+                }}
+                style={{
+                  padding: '0.85rem 1rem',
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom: alignTab === 'MISSION' ? '3px solid #059669' : '3px solid transparent',
+                  color: alignTab === 'MISSION' ? '#047857' : '#64748B',
+                  fontWeight: alignTab === 'MISSION' ? 800 : 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>3. พันธกิจ 5 ด้าน</span>
+                <span
+                  style={{
+                    background: (targetAlignmentItem.alignments?.missionIds || []).length > 0 ? '#059669' : '#CBD5E1',
+                    color: '#FFFFFF',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    fontSize: '0.725rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {(targetAlignmentItem.alignments?.missionIds || []).length}
+                </span>
+              </button>
+            </div>
+
+            {/* Modal Body & Search */}
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Search Bar */}
+              <div style={{ position: 'relative' }}>
+                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  value={alignSearch}
+                  onChange={(e) => setAlignSearch(e.target.value)}
+                  placeholder={
+                    alignTab === 'STRATEGY'
+                      ? 'ค้นหาประเด็นยุทธศาสตร์ SFA, SO, ตัวชี้วัด CKPI...'
+                      : alignTab === 'SKILL_MAP'
+                      ? 'ค้นหาทักษะ Skill Map, รหัส, หมวดหมู่...'
+                      : 'ค้นหาพันธกิจของสำนักฯ...'
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem 0.55rem 2.25rem',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.85rem',
+                  }}
+                />
+              </div>
+
+              {/* Items List for active tab */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {alignTab === 'STRATEGY' && (
+                  <>
+                    {availableStrategies
+                      .filter((st) => !alignSearch || (st.title || '').toLowerCase().includes(alignSearch.toLowerCase()) || (st.code || '').toLowerCase().includes(alignSearch.toLowerCase()))
+                      .map((st) => {
+                        const isSelected = (targetAlignmentItem.alignments?.strategyIds || []).includes(st.id);
+                        return (
+                          <div
+                            key={st.id}
+                            onClick={() => toggleAlignmentMulti(targetAlignmentItem.id, 'strategy', st.id, st.code || st.title)}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderRadius: '10px',
+                              border: `1.5px solid ${isSelected ? '#3B82F6' : '#E2E8F0'}`,
+                              background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                style={{ accentColor: '#2563EB', marginTop: '3px', cursor: 'pointer' }}
+                              />
+                              <div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isSelected ? '#1E40AF' : '#1E293B' }}>
+                                  {st.title}
+                                </div>
+                                {st.desc && (
+                                  <div style={{ fontSize: '0.775rem', color: '#64748B', marginTop: '2px' }}>
+                                    {st.desc}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                background: st.type === 'SFA' ? '#FEF3C7' : st.type === 'SO' ? '#E0E7FF' : '#DCFCE7',
+                                color: st.type === 'SFA' ? '#92400E' : st.type === 'SO' ? '#3730A3' : '#166534',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {st.type || 'STRATEGY'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </>
+                )}
+
+                {alignTab === 'SKILL_MAP' && (
+                  <>
+                    {availableSkills
+                      .filter((sk) => !alignSearch || (sk.title || '').toLowerCase().includes(alignSearch.toLowerCase()) || (sk.group || '').toLowerCase().includes(alignSearch.toLowerCase()))
+                      .map((sk) => {
+                        const isSelected = (targetAlignmentItem.alignments?.skillMapIds || []).includes(sk.id);
+                        return (
+                          <div
+                            key={sk.id}
+                            onClick={() => toggleAlignmentMulti(targetAlignmentItem.id, 'skillMap', sk.id, sk.title)}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderRadius: '10px',
+                              border: `1.5px solid ${isSelected ? '#6366F1' : '#E2E8F0'}`,
+                              background: isSelected ? '#EEF2FF' : '#FFFFFF',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                style={{ accentColor: '#4F46E5', marginTop: '3px', cursor: 'pointer' }}
+                              />
+                              <div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isSelected ? '#3730A3' : '#1E293B' }}>
+                                  {sk.title}
+                                </div>
+                                {sk.group && (
+                                  <div style={{ fontSize: '0.775rem', color: '#64748B', marginTop: '2px' }}>
+                                    หมวดหมู่: {sk.group}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                background: '#EDE9FE',
+                                color: '#5B21B6',
+                                flexShrink: 0,
+                              }}
+                            >
+                              SKILL
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </>
+                )}
+
+                {alignTab === 'MISSION' && (
+                  <>
+                    {availableMissions
+                      .filter((ms) => !alignSearch || (ms.title || '').toLowerCase().includes(alignSearch.toLowerCase()))
+                      .map((ms) => {
+                        const isSelected = (targetAlignmentItem.alignments?.missionIds || []).includes(ms.id);
+                        return (
+                          <div
+                            key={ms.id}
+                            onClick={() => toggleAlignmentMulti(targetAlignmentItem.id, 'mission', ms.id, ms.title)}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderRadius: '10px',
+                              border: `1.5px solid ${isSelected ? '#10B981' : '#E2E8F0'}`,
+                              background: isSelected ? '#ECFDF5' : '#FFFFFF',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                style={{ accentColor: '#059669', marginTop: '3px', cursor: 'pointer' }}
+                              />
+                              <div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isSelected ? '#065F46' : '#1E293B' }}>
+                                  {ms.title}
+                                </div>
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                background: '#D1FAE5',
+                                color: '#065F46',
+                                flexShrink: 0,
+                              }}
+                            >
+                              MISSION
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ fontSize: '0.825rem', color: '#64748B' }}>
+                เลือกแล้ว:{' '}
+                <span style={{ fontWeight: 800, color: '#1E293B' }}>
+                  {(targetAlignmentItem.alignments?.strategyIds || []).length +
+                    (targetAlignmentItem.alignments?.skillMapIds || []).length +
+                    (targetAlignmentItem.alignments?.missionIds || []).length}
+                </span>{' '}
+                รายการ
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAlignmentTargetItemId(null)}
+                style={{
+                  padding: '0.55rem 1.5rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                }}
+              >
+                เสร็จสิ้น
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

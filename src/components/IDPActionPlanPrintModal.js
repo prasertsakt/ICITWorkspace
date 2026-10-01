@@ -275,8 +275,15 @@ export default function IDPActionPlanPrintModal({
                     <td style={{ padding: '4px', border: '1px solid #000', textAlign: 'center' }}>{q2}</td>
                     <td style={{ padding: '4px', border: '1px solid #000', textAlign: 'center' }}>{q3}</td>
                     <td style={{ padding: '4px', border: '1px solid #000', textAlign: 'center' }}>{q4}</td>
-                    <td style={{ padding: '6px', border: '1px solid #000', textAlign: 'center' }}>
-                      {evalStatus}
+                    <td style={{ padding: '6px', border: '1px solid #000' }}>
+                      {item.kpiCriteria && (
+                        <div style={{ marginBottom: '4px', fontSize: '9.5px', color: '#0F172A' }}>
+                          <strong>เกณฑ์วัดผล (KPI):</strong> {item.kpiCriteria}
+                        </div>
+                      )}
+                      <div style={{ fontWeight: item.evaluation?.status === 'ACHIEVED' ? 700 : 'normal' }}>
+                        <strong>ผลการประเมิน:</strong> {evalStatus}
+                      </div>
                       {item.evaluation?.comment && (
                         <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>
                           ({item.evaluation.comment})
