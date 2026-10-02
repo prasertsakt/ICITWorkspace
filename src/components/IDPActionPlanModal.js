@@ -334,14 +334,27 @@ export default function IDPActionPlanModal({
   };
 
   const toggleItemMethod = (itemId, methodId) => {
+    const target = items.find((it) => it.id === itemId);
+    const currentMethods = target?.methods || [];
+    const isSelected = currentMethods.includes(methodId);
+
+    if (!isSelected && currentMethods.length >= 3) {
+      showAlert({
+        type: 'warning',
+        title: 'เลือกได้สูงสุด 3 วิธีการ',
+        message: 'ท่านสามารถเลือกวิธีการพัฒนาได้สูงสุดไม่เกิน 3 วิธีการต่อ 1 สมรรถนะ กรุณายกเลิกวิธีที่ไม่ต้องการออกก่อนเลือกวิธีใหม่',
+      });
+      return;
+    }
+
     setItems((prev) =>
       prev.map((it) => {
         if (it.id !== itemId) return it;
-        const currentMethods = it.methods || [];
-        const exists = currentMethods.includes(methodId);
+        const curMethods = it.methods || [];
+        const exists = curMethods.includes(methodId);
         const updated = exists
-          ? currentMethods.filter((m) => m !== methodId)
-          : [...currentMethods, methodId].sort((a, b) => a - b);
+          ? curMethods.filter((m) => m !== methodId)
+          : [...curMethods, methodId].sort((a, b) => a - b);
         return { ...it, methods: updated };
       })
     );
@@ -453,7 +466,7 @@ export default function IDPActionPlanModal({
     const newItem = {
       id: `item-${Date.now()}`,
       order: items.length + 1,
-      competencyName: 'สมรรถนะเพิ่มเติม',
+      competencyName: '',
       competencyType: 'CORE',
       gap: 0,
       goal: '',
@@ -1124,7 +1137,7 @@ export default function IDPActionPlanModal({
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
-                                  {item.competencyName}
+                                  {item.competencyName || 'ระบุชื่อสมรรถนะที่ต้องการพัฒนา'}
                                 </span>
                                 <span
                                   style={{
@@ -1192,12 +1205,12 @@ export default function IDPActionPlanModal({
                                 <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                                   ความรู้/ทักษะ/สมรรถนะ:
                                 </label>
-                                <input
-                                  type="text"
-                                  value={item.competencyName}
+                                <textarea
+                                  value={item.competencyName || ''}
                                   onChange={(e) => updateItemField(item.id, 'competencyName', e.target.value)}
                                   className="form-control"
-                                  placeholder="ระบุชื่อสมรรถนะที่ต้องการพัฒนา"
+                                  rows={2}
+                                  placeholder="เช่น ทักษะด้านการวิเคราะห์และออกแบบกระบวนการ"
                                   style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1' }}
                                 />
                               </div>
@@ -1255,7 +1268,7 @@ export default function IDPActionPlanModal({
                                         fontWeight: 800,
                                       }}
                                     >
-                                      {(item.methods || []).length}
+                                      {(item.methods || []).length}/3
                                     </span>
                                   )}
                                 </button>
@@ -1277,7 +1290,7 @@ export default function IDPActionPlanModal({
                               >
                                 {(item.methods || []).length === 0 ? (
                                   <span style={{ fontSize: '0.8rem', color: '#94A3B8', fontStyle: 'italic' }}>
-                                    ยังไม่ได้เลือกวิธีการพัฒนา — คลิกปุ่ม "เลือกวิธีการพัฒนา" ด้านบนเพื่อเลือกจาก 10 รูปแบบ
+                                    ยังไม่ได้เลือกวิธีการพัฒนา — คลิกปุ่ม "เลือกวิธีการพัฒนา" ด้านบนเพื่อเลือกจาก 10 รูปแบบ (เลือกได้สูงสุด 3 วิธีการ)
                                   </span>
                                 ) : (
                                   item.methods.map((methodId) => {
@@ -2190,7 +2203,7 @@ export default function IDPActionPlanModal({
                     เลือกวิธีการพัฒนา (Development Methods)
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: '#9A3412', margin: '2px 0 0 0', fontWeight: 600 }}>
-                    สมรรถนะ: <span style={{ color: '#7C2D12', fontWeight: 800 }}>{targetMethodItem.competencyName}</span> (เลือกได้มากกว่า 1 วิธี)
+                    สมรรถนะ: <span style={{ color: '#7C2D12', fontWeight: 800 }}>{targetMethodItem.competencyName || 'ไม่ระบุชื่อสมรรถนะ'}</span> (เลือกได้สูงสุด 3 วิธีการ)
                   </p>
                 </div>
               </div>
@@ -2230,6 +2243,7 @@ export default function IDPActionPlanModal({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '10px' }}>
                 {IDP_DEVELOPMENT_METHODS.map((method) => {
                   const isChecked = (targetMethodItem.methods || []).includes(method.id);
+                  const isMaxReached = !isChecked && (targetMethodItem.methods || []).length >= 3;
                   return (
                     <div
                       key={method.id}
@@ -2237,9 +2251,10 @@ export default function IDPActionPlanModal({
                       style={{
                         padding: '12px 14px',
                         borderRadius: '10px',
-                        border: `1.5px solid ${isChecked ? '#EA580C' : '#E2E8F0'}`,
-                        background: isChecked ? '#FFF7ED' : '#FFFFFF',
-                        cursor: 'pointer',
+                        border: `1.5px solid ${isChecked ? '#EA580C' : isMaxReached ? '#E2E8F0' : '#E2E8F0'}`,
+                        background: isChecked ? '#FFF7ED' : isMaxReached ? '#F8FAFC' : '#FFFFFF',
+                        cursor: isMaxReached ? 'not-allowed' : 'pointer',
+                        opacity: isMaxReached ? 0.6 : 1,
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '12px',
@@ -2250,20 +2265,21 @@ export default function IDPActionPlanModal({
                       <input
                         type="checkbox"
                         checked={isChecked}
+                        disabled={isMaxReached}
                         onChange={() => {}}
                         style={{
                           accentColor: '#EA580C',
                           marginTop: '3px',
-                          cursor: 'pointer',
+                          cursor: isMaxReached ? 'not-allowed' : 'pointer',
                           width: '16px',
                           height: '16px',
                         }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isChecked ? '#9A3412' : '#1E293B', lineHeight: '1.3' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 800, color: isChecked ? '#9A3412' : isMaxReached ? '#94A3B8' : '#1E293B', lineHeight: '1.3' }}>
                           {method.shortTitle}
                         </div>
-                        <div style={{ fontSize: '0.785rem', color: isChecked ? '#C2410C' : '#64748B', marginTop: '3px', lineHeight: '1.4' }}>
+                        <div style={{ fontSize: '0.785rem', color: isChecked ? '#C2410C' : isMaxReached ? '#94A3B8' : '#64748B', marginTop: '3px', lineHeight: '1.4' }}>
                           {method.title}
                         </div>
                       </div>
@@ -2318,10 +2334,10 @@ export default function IDPActionPlanModal({
             >
               <div style={{ fontSize: '0.825rem', color: '#64748B' }}>
                 เลือกแล้ว:{' '}
-                <span style={{ fontWeight: 800, color: '#EA580C' }}>
-                  {(targetMethodItem.methods || []).length}
+                <span style={{ fontWeight: 800, color: (targetMethodItem.methods || []).length === 3 ? '#16A34A' : '#EA580C' }}>
+                  {(targetMethodItem.methods || []).length} / 3
                 </span>{' '}
-                วิธี
+                วิธีการ {(targetMethodItem.methods || []).length >= 3 && <span style={{ color: '#16A34A', fontWeight: 700 }}>(เลือกครบ 3 วิธีแล้ว)</span>}
               </div>
 
               <button
