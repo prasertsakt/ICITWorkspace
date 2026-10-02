@@ -13,278 +13,171 @@ service cloud.firestore {
       return request.auth.token.email.lower();
     }
 
-    // Helper: Check if requester is registered as an Active Admin in personnel collection
+    // Helper: Check if requester is registered as an Active Admin
     function isAdmin() {
       return isAuthenticated() && (
         exists(/databases/$(database)/documents/personnel/$(request.auth.uid)) ||
-        // Check if any personnel document matches the user email with Admin role
-        request.auth.token.email == "prasertsak.t@cit.kmutnb.ac.th" ||
-        request.auth.token.email == "tiawongsombat@gmail.com" ||
-        request.auth.token.email == "jarucha.j@icit.kmutnb.ac.th"
+        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
+        userEmail() == "tiawongsombat@gmail.com" ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
       );
     }
 
-    // Rules for 'personnel' collection (Whitelist & Personnel Records)
+    // Helper: Check if requester is HR Officer (Jarucha) or Admin
+    function isHrOrAdmin() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
+        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
+        userEmail() == "tiawongsombat@gmail.com"
+      );
+    }
+
+    // 1. Rules for 'personnel' collection (Whitelist & Personnel Records)
     match /personnel/{personId} {
       // Anyone (including guests) can read personnel directory to view live organization structure
       allow read: if true;
-
-      // Write (Create, Update, Delete) is strictly restricted to authenticated users / admins:
+      // Write (Create, Update, Delete) is restricted to authenticated users / admins
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'departments' collection
+    // 2. Rules for 'departments' collection
     match /departments/{deptId} {
-      // Anyone can read department structure
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'executives' collection
+    // 3. Rules for 'executives' collection
     match /executives/{execId} {
-      // Anyone can read executive directory
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'leaves' collection (Leave Calendar Records)
+    // 4. Rules for 'leaves' collection (Leave Calendar Records)
     match /leaves/{leaveId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'leaves_archive' collection (Archived Historical Leave Records)
+    // 5. Rules for 'leaves_archive' collection (Archived Historical Leave Records)
     match /leaves_archive/{archiveId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'time_attendances' collection (Time Attendance Requests)
+    // 6. Rules for 'time_attendances' collection (Time Attendance Requests)
     match /time_attendances/{attendanceId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'job_descriptions' collection (JD Hub)
+    // 7. Rules for 'job_descriptions' collection (JD Hub)
     match /job_descriptions/{jdId} {
-      // Must be logged in to view JDs
       allow read: if isAuthenticated();
-
-      // Create: Authenticated users/admins
       allow create: if isAuthenticated();
-
-      // Update: Admin can update any JD; Owner can update their own JD
       allow update: if isAuthenticated() && (
         isAdmin() ||
         resource.data.personnelEmail == userEmail() ||
         request.resource.data.personnelEmail == userEmail()
       );
-
-      // Delete: Only Admin can delete (User cannot delete)
       allow delete: if isAdmin();
     }
 
-    // Rules for 'email_logs' collection (Sent Email History & Logs)
+    // 8. Rules for 'email_logs' collection (Sent Email History & Logs)
     match /email_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'activity_logs' collection (System Audit & Activity Logs)
+    // 9. Rules for 'activity_logs' collection (System Audit & Activity Logs)
     match /activity_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'settings' collection (Portal Configurations, Service Order, JD Hub Revision Period, JD Template Config, etc.)
+    // 10. Rules for 'settings' collection (Portal Configurations, JD Hub Config, etc.)
     match /settings/{settingId} {
-      allow read: if true; // Any visitor/user can read portal configs & JD templates
-      allow write: if isAuthenticated(); // Only logged-in users / admins can save
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
-    // Rules for 'ims_audits' collection (Integrated Management System - Internal Audit Reports)
+    // 11. Rules for 'ims_audits' collection (Internal Audit Reports)
     match /ims_audits/{auditId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'ims_config' collection (Yearly Lead & Internal Auditor Assignments)
+    // 12. Rules for 'ims_config' collection (Yearly Lead & Internal Auditor Assignments)
     match /ims_config/{configId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    // Rules for 'ims_car_incidents' collection (CAR & Incident Hub - ICIT-FM-COMMON-013)
+    // 13. Rules for 'ims_car_incidents' collection (CAR & Incident Hub - ICIT-FM-COMMON-013)
     match /ims_car_incidents/{carId} {
-      // All visitors and staff can view CAR & Incident records
       allow read: if true;
-
-      // Authenticated users can create new CAR/Incident drafts
       allow create: if isAuthenticated();
-
-      // Authenticated users (Requesters, Requestees, DCC, Admin) can update
       allow update: if isAuthenticated();
-
-      // Deletion rule: Must be authenticated AND status must NOT be 'CLOSED'
-      // Closed records are permanently locked against deletion at the database level
-      allow delete: if isAuthenticated() && (
-        resource.data.status != "CLOSED"
-      );
+      allow delete: if isAuthenticated() && resource.data.status != "CLOSED";
     }
 
-    // Rules for 'ims_ofi_hub' collection (OFI Hub - Opportunity for Improvement)
+    // 14. Rules for 'ims_ofi_hub' collection (OFI Hub - Opportunity for Improvement)
     match /ims_ofi_hub/{ofiId} {
-      // All staff and authenticated visitors can view OFI records
       allow read: if true;
-
-      // Authenticated users (DCC, MR, Assignees, Admin) can create and update OFI items
       allow create, update: if isAuthenticated();
-
-      // Authenticated users (DCC, Admin) can delete OFI records
       allow delete: if isAuthenticated();
     }
 
-    // Rules for 'idp_records' collection (IDP Hub - Individual Development Plan)
+    // 15. Rules for 'idp_records' collection (IDP Hub - Individual Development Plan & Need Analysis)
     match /idp_records/{idpId} {
-      // Authenticated staff can view IDP records
       allow read: if isAuthenticated();
-
-      // Authenticated HR/Admin/Owners can create
-      allow create: if isAuthenticated();
-
-      // Form owner, Supervisor, Deputy Director, HR Officer, or Admin can update
-      allow update: if isAuthenticated();
-
-      // Only HR Officer (jarucha) or Admin can delete
-      allow delete: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
-      );
+      allow create, update: if isAuthenticated();
+      allow delete: if isHrOrAdmin();
     }
 
-    // Rules for 'idp_config' collection (IDP Master Competency Configuration per Fiscal Year)
+    // 16. Rules for 'idp_config' collection (IDP Master Competency Configuration per Fiscal Year)
     match /idp_config/{configId} {
-      // All authenticated staff can read competency configuration
       allow read: if isAuthenticated();
-
-      // Only HR Officer (jarucha) or Admin can write/update configuration
-      allow write: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
-      );
+      allow write: if isHrOrAdmin();
     }
 
-    // Rules for 'idp_strategy_config' collection (IDP Strategic Framework: Vision, SFA, SO, CKPI per Fiscal Year)
+    // 17. Rules for 'idp_strategy_config' collection (IDP Strategic Framework: Vision, SFA, SO, CKPI)
     match /idp_strategy_config/{configId} {
-      // All authenticated staff can read strategy configuration
       allow read: if isAuthenticated();
-
-      // Only HR Officer (jarucha) or Admin can write/update strategic configuration
-      allow write: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
-      );
+      allow write: if isHrOrAdmin();
     }
 
-    // Rules for 'skill_map_configs' collection (Knowledge & Skill Map Master Hierarchy per Fiscal Year)
+    // 18. Rules for 'idp_action_plans' collection (IDP Action Plans & Quarterly Progress Tracking)
+    match /idp_action_plans/{planId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isHrOrAdmin();
+    }
+
+    // 19. Rules for 'skill_map_configs' collection (Knowledge & Skill Map Master Hierarchy)
     match /skill_map_configs/{configId} {
-      // All authenticated staff can read skill map structure
       allow read: if isAuthenticated();
-
-      // Only HR Officer (jarucha) or Admin can write/update configuration
-      allow write: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
-      );
+      allow write: if isHrOrAdmin();
     }
 
-    // Rules for 'skill_map_assessments' collection (Personnel Knowledge & Skill Map Self-Assessments)
+    // 20. Rules for 'skill_map_assessments' collection (Personnel Skill Map Assessments)
     match /skill_map_assessments/{assessmentId} {
-      // All authenticated staff can read assessments (including peer matrix and spider radar)
       allow read: if isAuthenticated();
-
-      // Authenticated staff can create and update their self-assessment; Admin & HR can update
       allow create, update: if isAuthenticated();
-
-      // Only HR Officer or Admin can delete assessment records
-      allow delete: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th"
-      );
+      allow delete: if isHrOrAdmin();
     }
 
-    // Rules for 'tqa_ofi_items' collection (Thailand Quality Award - TQA OFI Tracking)
+    // 21. Rules for 'tqa_ofi_items' collection (Thailand Quality Award - TQA OFI Tracking)
     match /tqa_ofi_items/{ofiId} {
-      // All visitors and staff can view TQA OFI items
       allow read: if true;
-
-      // Authenticated users (Admin, Assigned Persons) can create and update OFI items / action reports
       allow create, update: if isAuthenticated();
-
-      // Deletion restricted to authenticated Admins
       allow delete: if isAuthenticated();
     }
 
-    // Rules for 'tqa_reports' collection (TQA Feedback Report URLs per Fiscal Year)
+    // 22. Rules for 'tqa_reports' collection (TQA Feedback Report URLs per Fiscal Year)
     match /tqa_reports/{reportId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
-
-    // Rules for 'idp_records' collection (Individual Development Plan - IDP Hub)
-    match /idp_records/{recordId} {
-      // Authenticated personnel can view IDP records
-      allow read: if isAuthenticated();
-      // Authenticated users (Self, Supervisor, Deputy Director, HR Officer, Admin) can create and update
-      allow create, update: if isAuthenticated();
-      // Deletion restricted to Admin or HR Officer
-      allow delete: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
-        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
-        userEmail() == "tiawongsombat@gmail.com"
-      );
-    }
-
-    // Rules for 'idp_config' collection (IDP Standard Competency Configuration per Fiscal Year)
-    match /idp_config/{configId} {
-      // All authenticated staff can read IDP competency config
-      allow read: if isAuthenticated();
-      // HR Officer and Admins can create, update, and manage
-      allow write: if isAuthenticated();
-    }
-
-    // Rules for 'idp_strategy_config' collection (Strategic Focus Areas, SO, CKPI Framework Configuration)
-    match /idp_strategy_config/{configId} {
-      // All authenticated staff can read Strategic Framework config
-      allow read: if isAuthenticated();
-      // HR Officer and Admins can create, update, and duplicate configuration
-      allow write: if isAuthenticated();
-    }
-
-    // Rules for 'skill_map_configs' collection (Skill Map Structure & Matrix Configuration)
-    match /skill_map_configs/{configId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Rules for 'skill_map_assessments' collection (Skill Map Personnel Assessments)
-    match /skill_map_assessments/{assessmentId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Rules for 'idp_action_plans' collection (IDP Action Plans & Quarterly Progress Tracking)
-    match /idp_action_plans/{planId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if isAuthenticated() && (
-        isAdmin() ||
-        userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
-        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
-        userEmail() == "tiawongsombat@gmail.com"
-      );
-    }
   }
 }
-

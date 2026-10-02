@@ -41,7 +41,7 @@ import {
   deleteActionPlan,
   saveActionPlan,
   createActionPlanItemsFromNeedAnalysis,
-  exportActionPlanToExcel,
+  exportAllActionPlansToExcel,
 } from '@/lib/idpActionPlanService';
 import { subscribeIdpRecords, isHrOfficer } from '@/lib/idpService';
 import {
@@ -519,6 +519,58 @@ function IDPActionPlanContent() {
               <option value="IN_PROGRESS">อยู่ระหว่างดำเนินการ</option>
               <option value="EVALUATED">ประเมินผลแล้ว</option>
             </select>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetPlans = filteredPlans.length > 0 ? filteredPlans : actionPlans;
+                  if (targetPlans.length === 0) {
+                    showAlert({
+                      type: 'info',
+                      title: 'ไม่พบข้อมูลแผนพัฒนา',
+                      message: 'ไม่มีข้อมูลแผนพัฒนา IDP Action Plan สำหรับส่งออกในขณะนี้',
+                    });
+                    return;
+                  }
+                  exportAllActionPlansToExcel(targetPlans, fiscalYear);
+                }}
+                disabled={actionPlans.length === 0}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '0.65rem 1.15rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: actionPlans.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: actionPlans.length === 0 ? 0.6 : 1,
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="ส่งออกแผนพัฒนาบุคลากรทุกคนเป็นไฟล์ Excel รวม (แยก 1 Sheet ต่อ 1 คน) - สำหรับผู้ดูแลระบบ"
+              >
+                <FileSpreadsheet size={16} />
+                <span>ส่งออก Excel รวม</span>
+                {actionPlans.length > 0 && (
+                  <span
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.25)',
+                      padding: '1px 7px',
+                      borderRadius: '999px',
+                      fontSize: '0.725rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {filteredPlans.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -735,26 +787,6 @@ function IDPActionPlanContent() {
                       title="พิมพ์แบบฟอร์ม"
                     >
                       <Printer size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => exportActionPlanToExcel(plan, fiscalYear)}
-                      style={{
-                        padding: '0.45rem 0.75rem',
-                        borderRadius: '8px',
-                        background: '#ECFDF5',
-                        color: '#059669',
-                        border: '1px solid #A7F3D0',
-                        fontSize: '0.825rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                      title="ส่งออก Excel"
-                    >
-                      <FileSpreadsheet size={15} />
                     </button>
 
                     {(isAdmin || isHR) && (

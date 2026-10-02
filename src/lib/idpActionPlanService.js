@@ -357,11 +357,9 @@ export function formatAlignmentText(alignments = {}) {
 }
 
 /**
- * Export a Single IDP Action Plan to Excel (.xlsx) matching the Official Form Layout
+ * Helper to build worksheet rows for a single IDP Action Plan
  */
-export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
-  if (!plan) return;
-  const wb = XLSX.utils.book_new();
+function buildActionPlanRows(plan, fiscalYear = '2569') {
   const rows = [];
 
   // Header Title
@@ -541,9 +539,124 @@ export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
     { wch: 28 }, // Mission
   ];
 
-  const sheetName = `IDP_${(plan.personnelName || 'Plan').slice(0, 20)}`.replace(/[:\\/?*[\]]/g, '_');
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  return ws;
+}
+
+/**
+ * Export a Single IDP Action Plan to Excel (.xlsx)
+ */
+export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
+  if (!plan) return;
+  const wb = XLSX.utils.book_new();
+  const ws = buildActionPlanRows(plan, fiscalYear);
+  const cleanName = (plan.personnelName || 'Plan').replace(/[:\\/?*[\]]/g, '_').slice(0, 28);
+  XLSX.utils.book_append_sheet(wb, ws, cleanName);
 
   const fileName = `IDP_Action_Plan_${fiscalYear}_${(plan.personnelName || 'Staff').replace(/\s+/g, '_')}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+/**
+ * Export All IDP Action Plans into a single Excel (.xlsx) file with separate sheets for each individual person
+ */
+export function exportAllActionPlansToExcel(plans = [], fiscalYear = '2569') {
+  if (!plans || plans.length === 0) return;
+  const wb = XLSX.utils.book_new();
+
+  // 1. Overview Sheet (ภาพรวมแผน IDP)
+  const summaryRows = [];
+  summaryRows.push([`รายงานสรุปแผนพัฒนาบุคลากรรายบุคคล (IDP Action Plan) ประจำปีงบประมาณ พ.ศ. ${fiscalYear}`]);
+  summaryRows.push([`สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ`]);
+  summaryRows.push([`จำนวนแผนพัฒนาทั้งหมด: ${plans.length} ฉบับ`, '', '', `วันที่ส่งออกข้อมูล: ${formatDateDDMMYYYYBE(new Date().toISOString())}`]);
+  summaryRows.push([]);
+
+  // Table Headers
+  summaryRows.push([
+    'ลำดับ',
+    'ชื่อ - สกุล',
+    'ตำแหน่ง',
+    'ฝ่าย/งาน',
+    'จำนวนสมรรถนะ (ข้อ)',
+    'บรรลุตามตัวชี้วัด (ข้อ)',
+    'คิดเป็นร้อยละ (%)',
+    'ผลการประเมิน',
+    'สถานะแผน',
+    'ลงนามรับทราบ (ผู้รับการพัฒนา)',
+    'ลงนามรับทราบ (ผู้บังคับบัญชา)',
+    'ลงนามประเมิน (ผู้บังคับบัญชา)',
+    'ลงนามรับทราบผล (ผู้รับการพัฒนา)',
+  ]);
+
+  plans.forEach((plan, idx) => {
+    const items = plan.items || [];
+    const achievedCount = items.filter((it) => it.evaluation?.status === 'ACHIEVED').length;
+    const percent = items.length > 0 ? Math.round((achievedCount / items.length) * 100) : (plan.signatures?.evaluation?.percent ?? 0);
+    const ack = plan.signatures?.acknowledgement || {};
+    const ev = plan.signatures?.evaluation || {};
+
+    const evalResultLabel =
+      ev.resultType === 'COMPLETED'
+        ? 'สำเร็จตามแผน'
+        : ev.resultType === 'NEARLY_COMPLETED'
+        ? 'เกือบสำเร็จตามแผน'
+        : '-';
+
+    summaryRows.push([
+      idx + 1,
+      plan.personnelName || '-',
+      plan.position || '-',
+      plan.department || '-',
+      items.length,
+      achievedCount,
+      `${percent}%`,
+      evalResultLabel,
+      IDP_ACTION_PLAN_STATUSES[plan.status]?.label || plan.status || '-',
+      ack.trainee?.signed ? `ลงนามแล้ว (${formatDateDDMMYYYYBE(ack.trainee.signedAt)})` : 'ยังไม่ลงนาม',
+      ack.supervisor?.signed ? `ลงนามแล้ว (${formatDateDDMMYYYYBE(ack.supervisor.signedAt)})` : 'ยังไม่ลงนาม',
+      ev.supervisor?.signed ? `ประเมินแล้ว (${formatDateDDMMYYYYBE(ev.supervisor.signedAt)})` : 'ยังไม่ประเมิน',
+      ev.trainee?.signed ? `รับทราบแล้ว (${formatDateDDMMYYYYBE(ev.trainee.signedAt)})` : 'ยังไม่รับทราบ',
+    ]);
+  });
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [
+    { wch: 8 },  // ลำดับ
+    { wch: 28 }, // ชื่อ - สกุล
+    { wch: 22 }, // ตำแหน่ง
+    { wch: 26 }, // ฝ่าย
+    { wch: 18 }, // จำนวนสมรรถนะ
+    { wch: 20 }, // บรรลุ
+    { wch: 16 }, // ร้อยละ
+    { wch: 20 }, // ผลการประเมิน
+    { wch: 20 }, // สถานะแผน
+    { wch: 26 }, // ลงนาม 1
+    { wch: 26 }, // ลงนาม 2
+    { wch: 26 }, // ลงนาม 3
+    { wch: 26 }, // ลงนาม 4
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'ภาพรวมแผน IDP');
+
+  // 2. Individual Sheets for Each Person
+  const usedSheetNames = new Set(['ภาพรวมแผน IDP']);
+  plans.forEach((plan, idx) => {
+    const ws = buildActionPlanRows(plan, fiscalYear);
+    const cleanName = (plan.personnelName || `Person_${idx + 1}`)
+      .replace(/[:\\/?*[\]]/g, '')
+      .trim();
+    let sheetName = `${idx + 1}.${cleanName}`.slice(0, 31);
+    
+    // Ensure unique sheet name within 31 chars limit
+    let counter = 1;
+    while (usedSheetNames.has(sheetName)) {
+      sheetName = `${idx + 1}.${cleanName.slice(0, 26)}_${counter}`.slice(0, 31);
+      counter++;
+    }
+    usedSheetNames.add(sheetName);
+
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const fileName = `IDP_Action_Plans_All_FiscalYear_${fiscalYear}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }

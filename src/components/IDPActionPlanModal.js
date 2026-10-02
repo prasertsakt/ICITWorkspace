@@ -737,28 +737,6 @@ export default function IDPActionPlanModal({
 
             <button
               type="button"
-              onClick={() => exportActionPlanToExcel({ ...plan, items }, fiscalYear)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
-              }}
-            >
-              <FileSpreadsheet size={16} />
-              <span>ส่งออก Excel</span>
-            </button>
-
-            <button
-              type="button"
               onClick={async () => {
                 if (hasUnsavedChanges) {
                   const confirmed = await showConfirm({

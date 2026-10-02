@@ -59,27 +59,6 @@ export default function IDPActionPlanPrintModal({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => exportActionPlanToExcel(plan, fiscalYear)}
-            style={{
-              padding: '0.45rem 0.9rem',
-              borderRadius: '8px',
-              background: '#059669',
-              color: '#FFFFFF',
-              border: 'none',
-              fontSize: '0.825rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            <FileSpreadsheet size={15} />
-            <span>ส่งออก Excel</span>
-          </button>
-
-          <button
-            type="button"
             onClick={handlePrint}
             style={{
               padding: '0.45rem 1.1rem',
