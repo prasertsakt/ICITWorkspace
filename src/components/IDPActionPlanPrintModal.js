@@ -77,6 +77,7 @@ export default function IDPActionPlanPrintModal({
 
   const ack = plan.signatures?.acknowledgement || {};
   const ev = plan.signatures?.evaluation || {};
+  const items = plan.items || [];
 
   const isSupervisorSigned = Boolean(ev.supervisor?.signed);
 
