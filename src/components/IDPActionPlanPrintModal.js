@@ -78,25 +78,22 @@ export default function IDPActionPlanPrintModal({
   const ack = plan.signatures?.acknowledgement || {};
   const ev = plan.signatures?.evaluation || {};
 
-  const items = plan.items || [];
-  const totalItems = items.length;
-  const achievedCount = items.filter((it) => it.evaluation?.status === 'ACHIEVED').length;
-  const calculatedPercent = totalItems > 0 ? Math.round((achievedCount / totalItems) * 100) : 0;
+  const isSupervisorSigned = Boolean(ev.supervisor?.signed);
 
-  // Percentage to display: prioritize saved percentage if available, otherwise calculate from items
-  const displayPercent =
-    ev.percent !== undefined && ev.percent !== null && ev.percent !== ''
-      ? ev.percent
-      : (totalItems > 0 ? calculatedPercent : null);
-
-  // Result type determination:
+  // If supervisor has evaluated and signed:
   const isCompleted =
-    ev.resultType === 'COMPLETED' ||
-    (!ev.resultType && (displayPercent !== null ? displayPercent >= 100 : false) && (achievedCount > 0 || Boolean(ev.supervisor?.signed)));
+    isSupervisorSigned &&
+    (ev.resultType === 'COMPLETED' || (ev.percent !== undefined && Number(ev.percent) >= 100));
 
   const isNearlyCompleted =
-    ev.resultType === 'NEARLY_COMPLETED' ||
-    (!ev.resultType && (displayPercent !== null ? displayPercent < 100 : false) && (Boolean(ev.supervisor?.signed) || achievedCount > 0 || Boolean(ev.reason?.trim())));
+    isSupervisorSigned &&
+    (ev.resultType === 'NEARLY_COMPLETED' || (ev.percent !== undefined && Number(ev.percent) < 100));
+
+  // Percentage: show actual evaluated percent if supervisor has signed, otherwise show dotted line placeholder
+  const displayPercent =
+    isSupervisorSigned && ev.percent !== undefined && ev.percent !== null && ev.percent !== ''
+      ? ev.percent
+      : '.....';
 
   return (
     <div
