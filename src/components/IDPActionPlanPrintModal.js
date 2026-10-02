@@ -1,9 +1,67 @@
 'use client';
 
 import React from 'react';
-import { X, Printer, FileSpreadsheet } from 'lucide-react';
-import { formatMethodsString, exportActionPlanToExcel } from '@/lib/idpActionPlanService';
-import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import { X, Printer } from 'lucide-react';
+import { formatMethodsString } from '@/lib/idpActionPlanService';
+
+/**
+ * Helper to format date into full Thai date format: e.g. "30 ตุลาคม 2569"
+ */
+function formatThaiFullDate(dateInput) {
+  if (!dateInput) return null;
+  const THAI_MONTHS_FULL = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  let day = null;
+  let monthIndex = null;
+  let beYear = null;
+
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+    day = dateInput.getDate();
+    monthIndex = dateInput.getMonth();
+    beYear = dateInput.getFullYear() < 2400 ? dateInput.getFullYear() + 543 : dateInput.getFullYear();
+  } else if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (!trimmed || trimmed === '-') return null;
+
+    // ISO: YYYY-MM-DD
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const y = parseInt(isoMatch[1], 10);
+      monthIndex = parseInt(isoMatch[2], 10) - 1;
+      day = parseInt(isoMatch[3], 10);
+      beYear = y < 2400 ? y + 543 : y;
+    } else if (trimmed.includes('/') || trimmed.includes('-')) {
+      const sep = trimmed.includes('/') ? '/' : '-';
+      const parts = trimmed.split(sep);
+      if (parts.length === 3) {
+        const p1 = parseInt(parts[0], 10);
+        const p2 = parseInt(parts[1], 10);
+        const y = parseInt(parts[2].split(' ')[0], 10);
+        if (!isNaN(p1) && !isNaN(p2) && !isNaN(y)) {
+          if (p1 > 12) {
+            day = p1;
+            monthIndex = p2 - 1;
+          } else if (p2 > 12) {
+            day = p2;
+            monthIndex = p1 - 1;
+          } else {
+            day = p1;
+            monthIndex = p2 - 1;
+          }
+          beYear = y < 2400 ? y + 543 : y;
+        }
+      }
+    }
+  }
+
+  if (day && monthIndex !== null && monthIndex >= 0 && monthIndex < 12 && beYear) {
+    return `${day} ${THAI_MONTHS_FULL[monthIndex]} ${beYear}`;
+  }
+  return null;
+}
 
 export default function IDPActionPlanPrintModal({
   isOpen,
@@ -19,6 +77,26 @@ export default function IDPActionPlanPrintModal({
 
   const ack = plan.signatures?.acknowledgement || {};
   const ev = plan.signatures?.evaluation || {};
+
+  const items = plan.items || [];
+  const totalItems = items.length;
+  const achievedCount = items.filter((it) => it.evaluation?.status === 'ACHIEVED').length;
+  const calculatedPercent = totalItems > 0 ? Math.round((achievedCount / totalItems) * 100) : 0;
+
+  // Percentage to display: prioritize saved percentage if available, otherwise calculate from items
+  const displayPercent =
+    ev.percent !== undefined && ev.percent !== null && ev.percent !== ''
+      ? ev.percent
+      : (totalItems > 0 ? calculatedPercent : null);
+
+  // Result type determination:
+  const isCompleted =
+    ev.resultType === 'COMPLETED' ||
+    (!ev.resultType && (displayPercent !== null ? displayPercent >= 100 : false) && (achievedCount > 0 || Boolean(ev.supervisor?.signed)));
+
+  const isNearlyCompleted =
+    ev.resultType === 'NEARLY_COMPLETED' ||
+    (!ev.resultType && (displayPercent !== null ? displayPercent < 100 : false) && (Boolean(ev.supervisor?.signed) || achievedCount > 0 || Boolean(ev.reason?.trim())));
 
   return (
     <div
@@ -116,7 +194,7 @@ export default function IDPActionPlanPrintModal({
         {/* Document Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-            แผนพัฒนาบุคลากร ประจำปีงบประมาณ พ.ศ. {fiscalYear} : Individual Development (IDP)
+            แผนพัฒนาบุคลากร ประจำปีงบประมาณ พ.ศ. {fiscalYear} : Individual Development Plan (IDP)
           </h2>
           <h3 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0' }}>
             สังกัด สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ
@@ -216,14 +294,14 @@ export default function IDPActionPlanPrintModal({
             </tr>
           </thead>
           <tbody>
-            {(plan.items || []).length === 0 ? (
+            {items.length === 0 ? (
               <tr>
                 <td colSpan="13" style={{ textAlign: 'center', padding: '1.5rem', border: '1px solid #000' }}>
                   ไม่มีข้อมูลรายการแผนพัฒนา
                 </td>
               </tr>
             ) : (
-              plan.items.map((item, idx) => {
+              items.map((item, idx) => {
                 const methodsStr = formatMethodsString(item.methods, item.methodCustom);
                 const q1 = item.quarters?.q1?.progress || (item.quarters?.q1?.planned ? '✓' : '-');
                 const q2 = item.quarters?.q2?.progress || (item.quarters?.q2?.planned ? '✓' : '-');
@@ -315,7 +393,7 @@ export default function IDPActionPlanPrintModal({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1.3fr 1fr',
+            gridTemplateColumns: '1fr 1.35fr 1fr',
             border: '1px solid #000',
             fontSize: '11px',
           }}
@@ -325,14 +403,14 @@ export default function IDPActionPlanPrintModal({
             <div>
               <strong>รับทราบแผนพัฒนา IDP</strong>
               <div style={{ marginTop: '16px' }}>
-                ลงชื่อ: {ack.trainee?.signed ? <u>{ack.trainee.name}</u> : '...................................................'} ผู้รับการพัฒนา
+                ลงชื่อ: {ack.trainee?.signed ? <u>&nbsp;{ack.trainee.name}&nbsp;</u> : '...................................................'} ผู้รับการพัฒนา
               </div>
               <div style={{ marginTop: '12px' }}>
-                ลงชื่อ: {ack.supervisor?.signed ? <u>{ack.supervisor.name}</u> : '...................................................'} ผู้บังคับบัญชา
+                ลงชื่อ: {ack.supervisor?.signed ? <u>&nbsp;{ack.supervisor.name}&nbsp;</u> : '...................................................'} ผู้บังคับบัญชา
               </div>
             </div>
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
-              วันที่ {ack.trainee?.signedAt ? formatDateDDMMYYYYBE(ack.trainee.signedAt) : '30 ตุลาคม 2568'}
+              วันที่ {formatThaiFullDate(ack.supervisor?.signedAt) || formatThaiFullDate(ack.trainee?.signedAt) || '..... / .................... / ..........'}
             </div>
           </div>
 
@@ -341,22 +419,60 @@ export default function IDPActionPlanPrintModal({
             <div>
               <strong>การประเมินผลพัฒนาตามแผน IDP โดยผู้บังคับบัญชา</strong>
               <div style={{ marginTop: '6px' }}>
-                <div>{ev.resultType === 'COMPLETED' ? '☑' : '☐'} ดำเนินการพัฒนาตนเองสำเร็จตามแผน IDP</div>
-                <div>{ev.resultType === 'NEARLY_COMPLETED' ? '☑' : '☐'} ดำเนินการพัฒนาตนเองเกือบสำเร็จตามแผน IDP</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '13px',
+                      height: '13px',
+                      border: '1.2px solid #000',
+                      borderRadius: '2px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      lineHeight: 1,
+                      backgroundColor: '#FFF',
+                    }}
+                  >
+                    {isCompleted ? '✓' : ''}
+                  </span>
+                  <span>ดำเนินการพัฒนาตนเองสำเร็จตามแผน IDP</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '13px',
+                      height: '13px',
+                      border: '1.2px solid #000',
+                      borderRadius: '2px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      lineHeight: 1,
+                      backgroundColor: '#FFF',
+                    }}
+                  >
+                    {isNearlyCompleted ? '✓' : ''}
+                  </span>
+                  <span>ดำเนินการพัฒนาตนเองเกือบสำเร็จตามแผน IDP</span>
+                </div>
               </div>
               <div style={{ marginTop: '6px' }}>
-                คิดเป็นร้อยละ <u>&nbsp;{ev.percent ?? '.....'}&nbsp;</u> ของแผนที่กำหนดไว้
+                คิดเป็นร้อยละ <u>&nbsp;{displayPercent !== null ? displayPercent : '.....'}&nbsp;</u> ของแผนที่กำหนดไว้
                 <br />
-                เนื่องจาก <u>&nbsp;{ev.reason || '.....................................................'}&nbsp;</u>
+                เนื่องจาก <u>&nbsp;{ev.reason || '...................................................................................................'}&nbsp;</u>
               </div>
               <div style={{ marginTop: '12px' }}>
-                ลงชื่อ: {ev.supervisor?.signed ? <u>{ev.supervisor.name}</u> : '...................................................'} ผู้บังคับบัญชา
+                ลงชื่อ: {ev.supervisor?.signed ? <u>&nbsp;{ev.supervisor.name}&nbsp;</u> : '...................................................'} ผู้บังคับบัญชา
                 <br />
-                ตำแหน่ง: <u>&nbsp;{ev.supervisor?.position || 'รองผู้อำนวยการฝ่ายบริหาร'}&nbsp;</u>
+                ตำแหน่ง: {ev.supervisor?.position ? <u>&nbsp;{ev.supervisor.position}&nbsp;</u> : ev.supervisor?.signed ? <u>&nbsp;รองผู้อำนวยการฝ่ายบริหาร&nbsp;</u> : '...................................................'}
               </div>
             </div>
             <div style={{ marginTop: '8px', textAlign: 'center' }}>
-              วันที่ {ev.supervisor?.signedAt ? formatDateDDMMYYYYBE(ev.supervisor.signedAt) : '30 ตุลาคม 2568'}
+              วันที่ {formatThaiFullDate(ev.supervisor?.signedAt) || '..... / .................... / ..........'}
             </div>
           </div>
 
@@ -365,13 +481,13 @@ export default function IDPActionPlanPrintModal({
             <div>
               <strong>รับทราบผลการพัฒนา IDP</strong>
               <div style={{ marginTop: '24px' }}>
-                ลงชื่อ: {ev.trainee?.signed ? <u>{ev.trainee.name}</u> : '...................................................'} ผู้รับการพัฒนา
+                ลงชื่อ: {ev.trainee?.signed ? <u>&nbsp;{ev.trainee.name}&nbsp;</u> : '...................................................'} ผู้รับการพัฒนา
                 <br />
-                ตำแหน่ง: <u>&nbsp;{ev.trainee?.position || plan.position || 'บุคลากร'}&nbsp;</u>
+                ตำแหน่ง: {ev.trainee?.position ? <u>&nbsp;{ev.trainee.position}&nbsp;</u> : plan.position ? <u>&nbsp;{plan.position}&nbsp;</u> : '...................................................'}
               </div>
             </div>
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
-              วันที่ {ev.trainee?.signedAt ? formatDateDDMMYYYYBE(ev.trainee.signedAt) : '30 ตุลาคม 2568'}
+              วันที่ {formatThaiFullDate(ev.trainee?.signedAt) || '..... / .................... / ..........'}
             </div>
           </div>
         </div>
@@ -380,29 +496,82 @@ export default function IDPActionPlanPrintModal({
       {/* Print Stylesheet */}
       <style jsx global>{`
         @media print {
-          body {
+          @page {
+            size: A4 landscape;
+            margin: 6mm 8mm;
+          }
+          html, body {
             background: #ffffff !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
+            font-size: 8.5pt !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-modal-overlay,
+          .print-modal-overlay * {
+            visibility: visible !important;
+          }
+          .print-modal-overlay {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            min-height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            backdrop-filter: none !important;
+            z-index: 99999 !important;
+            display: block !important;
+            overflow: visible !important;
           }
           .no-print {
             display: none !important;
           }
-          .print-modal-overlay {
-            position: static !important;
-            background: none !important;
-            padding: 0 !important;
-            overflow: visible !important;
-          }
           .printable-sheet {
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
             max-width: 100% !important;
-            box-shadow: none !important;
-            padding: 10mm !important;
+            margin: 0 !important;
+            padding: 4mm 2mm !important;
             border-radius: 0 !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
           }
-          @page {
-            size: A4 landscape;
-            margin: 8mm;
+          .printable-sheet table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+            font-size: 7.5pt !important;
+          }
+          .printable-sheet th,
+          .printable-sheet td {
+            padding: 2.5px 3.5px !important;
+            line-height: 1.2 !important;
+            border: 1px solid #000000 !important;
+          }
+          .printable-sheet tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .printable-sheet thead {
+            display: table-header-group !important;
+          }
+          .printable-sheet tfoot {
+            display: table-footer-group !important;
           }
         }
       `}</style>
