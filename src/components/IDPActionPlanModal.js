@@ -120,6 +120,21 @@ export default function IDPActionPlanModal({
   const planOwnerEmail = (plan?.personnelEmail || '').trim().toLowerCase();
   const isOwner = userEmail && userEmail === planOwnerEmail;
 
+  // Supervisor / Dept Head / Executive / Admin Permission for Part 2 Evaluation
+  const isLeaderOrExecutive = Boolean(
+    currentPersonnel?.isExecutive ||
+    currentPersonnel?.department === 'คณะผู้บริหาร' ||
+    /หัวหน้า|ผู้อำนวยการ|รองผู้อำนวยการ|ผู้บริหาร/i.test(currentPersonnel?.position || '') ||
+    /head|director|deputy|executive|supervisor/i.test(currentPersonnel?.role || currentPersonnel?.position || '')
+  );
+
+  const canEditEvaluationReason = Boolean(
+    isAdmin ||
+    isHR ||
+    (isLeaderOrExecutive && !isOwner) ||
+    (!isOwner && (isAdmin || isHR || isLeaderOrExecutive))
+  );
+
   // Subscribe Strategy Config
   useEffect(() => {
     if (!isOpen) return;
@@ -1925,7 +1940,7 @@ export default function IDPActionPlanModal({
                     </label>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                         คิดเป็นร้อยละ (%):
@@ -1957,16 +1972,41 @@ export default function IDPActionPlanModal({
 
                     <div>
                       <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                        เนื่องจาก (เหตุผล):
+                        เนื่องจาก (เหตุผลประกอบการประเมิน):
                       </label>
-                      <input
-                        type="text"
+                      <textarea
+                        rows={3}
                         value={evalReason}
-                        onChange={(e) => setEvalReason(e.target.value)}
+                        onChange={(e) => {
+                          if (canEditEvaluationReason) {
+                            setEvalReason(e.target.value);
+                            setHasUnsavedChanges(true);
+                          }
+                        }}
+                        readOnly={!canEditEvaluationReason}
                         className="form-control"
-                        placeholder="ระบุเหตุผลประกอบการประเมิน..."
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1' }}
+                        placeholder={
+                          canEditEvaluationReason
+                            ? 'ระบุเหตุผลประกอบการประเมินผลการพัฒนาตนเอง...'
+                            : 'ยังไม่มีการระบุเหตุผลประกอบการประเมิน (สงวนสิทธิ์เฉพาะหัวหน้า/ผู้บังคับบัญชา/ผู้ดูแลระบบ)'
+                        }
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          border: `1px solid ${canEditEvaluationReason ? '#CBD5E1' : '#E2E8F0'}`,
+                          backgroundColor: canEditEvaluationReason ? '#FFFFFF' : '#F1F5F9',
+                          color: canEditEvaluationReason ? '#1E293B' : '#64748B',
+                          cursor: canEditEvaluationReason ? 'text' : 'not-allowed',
+                          fontSize: '0.85rem',
+                          lineHeight: '1.5',
+                        }}
                       />
+                      {!canEditEvaluationReason && (
+                        <p style={{ fontSize: '0.7rem', color: '#94A3B8', margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                          * สงวนสิทธิ์การระบุ/แก้ไขเหตุผลเฉพาะหัวหน้าฝ่าย, ผู้บังคับบัญชา หรือผู้ดูแลระบบเท่านั้น
+                        </p>
+                      )}
                     </div>
                   </div>
 
