@@ -260,7 +260,12 @@ export default function IDPActionPlanPrintModal({
                 return (
                   <tr key={item.id} style={{ verticalAlign: 'top' }}>
                     <td style={{ padding: '6px', border: '1px solid #000' }}>
-                      <strong>{idx + 1}. {item.competencyName}</strong>
+                      <strong>{idx + 1}. {item.competencyName || '-'}</strong>
+                      {item.skillDetail && (
+                        <div style={{ fontSize: '10px', color: '#334155', marginTop: '3px' }}>
+                          {item.skillDetail}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '6px', border: '1px solid #000' }}>
                       {item.goal || '-'}

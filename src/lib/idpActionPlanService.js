@@ -200,6 +200,7 @@ export function createActionPlanItemsFromNeedAnalysis(selectedCompetencies = [])
     evaluatedScore: Number(comp.evaluatedTotal) || 0,
     
     // Form fields
+    skillDetail: '', // รายละเอียดความรู้/ทักษะที่ต้องการพัฒนา (ผู้ใช้กรอกเอง)
     goal: '',
     kpiCriteria: '', // Staff success criteria / KPI
     methods: [], // Multi-select array of method IDs (e.g. [1, 6])
@@ -437,8 +438,12 @@ export function exportActionPlanToExcel(plan, fiscalYear = '2569') {
     const skillLabel = (item.alignments?.skillMapTitles || []).join(', ') || '-';
     const missionLabel = (item.alignments?.missionTitles || []).join(', ') || '-';
 
+    const compTitle = item.skillDetail
+      ? `${idx + 1}. ${item.competencyName}\n(${item.skillDetail})`
+      : `${idx + 1}. ${item.competencyName || '-'}`;
+
     rows.push([
-      `${idx + 1}. ${item.competencyName}`,
+      compTitle,
       item.goal || '-',
       methodsStr,
       item.application || '-',

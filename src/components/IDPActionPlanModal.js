@@ -466,9 +466,10 @@ export default function IDPActionPlanModal({
     const newItem = {
       id: `item-${Date.now()}`,
       order: items.length + 1,
-      competencyName: '',
+      competencyName: 'สมรรถนะเพิ่มเติม',
       competencyType: 'CORE',
       gap: 0,
+      skillDetail: '',
       goal: '',
       methods: [],
       methodCustom: '',
@@ -1206,8 +1207,8 @@ export default function IDPActionPlanModal({
                                   ความรู้/ทักษะ/สมรรถนะ:
                                 </label>
                                 <textarea
-                                  value={item.competencyName || ''}
-                                  onChange={(e) => updateItemField(item.id, 'competencyName', e.target.value)}
+                                  value={item.skillDetail || ''}
+                                  onChange={(e) => updateItemField(item.id, 'skillDetail', e.target.value)}
                                   className="form-control"
                                   rows={2}
                                   placeholder="เช่น ทักษะด้านการวิเคราะห์และออกแบบกระบวนการ"
@@ -2426,7 +2427,7 @@ export default function IDPActionPlanModal({
                     บันทึกผลการพัฒนา (Progress Report) — {IDP_ACTION_PLAN_QUARTERS.find((q) => q.key === wysiwygModalState.quarterKey)?.fullLabel || wysiwygModalState.quarterKey}
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: '#4338CA', margin: '2px 0 0 0', fontWeight: 600 }}>
-                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetWysiwygItem ? targetWysiwygItem.competencyName : ''}</span>
+                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetWysiwygItem ? (targetWysiwygItem.competencyName || 'ไม่ระบุชื่อสมรรถนะ') : ''}</span>
                   </p>
                 </div>
               </div>
@@ -3051,7 +3052,7 @@ export default function IDPActionPlanModal({
                     กำหนดความสอดคล้อง 4 มิติ
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: '#4338CA', margin: '2px 0 0 0', fontWeight: 600 }}>
-                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetAlignmentItem.competencyName}</span>
+                    สมรรถนะ: <span style={{ color: '#1E1B4B', fontWeight: 800 }}>{targetAlignmentItem.competencyName || 'ไม่ระบุชื่อสมรรถนะ'}</span>
                   </p>
                 </div>
               </div>

@@ -361,8 +361,8 @@ export default function IDPModal({
       let updatedPlan;
       if (existingPlan) {
         // Merge or replace items
-        const existingItemNames = new Set((existingPlan.items || []).map((it) => it.competencyName));
-        const itemsToAppend = newItems.filter((it) => !existingItemNames.has(it.competencyName));
+        const existingKeys = new Set((existingPlan.items || []).map((it) => it.sourceNeedId || it.sourceCompetencyName || it.competencyName));
+        const itemsToAppend = newItems.filter((it) => !existingKeys.has(it.sourceNeedId || it.sourceCompetencyName));
         const mergedItems = [...(existingPlan.items || []), ...itemsToAppend].map((it, idx) => ({
           ...it,
           order: idx + 1,

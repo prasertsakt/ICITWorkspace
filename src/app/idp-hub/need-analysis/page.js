@@ -200,8 +200,8 @@ function IDPNeedAnalysisContent() {
 
       let updatedPlan;
       if (existingPlan) {
-        const existingItemNames = new Set((existingPlan.items || []).map((it) => it.competencyName));
-        const itemsToAppend = newItems.filter((it) => !existingItemNames.has(it.competencyName));
+        const existingKeys = new Set((existingPlan.items || []).map((it) => it.sourceNeedId || it.sourceCompetencyName || it.competencyName));
+        const itemsToAppend = newItems.filter((it) => !existingKeys.has(it.sourceNeedId || it.sourceCompetencyName));
         const mergedItems = [...(existingPlan.items || []), ...itemsToAppend].map((it, idx) => ({
           ...it,
           order: idx + 1,
