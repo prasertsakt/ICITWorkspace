@@ -929,75 +929,7 @@ export default function IDPHubLandingPage() {
             </div>
           </Link>
 
-          {/* Sub-Service 3: IDP Tracking & Evaluation (Coming Soon) */}
-          <div
-            className="card"
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '1.25rem',
-              border: '1px solid #E2E8F0',
-              padding: '1.75rem',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              opacity: 0.85,
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <div
-                  style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '16px',
-                    background: '#F1F5F9',
-                    color: '#64748B',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendingUp size={26} />
-                </div>
-                <span
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: '999px',
-                    background: '#F1F5F9',
-                    color: '#64748B',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  กำลังพัฒนา (Coming Soon)
-                </span>
-              </div>
 
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#334155', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
-                ติดตามและประเมินผลสัมฤทธิ์ (IDP Tracking)
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: '#94A3B8', lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
-                บันทึกประวัติและผลการเข้าร่วมการอบรม/สัมมนา/ศึกษาดูงาน และประเมินผลสัมฤทธิ์การพัฒนาตนเองเมื่อสิ้นสุดรอบปีงบประมาณ
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '1rem',
-                borderTop: '1px solid #F1F5F9',
-                color: '#94A3B8',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-              }}
-            >
-              <span>โมดูลระยะถัดไป</span>
-              <Lock size={16} />
-            </div>
-          </div>
         </div>
       </div>
 
