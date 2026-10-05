@@ -23,6 +23,9 @@ export default function RootLayout({ children }) {
     <html lang="th">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+        <link rel="icon" href="/icit-logo.png" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/icit-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icit-logo.png" />
       </head>
       <body>
         <AuthProvider>

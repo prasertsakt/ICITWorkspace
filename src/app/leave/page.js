@@ -251,30 +251,52 @@ function LeaveContent() {
           style={{
             maxWidth: '520px',
             margin: '0 auto',
-            padding: '2.5rem 2rem',
-            borderRadius: 'var(--radius-lg)',
+            padding: '2.75rem 2rem',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
+            borderTop: '5px solid #F97316',
           }}
         >
           <div
             style={{
-              width: '64px',
-              height: '64px',
+              width: '68px',
+              height: '68px',
               borderRadius: '50%',
-              background: 'var(--primary-50)',
-              color: 'var(--primary-600)',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <Calendar size={32} />
+            <Calendar size={34} />
           </div>
 
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-            เข้าสู่ระบบเพื่อใช้งาน "ปฏิทินวันลา"
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              background: '#FFF7ED',
+              color: '#EA580C',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
+            }}
+          >
+            <span className="pulse-dot" style={{ background: '#EA580C' }} />
+            ต้องเข้าสู่ระบบเพื่อใช้งาน
+          </div>
+
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.65rem', color: 'var(--text-primary)' }}>
+            ปฏิทินวันลาและสรุปสถิติ (Leave Calendar)
           </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.75rem' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
             ระบบปฏิทินวันลาและแดชบอร์ดสรุปสถิติเป็นบริการสารสนเทศภายในองค์กร
             <br />
             โปรดเข้าสู่ระบบด้วยบัญชี Google เพื่อเข้าดูปฏิทินและสถานะการลา
@@ -283,8 +305,18 @@ function LeaveContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <button
               onClick={handleGoogleSignIn}
-              className="btn btn-primary btn-sm"
-              style={{ width: '100%', padding: '0.65rem', justifyContent: 'center' }}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.85rem',
+                fontSize: '1rem',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+              }}
             >
               <LogIn size={20} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
@@ -305,120 +337,228 @@ function LeaveContent() {
 
   return (
     <div className="main-container">
-      {/* Header Section */}
-      <div
+      {/* Top Hero Banner */}
+      <section
+        className="card-glass"
         style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          marginBottom: '1.75rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '2.25rem 2rem',
+          marginBottom: '2rem',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          color: '#FFFFFF',
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-            <span className="badge badge-active">
-              <Calendar size={13} />
-              ระบบบริการงานบุคคล
-            </span>
-            {isAdmin && (
-              <span className="badge badge-admin">
-                <ShieldCheck size={12} />
-                Admin สิทธิ์บันทึกวันลา
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
+          <div style={{ maxWidth: '680px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              <span
+                style={{
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  borderRadius: '999px',
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                <Calendar size={13} style={{ color: '#FB923C' }} />
+                <span>ระบบบริการงานบุคคล</span>
               </span>
-            )}
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
-            ปฏิทินวันลาและสรุปสถิติ (Leave Calendar)
-          </h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-            ตรวจสอบสถานะการลา ปฏิทินวันลาของบุคลากรในองค์กร และสถิติภาพรวม
-          </p>
-        </div>
+              {isAdmin && (
+                <span
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    color: '#A7F3D0',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    borderRadius: '999px',
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    backdropFilter: 'blur(6px)',
+                  }}
+                >
+                  <ShieldCheck size={12} style={{ color: '#34D399' }} />
+                  <span>Admin สิทธิ์บันทึกวันลา</span>
+                </span>
+              )}
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* Cache & Refresh button (all users) */}
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="btn btn-secondary btn-sm"
-            title="รีเฟรชดึงข้อมูลล่าสุดจาก Cloud Firestore"
-            style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
-            <span>{isRefreshing ? 'กำลังโหลด...' : formattedSyncTime ? `แคช: ${formattedSyncTime}` : 'รีเฟรช'}</span>
-          </button>
-
-          {/* Executive & HR Staff: Create Leave Report PDF */}
-          {canCreateReport && (
-            <button
-              onClick={() => setIsReportModalOpen(true)}
-              className="btn btn-secondary btn-sm"
-              title="ออกรายงานสรุปสถิติและประวัติการลาเป็น PDF (สำหรับผู้บริหารและเจ้าหน้าที่บุคลากร)"
+            <h1
               style={{
-                padding: '0.6rem 0.95rem',
-                fontSize: '0.8rem',
+                fontSize: 'clamp(1.75rem, 3.8vw, 2.35rem)',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: '#FFFFFF',
+                lineHeight: 1.2,
+                margin: '0 0 0.5rem 0',
+              }}
+            >
+              ปฏิทินวันลาและสรุปสถิติ{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                (Leave Calendar)
+              </span>
+            </h1>
+
+            <p style={{ fontSize: '0.95rem', color: 'rgba(255, 255, 255, 0.78)', margin: 0, lineHeight: 1.6 }}>
+              ตรวจสอบสถานะการลา ปฏิทินวันลาของบุคลากรในองค์กร และสถิติภาพรวม
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {/* Cache & Refresh button (all users) */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="btn"
+              title="รีเฟรชดึงข้อมูลล่าสุดจาก Cloud Firestore"
+              style={{
+                padding: '0.65rem 0.95rem',
+                fontSize: '0.825rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
-                color: '#4338CA',
-                borderColor: '#C7D2FE',
-                fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.12)',
+                background: 'rgba(255, 255, 255, 0.12)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                borderRadius: 'var(--radius-md)',
+                backdropFilter: 'blur(8px)',
+                cursor: 'pointer',
+                fontWeight: 600,
               }}
             >
-              <FileText size={15} color="#4F46E5" />
-              <span>ออกรายงานสรุป (PDF)</span>
+              <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{isRefreshing ? 'กำลังโหลด...' : formattedSyncTime ? `แคช: ${formattedSyncTime}` : 'รีเฟรช'}</span>
             </button>
-          )}
 
-          {isAdmin && (
-            <>
-              {/* Batch Sync to Firebase */}
+            {/* Executive & HR Staff: Create Leave Report PDF */}
+            {canCreateReport && (
               <button
-                onClick={handleSyncToCloud}
-                disabled={isSyncing}
-                className="btn btn-secondary btn-sm"
-                title="ซิงก์ข้อมูลวันลาขึ้น Cloud Firestore ด้วย Atomic Batch Write"
-                style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => setIsReportModalOpen(true)}
+                className="btn"
+                title="ออกรายงานสรุปสถิติและประวัติการลาเป็น PDF (สำหรับผู้บริหารและเจ้าหน้าที่บุคลากร)"
+                style={{
+                  padding: '0.65rem 1.05rem',
+                  fontSize: '0.825rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(249, 115, 22, 0.2)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  borderRadius: 'var(--radius-md)',
+                  backdropFilter: 'blur(8px)',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
               >
-                {isSyncing ? (
-                  <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                ) : syncStatus ? (
-                  <CheckCircle2 size={14} color="var(--mint-600)" />
-                ) : (
-                  <CloudUpload size={14} color="var(--primary-600)" />
-                )}
-                <span>{isSyncing ? 'กำลังซิงก์...' : syncStatus || 'ซิงก์ขึ้น Firebase'}</span>
+                <FileText size={15} color="#FB923C" />
+                <span>ออกรายงานสรุป (PDF)</span>
               </button>
+            )}
 
-              {/* Archive Old Data button */}
-              <button
-                onClick={handleArchiveOldData}
-                disabled={isArchiving}
-                className="btn btn-secondary btn-sm"
-                title={`ย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${selectedYear + 542} เข้าคลังประวัติ`}
-                style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Archive size={14} color="var(--amber-600)" />
-                <span>{isArchiving ? 'กำลังจัดเก็บ...' : 'จัดเก็บข้อมูลเก่า'}</span>
-              </button>
+            {isAdmin && (
+              <>
+                {/* Batch Sync to Firebase */}
+                <button
+                  onClick={handleSyncToCloud}
+                  disabled={isSyncing}
+                  className="btn"
+                  title="ซิงก์ข้อมูลวันลาขึ้น Cloud Firestore ด้วย Atomic Batch Write"
+                  style={{
+                    padding: '0.65rem 0.95rem',
+                    fontSize: '0.825rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  {isSyncing ? (
+                    <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : syncStatus ? (
+                    <CheckCircle2 size={14} color="#34D399" />
+                  ) : (
+                    <CloudUpload size={14} color="#FB923C" />
+                  )}
+                  <span>{isSyncing ? 'กำลังซิงก์...' : syncStatus || 'ซิงก์ขึ้น Firebase'}</span>
+                </button>
 
-              {/* Add Leave */}
-              <button
-                onClick={handleOpenAddModal}
-                className="btn btn-primary btn-sm"
-                style={{ padding: '0.6rem 1.15rem' }}
-              >
-                <Plus size={16} />
-                <span>บันทึกการลาใหม่</span>
-              </button>
-            </>
-          )}
+                {/* Archive Old Data button */}
+                <button
+                  onClick={handleArchiveOldData}
+                  disabled={isArchiving}
+                  className="btn"
+                  title={`ย้ายข้อมูลวันลาที่สิ้นสุดก่อนปี ${selectedYear + 542} เข้าคลังประวัติ`}
+                  style={{
+                    padding: '0.65rem 0.95rem',
+                    fontSize: '0.825rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Archive size={14} color="#FBBF24" />
+                  <span>{isArchiving ? 'กำลังจัดเก็บ...' : 'จัดเก็บข้อมูลเก่า'}</span>
+                </button>
+
+                {/* Add Leave */}
+                <button
+                  onClick={handleOpenAddModal}
+                  className="btn"
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>บันทึกการลาใหม่</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Dashboard Summary Metric Cards */}
       <div className="grid-3" style={{ gap: '1rem', marginBottom: '1.75rem' }}>
