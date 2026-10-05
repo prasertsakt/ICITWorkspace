@@ -488,7 +488,7 @@ export default function OfiHubPage() {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #FAF5FF 0%, #F8FAFC 100%)',
+          background: '#F8FAFC',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -512,13 +512,13 @@ export default function OfiHubPage() {
               width: '70px',
               height: '70px',
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.5rem',
-              boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.3)',
+              boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)',
             }}
           >
             <Lightbulb size={40} />
@@ -531,11 +531,12 @@ export default function OfiHubPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '999px',
-              background: '#F3E8FF',
-              color: '#7C3AED',
+              background: '#FFF7ED',
+              color: '#EA580C',
               fontSize: '0.8rem',
               fontWeight: 700,
               marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
             }}
           >
             <Lock size={13} />
@@ -561,8 +562,8 @@ export default function OfiHubPage() {
                 fontWeight: 600,
                 justifyContent: 'center',
                 gap: '8px',
-                background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-                borderColor: '#7C3AED',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                borderColor: '#EA580C',
               }}
             >
               <LogIn size={18} />
@@ -637,10 +638,11 @@ export default function OfiHubPage() {
       {/* Header / Hero Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #7C3AED 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
           padding: '2.25rem 1.5rem 3rem',
-          boxShadow: '0 4px 20px -2px rgba(109, 40, 217, 0.25)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
         }}
       >
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -661,7 +663,7 @@ export default function OfiHubPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: '#E9D5FF',
+                color: '#FED7AA',
                 textDecoration: 'none',
                 fontSize: '0.9rem',
                 fontWeight: 600,
@@ -687,11 +689,12 @@ export default function OfiHubPage() {
                 padding: '6px 14px',
                 borderRadius: '999px',
                 backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
               }}
             >
-              <Shield size={14} color="#DDD6FE" />
+              <Shield size={14} color="#FB923C" />
               <span>สิทธิ์ของคุณ:</span>
-              <strong style={{ color: '#F5D0FE' }}>
+              <strong style={{ color: '#FB923C' }}>
                 {isAdmin
                   ? 'ผู้ดูแลระบบ (Admin)'
                   : isDcc
@@ -721,7 +724,8 @@ export default function OfiHubPage() {
                   width: '60px',
                   height: '60px',
                   borderRadius: '16px',
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -729,7 +733,7 @@ export default function OfiHubPage() {
                   boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
                 }}
               >
-                <Lightbulb size={32} color="#FDE047" />
+                <Lightbulb size={32} color="#FB923C" />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -747,10 +751,11 @@ export default function OfiHubPage() {
                   <span
                     style={{
                       fontSize: '0.75rem',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      background: '#A855F7',
-                      color: '#FFFFFF',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      background: 'rgba(249, 115, 22, 0.22)',
+                      border: '1px solid rgba(249, 115, 22, 0.4)',
+                      color: '#FED7AA',
                       fontWeight: 700,
                     }}
                   >
@@ -761,7 +766,7 @@ export default function OfiHubPage() {
                   style={{
                     margin: '4px 0 0 0',
                     fontSize: '0.95rem',
-                    color: '#E9D5FF',
+                    color: '#E2E8F0',
                     fontWeight: 400,
                   }}
                 >
@@ -785,14 +790,15 @@ export default function OfiHubPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
                   padding: '6px 12px',
                   borderRadius: '10px',
                   backdropFilter: 'blur(6px)',
                 }}
               >
-                <Calendar size={18} color="#DDD6FE" />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#E9D5FF' }}>
+                <Calendar size={18} color="#FB923C" />
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#FED7AA' }}>
                   ปีงบประมาณ:
                 </span>
                 <select
@@ -800,7 +806,7 @@ export default function OfiHubPage() {
                   onChange={(e) => setSelectedYear(e.target.value)}
                   style={{
                     background: '#FFFFFF',
-                    color: '#4C1D95',
+                    color: '#0F172A',
                     border: 'none',
                     borderRadius: '6px',
                     padding: '6px 12px',
@@ -832,13 +838,13 @@ export default function OfiHubPage() {
                     gap: '6px',
                     padding: '8px 16px',
                     borderRadius: '10px',
-                    background: '#FFFFFF',
-                    color: '#6D28D9',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
                     border: 'none',
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                     transition: 'all 0.2s',
                   }}
                   title="สร้างรายการ OFI ใหม่ประจำปีงบประมาณนี้"
@@ -860,9 +866,9 @@ export default function OfiHubPage() {
                     gap: '8px',
                     padding: '8px 18px',
                     borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.12)',
                     color: '#FFFFFF',
-                    border: '1px solid rgba(255, 255, 255, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: isImporting ? 'not-allowed' : 'pointer',

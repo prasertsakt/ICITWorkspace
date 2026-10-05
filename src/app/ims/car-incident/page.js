@@ -315,7 +315,9 @@ export default function CarIncidentHubPage() {
       {/* Top Banner / Hero */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 60%, #14B8A6 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
           color: '#FFFFFF',
           padding: '2.5rem 1.5rem 3.5rem',
           position: 'relative',
@@ -330,7 +332,7 @@ export default function CarIncidentHubPage() {
               alignItems: 'center',
               gap: '8px',
               fontSize: '0.85rem',
-              color: '#CCFBF1',
+              color: '#FED7AA',
               marginBottom: '1.25rem',
             }}
           >
@@ -349,7 +351,7 @@ export default function CarIncidentHubPage() {
               <span>ระบบบริหารงาน IMS</span>
             </Link>
             <span>/</span>
-            <span style={{ color: '#A7F3D0', fontWeight: 700 }}>CAR & Incident Hub</span>
+            <span style={{ color: '#FB923C', fontWeight: 700 }}>CAR & Incident Hub</span>
           </div>
 
           <div
@@ -369,14 +371,15 @@ export default function CarIncidentHubPage() {
                   gap: '6px',
                   padding: '4px 12px',
                   borderRadius: '999px',
-                  background: 'rgba(255, 255, 255, 0.18)',
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
                   fontSize: '0.8rem',
                   fontWeight: 600,
-                  color: '#FFFFFF',
+                  color: '#FED7AA',
                   marginBottom: '0.75rem',
                 }}
               >
-                <ShieldCheck size={15} color="#A7F3D0" />
+                <ShieldCheck size={15} color="#FB923C" />
                 <span>ICIT-FM-COMMON-013, 19 DEC 2025 Version 5.0 (Internal Use)</span>
               </div>
               <h1
@@ -387,12 +390,12 @@ export default function CarIncidentHubPage() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                CAR & Incident Hub
+                CAR &amp; Incident Hub
               </h1>
               <p
                 style={{
                   fontSize: '0.95rem',
-                  color: '#CCFBF1',
+                  color: '#E2E8F0',
                   margin: 0,
                   maxWidth: '740px',
                   lineHeight: 1.5,
@@ -410,14 +413,14 @@ export default function CarIncidentHubPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(255, 255, 255, 0.12)',
                   backdropFilter: 'blur(8px)',
                   padding: '6px 14px',
                   borderRadius: '12px',
                   border: '1px solid rgba(255, 255, 255, 0.25)',
                 }}
               >
-                <Calendar size={18} color="#A7F3D0" />
+                <Calendar size={18} color="#FB923C" />
                 <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>ปีงบประมาณ:</span>
                 <select
                   value={selectedYear}
@@ -460,10 +463,10 @@ export default function CarIncidentHubPage() {
                 }}
                 className="btn btn-primary"
                 style={{
-                  background: '#FFFFFF',
-                  color: '#0F766E',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: '#FFFFFF',
                   border: 'none',
-                  boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.2)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
@@ -494,8 +497,8 @@ export default function CarIncidentHubPage() {
       >
         <div
           style={{
-            background: yearlyConfig?._isConfigured ? '#F0FDFA' : '#FFFBEB',
-            border: `1px solid ${yearlyConfig?._isConfigured ? '#CCFBF1' : '#FDE68A'}`,
+            background: yearlyConfig?._isConfigured ? '#FFF7ED' : '#FFFBEB',
+            border: `1px solid ${yearlyConfig?._isConfigured ? '#FFEDD5' : '#FDE68A'}`,
             borderRadius: '12px',
             padding: '0.85rem 1.25rem',
             marginBottom: '1.5rem',
@@ -508,7 +511,7 @@ export default function CarIncidentHubPage() {
             boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: yearlyConfig?._isConfigured ? '#0F766E' : '#92400E' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: yearlyConfig?._isConfigured ? '#9A3412' : '#92400E' }}>
             <Users size={17} />
             {yearlyConfig?._isConfigured ? (
               <span>
@@ -547,12 +550,12 @@ export default function CarIncidentHubPage() {
                   gap: '5px',
                   fontSize: '0.8rem',
                   fontWeight: 600,
-                  color: '#0F766E',
-                  background: '#CCFBF1',
+                  color: '#EA580C',
+                  background: '#FFEDD5',
                   padding: '4px 10px',
                   borderRadius: '6px',
                   textDecoration: 'none',
-                  border: '1px solid #99F6E4',
+                  border: '1px solid #FED7AA',
                   transition: 'all 0.2s ease',
                 }}
               >
@@ -563,7 +566,7 @@ export default function CarIncidentHubPage() {
             {isDCC && (
               <span
                 style={{
-                  background: '#0D9488',
+                  background: '#EA580C',
                   color: '#FFFFFF',
                   padding: '2px 10px',
                   borderRadius: '999px',

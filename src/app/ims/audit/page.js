@@ -318,13 +318,13 @@ export default function ImsAuditPage() {
           background: '#F8FAFC',
         }}
       >
-        <div style={{ textAlign: 'center', color: '#0D9488', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', color: '#EA580C', fontWeight: 600 }}>
           <div
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #CCFBF1',
-              borderTopColor: '#0D9488',
+              border: '3px solid #FED7AA',
+              borderTopColor: '#EA580C',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 1rem',
@@ -343,7 +343,7 @@ export default function ImsAuditPage() {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #F0FDFA 0%, #F8FAFC 100%)',
+          background: 'linear-gradient(135deg, #FFF7ED 0%, #F8FAFC 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -352,31 +352,32 @@ export default function ImsAuditPage() {
       >
         <div
           style={{
-            maxWidth: '500px',
+            maxWidth: '520px',
             width: '100%',
             background: '#FFFFFF',
-            borderRadius: '1.5rem',
+            borderRadius: 'var(--radius-xl)',
             border: '1px solid #E2E8F0',
-            padding: '2.5rem 2.25rem',
+            borderTop: '5px solid #F97316',
+            padding: '2.75rem 2.25rem',
             textAlign: 'center',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
           }}
         >
           <div
             style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
-              color: '#FFFFFF',
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              boxShadow: '0 10px 15px -3px rgba(13, 148, 136, 0.3)',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <ShieldCheck size={40} />
+            <ShieldCheck size={36} />
           </div>
 
           <div
@@ -386,21 +387,22 @@ export default function ImsAuditPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '999px',
-              background: '#CCFBF1',
-              color: '#0F766E',
+              background: '#FFF7ED',
+              color: '#EA580C',
               fontSize: '0.8rem',
               fontWeight: 700,
               marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
             }}
           >
             <Lock size={13} />
             <span>สงวนสิทธิ์เฉพาะผู้ใช้ที่เข้าสู่ระบบ</span>
           </div>
 
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
             รายงานการตรวจติดตามภายใน (IMS)
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
             กรุณาเข้าสู่ระบบด้วย Google Account ของสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ เพื่อเข้าถึงรายงานและการตรวจติดตาม
           </p>
 
@@ -411,14 +413,18 @@ export default function ImsAuditPage() {
               className="btn btn-primary"
               style={{
                 width: '100%',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.95rem',
-                fontWeight: 600,
+                padding: '0.85rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: 700,
                 justifyContent: 'center',
                 gap: '8px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                color: '#FFFFFF',
               }}
             >
-              <LogIn size={18} />
+              <LogIn size={20} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
 
@@ -451,7 +457,7 @@ export default function ImsAuditPage() {
             top: '20px',
             right: '20px',
             zIndex: 99999,
-            background: feedbackMessage.type === 'info' ? '#0284C7' : '#0F766E',
+            background: feedbackMessage.type === 'info' ? '#0284C7' : '#EA580C',
             color: '#FFFFFF',
             padding: '0.85rem 1.25rem',
             borderRadius: '10px',
@@ -494,7 +500,7 @@ export default function ImsAuditPage() {
               หน้าหลัก
             </Link>
             <ChevronRight size={14} color="#94A3B8" />
-            <Link href="/ims" style={{ color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}>
+            <Link href="/ims" style={{ color: '#EA580C', textDecoration: 'none', fontWeight: 600 }}>
               ระบบบริหารงาน IMS
             </Link>
             <ChevronRight size={14} color="#94A3B8" />
@@ -522,7 +528,7 @@ export default function ImsAuditPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              <History size={16} color="#0D9488" />
+              <History size={16} color="#EA580C" />
               <span>ประวัติกิจกรรม (Activity Log)</span>
             </button>
 
@@ -564,12 +570,12 @@ export default function ImsAuditPage() {
                   padding: '0.55rem 1.25rem',
                   borderRadius: '8px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                   color: '#FFFFFF',
                   fontSize: '0.875rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(13, 148, 136, 0.3)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                 }}
               >
                 <Plus size={17} />
@@ -642,8 +648,8 @@ export default function ImsAuditPage() {
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  background: '#CCFBF1',
-                  color: '#0D9488',
+                  background: '#FFF7ED',
+                  color: '#EA580C',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -667,8 +673,8 @@ export default function ImsAuditPage() {
               background: '#FFFFFF',
               padding: '0.4rem 0.75rem 0.4rem 0.85rem',
               borderRadius: '12px',
-              border: '1.5px solid #CCFBF1',
-              boxShadow: '0 2px 5px rgba(13, 148, 136, 0.08)',
+              border: '1.5px solid #FFEDD5',
+              boxShadow: '0 2px 5px rgba(234, 88, 12, 0.08)',
             }}
           >
             <div
@@ -676,13 +682,13 @@ export default function ImsAuditPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: '#0F766E',
+                color: '#EA580C',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 whiteSpace: 'nowrap',
               }}
             >
-              <Calendar size={16} color="#0D9488" />
+              <Calendar size={16} color="#EA580C" />
               <span>ปีงบประมาณ:</span>
             </div>
 
@@ -696,9 +702,9 @@ export default function ImsAuditPage() {
                   WebkitAppearance: 'none',
                   padding: '0.45rem 2.25rem 0.45rem 0.85rem',
                   borderRadius: '8px',
-                  border: '1.5px solid #0D9488',
-                  background: '#F0FDFA',
-                  color: '#0F766E',
+                  border: '1.5px solid #F97316',
+                  background: '#FFF7ED',
+                  color: '#9A3412',
                   fontSize: '0.9rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -717,7 +723,7 @@ export default function ImsAuditPage() {
               </select>
               <ChevronDown
                 size={16}
-                color="#0D9488"
+                color="#EA580C"
                 style={{
                   position: 'absolute',
                   right: '10px',
@@ -952,8 +958,8 @@ export default function ImsAuditPage() {
 
         <div
           style={{
-            background: isYearConfigured ? '#F0FDFA' : '#FFFBEB',
-            border: `1px solid ${isYearConfigured ? '#CCFBF1' : '#FDE68A'}`,
+            background: isYearConfigured ? '#FFF7ED' : '#FFFBEB',
+            border: `1px solid ${isYearConfigured ? '#FFEDD5' : '#FDE68A'}`,
             borderRadius: '12px',
             padding: '0.85rem 1.25rem',
             marginBottom: '1.5rem',
@@ -965,8 +971,8 @@ export default function ImsAuditPage() {
             fontSize: '0.85rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isYearConfigured ? '#0F766E' : '#92400E' }}>
-            <Users size={17} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isYearConfigured ? '#9A3412' : '#92400E' }}>
+            <Users size={17} color="#EA580C" />
             {isYearConfigured ? (
               <span>
                 <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong>{' '}
@@ -1010,19 +1016,19 @@ export default function ImsAuditPage() {
                   gap: '5px',
                   fontSize: '0.8rem',
                   fontWeight: 600,
-                  color: '#0F766E',
-                  background: '#CCFBF1',
+                  color: '#9A3412',
+                  background: '#FFEDD5',
                   padding: '4px 10px',
                   borderRadius: '6px',
                   textDecoration: 'none',
-                  border: '1px solid #99F6E4',
+                  border: '1px solid #FED7AA',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#99F6E4';
+                  e.currentTarget.style.background = '#FED7AA';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#CCFBF1';
+                  e.currentTarget.style.background = '#FFEDD5';
                 }}
               >
                 <ExternalLink size={13} />
@@ -1036,7 +1042,7 @@ export default function ImsAuditPage() {
                 style={{
                   border: 'none',
                   background: 'transparent',
-                  color: '#0D9488',
+                  color: '#EA580C',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textDecoration: 'underline',
