@@ -488,39 +488,101 @@ export default function ImsAuditPage() {
         }}
       >
         <div style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Breadcrumb Navigation */}
+          {/* Top Bar: Breadcrumb Navigation & Secondary Actions */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.85rem',
-              color: '#FED7AA',
-              marginBottom: '1.25rem',
+              justifyContent: 'space-between',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap',
+              gap: '1rem',
             }}
           >
-            <Link
-              href="/ims"
+            <div
               style={{
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                fontWeight: 600,
+                gap: '8px',
+                fontSize: '0.85rem',
+                color: '#FED7AA',
               }}
             >
-              <ArrowLeft size={16} />
-              <span>ระบบบริหารงาน IMS</span>
-            </Link>
-            <span>/</span>
-            <span style={{ color: '#FB923C', fontWeight: 700 }}>Internal Audit Report</span>
+              <Link
+                href="/ims"
+                style={{
+                  color: '#FFFFFF',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 600,
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>ระบบบริหารงาน IMS</span>
+              </Link>
+              <span>/</span>
+              <span style={{ color: '#FB923C', fontWeight: 700 }}>Internal Audit Report</span>
+            </div>
+
+            {/* Secondary Action Utilities */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setIsActivityLogModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#FED7AA',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(6px)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <History size={14} color="#FB923C" />
+                <span>Activity Log</span>
+              </button>
+
+              {(isAdmin || isDcc) && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfigModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#FED7AA',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(6px)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Settings size={14} color="#FB923C" />
+                  <span>จัดการรายชื่อผู้ตรวจ</span>
+                </button>
+              )}
+            </div>
           </div>
 
+          {/* Main Hero Row: Title & Primary Actions */}
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '1.5rem',
@@ -568,22 +630,22 @@ export default function ImsAuditPage() {
               </p>
             </div>
 
-            {/* Year Selector & Quick Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+            {/* Year Selector & Primary Action Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <div
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
                   background: 'rgba(255, 255, 255, 0.12)',
                   backdropFilter: 'blur(8px)',
                   padding: '6px 14px',
-                  borderRadius: '12px',
+                  borderRadius: '10px',
                   border: '1px solid rgba(255, 255, 255, 0.25)',
                 }}
               >
-                <Calendar size={18} color="#FB923C" />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>ปีงบประมาณ:</span>
+                <Calendar size={17} color="#FB923C" />
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#FED7AA' }}>ปีงบประมาณ:</span>
                 <select
                   id="ims-fiscal-year-select"
                   value={selectedYear}
@@ -593,7 +655,7 @@ export default function ImsAuditPage() {
                     border: 'none',
                     color: '#FFFFFF',
                     fontWeight: 800,
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
                     cursor: 'pointer',
                     outline: 'none',
                   }}
@@ -604,118 +666,70 @@ export default function ImsAuditPage() {
                     </option>
                   ))}
                   <option value="ALL" style={{ color: '#0F172A' }}>
-                    ทุกปีงบประมาณ (ทั้งหมด)
+                    ทั้งหมด
                   </option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {isAuthorizedToAudit ? (
                 <button
                   type="button"
-                  onClick={() => setIsActivityLogModalOpen(true)}
+                  onClick={() => {
+                    setEditingAudit(null);
+                    setIsFormModalOpen(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.35)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    padding: '0.62rem 1.25rem',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={18} />
+                  <span>สร้างรายงานการตรวจติดตาม</span>
+                </button>
+              ) : (
+                <div
+                  title={
+                    !isYearConfigured
+                      ? `ยังไม่ได้กำหนดคณะผู้ตรวจติดตามประจำปีงบประมาณ ${selectedYear} — ผู้ดูแลระบบต้องกำหนดรายชื่อก่อนจึงจะสร้างรายงานได้`
+                      : 'โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้'
+                  }
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '0.6rem 1rem',
+                    padding: '0.62rem 1.15rem',
                     borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     background: 'rgba(255, 255, 255, 0.12)',
-                    color: '#FFFFFF',
-                    fontSize: '0.85rem',
+                    color: '#FED7AA',
+                    fontSize: '0.825rem',
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
                   }}
                 >
-                  <History size={15} color="#FED7AA" />
-                  <span>Activity Log</span>
-                </button>
-
-                {(isAdmin || isDcc) && (
-                  <button
-                    type="button"
-                    onClick={() => setIsConfigModalOpen(true)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '0.6rem 1rem',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255, 255, 255, 0.25)',
-                      background: 'rgba(255, 255, 255, 0.12)',
-                      color: '#FFFFFF',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      backdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    <Settings size={15} color="#FED7AA" />
-                    <span>จัดการรายชื่อผู้ตรวจ</span>
-                  </button>
-                )}
-
-                {isAuthorizedToAudit ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingAudit(null);
-                      setIsFormModalOpen(true);
-                    }}
-                    className="btn btn-primary"
-                    style={{
-                      background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontWeight: 800,
-                      fontSize: '0.9rem',
-                      padding: '0.6rem 1.25rem',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Plus size={18} />
-                    <span>+ สร้างรายงานการตรวจติดตาม</span>
-                  </button>
-                ) : (
-                  <div
-                    title={
-                      !isYearConfigured
-                        ? `ยังไม่ได้กำหนดคณะผู้ตรวจติดตามประจำปีงบประมาณ ${selectedYear} — ผู้ดูแลระบบต้องกำหนดรายชื่อก่อนจึงจะสร้างรายงานได้`
-                        : 'โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้'
-                    }
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '0.6rem 1rem',
-                      borderRadius: '10px',
-                      background: 'rgba(255, 255, 255, 0.12)',
-                      color: '#FED7AA',
-                      fontSize: '0.825rem',
-                      fontWeight: 600,
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                    }}
-                  >
-                    {!isYearConfigured ? (
-                      <>
-                        <AlertCircle size={15} color="#FECACA" />
-                        <span>ยังไม่ได้กำหนดผู้ตรวจปี {selectedYear}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Eye size={15} />
-                        <span>โหมดดูข้อมูลอย่างเดียว</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {!isYearConfigured ? (
+                    <>
+                      <AlertCircle size={15} color="#FECACA" />
+                      <span>ยังไม่ได้กำหนดผู้ตรวจปี {selectedYear}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={15} />
+                      <span>โหมดดูข้อมูลอย่างเดียว</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
