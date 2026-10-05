@@ -74,13 +74,13 @@ export default function ImsLandingPage() {
           background: '#F8FAFC',
         }}
       >
-        <div style={{ textAlign: 'center', color: '#0D9488', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', color: '#EA580C', fontWeight: 600 }}>
           <div
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #CCFBF1',
-              borderTopColor: '#0D9488',
+              border: '3px solid #FED7AA',
+              borderTopColor: '#EA580C',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 1rem',
@@ -99,7 +99,7 @@ export default function ImsLandingPage() {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #F0FDFA 0%, #F8FAFC 100%)',
+          background: 'linear-gradient(135deg, #FFF7ED 0%, #F8FAFC 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -108,31 +108,32 @@ export default function ImsLandingPage() {
       >
         <div
           style={{
-            maxWidth: '500px',
+            maxWidth: '520px',
             width: '100%',
             background: '#FFFFFF',
-            borderRadius: '1.5rem',
+            borderRadius: 'var(--radius-xl)',
             border: '1px solid #E2E8F0',
-            padding: '2.5rem 2.25rem',
+            borderTop: '5px solid #F97316',
+            padding: '2.75rem 2.25rem',
             textAlign: 'center',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
           }}
         >
           <div
             style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
-              color: '#FFFFFF',
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              boxShadow: '0 10px 15px -3px rgba(13, 148, 136, 0.3)',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <ShieldCheck size={40} />
+            <ShieldCheck size={36} />
           </div>
 
           <div
@@ -142,21 +143,22 @@ export default function ImsLandingPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '999px',
-              background: '#CCFBF1',
-              color: '#0F766E',
+              background: '#FFF7ED',
+              color: '#EA580C',
               fontSize: '0.8rem',
               fontWeight: 700,
               marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
             }}
           >
             <Lock size={13} />
             <span>สงวนสิทธิ์เฉพาะผู้ใช้ที่เข้าสู่ระบบ</span>
           </div>
 
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.5rem 0', lineHeight: 1.3 }}>
             ระบบบริหารงาน IMS
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
             ศูนย์กลางกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ (ISO 9001 / ISO 27001) สำนักคอมพิวเตอร์ฯ มจพ.
           </p>
 
@@ -167,14 +169,18 @@ export default function ImsLandingPage() {
               className="btn btn-primary"
               style={{
                 width: '100%',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.95rem',
-                fontWeight: 600,
+                padding: '0.85rem',
+                fontSize: '1rem',
+                fontWeight: 700,
                 justifyContent: 'center',
                 gap: '8px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                color: '#FFFFFF',
               }}
             >
-              <LogIn size={18} />
+              <LogIn size={20} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
 
@@ -197,22 +203,24 @@ export default function ImsLandingPage() {
       {/* Hero Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 40%, #0284C7 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
           padding: '3.5rem 1.5rem 4.5rem',
           position: 'relative',
           overflow: 'hidden',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
         }}
       >
-        {/* Background decorative circles */}
+        {/* Background decorative elements */}
         <div
           style={{
             position: 'absolute',
             width: '450px',
             height: '450px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.05)',
-            top: '-150px',
+            background: 'radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%)',
+            top: '-100px',
             right: '-100px',
             pointerEvents: 'none',
           }}
@@ -223,7 +231,7 @@ export default function ImsLandingPage() {
             width: '300px',
             height: '300px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.04)',
+            background: 'radial-gradient(circle, rgba(251, 146, 60, 0.06) 0%, transparent 70%)',
             bottom: '-100px',
             left: '10%',
             pointerEvents: 'none',
@@ -248,14 +256,15 @@ export default function ImsLandingPage() {
                 gap: '6px',
                 padding: '6px 14px',
                 borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.18)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FED7AA',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 backdropFilter: 'blur(8px)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#FFFFFF',
+                fontSize: '0.8rem',
+                fontWeight: 700,
               }}
             >
-              <ShieldCheck size={16} color="#A7F3D0" />
+              <ShieldCheck size={16} color="#FB923C" />
               <span>Integrated Management System (ISO 9001:2015 & ISO/IEC 27001:2022)</span>
             </div>
 
@@ -269,27 +278,29 @@ export default function ImsLandingPage() {
                   gap: '8px',
                   padding: '7px 16px',
                   borderRadius: '999px',
-                  background: 'rgba(255, 255, 255, 0.22)',
+                  background: 'rgba(255, 255, 255, 0.12)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.35)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   color: '#FFFFFF',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.32)';
+                  e.currentTarget.style.background = 'rgba(249, 115, 22, 0.25)';
+                  e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.5)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
                 title="จัดการรายการหัวข้อที่รับการตรวจ (เพิ่ม / แก้ไข / ลบ / จัดเรียง / คืนค่าเริ่มต้น)"
               >
-                <Sliders size={15} color="#A7F3D0" />
+                <Sliders size={15} color="#FB923C" />
                 <span>จัดการหัวข้อที่รับการตรวจ (Admin)</span>
               </button>
             )}
@@ -304,13 +315,22 @@ export default function ImsLandingPage() {
               lineHeight: 1.2,
             }}
           >
-            ระบบบริหารงาน IMS
+            ระบบบริหารงาน IMS{' '}
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              (Integrated Management System)
+            </span>
           </h1>
 
           <p
             style={{
               fontSize: 'clamp(1rem, 2vw, 1.15rem)',
-              color: '#CCFBF1',
+              color: 'rgba(255, 255, 255, 0.78)',
               maxWidth: '720px',
               lineHeight: 1.6,
               margin: '0 0 2rem 0',
@@ -330,60 +350,60 @@ export default function ImsLandingPage() {
           >
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
-                <FileText size={16} color="#A7F3D0" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <FileText size={16} color="#FB923C" />
                 <span>รายการตรวจทั้งหมด</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
                 {totalAudits}
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
-                <CheckCircle2 size={16} color="#A7F3D0" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <CheckCircle2 size={16} color="#34D399" />
                 <span>ตรวจเสร็จสิ้นแล้ว</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#A7F3D0', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#34D399', letterSpacing: '-0.02em' }}>
                 {completedAudits}
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 0.22)',
-                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#CCFBF1', fontWeight: 600 }}>
-                <BarChart3 size={16} color="#A7F3D0" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <BarChart3 size={16} color="#FB923C" />
                 <span>ผลการตรวจ (C / NC / OFI)</span>
               </div>
               <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '8px', letterSpacing: '-0.01em' }}>
-                <span style={{ color: '#A7F3D0' }}>{cCount} C</span> &bull;{' '}
-                <span style={{ color: '#FECACA' }}>{ncCount} NC</span> &bull;{' '}
-                <span style={{ color: '#FDE68A' }}>{ofiCount} OFI</span>
+                <span style={{ color: '#34D399' }}>{cCount} C</span> &bull;{' '}
+                <span style={{ color: '#F87171' }}>{ncCount} NC</span> &bull;{' '}
+                <span style={{ color: '#FBBF24' }}>{ofiCount} OFI</span>
               </div>
             </div>
           </div>
@@ -406,15 +426,19 @@ export default function ImsLandingPage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '0.8rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
-              color: '#0D9488',
+              color: '#EA580C',
+              background: '#FFF7ED',
+              border: '1px solid #FFEDD5',
+              padding: '4px 10px',
+              borderRadius: '999px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              marginBottom: '0.35rem',
+              marginBottom: '0.5rem',
             }}
           >
-            <Layers size={15} />
+            <Layers size={14} color="#EA580C" />
             <span>IMS SERVICES</span>
           </div>
           <h2
@@ -454,13 +478,13 @@ export default function ImsLandingPage() {
               style={{
                 background: '#FFFFFF',
                 borderRadius: '1.25rem',
-                border: '1.5px solid #0D9488',
+                border: '1.5px solid #F97316',
                 padding: '2rem',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 25px -5px rgba(13, 148, 136, 0.1)',
+                boxShadow: '0 10px 25px -5px rgba(249, 115, 22, 0.12)',
                 transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 cursor: 'pointer',
                 position: 'relative',
@@ -468,11 +492,11 @@ export default function ImsLandingPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(13, 148, 136, 0.25)';
+                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(249, 115, 22, 0.25)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(13, 148, 136, 0.1)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(249, 115, 22, 0.12)';
               }}
             >
               {/* Active Badge */}
@@ -503,19 +527,19 @@ export default function ImsLandingPage() {
                     width: '56px',
                     height: '56px',
                     borderRadius: '1rem',
-                    background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '1.5rem',
-                    boxShadow: '0 8px 16px -4px rgba(13, 148, 136, 0.4)',
+                    boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)',
                   }}
                 >
                   <FileCheck size={28} />
                 </div>
 
-                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0D9488', marginBottom: '0.35rem' }}>
+                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#EA580C', marginBottom: '0.35rem' }}>
 
                 </div>
                 <h3
@@ -551,21 +575,21 @@ export default function ImsLandingPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.5rem',
-                    background: '#F8FAFC',
+                    background: '#FFF7ED',
                     padding: '1rem',
                     borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid #FFEDD5',
                     marginBottom: '1.5rem',
                     fontSize: '0.85rem',
-                    color: '#334155',
+                    color: '#9A3412',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#0D9488" />
+                    <CheckCircle2 size={16} color="#EA580C" />
                     <span>แดชบอร์ดสรุปภาพรวม C, NC, OFI แบบเรียลไทม์</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#0D9488" />
+                    <CheckCircle2 size={16} color="#EA580C" />
                     <span>กำหนดสิทธิ์คณะผู้ตรวจติดตามและ Lead IA ประจำปีงบประมาณ</span>
                   </div>
 
@@ -580,7 +604,7 @@ export default function ImsLandingPage() {
                   justifyContent: 'space-between',
                   paddingTop: '1rem',
                   borderTop: '1px solid #F1F5F9',
-                  color: '#0D9488',
+                  color: '#EA580C',
                   fontWeight: 700,
                   fontSize: '0.95rem',
                 }}
