@@ -475,262 +475,360 @@ export default function ImsAuditPage() {
         </div>
       )}
 
-      {/* Top Breadcrumb & Actions Bar */}
+      {/* Top Banner / Hero */}
       <div
         style={{
-          background: '#FFFFFF',
-          borderBottom: '1px solid #E2E8F0',
-          padding: '1rem 1.5rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          color: '#FFFFFF',
+          padding: '2.5rem 1.5rem 3.5rem',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
-        >
-          {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
-            <Link href="/" style={{ color: '#64748B', textDecoration: 'none' }}>
-              หน้าหลัก
-            </Link>
-            <ChevronRight size={14} color="#94A3B8" />
-            <Link href="/ims" style={{ color: '#EA580C', textDecoration: 'none', fontWeight: 600 }}>
-              ระบบบริหารงาน IMS
-            </Link>
-            <ChevronRight size={14} color="#94A3B8" />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>รายงานการตรวจติดตามภายใน</span>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {/* Button: Activity Log Modal */}
-            <button
-              type="button"
-              onClick={() => setIsActivityLogModalOpen(true)}
+        <div style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Breadcrumb Navigation */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.85rem',
+              color: '#FED7AA',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <Link
+              href="/ims"
               style={{
-                display: 'flex',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '0.55rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                background: '#FFFFFF',
-                color: '#334155',
-                fontSize: '0.875rem',
+                gap: '4px',
                 fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
               }}
             >
-              <History size={16} color="#EA580C" />
-              <span>ประวัติกิจกรรม (Activity Log)</span>
-            </button>
+              <ArrowLeft size={16} />
+              <span>ระบบบริหารงาน IMS</span>
+            </Link>
+            <span>/</span>
+            <span style={{ color: '#FB923C', fontWeight: 700 }}>Internal Audit Report</span>
+          </div>
 
-            {(isAdmin || isDcc) && (
-              <button
-                type="button"
-                onClick={() => setIsConfigModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#334155',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Settings size={16} color="#64748B" />
-                <span>จัดการรายชื่อผู้ตรวจประจำปีงบประมาณ</span>
-              </button>
-            )}
-
-            {isAuthorizedToAudit ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingAudit(null);
-                  setIsFormModalOpen(true);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '0.55rem 1.25rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                }}
-              >
-                <Plus size={17} />
-                <span>สร้างรายงานการตรวจติดตาม</span>
-              </button>
-            ) : (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+            }}
+          >
+            <div>
               <div
-                title={
-                  !isYearConfigured
-                    ? `ยังไม่ได้กำหนดคณะผู้ตรวจติดตามประจำปีงบประมาณ ${selectedYear} — ผู้ดูแลระบบต้องกำหนดรายชื่อก่อนจึงจะสร้างรายงานได้`
-                    : 'โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้'
-                }
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '999px',
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#FED7AA',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                <FileCheck size={15} color="#FB923C" />
+                <span>มาตรฐาน IMS (ISO 9001 &amp; ISO/IEC 27001) มจพ.</span>
+              </div>
+              <h1
+                style={{
+                  fontSize: 'clamp(1.75rem, 3.5vw, 2.35rem)',
+                  fontWeight: 800,
+                  margin: '0 0 0.5rem 0',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Internal Audit Report
+              </h1>
+              <p
+                style={{
+                  fontSize: '0.95rem',
+                  color: '#E2E8F0',
+                  margin: 0,
+                  maxWidth: '740px',
+                  lineHeight: 1.5,
+                }}
+              >
+                รายงานผลการตรวจติดตามคุณภาพและความมั่นคงปลอดภัยสารสนเทศภายใน พร้อมติดตามสถานะการอนุมัติ สัดส่วนผลตรวจ และข้อสังเกต
+              </p>
+            </div>
+
+            {/* Year Selector & Quick Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '8px',
-                  background: !isYearConfigured ? '#FEF2F2' : '#F1F5F9',
-                  color: !isYearConfigured ? '#DC2626' : '#64748B',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  border: `1px solid ${!isYearConfigured ? '#FECACA' : '#CBD5E1'}`,
+                  gap: '8px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '6px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
                 }}
               >
-                {!isYearConfigured ? (
-                  <>
-                    <AlertCircle size={15} color="#DC2626" />
-                    <span>ยังไม่ได้กำหนดคณะผู้ตรวจติดตามของปี {selectedYear}</span>
-                  </>
+                <Calendar size={18} color="#FB923C" />
+                <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>ปีงบประมาณ:</span>
+                <select
+                  id="ims-fiscal-year-select"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr} style={{ color: '#0F172A' }}>
+                      {yr}
+                    </option>
+                  ))}
+                  <option value="ALL" style={{ color: '#0F172A' }}>
+                    ทุกปีงบประมาณ (ทั้งหมด)
+                  </option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsActivityLogModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#FFFFFF',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <History size={15} color="#FED7AA" />
+                  <span>Activity Log</span>
+                </button>
+
+                {(isAdmin || isDcc) && (
+                  <button
+                    type="button"
+                    onClick={() => setIsConfigModalOpen(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0.6rem 1rem',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      color: '#FFFFFF',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <Settings size={15} color="#FED7AA" />
+                    <span>จัดการรายชื่อผู้ตรวจ</span>
+                  </button>
+                )}
+
+                {isAuthorizedToAudit ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAudit(null);
+                      setIsFormModalOpen(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      padding: '0.6rem 1.25rem',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={18} />
+                    <span>+ สร้างรายงานการตรวจติดตาม</span>
+                  </button>
                 ) : (
-                  <>
-                    <Eye size={15} color="#64748B" />
-                    <span>โหมดดูข้อมูลอย่างเดียว</span>
-                  </>
+                  <div
+                    title={
+                      !isYearConfigured
+                        ? `ยังไม่ได้กำหนดคณะผู้ตรวจติดตามประจำปีงบประมาณ ${selectedYear} — ผู้ดูแลระบบต้องกำหนดรายชื่อก่อนจึงจะสร้างรายงานได้`
+                        : 'โหมดดูข้อมูลอย่างเดียว: เฉพาะคณะผู้ตรวจติดตามที่ได้รับมอบหมายของปีนี้เท่านั้นที่สามารถสร้างรายงานได้'
+                    }
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0.6rem 1rem',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      color: '#FED7AA',
+                      fontSize: '0.825rem',
+                      fontWeight: 600,
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                  >
+                    {!isYearConfigured ? (
+                      <>
+                        <AlertCircle size={15} color="#FECACA" />
+                        <span>ยังไม่ได้กำหนดผู้ตรวจปี {selectedYear}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={15} />
+                        <span>โหมดดูข้อมูลอย่างเดียว</span>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.75rem 1.5rem' }}>
-        {/* Title Header with Year Selector */}
+      <div
+        style={{
+          maxWidth: '1280px',
+          margin: '-1.75rem auto 0',
+          padding: '0 1.5rem',
+          position: 'relative',
+          zIndex: 2,
+        }}
+      >
+        {/* Yearly Config Banner */}
         <div
           style={{
+            background: isYearConfigured ? '#FFF7ED' : '#FFFBEB',
+            border: `1px solid ${isYearConfigured ? '#FFEDD5' : '#FDE68A'}`,
+            borderRadius: '12px',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
-            marginBottom: '1.5rem',
+            gap: '0.75rem',
+            fontSize: '0.85rem',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
           }}
         >
-          <div>
-            <h1
-              style={{
-                fontSize: '1.65rem',
-                fontWeight: 800,
-                color: '#0F172A',
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-              }}
-            >
-              <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isYearConfigured ? '#9A3412' : '#92400E' }}>
+            <Users size={17} color="#EA580C" />
+            {isYearConfigured ? (
+              <span>
+                <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong>{' '}
+                {yearlyConfig?.mrName && (
+                  <>
+                    MR (ตัวแทนฝ่ายบริหาร): <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
+                  </>
+                )}
+                Lead IA คือ{' '}
+                <strong>{yearlyConfig?.leadAuditorName || '-'}</strong>
+                {yearlyConfig?.dccName && (
+                  <>
+                    {' '}• DCC (ผู้ควบคุมเอกสาร): <strong>{yearlyConfig.dccName}</strong>
+                  </>
+                )}
+                {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
+                  ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน (${yearlyConfig.auditors
+                    .map((a) => a.name)
+                    .join(', ')})`
+                  : ''}
+              </span>
+            ) : (
+              <span>
+                <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
+                <span style={{ color: '#B45309' }}>
+                  ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — กรุณาให้ผู้ดูแลระบบหรือ DCC กำหนดรายชื่อก่อน
+                </span>
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {yearlyConfig?.appointmentOrderUrl && (
+              <a
+                href={yearlyConfig.appointmentOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="เปิดดูคำสั่งแต่งตั้งคณะผู้ตรวจติดตาม (Google Drive)"
                 style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: '#FFF7ED',
-                  color: '#EA580C',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: '5px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#9A3412',
+                  background: '#FFEDD5',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  border: '1px solid #FED7AA',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#FED7AA';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#FFEDD5';
                 }}
               >
-                <FileCheck size={22} />
-              </div>
-              <span>Internal Audit Report (การตรวจติดตามภายใน)</span>
-            </h1>
-            <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-              มาตรฐาน IMS (ISO 9001 & ISO/IEC 27001) สำนักคอมพิวเตอร์ฯ มจพ.
-            </p>
-          </div>
-
-          {/* Fiscal Year Selector Dropdown */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              background: '#FFFFFF',
-              padding: '0.4rem 0.75rem 0.4rem 0.85rem',
-              borderRadius: '12px',
-              border: '1.5px solid #FFEDD5',
-              boxShadow: '0 2px 5px rgba(234, 88, 12, 0.08)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: '#EA580C',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Calendar size={16} color="#EA580C" />
-              <span>ปีงบประมาณ:</span>
-            </div>
-
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <select
-                id="ims-fiscal-year-select"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                <ExternalLink size={13} />
+                <span>คำสั่งแต่งตั้ง</span>
+              </a>
+            )}
+            {(isAdmin || isDcc) && (
+              <button
+                type="button"
+                onClick={() => setIsConfigModalOpen(true)}
                 style={{
-                  appearance: 'none',
-                  WebkitAppearance: 'none',
-                  padding: '0.45rem 2.25rem 0.45rem 0.85rem',
-                  borderRadius: '8px',
-                  border: '1.5px solid #F97316',
-                  background: '#FFF7ED',
-                  color: '#9A3412',
-                  fontSize: '0.9rem',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#EA580C',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  outline: 'none',
-                  minWidth: '175px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'all 0.15s ease',
+                  textDecoration: 'underline',
+                  padding: 0,
                 }}
               >
-                {availableYears.map((yr) => (
-                  <option key={yr} value={yr}>
-                    ปีงบประมาณ {yr}
-                  </option>
-                ))}
-                <option value="ALL">ทุกปีงบประมาณ (ทั้งหมด)</option>
-              </select>
-              <ChevronDown
-                size={16}
-                color="#EA580C"
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
+                {isYearConfigured ? 'แก้ไขผู้ตรวจ' : 'กำหนดคณะผู้ตรวจ'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -955,105 +1053,6 @@ export default function ImsAuditPage() {
             </div>
           </div>
         )}
-
-        <div
-          style={{
-            background: isYearConfigured ? '#FFF7ED' : '#FFFBEB',
-            border: `1px solid ${isYearConfigured ? '#FFEDD5' : '#FDE68A'}`,
-            borderRadius: '12px',
-            padding: '0.85rem 1.25rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            fontSize: '0.85rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isYearConfigured ? '#9A3412' : '#92400E' }}>
-            <Users size={17} color="#EA580C" />
-            {isYearConfigured ? (
-              <span>
-                <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong>{' '}
-                {yearlyConfig?.mrName && (
-                  <>
-                    MR (ตัวแทนฝ่ายบริหาร): <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
-                  </>
-                )}
-                Lead IA คือ{' '}
-                <strong>{yearlyConfig?.leadAuditorName || '-'}</strong>
-                {yearlyConfig?.dccName && (
-                  <>
-                    {' '}• DCC (ผู้ควบคุมเอกสาร): <strong>{yearlyConfig.dccName}</strong>
-                  </>
-                )}
-                {yearlyConfig?.auditors && yearlyConfig.auditors.length > 0
-                  ? ` • ผู้ตรวจ ${yearlyConfig.auditors.length} ท่าน (${yearlyConfig.auditors
-                    .map((a) => a.name)
-                    .join(', ')})`
-                  : ''}
-              </span>
-            ) : (
-              <span>
-                <strong>ปีงบประมาณ {selectedYear}:</strong>{' '}
-                <span style={{ color: '#B45309' }}>
-                  ยังไม่ได้กำหนดคณะผู้ตรวจติดตามภายใน — กรุณาให้ผู้ดูแลระบบหรือ DCC กำหนดรายชื่อก่อน
-                </span>
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {yearlyConfig?.appointmentOrderUrl && (
-              <a
-                href={yearlyConfig.appointmentOrderUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="เปิดดูคำสั่งแต่งตั้งคณะผู้ตรวจติดตาม (Google Drive)"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#9A3412',
-                  background: '#FFEDD5',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  border: '1px solid #FED7AA',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#FED7AA';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#FFEDD5';
-                }}
-              >
-                <ExternalLink size={13} />
-                <span>คำสั่งแต่งตั้ง</span>
-              </a>
-            )}
-            {(isAdmin || isDcc) && (
-              <button
-                type="button"
-                onClick={() => setIsConfigModalOpen(true)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#EA580C',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  padding: 0,
-                }}
-              >
-                {isYearConfigured ? 'แก้ไขผู้ตรวจ' : 'กำหนดคณะผู้ตรวจ'}
-              </button>
-            )}
-          </div>
-        </div>
 
         {/* Filter and Search Bar */}
         <div
