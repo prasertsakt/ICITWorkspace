@@ -28,6 +28,7 @@ import { subscribeCarIncidents } from '@/lib/carIncidentService';
 import { subscribeOfiItems } from '@/lib/ofiHubService';
 import { useAuth } from '@/context/AuthContext';
 import ImsAuditTopicsModal from '@/components/ImsAuditTopicsModal';
+import ImsDashboardSummaryModal from '@/components/ImsDashboardSummaryModal';
 
 export default function ImsLandingPage() {
   const { currentUser, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
@@ -36,6 +37,8 @@ export default function ImsLandingPage() {
   const [ofiItems, setOfiItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryModalInitialTab, setSummaryModalInitialTab] = useState('ALL');
 
   useEffect(() => {
     const unsubAudits = subscribeImsAudits((data) => {
@@ -339,7 +342,7 @@ export default function ImsLandingPage() {
             ศูนย์กลางการกำกับดูแลมาตรฐานคุณภาพและความมั่นคงปลอดภัยสารสนเทศแบบบูรณาการ
           </p>
 
-          {/* Quick Stat Counters */}
+          {/* Quick Stat Counters (Clickable with Summary Modal) */}
           <div
             style={{
               display: 'grid',
@@ -348,7 +351,12 @@ export default function ImsLandingPage() {
               maxWidth: '820px',
             }}
           >
+            {/* Card 1: Total Audits */}
             <div
+              onClick={() => {
+                setSummaryModalInitialTab('ALL');
+                setIsSummaryModalOpen(true);
+              }}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
@@ -356,18 +364,42 @@ export default function ImsLandingPage() {
                 padding: '1.15rem 1.25rem',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
+              title="คลิกเพื่อดูสรุปรายละเอียดแผนตรวจทั้งหมด"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
-                <FileText size={16} color="#FB923C" />
-                <span>รายการตรวจทั้งหมด</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                  <FileText size={16} color="#FB923C" />
+                  <span>รายการตรวจทั้งหมด</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#FED7AA', opacity: 0.8 }}>↗</span>
               </div>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
                 {totalAudits}
               </div>
+              <div style={{ fontSize: '0.725rem', color: '#CBD5E1', marginTop: '4px' }}>
+                คลิกเพื่อดูรายละเอียด
+              </div>
             </div>
 
+            {/* Card 2: Completed Audits */}
             <div
+              onClick={() => {
+                setSummaryModalInitialTab('COMPLETED');
+                setIsSummaryModalOpen(true);
+              }}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
@@ -375,18 +407,42 @@ export default function ImsLandingPage() {
                 padding: '1.15rem 1.25rem',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
+              title="คลิกเพื่อดูสรุปผลการตรวจที่เสร็จสิ้นแล้ว"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
-                <CheckCircle2 size={16} color="#34D399" />
-                <span>ตรวจเสร็จสิ้นแล้ว</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                  <CheckCircle2 size={16} color="#34D399" />
+                  <span>ตรวจเสร็จสิ้นแล้ว</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#34D399', opacity: 0.8 }}>↗</span>
               </div>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#34D399', letterSpacing: '-0.02em' }}>
                 {completedAudits}
               </div>
+              <div style={{ fontSize: '0.725rem', color: '#CBD5E1', marginTop: '4px' }}>
+                คลิกเพื่อดูรายละเอียด
+              </div>
             </div>
 
+            {/* Card 3: Results Breakdown (C / NC / OFI) */}
             <div
+              onClick={() => {
+                setSummaryModalInitialTab('NC');
+                setIsSummaryModalOpen(true);
+              }}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
@@ -394,16 +450,35 @@ export default function ImsLandingPage() {
                 padding: '1.15rem 1.25rem',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                e.currentTarget.style.borderColor = 'rgba(251, 191, 36, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
+              title="คลิกเพื่อดูผลสรุปแยก C, NC, OFI และรายการที่เกี่ยวข้อง"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
-                <BarChart3 size={16} color="#FB923C" />
-                <span>ผลการตรวจ (C / NC / OFI)</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                  <BarChart3 size={16} color="#FB923C" />
+                  <span>ผลการตรวจ (C / NC / OFI)</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#FBBF24', opacity: 0.8 }}>↗</span>
               </div>
               <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '8px', letterSpacing: '-0.01em' }}>
                 <span style={{ color: '#34D399' }}>{cCount} C</span> &bull;{' '}
                 <span style={{ color: '#F87171' }}>{ncCount} NC</span> &bull;{' '}
                 <span style={{ color: '#FBBF24' }}>{ofiCount} OFI</span>
+              </div>
+              <div style={{ fontSize: '0.725rem', color: '#CBD5E1', marginTop: '4px' }}>
+                คลิกเพื่อดูรายละเอียด
               </div>
             </div>
           </div>
@@ -925,6 +1000,16 @@ export default function ImsLandingPage() {
           email: currentUser?.email,
           name: currentUser?.displayName || currentUser?.email || 'Admin',
         }}
+      />
+
+      {/* Interactive IMS Dashboard Data Summary Modal */}
+      <ImsDashboardSummaryModal
+        isOpen={isSummaryModalOpen}
+        onClose={() => setIsSummaryModalOpen(false)}
+        initialTab={summaryModalInitialTab}
+        audits={audits}
+        carIncidents={carIncidents}
+        ofiItems={ofiItems}
       />
     </div>
   );
