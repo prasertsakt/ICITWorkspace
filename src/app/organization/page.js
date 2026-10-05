@@ -139,22 +139,37 @@ export default function OrganizationPage() {
 
       {/* Hero Header */}
       <section
+        className="card-glass"
         style={{
-          background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #FDF4FF 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           borderRadius: 'var(--radius-xl)',
-          padding: '2rem 1.5rem',
+          padding: '2.25rem 2rem',
           marginBottom: '2rem',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid rgba(199, 210, 254, 0.4)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          color: '#FFFFFF',
         }}
       >
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: '700px' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: '760px' }}>
           <div
-            className="badge badge-admin"
-            style={{ marginBottom: '0.75rem', background: 'white', border: '1px solid var(--primary-200)' }}
+            style={{
+              marginBottom: '0.75rem',
+              background: 'rgba(249, 115, 22, 0.22)',
+              color: '#FED7AA',
+              border: '1px solid rgba(249, 115, 22, 0.4)',
+              borderRadius: '999px',
+              fontSize: '0.725rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              backdropFilter: 'blur(6px)',
+            }}
           >
-            <Building2 size={14} />
+            <Building2 size={14} style={{ color: '#FB923C' }} />
             <span>โครงสร้างองค์กรและทำเนียบบุคลากร</span>
           </div>
 
@@ -163,29 +178,58 @@ export default function OrganizationPage() {
               fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)',
               fontWeight: 800,
               letterSpacing: '-0.02em',
-              color: 'var(--text-primary)',
+              color: '#FFFFFF',
               lineHeight: 1.25,
               marginBottom: '0.75rem',
             }}
           >
-            โครงสร้างฝ่ายงานและทำเนียบบุคลากร
+            โครงสร้างฝ่ายงานและ
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                marginLeft: '8px',
+              }}
+            >
+              ทำเนียบบุคลากร
+            </span>
           </h2>
 
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-            ผังโครงสร้าง 6 ฝ่ายงานหลัก คณะฝ่ายบริหาร และรายชื่อบุคลากรทั้งหมดภายในองค์กร
+          <p style={{ fontSize: '0.95rem', color: '#CBD5E1', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            ผังโครงสร้าง 6 ฝ่ายงานหลัก คณะฝ่ายบริหาร และรายชื่อบุคลากรทั้งหมดภายในองค์กร สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             {currentPersonnel ? (
-              <Link href="/profile" className="btn btn-primary btn-sm">
+              <Link
+                href="/profile"
+                className="btn btn-primary btn-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                }}
+              >
                 <UserCheck size={16} />
                 <span>ดูข้อมูลส่วนบุคคลของฉัน</span>
               </Link>
             ) : null}
 
             {isAdmin && (
-              <Link href="/admin" className="btn btn-secondary btn-sm">
-                <ShieldCheck size={16} />
+              <Link
+                href="/admin"
+                className="btn btn-secondary btn-sm"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#FFFFFF',
+                  borderColor: 'rgba(255, 255, 255, 0.25)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <ShieldCheck size={16} style={{ color: '#FB923C' }} />
                 <span>จัดการข้อมูล (Admin)</span>
               </Link>
             )}
@@ -323,8 +367,18 @@ export default function OrganizationPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
                 onClick={() => setIsRearrangingExecs(!isRearrangingExecs)}
-                className={`btn btn-sm ${isRearrangingExecs ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}
+                className="btn btn-sm"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.8rem',
+                  background: isRearrangingExecs ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : '#FFF7ED',
+                  borderColor: '#FED7AA',
+                  color: isRearrangingExecs ? '#FFFFFF' : '#EA580C',
+                  fontWeight: 600,
+                  boxShadow: isRearrangingExecs ? '0 4px 12px rgba(249, 115, 22, 0.3)' : undefined,
+                }}
               >
                 {isRearrangingExecs ? (
                   <>
@@ -736,19 +790,40 @@ export default function OrganizationPage() {
             >
               <button
                 onClick={() => setSelectedDept('ALL')}
-                className={`btn btn-sm ${selectedDept === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                className="btn btn-sm"
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'nowrap',
+                  borderRadius: '20px',
+                  background: selectedDept === 'ALL' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'var(--bg-card)',
+                  color: selectedDept === 'ALL' ? '#FFFFFF' : 'var(--text-secondary)',
+                  border: selectedDept === 'ALL' ? 'none' : '1px solid var(--border-subtle)',
+                  fontWeight: selectedDept === 'ALL' ? 700 : 500,
+                  boxShadow: selectedDept === 'ALL' ? '0 2px 8px rgba(249, 115, 22, 0.25)' : undefined,
+                }}
               >
                 ทั้งหมด ({personnelList.length})
               </button>
               {PREDEFINED_DEPARTMENTS.map((dept) => {
                 const count = personnelList.filter((p) => p.department === dept).length;
+                const isSelected = selectedDept === dept;
                 return (
                   <button
                     key={dept}
                     onClick={() => setSelectedDept(dept)}
-                    className={`btn btn-sm ${selectedDept === dept ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    className="btn btn-sm"
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                      borderRadius: '20px',
+                      background: isSelected ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'var(--bg-card)',
+                      color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                      border: isSelected ? 'none' : '1px solid var(--border-subtle)',
+                      fontWeight: isSelected ? 700 : 500,
+                      boxShadow: isSelected ? '0 2px 8px rgba(249, 115, 22, 0.25)' : undefined,
+                    }}
                   >
                     {dept} ({count})
                   </button>

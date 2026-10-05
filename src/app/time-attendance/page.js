@@ -484,8 +484,8 @@ function TimeAttendanceContent() {
             maxWidth: '520px',
             margin: '0 auto',
             padding: '3rem 2rem',
-            borderTop: '5px solid #4F46E5',
-            boxShadow: '0 20px 40px -15px rgba(79, 70, 229, 0.15)',
+            borderTop: '5px solid #F97316',
+            boxShadow: '0 20px 40px -15px rgba(249, 115, 22, 0.15)',
           }}
         >
           <div
@@ -493,13 +493,13 @@ function TimeAttendanceContent() {
               width: '72px',
               height: '72px',
               borderRadius: '50%',
-              background: '#EEF2FF',
-              color: '#4F46E5',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.5rem',
-              boxShadow: '0 8px 16px -4px rgba(79, 70, 229, 0.2)',
+              boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.2)',
             }}
           >
             <Clock size={36} />
@@ -510,8 +510,8 @@ function TimeAttendanceContent() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#EEF2FF',
-              color: '#4F46E5',
+              background: '#FFF7ED',
+              color: '#EA580C',
               padding: '4px 12px',
               borderRadius: '100px',
               fontSize: '0.78rem',
@@ -519,12 +519,12 @@ function TimeAttendanceContent() {
               marginBottom: '1rem',
             }}
           >
-            <span className="pulse-dot" style={{ background: '#4F46E5' }} />
+            <span className="pulse-dot" style={{ background: '#EA580C' }} />
             ต้องเข้าสู่ระบบเพื่อใช้งาน
           </div>
 
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-            ระบบขอลงเวลา
+            ระบบขอลงเวลาปฏิบัติราชการ
           </h2>
 
           <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>
@@ -544,8 +544,11 @@ function TimeAttendanceContent() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                background: '#4F46E5',
-                borderColor: '#4F46E5',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                color: '#FFFFFF',
+                fontWeight: 700,
               }}
             >
               <LogIn size={20} />
@@ -712,33 +715,40 @@ function TimeAttendanceContent() {
 
       {/* Top Banner & Header */}
       <section
+        className="card-glass"
         style={{
-          background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 40%, #EDE9FE 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           borderRadius: 'var(--radius-xl)',
           padding: '2.25rem 2rem',
           marginBottom: '2rem',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid rgba(199, 210, 254, 0.45)',
-          boxShadow: '0 8px 24px -4px rgba(99, 102, 241, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          color: '#FFFFFF',
         }}
       >
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div style={{ maxWidth: '680px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
               <span
-                className="badge"
                 style={{
-                  background: 'white',
-                  color: 'var(--primary-600)',
-                  border: '1px solid var(--primary-200)',
-                  boxShadow: 'var(--shadow-sm)',
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  borderRadius: '999px',
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  backdropFilter: 'blur(6px)',
                 }}
               >
-                <Clock size={13} />
-                ระบบขอลงเวลา
+                <Clock size={13} style={{ color: '#FB923C' }} />
+                <span>ระบบขอลงเวลาปฏิบัติราชการ</span>
               </span>
-
             </div>
 
             <h1
@@ -746,15 +756,25 @@ function TimeAttendanceContent() {
                 fontSize: 'clamp(1.75rem, 3.8vw, 2.35rem)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
-                color: 'var(--text-primary)',
+                color: '#FFFFFF',
                 lineHeight: 1.2,
                 marginBottom: '0.65rem',
               }}
             >
-              ระบบขอลงเวลาปฏิบัติราชการ
+              ระบบขอลงเวลา
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  marginLeft: '8px',
+                }}
+              >
+                ปฏิบัติราชการ
+              </span>
             </h1>
 
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: '0.95rem', color: '#CBD5E1', lineHeight: 1.6, margin: 0 }}>
               ยื่นคำขอลงเวลามา/กลับปฏิบัติราชการ พร้อมระบุพยานหรือแนบภาพกล้องวงจรปิด ผ่านกระบวนการตรวจสอบโดยฝ่ายบุคคล รับรองโดยพยาน อนุมัติโดยหัวหน้าฝ่าย และรองผู้อำนวยการฝ่ายบริหาร
             </p>
           </div>
@@ -766,13 +786,30 @@ function TimeAttendanceContent() {
                 type="button"
                 onClick={() => setIsNewModalOpen(true)}
                 className="btn btn-primary"
-                style={{ padding: '0.75rem 1.35rem', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)' }}
+                style={{
+                  padding: '0.75rem 1.35rem',
+                  fontSize: '0.95rem',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                }}
               >
                 <Plus size={18} />
                 <span>สร้างขอลงเวลา</span>
               </button>
             ) : (
-              <button onClick={handleGoogleSignIn} className="btn btn-primary">
+              <button
+                onClick={handleGoogleSignIn}
+                className="btn btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                }}
+              >
                 <span>เข้าสู่ระบบเพื่อสร้างขอลงเวลา</span>
               </button>
             )}
@@ -795,9 +832,17 @@ function TimeAttendanceContent() {
                   }}
                   className="btn btn-secondary btn-sm"
                   title="ตั้งค่าระบบอีเมลและการเชื่อมต่อ Google Apps Script"
-                  style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#FFFFFF',
+                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                    backdropFilter: 'blur(8px)',
+                  }}
                 >
-                  <Settings size={14} />
+                  <Settings size={14} style={{ color: '#FB923C' }} />
                   <span>ตั้งค่าระบบอีเมล</span>
                 </button>
               </>
@@ -958,13 +1003,13 @@ function TimeAttendanceContent() {
               onClick={() => setActiveTab('all')}
               style={{
                 padding: '0.65rem 1rem',
-                borderBottom: activeTab === 'all' ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
+                borderBottom: activeTab === 'all' ? '2.5px solid #EA580C' : '2.5px solid transparent',
                 background: 'transparent',
                 borderTop: 'none',
                 borderLeft: 'none',
                 borderRight: 'none',
                 fontWeight: activeTab === 'all' ? 700 : 500,
-                color: activeTab === 'all' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                color: activeTab === 'all' ? '#EA580C' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: '0.9rem',
                 display: 'flex',
@@ -985,13 +1030,13 @@ function TimeAttendanceContent() {
                   onClick={() => setActiveTab('mine')}
                   style={{
                     padding: '0.65rem 1rem',
-                    borderBottom: activeTab === 'mine' ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
+                    borderBottom: activeTab === 'mine' ? '2.5px solid #EA580C' : '2.5px solid transparent',
                     background: 'transparent',
                     borderTop: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
                     fontWeight: activeTab === 'mine' ? 700 : 500,
-                    color: activeTab === 'mine' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                    color: activeTab === 'mine' ? '#EA580C' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.9rem',
                     display: 'flex',
@@ -1008,13 +1053,13 @@ function TimeAttendanceContent() {
                   onClick={() => setActiveTab('witness')}
                   style={{
                     padding: '0.65rem 1rem',
-                    borderBottom: activeTab === 'witness' ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
+                    borderBottom: activeTab === 'witness' ? '2.5px solid #EA580C' : '2.5px solid transparent',
                     background: 'transparent',
                     borderTop: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
                     fontWeight: activeTab === 'witness' ? 700 : 500,
-                    color: activeTab === 'witness' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                    color: activeTab === 'witness' ? '#EA580C' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.9rem',
                     display: 'flex',
@@ -1032,13 +1077,13 @@ function TimeAttendanceContent() {
                     onClick={() => setActiveTab('dept_head')}
                     style={{
                       padding: '0.65rem 1rem',
-                      borderBottom: activeTab === 'dept_head' ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
+                      borderBottom: activeTab === 'dept_head' ? '2.5px solid #EA580C' : '2.5px solid transparent',
                       background: 'transparent',
                       borderTop: 'none',
                       borderLeft: 'none',
                       borderRight: 'none',
                       fontWeight: activeTab === 'dept_head' ? 700 : 500,
-                      color: activeTab === 'dept_head' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                      color: activeTab === 'dept_head' ? '#EA580C' : 'var(--text-secondary)',
                       cursor: 'pointer',
                       fontSize: '0.9rem',
                       display: 'flex',
@@ -1058,13 +1103,13 @@ function TimeAttendanceContent() {
                   onClick={() => setActiveTab('pending_me')}
                   style={{
                     padding: '0.65rem 1rem',
-                    borderBottom: activeTab === 'pending_me' ? '2.5px solid var(--primary-600)' : '2.5px solid transparent',
+                    borderBottom: activeTab === 'pending_me' ? '2.5px solid #EA580C' : '2.5px solid transparent',
                     background: 'transparent',
                     borderTop: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
                     fontWeight: activeTab === 'pending_me' ? 700 : 500,
-                    color: activeTab === 'pending_me' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                    color: activeTab === 'pending_me' ? '#EA580C' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.9rem',
                     display: 'flex',
