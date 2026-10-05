@@ -210,33 +210,65 @@ export default function AdminPage() {
       <div className="main-container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
         <div
           className="card-glass"
-          style={{ maxWidth: '480px', margin: '0 auto', padding: '2.5rem 1.5rem' }}
+          style={{
+            maxWidth: '520px',
+            margin: '0 auto',
+            padding: '2.75rem 2rem',
+            borderRadius: 'var(--radius-xl)',
+            borderTop: '5px solid #F97316',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
+          }}
         >
           <div
             style={{
-              width: '64px',
-              height: '64px',
+              width: '68px',
+              height: '68px',
               borderRadius: '50%',
-              background: 'var(--rose-50)',
-              color: 'var(--rose-500)',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <ShieldCheck size={32} />
+            <ShieldCheck size={36} />
           </div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              background: '#FFF7ED',
+              color: '#EA580C',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
+            }}
+          >
+            <span className="pulse-dot" style={{ background: '#EA580C' }} />
             เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น
+          </div>
+
+          <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.65rem' }}>
+            สงวนสิทธิ์เฉพาะผู้ดูแลระบบ
           </h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>
             บัญชีปัจจุบันของคุณ ({currentPersonnel?.email || 'ยังไม่ได้เข้าสู่ระบบ'}) ไม่มีสิทธิ์เข้าถึงส่วนจัดการระบบนี้
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <Link href="/" className="btn btn-secondary btn-sm">
-              กลับหน้าหลัก
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+            >
+              กลับสู่หน้าหลัก (Portal)
             </Link>
           </div>
         </div>
@@ -434,91 +466,203 @@ export default function AdminPage() {
 
   return (
     <div className="main-container">
-      {/* Header */}
-      <div
+      {/* Top Hero Banner */}
+      <section
+        className="card-glass"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1.5rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '2.25rem 2rem',
+          marginBottom: '2rem',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          color: '#FFFFFF',
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-            <span className="badge badge-admin">
-              <ShieldCheck size={12} />
-              Admin Management Console
-            </span>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
+          <div style={{ maxWidth: '680px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              <span
+                style={{
+                  background: 'rgba(249, 115, 22, 0.22)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  borderRadius: '999px',
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                <ShieldCheck size={13} style={{ color: '#FB923C' }} />
+                <span>Admin Management Console</span>
+              </span>
+            </div>
+
+            <h1
+              style={{
+                fontSize: 'clamp(1.75rem, 3.8vw, 2.35rem)',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: '#FFFFFF',
+                lineHeight: 1.2,
+                margin: '0 0 0.5rem 0',
+              }}
+            >
+              ระบบจัดการข้อมูลองค์กร{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                (Admin Console)
+              </span>
+            </h1>
+
+            <p style={{ fontSize: '0.95rem', color: 'rgba(255, 255, 255, 0.78)', margin: 0, lineHeight: 1.6 }}>
+              จัดการรายชื่อบุคลากร (Google Login Whitelist), โครงสร้าง 6 ฝ่าย และฝ่ายบริหาร
+            </p>
           </div>
-          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            ระบบจัดการข้อมูลองค์กร
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            จัดการรายชื่อบุคลากร (Google Login Whitelist), โครงสร้าง 6 ฝ่าย และฝ่ายบริหาร
-          </p>
+
+          {/* Tab Buttons */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.4rem',
+              background: 'rgba(15, 23, 42, 0.45)',
+              padding: '0.4rem',
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+              overflowX: 'auto',
+              flexWrap: 'wrap',
+            }}
+          >
+            <button
+              onClick={() => setActiveTab('personnel')}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'personnel' ? 700 : 500,
+                background:
+                  activeTab === 'personnel'
+                    ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                    : 'transparent',
+                color: activeTab === 'personnel' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                border: activeTab === 'personnel' ? 'none' : '1px solid transparent',
+                boxShadow:
+                  activeTab === 'personnel' ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none',
+              }}
+            >
+              <Users size={15} />
+              <span>บุคลากร ({personnelList.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('departments')}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'departments' ? 700 : 500,
+                background:
+                  activeTab === 'departments'
+                    ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                    : 'transparent',
+                color: activeTab === 'departments' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                border: activeTab === 'departments' ? 'none' : '1px solid transparent',
+                boxShadow:
+                  activeTab === 'departments' ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none',
+              }}
+            >
+              <Building2 size={15} />
+              <span>โครงสร้างฝ่าย (6)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('executives')}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'executives' ? 700 : 500,
+                background:
+                  activeTab === 'executives'
+                    ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                    : 'transparent',
+                color: activeTab === 'executives' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                border: activeTab === 'executives' ? 'none' : '1px solid transparent',
+                boxShadow:
+                  activeTab === 'executives' ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none',
+              }}
+            >
+              <Award size={15} />
+              <span>ฝ่ายบริหาร ({executiveList.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('logs')}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'logs' ? 700 : 500,
+                background:
+                  activeTab === 'logs'
+                    ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                    : 'transparent',
+                color: activeTab === 'logs' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                border: activeTab === 'logs' ? 'none' : '1px solid transparent',
+                boxShadow:
+                  activeTab === 'logs' ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none',
+              }}
+            >
+              <Activity size={15} />
+              <span>ประวัติกิจกรรม ({activityLogs.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'settings' ? 700 : 500,
+                background:
+                  activeTab === 'settings'
+                    ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                    : 'transparent',
+                color: activeTab === 'settings' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                border: activeTab === 'settings' ? 'none' : '1px solid transparent',
+                boxShadow:
+                  activeTab === 'settings' ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none',
+              }}
+            >
+              <Settings size={15} />
+              <span>ตั้งค่า & คู่มือ</span>
+            </button>
+          </div>
         </div>
-
-        {/* Tab Buttons */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.4rem',
-            background: 'white',
-            padding: '0.35rem',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid var(--border-subtle)',
-            boxShadow: 'var(--shadow-sm)',
-            overflowX: 'auto',
-          }}
-        >
-          <button
-            onClick={() => setActiveTab('personnel')}
-            className={`btn btn-sm ${activeTab === 'personnel' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Users size={15} />
-            <span>บุคลากร ({personnelList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('departments')}
-            className={`btn btn-sm ${activeTab === 'departments' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Building2 size={15} />
-            <span>โครงสร้างฝ่าย (6)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('executives')}
-            className={`btn btn-sm ${activeTab === 'executives' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Award size={15} />
-            <span>ฝ่ายบริหาร ({executiveList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`btn btn-sm ${activeTab === 'logs' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Activity size={15} />
-            <span>ประวัติกิจกรรม ({activityLogs.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`btn btn-sm ${activeTab === 'settings' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Settings size={15} />
-            <span>ตั้งค่า & คู่มือ</span>
-          </button>
-        </div>
-      </div>
+      </section>
 
       {/* ===================== TAB 1: PERSONNEL MANAGEMENT ===================== */}
       {activeTab === 'personnel' && (
