@@ -196,82 +196,111 @@ export default function PortalLandingPage() {
     <div className="main-container">
       {/* Top Welcome Banner */}
       <section
+        className="card-glass"
         style={{
-          background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 40%, #FFF1F2 100%)',
+          padding: '2.25rem 2rem',
           borderRadius: 'var(--radius-xl)',
-          padding: '2.5rem 1.75rem',
-          marginBottom: '2.5rem',
+          marginBottom: '2rem',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          color: '#FFFFFF',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid rgba(199, 210, 254, 0.45)',
-          boxShadow: '0 8px 24px -4px rgba(99, 102, 241, 0.08)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
         }}
       >
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: '780px' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: '820px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
             <span
-              className="badge"
               style={{
-                background: 'white',
-                color: 'var(--primary-600)',
-                border: '1px solid var(--primary-200)',
-                boxShadow: 'var(--shadow-sm)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FED7AA',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                borderRadius: '999px',
+                fontSize: '0.725rem',
+                fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 padding: '4px 10px 4px 6px',
+                backdropFilter: 'blur(6px)',
               }}
             >
               <img src="/icit-logo.png" alt="ICIT" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
-              <span>ICIT PORTAL &bull; ศูนย์รวมระบบสารสนเทศ</span>
+              <span>ICIT WORKSPACE &bull; ศูนย์รวมระบบสารสนเทศ</span>
             </span>
 
             <span
-              className="badge"
               style={{
-                background: 'rgba(255, 255, 255, 0.8)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
+                background: 'rgba(255, 255, 255, 0.12)',
+                color: '#E2E8F0',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '999px',
+                fontSize: '0.725rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                backdropFilter: 'blur(6px)',
               }}
             >
-              <Calendar size={13} />
-              {formatThaiDisplayDate(todayBuddhistDate)}
+              <Calendar size={13} style={{ color: '#FB923C' }} />
+              <span>{formatThaiDisplayDate(todayBuddhistDate)}</span>
             </span>
           </div>
 
           <h1
             style={{
-              fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+              fontSize: 'clamp(1.75rem, 4vw, 2.35rem)',
               fontWeight: 800,
               letterSpacing: '-0.02em',
-              color: 'var(--text-primary)',
-              lineHeight: 1.2,
+              color: '#FFFFFF',
+              lineHeight: 1.25,
               marginBottom: '0.75rem',
             }}
           >
             {currentPersonnel ? (
               <>
-                สวัสดี, <span style={{ color: 'var(--primary-600)' }}>{currentPersonnel.name}</span> 👋
+                สวัสดี,{' '}
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {currentPersonnel.name}
+                </span>{' '}
+                👋
               </>
             ) : (
               <>
-                <span style={{ color: 'var(--primary-600)' }}>ICIT Workspace Portal</span>
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  ICIT Workspace Portal
+                </span>
               </>
             )}
           </h1>
 
-          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.95rem', color: '#CBD5E1', lineHeight: 1.6, margin: 0 }}>
             {currentPersonnel ? (
               <>
-                สังกัด <strong>{currentPersonnel.department}</strong> &bull; ตำแหน่ง{' '}
-                <strong>
+                สังกัด <strong style={{ color: '#FFFFFF' }}>{currentPersonnel.department}</strong> &bull; ตำแหน่ง{' '}
+                <strong style={{ color: '#FFFFFF' }}>
                   {currentPersonnel.position}{currentPersonnel.level ? ` (${currentPersonnel.level})` : ''}
                 </strong>
                 <br />
                 เข้าถึงระบบสารสนเทศ โครงสร้างองค์กร และบริการดิจิทัลทั้งหมดได้จากหน้านี้
               </>
             ) : (
-              'ศูนย์รวมระบบสารสนเทศภายในองค์กร'
+              'ศูนย์รวมระบบสารสนเทศภายในองค์กร สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ'
             )}
           </p>
         </div>
@@ -327,7 +356,7 @@ export default function PortalLandingPage() {
                   height: '36px',
                   borderRadius: '20px',
                   background: 'var(--bg-card)',
-                  borderColor: searchQuery ? 'var(--primary-400)' : 'var(--border-subtle)',
+                  borderColor: searchQuery ? '#F97316' : 'var(--border-subtle)',
                   boxShadow: 'var(--shadow-sm)',
                 }}
               />
@@ -363,13 +392,17 @@ export default function PortalLandingPage() {
                   className="btn btn-primary btn-sm"
                   style={{
                     height: '36px',
-                    padding: '0 0.85rem',
+                    padding: '0 0.95rem',
                     fontSize: '0.78rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                     borderRadius: '20px',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
                   }}
                   title="คลิกเพื่อเพิ่มการ์ดระบบงานหรือบริการใหม่"
                 >
@@ -391,7 +424,7 @@ export default function PortalLandingPage() {
                     <button
                       onClick={() => setIsRearranging(false)}
                       className="btn btn-secondary btn-sm"
-                      style={{ height: '36px', padding: '0 0.85rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', borderColor: 'var(--primary-300)', color: 'var(--primary-700)', borderRadius: '20px' }}
+                      style={{ height: '36px', padding: '0 0.85rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#FED7AA', color: '#EA580C', background: '#FFF7ED', borderRadius: '20px', fontWeight: 700 }}
                     >
                       <CheckCircle2 size={14} />
                       <span>เสร็จสิ้นการจัดเรียง</span>
@@ -411,10 +444,11 @@ export default function PortalLandingPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      borderColor: 'var(--primary-300)',
-                      color: 'var(--primary-700)',
-                      background: 'var(--primary-50)',
+                      borderColor: '#FED7AA',
+                      color: '#EA580C',
+                      background: '#FFF7ED',
                       borderRadius: '20px',
+                      fontWeight: 600,
                     }}
                     title="คลิกเพื่อสลับและจัดลำดับการ์ดบริการ"
                   >
@@ -436,11 +470,11 @@ export default function PortalLandingPage() {
               justifyContent: 'space-between',
               marginBottom: '1rem',
               padding: '0.45rem 0.85rem',
-              background: 'var(--primary-50)',
+              background: '#FFF7ED',
               borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--primary-200)',
+              border: '1px solid #FED7AA',
               fontSize: '0.8rem',
-              color: 'var(--primary-700)',
+              color: '#C2410C',
             }}
           >
             <span>
@@ -452,9 +486,9 @@ export default function PortalLandingPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--primary-700)',
+                color: '#EA580C',
                 cursor: 'pointer',
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: '0.75rem',
                 textDecoration: 'underline',
               }}
@@ -535,10 +569,10 @@ export default function PortalLandingPage() {
                       justifyContent: 'space-between',
                       padding: '0.4rem 0.6rem',
                       marginBottom: '0.5rem',
-                      background: 'var(--primary-50)',
+                      background: '#FFF7ED',
                       borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--primary-200)',
-                      color: 'var(--primary-700)',
+                      border: '1px solid #FED7AA',
+                      color: '#C2410C',
                       fontSize: '0.75rem',
                       fontWeight: 600,
                     }}
@@ -645,9 +679,9 @@ export default function PortalLandingPage() {
                             style={{
                               padding: '3px 6px',
                               borderRadius: '6px',
-                              color: 'var(--primary-600)',
-                              background: 'var(--primary-50)',
-                              borderColor: 'var(--primary-200)',
+                              color: '#EA580C',
+                              background: '#FFF7ED',
+                              borderColor: '#FED7AA',
                             }}
                             title="แก้ไขการ์ดบริการนี้"
                           >
@@ -716,7 +750,7 @@ export default function PortalLandingPage() {
                     ...baseCardStyle,
                     cursor: 'grab',
                     opacity: isDragging ? 0.35 : 1,
-                    outline: isOver ? '2px dashed var(--primary-500)' : undefined,
+                    outline: isOver ? '2px dashed #F97316' : undefined,
                     outlineOffset: '3px',
                     transform: isOver ? 'scale(1.02)' : 'scale(1)',
                     boxShadow: isDragging ? 'var(--shadow-lg)' : undefined,
