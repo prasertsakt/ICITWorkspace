@@ -170,11 +170,12 @@ export default function TqaOfiFormModal({
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -183,7 +184,9 @@ export default function TqaOfiFormModal({
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FB923C',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -192,10 +195,10 @@ export default function TqaOfiFormModal({
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
                 {ofiToEdit ? 'แก้ไขข้อเสนอแนะ TQA OFI' : 'เพิ่มข้อเสนอแนะ TQA OFI ใหม่'}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#DDD6FE' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#FED7AA' }}>
                 ปีงบประมาณ {fiscalYear}
               </p>
             </div>
@@ -472,8 +475,9 @@ export default function TqaOfiFormModal({
               className="btn btn-primary"
               disabled={isSaving}
               style={{
-                background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                borderColor: '#6D28D9',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                borderColor: '#EA580C',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                 gap: '6px',
               }}
             >

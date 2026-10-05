@@ -38,6 +38,7 @@ import {
 } from '../lib/constants';
 import { useModal } from '../context/ModalContext';
 import { subscribeImsAuditTopics, isMrUser } from '../lib/imsService';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import {
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
@@ -2097,7 +2098,7 @@ export default function CarIncidentModal({
                       ✓ เห็นชอบและอนุมัติแผนงานแล้ว โดย {auditorApproval.auditorName || 'ผู้ตรวจติดตาม'}
                       {auditorApproval.approvedAt && (
                         <span style={{ fontWeight: 400, color: '#64748B', marginLeft: '6px' }}>
-                          ({new Date(auditorApproval.approvedAt).toLocaleDateString('th-TH')})
+                          ({formatDateDDMMYYYYBE(auditorApproval.approvedAt)})
                         </span>
                       )}
                     </span>
@@ -2113,7 +2114,7 @@ export default function CarIncidentModal({
                       {auditorApproval.auditorName && (
                         <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '4px' }}>
                           โดย {auditorApproval.auditorName}{' '}
-                          {auditorApproval.revisedAt && `(${new Date(auditorApproval.revisedAt).toLocaleDateString('th-TH')})`}
+                          {auditorApproval.revisedAt && `(${formatDateDDMMYYYYBE(auditorApproval.revisedAt)})`}
                         </div>
                       )}
                     </div>

@@ -317,11 +317,12 @@ export default function TqaOfiActionModal({
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -330,7 +331,9 @@ export default function TqaOfiActionModal({
                 width: '38px',
                 height: '38px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FB923C',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -342,7 +345,9 @@ export default function TqaOfiActionModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span
                   style={{
-                    background: 'rgba(255, 255, 255, 0.25)',
+                    background: 'rgba(249, 115, 22, 0.22)',
+                    color: '#FED7AA',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
                     padding: '2px 8px',
                     borderRadius: '6px',
                     fontSize: '0.75rem',
@@ -351,11 +356,11 @@ export default function TqaOfiActionModal({
                 >
                   {ofiItem.itemRef || 'TQA OFI'}
                 </span>
-                <span style={{ fontSize: '0.825rem', color: '#DDD6FE' }}>
+                <span style={{ fontSize: '0.825rem', color: '#CBD5E1' }}>
                   {ofiItem.category}
                 </span>
               </div>
-              <h3 style={{ margin: '3px 0 0', fontSize: '1.1rem', fontWeight: 800 }}>
+              <h3 style={{ margin: '3px 0 0', fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
                 รายงานผลการดำเนินงาน 3 รอบ (Action Progress Tracking)
               </h3>
             </div>

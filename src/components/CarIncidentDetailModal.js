@@ -24,6 +24,7 @@ import {
   canUserManageCarIncidentStatus,
   isDccUser,
 } from '../lib/carIncidentService';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
 export default function CarIncidentDetailModal({
   isOpen,
@@ -322,7 +323,7 @@ export default function CarIncidentDetailModal({
                   </u>
                 </div>
                 <div>
-                  วันที่: <u>&nbsp;{record.requestDate || '-'}&nbsp;</u>
+                  วันที่: <u>&nbsp;{formatDateDDMMYYYYBE(record.requestDate) || '-'}&nbsp;</u>
                 </div>
               </div>
 
@@ -371,7 +372,7 @@ export default function CarIncidentDetailModal({
                   </u>
                 </div>
                 <div>
-                  วันที่: <u>&nbsp;{record.part2Date || '-'}&nbsp;</u>
+                  วันที่: <u>&nbsp;{formatDateDDMMYYYYBE(record.part2Date) || '-'}&nbsp;</u>
                 </div>
               </div>
 
@@ -443,8 +444,8 @@ export default function CarIncidentDetailModal({
                       <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{idx + 1}</td>
                       <td style={{ border: '1px solid #000000', padding: '6px' }}>{plan.step || '-'}</td>
                       <td style={{ border: '1px solid #000000', padding: '6px' }}>{plan.responsiblePerson || '-'}</td>
-                      <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{plan.targetDate || '-'}</td>
-                      <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{plan.completedDate || '-'}</td>
+                      <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{formatDateDDMMYYYYBE(plan.targetDate) || '-'}</td>
+                      <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{formatDateDDMMYYYYBE(plan.completedDate) || '-'}</td>
                       <td style={{ border: '1px solid #000000', padding: '6px', textAlign: 'center' }}>{plan.signature || '-'}</td>
                       <td style={{ border: '1px solid #000000', padding: '6px' }}>{plan.remarks || '-'}</td>
                     </tr>
@@ -467,7 +468,7 @@ export default function CarIncidentDetailModal({
                     {record.auditorApproval?.approved ? (
                       <span style={{ color: '#059669', fontWeight: 600 }}>
                         ✓ เห็นชอบและอนุมัติแล้ว โดย {record.auditorApproval.auditorName || 'ผู้ตรวจติดตาม'}
-                        {record.auditorApproval.approvedAt && ` (${new Date(record.auditorApproval.approvedAt).toLocaleDateString('th-TH')})`}
+                        {record.auditorApproval.approvedAt && ` (${formatDateDDMMYYYYBE(record.auditorApproval.approvedAt)})`}
                       </span>
                     ) : record.auditorApproval?.approved === false ? (
                       <span style={{ color: '#D97706', fontWeight: 600 }}>
@@ -485,7 +486,7 @@ export default function CarIncidentDetailModal({
                     <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {record.reviewComments.map((c, i) => (
                         <div key={c.id || i} style={{ fontSize: '8.5pt', color: '#334155' }}>
-                          • <span style={{ fontWeight: 600 }}>{c.authorName}</span> ({c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : ''}): {c.text || c.content}
+                          • <span style={{ fontWeight: 600 }}>{c.authorName}</span> ({c.createdAt ? formatDateDDMMYYYYBE(c.createdAt) : ''}): {c.text || c.content}
                         </div>
                       ))}
                     </div>
@@ -500,7 +501,7 @@ export default function CarIncidentDetailModal({
                   <u>
                     &nbsp;{record.executiveSignature ? record.executiveSignature.name : '________________________'}&nbsp;
                   </u>{' '}
-                  วันที่ <u>&nbsp;{record.executiveSignature?.date || '______________'}&nbsp;</u>
+                  วันที่ <u>&nbsp;{formatDateDDMMYYYYBE(record.executiveSignature?.date) || '______________'}&nbsp;</u>
                 </div>
               </div>
             </div>
@@ -518,7 +519,7 @@ export default function CarIncidentDetailModal({
                   </u>
                 </div>
                 <div>
-                  วันที่: <u>&nbsp;{record.followUpDate || '-'}&nbsp;</u>
+                  วันที่: <u>&nbsp;{formatDateDDMMYYYYBE(record.followUpDate) || '-'}&nbsp;</u>
                 </div>
               </div>
 
@@ -558,7 +559,7 @@ export default function CarIncidentDetailModal({
                       <div key={item.id || idx} style={{ padding: '6px 8px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '4px', fontSize: '8.5pt' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ fontWeight: 700 }}>
-                            รอบที่ {idx + 1} ({item.followUpDate || '-'}) - ผู้ตรวจ: {item.followUpAuditor?.name || '-'}
+                            รอบที่ {idx + 1} ({formatDateDDMMYYYYBE(item.followUpDate) || '-'}) - ผู้ตรวจ: {item.followUpAuditor?.name || '-'}
                           </span>
                           <span style={{ fontWeight: 700, color: item.followUpResult === 'RESOLVED' ? '#16A34A' : '#D97706' }}>
                             {item.followUpResult === 'RESOLVED' ? '✓ Resolved' : '⚠️ Ineffective'}
@@ -583,7 +584,7 @@ export default function CarIncidentDetailModal({
                 {record.notes.map((n, i) => (
                   <div key={n.id || i} style={{ marginBottom: '6px', borderBottom: '1px dotted #E2E8F0', paddingBottom: '4px' }}>
                     <span style={{ fontWeight: 'bold' }}>{n.authorName}</span>{' '}
-                    <span style={{ color: '#666', fontSize: '8.5pt' }}>({new Date(n.createdAt).toLocaleDateString('th-TH')}):</span>{' '}
+                    <span style={{ color: '#666', fontSize: '8.5pt' }}>({formatDateDDMMYYYYBE(n.createdAt)}):</span>{' '}
                     <span>{n.content}</span>
                   </div>
                 ))}

@@ -26,7 +26,7 @@ import {
   IMS_STANDARDS,
   IMS_AUDIT_TOPICS,
 } from '@/lib/constants';
-import { getAvailableFiscalYears } from '@/lib/dateUtils';
+import { getAvailableFiscalYears, formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
 import CarIncidentModal from '@/components/CarIncidentModal';
 import CarIncidentDetailModal from '@/components/CarIncidentDetailModal';
@@ -911,7 +911,7 @@ export default function CarIncidentHubPage() {
                           {item.docNumber}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                          {item.requestDate}
+                          {formatDateDDMMYYYYBE(item.requestDate) || item.requestDate || '-'}
                         </div>
                       </td>
 

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { IMS_RESULT_TYPES, IMS_AUDIT_STATUSES } from '@/lib/constants';
 import { useModal } from '@/context/ModalContext';
+import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
 export default function ImsAuditDetailModal({
   isOpen,
@@ -97,11 +98,12 @@ export default function ImsAuditDetailModal({
         <div
           style={{
             padding: '1.25rem 1.75rem',
-            background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -110,19 +112,21 @@ export default function ImsAuditDetailModal({
                 width: '38px',
                 height: '38px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(249, 115, 22, 0.25)',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: '#FB923C',
               }}
             >
-              <ShieldCheck size={22} color="#FFFFFF" />
+              <ShieldCheck size={22} />
             </div>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
                 รายละเอียดการตรวจติดตามภายใน
               </h2>
-              <p style={{ fontSize: '0.825rem', color: '#CCFBF1', margin: '2px 0 0 0' }}>
+              <p style={{ fontSize: '0.825rem', color: '#FED7AA', margin: '2px 0 0 0' }}>
                 ปีงบประมาณ {audit.auditYear} • {audit.isoStandard || 'IMS 9001/27001'}
               </p>
             </div>
@@ -200,7 +204,7 @@ export default function ImsAuditDetailModal({
 
             <div style={{ color: '#64748B', fontWeight: 500 }}>วันที่ทำการตรวจติดตาม</div>
             <div style={{ color: '#0284C7', fontWeight: 700 }}>
-              {audit.auditDate || '-'}
+              {formatDateDDMMYYYYBE(audit.auditDate)}
             </div>
 
             <div style={{ color: '#64748B', fontWeight: 500 }}>สถานะกระบวนการ</div>

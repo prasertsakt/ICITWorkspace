@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   X,
@@ -16,7 +16,9 @@ import {
   ShieldCheck,
   Search,
   Filter,
+  ChevronDown,
 } from 'lucide-react';
+import { formatDateDDMMYYYYBE, getAvailableFiscalYears } from '@/lib/dateUtils';
 
 export default function ImsDashboardSummaryModal({
   isOpen,
@@ -27,7 +29,10 @@ export default function ImsDashboardSummaryModal({
   ofiItems = [],
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [selectedYear, setSelectedYear] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const availableYears = useMemo(() => getAvailableFiscalYears(2568, 1, true), []);
 
   // Sync initialTab when modal opens
   React.useEffect(() => {
@@ -39,17 +44,30 @@ export default function ImsDashboardSummaryModal({
 
   if (!isOpen) return null;
 
-  const totalAudits = audits.length;
-  const completedAudits = audits.filter((a) => a.status === 'COMPLETED');
-  const cAudits = audits.filter((a) => a.result === 'C');
-  const ncAudits = audits.filter((a) => a.result === 'NC');
-  const ofiAudits = audits.filter((a) => a.result === 'OFI');
-  const totalCars = carIncidents.length;
+  // Filter raw lists by selected fiscal year
+  const yearFilteredAudits = audits.filter((a) => {
+    if (selectedYear === 'ALL') return true;
+    const y = String(a.auditYear || a.fiscalYear || a.year || '');
+    return y === selectedYear;
+  });
+
+  const yearFilteredCars = carIncidents.filter((c) => {
+    if (selectedYear === 'ALL') return true;
+    const y = String(c.fiscalYear || c.year || '');
+    return y === selectedYear;
+  });
+
+  const totalAudits = yearFilteredAudits.length;
+  const completedAudits = yearFilteredAudits.filter((a) => a.status === 'COMPLETED');
+  const cAudits = yearFilteredAudits.filter((a) => a.result === 'C');
+  const ncAudits = yearFilteredAudits.filter((a) => a.result === 'NC');
+  const ofiAudits = yearFilteredAudits.filter((a) => a.result === 'OFI');
+  const totalCars = yearFilteredCars.length;
 
   // Filter items based on activeTab
   let currentList = [];
   if (activeTab === 'ALL') {
-    currentList = audits;
+    currentList = yearFilteredAudits;
   } else if (activeTab === 'COMPLETED') {
     currentList = completedAudits;
   } else if (activeTab === 'C') {
@@ -59,7 +77,7 @@ export default function ImsDashboardSummaryModal({
   } else if (activeTab === 'OFI') {
     currentList = ofiAudits;
   } else if (activeTab === 'CAR') {
-    currentList = carIncidents;
+    currentList = yearFilteredCars;
   }
 
   // Search filter
@@ -69,6 +87,8 @@ export default function ImsDashboardSummaryModal({
     return (
       (item.topic || '').toLowerCase().includes(term) ||
       (item.topicName || '').toLowerCase().includes(term) ||
+      (item.item || '').toLowerCase().includes(term) ||
+      (item.clauses || '').toLowerCase().includes(term) ||
       (item.auditorName || '').toLowerCase().includes(term) ||
       (item.auditeeName || '').toLowerCase().includes(term) ||
       (item.details || '').toLowerCase().includes(term) ||
@@ -228,7 +248,7 @@ export default function ImsDashboardSummaryModal({
           background: '#FFFFFF',
           borderRadius: '1.25rem',
           width: '100%',
-          maxWidth: '850px',
+          maxWidth: '880px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
@@ -309,7 +329,7 @@ export default function ImsDashboardSummaryModal({
           </button>
         </div>
 
-        {/* Tab Selection */}
+        {/* Filters and Year Selector Toolbar */}
         <div
           style={{
             background: '#F8FAFC',
@@ -322,17 +342,18 @@ export default function ImsDashboardSummaryModal({
             gap: '0.75rem',
           }}
         >
+          {/* Tabs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setActiveTab('ALL')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'ALL' ? '1.5px solid #F97316' : '1px solid #CBD5E1',
                 background: activeTab === 'ALL' ? '#FFF7ED' : '#FFFFFF',
                 color: activeTab === 'ALL' ? '#EA580C' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'ALL' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -344,12 +365,12 @@ export default function ImsDashboardSummaryModal({
               type="button"
               onClick={() => setActiveTab('COMPLETED')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'COMPLETED' ? '1.5px solid #10B981' : '1px solid #CBD5E1',
                 background: activeTab === 'COMPLETED' ? '#ECFDF5' : '#FFFFFF',
                 color: activeTab === 'COMPLETED' ? '#059669' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'COMPLETED' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -361,12 +382,12 @@ export default function ImsDashboardSummaryModal({
               type="button"
               onClick={() => setActiveTab('C')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'C' ? '1.5px solid #10B981' : '1px solid #CBD5E1',
                 background: activeTab === 'C' ? '#ECFDF5' : '#FFFFFF',
                 color: activeTab === 'C' ? '#059669' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'C' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -378,12 +399,12 @@ export default function ImsDashboardSummaryModal({
               type="button"
               onClick={() => setActiveTab('NC')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'NC' ? '1.5px solid #EF4444' : '1px solid #CBD5E1',
                 background: activeTab === 'NC' ? '#FEF2F2' : '#FFFFFF',
                 color: activeTab === 'NC' ? '#DC2626' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'NC' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -395,12 +416,12 @@ export default function ImsDashboardSummaryModal({
               type="button"
               onClick={() => setActiveTab('OFI')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'OFI' ? '1.5px solid #F59E0B' : '1px solid #CBD5E1',
                 background: activeTab === 'OFI' ? '#FFFBEB' : '#FFFFFF',
                 color: activeTab === 'OFI' ? '#D97706' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'OFI' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -412,12 +433,12 @@ export default function ImsDashboardSummaryModal({
               type="button"
               onClick={() => setActiveTab('CAR')}
               style={{
-                padding: '6px 12px',
+                padding: '5px 11px',
                 borderRadius: '8px',
                 border: activeTab === 'CAR' ? '1.5px solid #8B5CF6' : '1px solid #CBD5E1',
                 background: activeTab === 'CAR' ? '#F5F3FF' : '#FFFFFF',
                 color: activeTab === 'CAR' ? '#7C3AED' : '#475569',
-                fontSize: '0.825rem',
+                fontSize: '0.8rem',
                 fontWeight: activeTab === 'CAR' ? 700 : 500,
                 cursor: 'pointer',
               }}
@@ -426,33 +447,74 @@ export default function ImsDashboardSummaryModal({
             </button>
           </div>
 
-          {/* Search Box */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#FFFFFF',
-              border: '1px solid #CBD5E1',
-              borderRadius: '8px',
-              padding: '4px 10px',
-              width: '200px',
-            }}
-          >
-            <Search size={14} color="#94A3B8" />
-            <input
-              type="text"
-              placeholder="ค้นหา..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          {/* Year Filter and Search Box */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Fiscal Year Filter Dropdown */}
+            <div
               style={{
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.825rem',
-                width: '100%',
-                background: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#FFFFFF',
+                border: '1.5px solid #FFEDD5',
+                borderRadius: '8px',
+                padding: '3px 8px',
               }}
-            />
+            >
+              <Calendar size={14} color="#EA580C" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412', whiteSpace: 'nowrap' }}>
+                ปีงบ:
+              </span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: '#9A3412',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="ALL">ทุกปี (ทั้งหมด)</option>
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Box */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                width: '180px',
+              }}
+            >
+              <Search size={14} color="#94A3B8" />
+              <input
+                type="text"
+                placeholder="ค้นหา..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.8rem',
+                  width: '100%',
+                  background: 'transparent',
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -514,7 +576,7 @@ export default function ImsDashboardSummaryModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldCheck size={16} color="#7C3AED" />
                 <span>
-                  <strong>สถานะ CAR &amp; Incident:</strong> ปัจจุบันมีเอกสาร CAR/Incident ในระบบทั้งหมด <strong>{totalCars}</strong> รายการ
+                  <strong>สถานะ CAR &amp; Incident:</strong> {selectedYear === 'ALL' ? 'รวมทุกปีงบประมาณ' : `ปีงบประมาณ ${selectedYear}`} มีเอกสาร CAR/Incident ในระบบทั้งหมด <strong>{totalCars}</strong> รายการ
                 </span>
               </div>
               <Link
@@ -544,11 +606,11 @@ export default function ImsDashboardSummaryModal({
             >
               <FileCheck size={40} color="#94A3B8" style={{ margin: '0 auto 0.75rem' }} />
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>
-                ไม่พบรายการข้อมูลในหมวดนี้
+                ไม่พบรายการข้อมูลในหมวดนี้ {selectedYear !== 'ALL' ? `(ปีงบประมาณ ${selectedYear})` : ''}
               </div>
               <div style={{ fontSize: '0.825rem', marginTop: '4px' }}>
                 {activeTab === 'CAR'
-                  ? 'ยังไม่มีการสร้างเอกสารใบ CAR / Incident ในระบบ'
+                  ? 'ยังไม่มีการสร้างเอกสารใบ CAR / Incident ในระบบสำหรับเงื่อนไขนี้'
                   : 'ยังไม่มีรายงานการตรวจติดตามที่ตรงกับเงื่อนไข'}
               </div>
             </div>
@@ -598,9 +660,9 @@ export default function ImsDashboardSummaryModal({
                             border: '1px solid #FFEDD5',
                           }}
                         >
-                          ปี {item.fiscalYear || item.year || '-'}
+                          ปีงบประมาณ {item.auditYear || item.fiscalYear || item.year || '-'}
                         </span>
-                        {item.clause && (
+                        {item.clauses && (
                           <span
                             style={{
                               fontSize: '0.75rem',
@@ -610,7 +672,7 @@ export default function ImsDashboardSummaryModal({
                               borderRadius: '4px',
                             }}
                           >
-                            ข้อกำหนด {item.clause}
+                            ข้อกำหนด {item.clauses}
                           </span>
                         )}
                         {getStatusBadge(item.status)}
@@ -620,6 +682,12 @@ export default function ImsDashboardSummaryModal({
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginTop: '4px' }}>
                         {item.topic || item.topicName || item.title || 'รายการตรวจติดตาม'}
                       </div>
+
+                      {item.item && (
+                        <div style={{ fontSize: '0.85rem', color: '#0284C7', fontWeight: 600, marginTop: '2px' }}>
+                          ข้อตรวจ: {item.item}
+                        </div>
+                      )}
 
                       {item.details && (
                         <div
@@ -651,19 +719,19 @@ export default function ImsDashboardSummaryModal({
                       gap: '0.5rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {item.auditorName && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                      {item.auditorName || item.auditor1Name ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <User size={13} color="#94A3B8" />
-                          <span>ผู้ตรวจ: <strong>{item.auditorName}</strong></span>
+                          <span>ผู้ตรวจ: <strong>{item.auditorName || item.auditor1Name}</strong></span>
                         </div>
-                      )}
-                      {item.auditDate && (
+                      ) : null}
+                      {item.auditDate || item.date || item.createdAt ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Calendar size={13} color="#94A3B8" />
-                          <span>วันที่ตรวจ: {item.auditDate}</span>
+                          <span>วันที่ตรวจ: <strong>{formatDateDDMMYYYYBE(item.auditDate || item.date || item.createdAt)}</strong></span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     <Link
@@ -703,7 +771,7 @@ export default function ImsDashboardSummaryModal({
           }}
         >
           <div style={{ fontSize: '0.825rem', color: '#64748B' }}>
-            แสดงผลทั้งหมด <strong>{filteredList.length}</strong> รายการ
+            แสดงผล <strong>{filteredList.length}</strong> รายการ {selectedYear !== 'ALL' ? `(ปีงบประมาณ ${selectedYear})` : '(ทุกปีงบประมาณ)'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -22,7 +22,7 @@ import {
 } from '@/lib/imsService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
-import { getAvailableFiscalYears } from '@/lib/dateUtils';
+import { getAvailableFiscalYears, formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import OfiDetailModal from '@/components/OfiDetailModal';
 import OfiFormModal from '@/components/OfiFormModal';
 

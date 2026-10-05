@@ -30,7 +30,7 @@ import ImsAuditModal from '@/components/ImsAuditModal';
 import ImsAuditDetailModal from '@/components/ImsAuditDetailModal';
 import ImsAuditorsConfigModal from '@/components/ImsAuditorsConfigModal';
 import ImsActivityLogModal from '@/components/ImsActivityLogModal';
-import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
+import { getCurrentThaiFiscalYear, getAvailableFiscalYears, formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import {
   ShieldCheck,
   FileCheck,
@@ -1291,7 +1291,7 @@ export default function ImsAuditPage() {
                         {/* วันที่ / ปี */}
                         <td style={{ padding: '1rem', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                           <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0284C7' }}>
-                            {audit.auditDate || '-'}
+                            {formatDateDDMMYYYYBE(audit.auditDate)}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
                             ปีงบประมาณ {audit.auditYear}

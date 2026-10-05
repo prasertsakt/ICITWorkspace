@@ -25,7 +25,7 @@ import {
   IMS_AUDIT_STATUSES,
 } from '@/lib/constants';
 import { subscribeYearlyAuditors, subscribeImsAuditTopics } from '@/lib/imsService';
-import { getAvailableFiscalYears } from '@/lib/dateUtils';
+import { getAvailableFiscalYears, formatLocalDate } from '@/lib/dateUtils';
 
 export default function ImsAuditModal({
   isOpen,
@@ -213,7 +213,7 @@ export default function ImsAuditModal({
       setFormData({
         auditYear: currentYear,
         isoStandard: 'IMS 9001/27001',
-        auditDate: new Date().toISOString().split('T')[0],
+        auditDate: formatLocalDate(new Date()),
         auditors: [{ id: '', name: '', email: '', department: '' }],
         auditees: [{ id: '', name: '', department: '' }],
         topic: IMS_AUDIT_TOPICS[0] || '',

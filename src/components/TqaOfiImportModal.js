@@ -144,11 +144,12 @@ export default function TqaOfiImportModal({
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -157,7 +158,9 @@ export default function TqaOfiImportModal({
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FB923C',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -166,10 +169,10 @@ export default function TqaOfiImportModal({
               <Upload size={18} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
                 นำเข้าข้อมูลข้อเสนอแนะ TQA OFI
               </h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#DDD6FE' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#FED7AA' }}>
                 สำหรับปีงบประมาณ {fiscalYear}
               </p>
             </div>
@@ -200,8 +203,8 @@ export default function TqaOfiImportModal({
             onClick={() => setActiveTab('seed')}
             style={{
               padding: '8px 14px',
-              borderBottom: activeTab === 'seed' ? '2px solid #7C3AED' : '2px solid transparent',
-              color: activeTab === 'seed' ? '#6D28D9' : '#64748B',
+              borderBottom: activeTab === 'seed' ? '2px solid #EA580C' : '2px solid transparent',
+              color: activeTab === 'seed' ? '#EA580C' : '#64748B',
               fontWeight: activeTab === 'seed' ? 700 : 500,
               fontSize: '0.85rem',
               background: 'none',
@@ -223,8 +226,8 @@ export default function TqaOfiImportModal({
             onClick={() => setActiveTab('duplicate')}
             style={{
               padding: '8px 14px',
-              borderBottom: activeTab === 'duplicate' ? '2px solid #7C3AED' : '2px solid transparent',
-              color: activeTab === 'duplicate' ? '#6D28D9' : '#64748B',
+              borderBottom: activeTab === 'duplicate' ? '2px solid #EA580C' : '2px solid transparent',
+              color: activeTab === 'duplicate' ? '#EA580C' : '#64748B',
               fontWeight: activeTab === 'duplicate' ? 700 : 500,
               fontSize: '0.85rem',
               background: 'none',
@@ -246,8 +249,8 @@ export default function TqaOfiImportModal({
             onClick={() => setActiveTab('json')}
             style={{
               padding: '8px 14px',
-              borderBottom: activeTab === 'json' ? '2px solid #7C3AED' : '2px solid transparent',
-              color: activeTab === 'json' ? '#6D28D9' : '#64748B',
+              borderBottom: activeTab === 'json' ? '2px solid #EA580C' : '2px solid transparent',
+              color: activeTab === 'json' ? '#EA580C' : '#64748B',
               fontWeight: activeTab === 'json' ? 700 : 500,
               fontSize: '0.85rem',
               background: 'none',
@@ -308,7 +311,7 @@ export default function TqaOfiImportModal({
           {activeTab === 'seed' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.9rem', lineHeight: 1.6, color: '#334155' }}>
-                <strong style={{ color: '#6D28D9' }}>ชุดข้อมูลสกัดจากเล่มรายงานประเมินตนเอง 2568:</strong>
+                <strong style={{ color: '#EA580C' }}>ชุดข้อมูลสกัดจากเล่มรายงานประเมินตนเอง 2568:</strong>
                 <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#64748B' }}>
                   ประกอบด้วยข้อเสนอแนะเพื่อการปรับปรุงทั้งหมด <strong>47 รายการ</strong> ครอบคลุมหมวด 1 - 7 (Finding, Evidence, Potential Impact, Key Themes)
                 </p>
@@ -320,8 +323,9 @@ export default function TqaOfiImportModal({
                 disabled={isProcessing}
                 className="btn btn-primary"
                 style={{
-                  background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                  borderColor: '#6D28D9',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  borderColor: '#EA580C',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                   justifyContent: 'center',
                   padding: '0.75rem',
                   gap: '8px',
@@ -358,8 +362,9 @@ export default function TqaOfiImportModal({
                 disabled={isProcessing}
                 className="btn btn-primary"
                 style={{
-                  background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                  borderColor: '#6D28D9',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  borderColor: '#EA580C',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                   justifyContent: 'center',
                   gap: '8px',
                   fontWeight: 700,
@@ -393,8 +398,9 @@ export default function TqaOfiImportModal({
                 disabled={isProcessing}
                 className="btn btn-primary"
                 style={{
-                  background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                  borderColor: '#6D28D9',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  borderColor: '#EA580C',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                   justifyContent: 'center',
                   gap: '8px',
                   fontWeight: 700,

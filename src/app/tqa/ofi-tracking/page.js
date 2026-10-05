@@ -312,7 +312,20 @@ export default function TqaOfiTrackingPage() {
   if (authLoading) {
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#6D28D9', fontWeight: 600 }}>กำลังโหลดข้อมูล...</div>
+        <div style={{ textAlign: 'center', color: '#EA580C', fontWeight: 600 }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #FED7AA',
+              borderTopColor: '#EA580C',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1rem',
+            }}
+          />
+          กำลังโหลดข้อมูล...
+        </div>
       </div>
     );
   }
@@ -320,13 +333,24 @@ export default function TqaOfiTrackingPage() {
   if (!currentUser) {
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-        <div style={{ maxWidth: '450px', textAlign: 'center', background: '#FFFFFF', padding: '2rem', borderRadius: '1rem', border: '1px solid #E2E8F0' }}>
-          <Lock size={40} color="#7C3AED" style={{ margin: '0 auto 1rem' }} />
+        <div style={{ maxWidth: '450px', textAlign: 'center', background: '#FFFFFF', padding: '2rem', borderRadius: '1rem', border: '1px solid #E2E8F0', borderTop: '5px solid #F97316' }}>
+          <Lock size={40} color="#EA580C" style={{ margin: '0 auto 1rem' }} />
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>เข้าสู่ระบบเพื่อเข้าถึง TQA OFI Tracking</h2>
           <p style={{ fontSize: '0.875rem', color: '#64748B', margin: '0.5rem 0 1.5rem' }}>
             กรุณาเข้าสู่ระบบด้วย Google Account ของมหาวิทยาลัย
           </p>
-          <button type="button" onClick={handleGoogleSignIn} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#6D28D9', borderColor: '#6D28D9' }}>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+              borderColor: '#EA580C',
+              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+            }}
+          >
             <LogIn size={16} /> เข้าสู่ระบบ
           </button>
         </div>
@@ -336,22 +360,38 @@ export default function TqaOfiTrackingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: '5rem' }}>
-      {/* Top Header Navigation */}
+      {/* Top Header Navigation (Hero Banner matching JD Hub) */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #3B0764 0%, #581C87 50%, #6D28D9 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
-          padding: '2rem 1.5rem 3rem',
+          padding: '2.25rem 1.5rem 3.5rem',
           position: 'relative',
+          overflow: 'hidden',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
         }}
       >
-        <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage:
+              'radial-gradient(circle at 10% 20%, rgba(249, 115, 22, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(251, 146, 60, 0.06) 0%, transparent 40%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div style={{ maxWidth: '1360px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Link
                 href="/tqa"
                 style={{
-                  color: '#DDD6FE',
+                  color: '#FED7AA',
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -363,13 +403,24 @@ export default function TqaOfiTrackingPage() {
                 <ArrowLeft size={16} /> กลับสู่ TQA Hub
               </Link>
               <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>/</span>
-              <span style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 700 }}>OFI Tracking</span>
+              <span style={{ fontSize: '0.85rem', color: '#FB923C', fontWeight: 700 }}>OFI Tracking</span>
             </div>
 
             {/* Fiscal Year Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)', padding: '4px 12px', borderRadius: '10px' }}>
-              <Calendar size={16} color="#FDE047" />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#DDD6FE' }}>ปีงบประมาณ:</span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(8px)',
+                padding: '4px 12px',
+                borderRadius: '10px',
+              }}
+            >
+              <Calendar size={16} color="#FB923C" />
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#FED7AA' }}>ปีงบประมาณ:</span>
               <select
                 className="form-input"
                 style={{
@@ -377,9 +428,9 @@ export default function TqaOfiTrackingPage() {
                   padding: '4px 8px',
                   fontSize: '0.875rem',
                   fontWeight: 800,
-                  color: '#FFFFFF',
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  color: '#0F172A',
+                  background: '#FFFFFF',
+                  borderColor: 'transparent',
                   borderRadius: '6px',
                 }}
                 value={fiscalYear}
@@ -396,10 +447,29 @@ export default function TqaOfiTrackingPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.15rem)', fontWeight: 800, margin: '0 0 0.5rem 0', letterSpacing: '-0.02em' }}>
-                TQA OFI Tracking (ระบบติดตามข้อเสนอแนะเพื่อการปรับปรุง)
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    background: 'rgba(249, 115, 22, 0.22)',
+                    color: '#FED7AA',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Sparkles size={12} color="#FB923C" />
+                  <span>ระบบติดตามข้อเสนอแนะเพื่อการปรับปรุง</span>
+                </span>
+              </div>
+              <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.15rem)', fontWeight: 800, margin: '0 0 0.5rem 0', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                TQA OFI Tracking
               </h1>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: '#DDD6FE', maxWidth: '800px', lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: '#CBD5E1', maxWidth: '800px', lineHeight: 1.5 }}>
                 ติดตามความก้าวหน้าการปรับปรุงกระบวนการและผลลัพธ์ตามเกณฑ์รางวัลคุณภาพแห่งชาติ (TQA) ประจำปีงบประมาณ {fiscalYear}
               </p>
             </div>
@@ -413,9 +483,9 @@ export default function TqaOfiTrackingPage() {
                   rel="noopener noreferrer"
                   className="btn btn-secondary"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.12)',
                     color: '#FFFFFF',
-                    borderColor: 'rgba(255, 255, 255, 0.35)',
+                    borderColor: 'rgba(255, 255, 255, 0.25)',
                     gap: '6px',
                     fontSize: '0.85rem',
                     fontWeight: 700,
@@ -424,7 +494,7 @@ export default function TqaOfiTrackingPage() {
                   }}
                   title={reportConfig.reportTitle || `Feedback Report (${fiscalYear})`}
                 >
-                  <BookOpen size={16} color="#FDE047" style={{ flexShrink: 0 }} />
+                  <BookOpen size={16} color="#FB923C" style={{ flexShrink: 0 }} />
                   <span
                     style={{
                       overflow: 'hidden',
@@ -444,9 +514,9 @@ export default function TqaOfiTrackingPage() {
                   onClick={() => setIsReportUrlModalOpen(true)}
                   className="btn btn-secondary"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    color: '#FFFFFF',
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    background: 'rgba(249, 115, 22, 0.22)',
+                    color: '#FED7AA',
+                    borderColor: 'rgba(249, 115, 22, 0.4)',
                     gap: '6px',
                     fontSize: '0.85rem',
                     fontWeight: 700,
@@ -488,7 +558,7 @@ export default function TqaOfiTrackingPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B' }}>OFI ที่ติดตามดำเนินการ (ปี {fiscalYear})</span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Target size={18} />
                 </div>
               </div>
@@ -523,7 +593,7 @@ export default function TqaOfiTrackingPage() {
                   <span>ยังไม่ทำ {stats.untrackedCount} ข้อ</span>
                 </button>
               ) : (
-                <span style={{ color: '#6D28D9', fontWeight: 700 }}>ปิดแล้ว {stats.percentage}%</span>
+                <span style={{ color: '#EA580C', fontWeight: 700 }}>ปิดแล้ว {stats.percentage}%</span>
               )}
             </div>
           </div>
@@ -617,7 +687,7 @@ export default function TqaOfiTrackingPage() {
               borderRadius: '14px',
               padding: '1.25rem',
               border: '1px solid #E2E8F0',
-              borderTop: '3px solid #8B5CF6',
+              borderTop: '3px solid #F97316',
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
               display: 'flex',
               flexDirection: 'column',
@@ -627,21 +697,21 @@ export default function TqaOfiTrackingPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>3</span>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>3</span>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>ติดตามรอบที่ 3</span>
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7C3AED', background: '#FAF5FF', padding: '2px 8px', borderRadius: '999px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#EA580C', background: '#FFF7ED', padding: '2px 8px', borderRadius: '999px' }}>
                   {stats.round3.reportedPct}% รายงานแล้ว
                 </span>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#7C3AED', marginTop: '6px' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#EA580C', marginTop: '6px' }}>
                 {stats.round3.reported} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94A3B8' }}>/ {stats.total} ข้อ</span>
               </div>
             </div>
 
             <div style={{ marginTop: '10px' }}>
               <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
-                <div style={{ width: `${stats.round3.reportedPct}%`, height: '100%', background: '#8B5CF6', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+                <div style={{ width: `${stats.round3.reportedPct}%`, height: '100%', background: '#F97316', borderRadius: '999px', transition: 'width 0.3s ease' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B' }}>
                 <span style={{ color: '#059669', fontWeight: 600 }}>เสร็จ {stats.round3.completed}</span>
@@ -666,7 +736,7 @@ export default function TqaOfiTrackingPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EDE9FE', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Layers size={16} />
                 </div>
                 <div>
@@ -691,7 +761,7 @@ export default function TqaOfiTrackingPage() {
               {[
                 { round: 1, label: 'รอบที่ 1', color: '#10B981', bg: '#ECFDF5', data: stats.round1 },
                 { round: 2, label: 'รอบที่ 2', color: '#3B82F6', bg: '#EFF6FF', data: stats.round2 },
-                { round: 3, label: 'รอบที่ 3', color: '#8B5CF6', bg: '#FAF5FF', data: stats.round3 },
+                { round: 3, label: 'รอบที่ 3', color: '#EA580C', bg: '#FFF7ED', data: stats.round3 },
               ].map((ph) => (
                 <div key={ph.round} style={{ background: '#F8FAFC', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.78rem' }}>
@@ -763,8 +833,9 @@ export default function TqaOfiTrackingPage() {
                   }}
                   className="btn btn-primary"
                   style={{
-                    background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                    borderColor: '#6D28D9',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    borderColor: '#EA580C',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                     gap: '6px',
                     fontSize: '0.85rem',
                   }}
@@ -790,7 +861,7 @@ export default function TqaOfiTrackingPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.825rem', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <SlidersHorizontal size={15} color="#6D28D9" />
+                <SlidersHorizontal size={15} color="#EA580C" />
                 <span>ขอบเขตการติดตาม:</span>
               </span>
 
@@ -855,7 +926,7 @@ export default function TqaOfiTrackingPage() {
                     fontSize: '0.8rem',
                     fontWeight: scopeFilter === 'ALL' ? 800 : 600,
                     background: scopeFilter === 'ALL' ? '#FFFFFF' : 'transparent',
-                    color: scopeFilter === 'ALL' ? '#6D28D9' : '#64748B',
+                    color: scopeFilter === 'ALL' ? '#EA580C' : '#64748B',
                     boxShadow: scopeFilter === 'ALL' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                     border: 'none',
                     cursor: 'pointer',
@@ -863,7 +934,7 @@ export default function TqaOfiTrackingPage() {
                   }}
                   title="แสดงทุกรายการรวมทั้งที่ดำเนินการและยังไม่ดำเนินการ"
                 >
-                  <Layers size={14} color={scopeFilter === 'ALL' ? '#6D28D9' : '#94A3B8'} />
+                  <Layers size={14} color={scopeFilter === 'ALL' ? '#EA580C' : '#94A3B8'} />
                   <span>ทั้งหมด ({stats.totalAll})</span>
                 </button>
               </div>
@@ -895,9 +966,9 @@ export default function TqaOfiTrackingPage() {
                 borderRadius: '999px',
                 fontSize: '0.8rem',
                 fontWeight: 700,
-                border: selectedCategory === 'ALL' ? '1px solid #7C3AED' : '1px solid #E2E8F0',
-                background: selectedCategory === 'ALL' ? '#EDE9FE' : '#FFFFFF',
-                color: selectedCategory === 'ALL' ? '#6D28D9' : '#64748B',
+                border: selectedCategory === 'ALL' ? '1px solid #EA580C' : '1px solid #E2E8F0',
+                background: selectedCategory === 'ALL' ? '#FFF7ED' : '#FFFFFF',
+                color: selectedCategory === 'ALL' ? '#EA580C' : '#64748B',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease',
@@ -971,7 +1042,7 @@ export default function TqaOfiTrackingPage() {
 
         {/* OFI Items List / Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#6D28D9', fontWeight: 600 }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#EA580C', fontWeight: 600 }}>
             กำลังโหลดข้อมูลข้อเสนอแนะ...
           </div>
         ) : filteredOfiItems.length === 0 ? (
@@ -989,8 +1060,8 @@ export default function TqaOfiTrackingPage() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '16px',
-                background: '#FAF5FF',
-                color: '#7C3AED',
+                background: '#FFF7ED',
+                color: '#EA580C',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1026,8 +1097,9 @@ export default function TqaOfiTrackingPage() {
                   }}
                   className="btn btn-primary"
                   style={{
-                    background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                    borderColor: '#6D28D9',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    borderColor: '#EA580C',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                     gap: '6px',
                     fontWeight: 700,
                   }}
@@ -1366,7 +1438,7 @@ export default function TqaOfiTrackingPage() {
                     >
                       {/* Assigned Persons Pill */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem' }}>
-                        <Users size={15} color="#6D28D9" />
+                        <Users size={15} color="#EA580C" />
                         <span style={{ color: '#64748B', fontWeight: 600 }}>ผู้รายงานผล:</span>
                         {Array.isArray(item.assignedPersons) && item.assignedPersons.length > 0 ? (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
@@ -1375,9 +1447,9 @@ export default function TqaOfiTrackingPage() {
                                 key={pIdx}
                                 style={{
                                   padding: '2px 8px',
-                                  background: '#FAF5FF',
-                                  color: '#6D28D9',
-                                  border: '1px solid #EDE9FE',
+                                  background: '#FFF7ED',
+                                  color: '#EA580C',
+                                  border: '1px solid #FFEDD5',
                                   borderRadius: '999px',
                                   fontSize: '0.75rem',
                                   fontWeight: 600,
@@ -1425,8 +1497,9 @@ export default function TqaOfiTrackingPage() {
                           style={{
                             background: reportedRoundsCount > 0
                               ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
-                              : 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-                            borderColor: reportedRoundsCount > 0 ? '#059669' : '#6D28D9',
+                              : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            borderColor: reportedRoundsCount > 0 ? '#059669' : '#EA580C',
+                            boxShadow: reportedRoundsCount > 0 ? 'none' : '0 4px 12px rgba(249, 115, 22, 0.25)',
                             gap: '6px',
                             fontSize: '0.8rem',
                             fontWeight: 700,
@@ -1481,7 +1554,7 @@ export default function TqaOfiTrackingPage() {
                       {/* 3-Round Detailed Action Reports Section */}
                       <div style={{ borderTop: '1px solid #CBD5E1', paddingTop: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                          <div style={{ fontWeight: 800, color: '#6D28D9', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ fontWeight: 800, color: '#EA580C', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Layers size={16} />
                             <span>รายงานผลการดำเนินงาน 3 รอบ (3 Tracking Rounds):</span>
                           </div>
@@ -1567,7 +1640,7 @@ export default function TqaOfiTrackingPage() {
                                       style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#6D28D9',
+                                        color: '#EA580C',
                                         fontWeight: 700,
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
@@ -1736,7 +1809,7 @@ export default function TqaOfiTrackingPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.35rem' }}>
                 <span
                   style={{
-                    background: '#6D28D9',
+                    background: '#EA580C',
                     color: '#FFFFFF',
                     padding: '2px 8px',
                     borderRadius: '6px',
