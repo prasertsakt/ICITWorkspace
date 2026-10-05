@@ -294,32 +294,60 @@ function ProfileContent() {
       <div className="main-container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
         <div
           className="card-glass"
-          style={{ maxWidth: '460px', margin: '0 auto', padding: '2.5rem 1.5rem' }}
+          style={{
+            maxWidth: '520px',
+            margin: '0 auto',
+            padding: '2.75rem 2rem',
+            borderRadius: 'var(--radius-xl)',
+            borderTop: '5px solid #F97316',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
+          }}
         >
           <div
             style={{
-              width: '64px',
-              height: '64px',
+              width: '68px',
+              height: '68px',
               borderRadius: '50%',
-              background: 'var(--primary-50)',
-              color: 'var(--primary-600)',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <User size={32} />
+            <User size={36} />
           </div>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              background: '#FFF7ED',
+              color: '#EA580C',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
+            }}
+          >
+            <span className="pulse-dot" style={{ background: '#EA580C' }} />
+            ต้องเข้าสู่ระบบเพื่อดูข้อมูล
+          </div>
+
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.65rem' }}>
             เข้าสู่ระบบเพื่อดูข้อมูลของท่าน
           </h2>
           <p
             style={{
-              fontSize: '0.875rem',
+              fontSize: '0.9rem',
               color: 'var(--text-secondary)',
-              marginBottom: '1.5rem',
-              lineHeight: 1.5,
+              marginBottom: '2rem',
+              lineHeight: 1.6,
             }}
           >
             กรุณาลงชื่อเข้าใช้ด้วยบัญชี Google เพื่อตรวจสอบข้อมูลบุคลากร สถิติวันลา
@@ -329,9 +357,19 @@ function ProfileContent() {
             <button
               onClick={handleGoogleSignIn}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '0.75rem 1.5rem', fontSize: '0.95rem', justifyContent: 'center' }}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                color: '#FFFFFF',
+              }}
             >
-              <LogIn size={18} />
+              <LogIn size={20} />
               <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
             <Link
@@ -354,8 +392,8 @@ function ProfileContent() {
       {!isViewingSelf && targetPersonnel && (
         <div
           style={{
-            background: 'linear-gradient(90deg, #FEF3C7 0%, #FDE68A 100%)',
-            border: '1px solid #F59E0B',
+            background: 'linear-gradient(90deg, #FFF7ED 0%, #FFEDD5 100%)',
+            border: '1px solid #FDBA74',
             borderRadius: 'var(--radius-lg)',
             padding: '0.85rem 1.25rem',
             marginBottom: '1.5rem',
@@ -364,16 +402,16 @@ function ProfileContent() {
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '0.75rem',
-            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)',
+            boxShadow: '0 2px 8px rgba(249, 115, 22, 0.12)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <span style={{ fontSize: '1.25rem' }}>👀</span>
             <div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#92400E' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#9A3412' }}>
                 กำลังดูข้อมูลประจำตัวของ: {targetPersonnel.name}
               </div>
-              <div style={{ fontSize: '0.775rem', color: '#B45309' }}>
+              <div style={{ fontSize: '0.775rem', color: '#C2410C' }}>
                 สังกัด: {targetPersonnel.department || '-'} | ตำแหน่ง: {targetPersonnel.position || '-'}
               </div>
             </div>
@@ -384,8 +422,8 @@ function ProfileContent() {
               className="btn btn-secondary btn-sm"
               style={{
                 background: 'white',
-                borderColor: '#D97706',
-                color: '#B45309',
+                borderColor: '#FB923C',
+                color: '#C2410C',
                 fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -419,15 +457,28 @@ function ProfileContent() {
               marginBottom: '0.25rem',
             }}
           >
-            <span className="badge badge-admin">
-              <Sparkles size={12} />
+            <span
+              style={{
+                background: 'rgba(249, 115, 22, 0.12)',
+                color: '#EA580C',
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+              }}
+            >
+              <Sparkles size={12} color="#EA580C" />
               {isViewingSelf ? 'ข้อมูลส่วนบุคคลของท่าน (My Profile)' : 'ข้อมูลบุคลากรรายบุคคล (Personnel Profile)'}
             </span>
           </div>
-          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
             ข้อมูลประจำตัวบุคลากร
           </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
             รายละเอียดการบรรจุ ตำแหน่ง สังกัด พร้อมสรุปข้อมูลปฏิทินวันลาและระบบขอลงเวลา
           </p>
         </div>
@@ -448,7 +499,7 @@ function ProfileContent() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <UserCheck size={16} style={{ color: 'var(--primary-600)' }} />
+              <UserCheck size={16} style={{ color: '#EA580C' }} />
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                 สลับดูบุคลากร:
               </span>
@@ -480,7 +531,7 @@ function ProfileContent() {
                   transition: 'all 0.2s',
                   background: '#F8FAFC',
                 }}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--primary-500)')}
+                onFocus={(e) => (e.target.style.borderColor = '#F97316')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border-subtle)')}
               />
               {personSearchQuery && (
@@ -552,40 +603,41 @@ function ProfileContent() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.75rem' }}>
-        {/* TOP: Digital ID Badge Card */}
+        {/* TOP: Digital ID Badge Card with JD Hub Dark Slate Theme */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 50%, #818CF8 100%)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
             borderRadius: 'var(--radius-xl)',
-            padding: '2rem 1.75rem',
+            padding: '2.25rem 2rem',
             color: 'white',
-            boxShadow: '0 16px 36px -8px rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 12px 32px -6px rgba(15, 23, 42, 0.35)',
             position: 'relative',
             overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
           }}
         >
-          {/* Subtle decorative circles */}
+          {/* Subtle decorative glow */}
           <div
             style={{
               position: 'absolute',
-              top: '-40px',
-              right: '-40px',
-              width: '200px',
-              height: '200px',
+              top: '-60px',
+              right: '-60px',
+              width: '260px',
+              height: '260px',
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: 'radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, transparent 70%)',
               pointerEvents: 'none',
             }}
           />
           <div
             style={{
               position: 'absolute',
-              bottom: '-30px',
-              left: '30%',
-              width: '140px',
-              height: '140px',
+              bottom: '-40px',
+              left: '25%',
+              width: '180px',
+              height: '180px',
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'radial-gradient(circle, rgba(251, 146, 60, 0.08) 0%, transparent 70%)',
               pointerEvents: 'none',
             }}
           />
@@ -600,29 +652,30 @@ function ProfileContent() {
             }}
           >
             {/* Top row: Org Title & Role */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Building2 size={20} style={{ color: '#C7D2FE' }} />
+                <Building2 size={20} style={{ color: '#FB923C' }} />
                 <span
                   style={{
                     fontSize: '0.8rem',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     letterSpacing: '0.05em',
-                    color: '#E0E7FF',
+                    color: '#FED7AA',
                   }}
                 >
-                  ICIT ORGANIZATION BADGE
+                  ICIT ORGANIZATION DIGITAL BADGE
                 </span>
               </div>
               <span
                 style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(249, 115, 22, 0.22)',
                   backdropFilter: 'blur(8px)',
-                  padding: '0.25rem 0.75rem',
+                  padding: '0.3rem 0.85rem',
                   borderRadius: '99px',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
                 }}
               >
                 {targetPersonnel?.role === USER_ROLES.ADMIN
@@ -632,47 +685,57 @@ function ProfileContent() {
             </div>
 
             {/* Middle row: Avatar + Name + Position */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
               {targetPersonnel?.avatarUrl ? (
                 <img
                   src={targetPersonnel.avatarUrl}
                   alt={targetPersonnel.name}
                   style={{
-                    width: '84px',
-                    height: '84px',
+                    width: '88px',
+                    height: '88px',
                     borderRadius: 'var(--radius-full)',
                     objectFit: 'cover',
-                    border: '3px solid rgba(255, 255, 255, 0.8)',
-                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)',
+                    border: '3px solid #FB923C',
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.3)',
                   }}
                 />
               ) : (
                 <div
                   style={{
-                    width: '84px',
-                    height: '84px',
+                    width: '88px',
+                    height: '88px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'rgba(255, 255, 255, 0.25)',
-                    border: '3px solid rgba(255, 255, 255, 0.8)',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    border: '3px solid #FED7AA',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '2rem',
+                    fontSize: '2.25rem',
                     fontWeight: 800,
+                    color: '#FFFFFF',
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.3)',
                   }}
                 >
                   {targetPersonnel?.name?.charAt(0) || 'U'}
                 </div>
               )}
 
-              <div style={{ flex: 1, minWidth: '220px' }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.01em', margin: 0 }}>
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <h3
+                  style={{
+                    fontSize: '1.65rem',
+                    fontWeight: 800,
+                    letterSpacing: '-0.01em',
+                    margin: 0,
+                    color: '#FFFFFF',
+                  }}
+                >
                   {targetPersonnel?.name}
                 </h3>
                 <div
                   style={{
                     fontSize: '0.95rem',
-                    color: '#E0E7FF',
+                    color: 'rgba(255, 255, 255, 0.85)',
                     fontWeight: 500,
                     margin: '0.25rem 0',
                   }}
@@ -680,25 +743,29 @@ function ProfileContent() {
                   {targetPersonnel?.position}
                   {targetPersonnel?.level ? ` (${targetPersonnel.level})` : ''}
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.65rem' }}>
                   <span
                     style={{
-                      background: 'rgba(255, 255, 255, 0.18)',
-                      padding: '0.2rem 0.65rem',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      padding: '0.25rem 0.75rem',
                       borderRadius: '8px',
                       fontSize: '0.75rem',
                       fontWeight: 600,
+                      color: '#FED7AA',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                   >
                     🏢 {targetPersonnel?.department || 'ไม่ระบุฝ่าย'}
                   </span>
                   <span
                     style={{
-                      background: 'rgba(255, 255, 255, 0.18)',
-                      padding: '0.2rem 0.65rem',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      padding: '0.25rem 0.75rem',
                       borderRadius: '8px',
                       fontSize: '0.75rem',
                       fontWeight: 600,
+                      color: '#FED7AA',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                   >
                     🏷️ {targetPersonnel?.personnelType || 'พนักงานมหาวิทยาลัย'}
@@ -714,15 +781,15 @@ function ProfileContent() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 paddingTop: '1rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-                fontSize: '0.8rem',
-                color: '#E0E7FF',
+                borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.8)',
                 flexWrap: 'wrap',
                 gap: '0.5rem',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Mail size={14} />
+                <Mail size={15} color="#FB923C" />
                 <span>{targetPersonnel?.email || 'ไม่มีอีเมล'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -735,7 +802,7 @@ function ProfileContent() {
                     boxShadow: '0 0 8px #34D399',
                   }}
                 />
-                <span style={{ fontWeight: 600 }}>สถานะ: {targetPersonnel?.status}</span>
+                <span style={{ fontWeight: 600, color: '#FFFFFF' }}>สถานะ: {targetPersonnel?.status}</span>
               </div>
             </div>
           </div>
