@@ -56,13 +56,13 @@ export default function TqaLandingPage() {
   if (authLoading) {
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8FAFC' }}>
-        <div style={{ textAlign: 'center', color: '#6D28D9', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', color: '#EA580C', fontWeight: 600 }}>
           <div
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #EDE9FE',
-              borderTopColor: '#6D28D9',
+              border: '3px solid #FED7AA',
+              borderTopColor: '#EA580C',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 1rem',
@@ -81,7 +81,7 @@ export default function TqaLandingPage() {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #FAF5FF 0%, #F8FAFC 100%)',
+          background: 'linear-gradient(135deg, #FFF7ED 0%, #F8FAFC 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -90,31 +90,32 @@ export default function TqaLandingPage() {
       >
         <div
           style={{
-            maxWidth: '500px',
+            maxWidth: '520px',
             width: '100%',
             background: '#FFFFFF',
-            borderRadius: '1.5rem',
+            borderRadius: 'var(--radius-xl)',
             border: '1px solid #E2E8F0',
-            padding: '2.5rem 2.25rem',
+            borderTop: '5px solid #F97316',
+            padding: '2.75rem 2.25rem',
             textAlign: 'center',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.02)',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.12)',
           }}
         >
           <div
             style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-              color: '#FFFFFF',
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: '#FFF7ED',
+              color: '#EA580C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              boxShadow: '0 10px 15px -3px rgba(109, 40, 217, 0.3)',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.15)',
             }}
           >
-            <Award size={40} />
+            <Award size={36} />
           </div>
 
           <div
@@ -124,44 +125,56 @@ export default function TqaLandingPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '999px',
-              background: '#EDE9FE',
-              color: '#6D28D9',
+              background: '#FFF7ED',
+              color: '#EA580C',
               fontSize: '0.8rem',
               fontWeight: 700,
               marginBottom: '1rem',
+              border: '1px solid #FFEDD5',
             }}
           >
-            <Sparkles size={14} />
+            <Sparkles size={14} color="#EA580C" />
             <span>Thailand Quality Award (TQA / EdPEx)</span>
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0' }}>
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>
             ระบบบริหารคุณภาพสู่ความเป็นเลิศ (TQA)
           </h2>
-          <p style={{ fontSize: '0.9rem', color: '#64748B', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
             กรุณาเข้าสู่ระบบด้วยบัญชี Google ของมหาวิทยาลัย (@icit.kmutnb.ac.th หรือ @cit.kmutnb.ac.th) เพื่อติดตามข้อเสนอแนะและผลการดำเนินงานตามเกณฑ์ TQA
           </p>
 
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            className="btn btn-primary"
-            style={{
-              width: '100%',
-              padding: '0.85rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: 700,
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
-              borderColor: '#6D28D9',
-              boxShadow: '0 4px 12px rgba(109, 40, 217, 0.25)',
-              justifyContent: 'center',
-              gap: '10px',
-            }}
-          >
-            <span>เข้าสู่ระบบด้วย Google Account</span>
-            <ArrowRight size={18} />
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.85rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                justifyContent: 'center',
+                gap: '10px',
+                color: '#FFFFFF',
+              }}
+            >
+              <span>เข้าสู่ระบบด้วย Google Account</span>
+              <ArrowRight size={18} />
+            </button>
+            <Link
+              href="/"
+              className="btn btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+            >
+              <ArrowLeft size={16} />
+              <span>กลับสู่หน้าหลัก (Portal)</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -172,11 +185,13 @@ export default function TqaLandingPage() {
       {/* Hero Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #3B0764 0%, #581C87 50%, #6D28D9 100%)',
+          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
           color: '#FFFFFF',
           padding: '3rem 1.5rem 4rem',
           position: 'relative',
           overflow: 'hidden',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.3)',
         }}
       >
         <div
@@ -187,7 +202,7 @@ export default function TqaLandingPage() {
             right: 0,
             bottom: 0,
             backgroundImage:
-              'radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(192, 132, 252, 0.15) 0%, transparent 40%)',
+              'radial-gradient(circle at 10% 20%, rgba(249, 115, 22, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(251, 146, 60, 0.06) 0%, transparent 40%)',
             pointerEvents: 'none',
           }}
         />
@@ -197,7 +212,7 @@ export default function TqaLandingPage() {
             <Link
               href="/"
               style={{
-                color: '#DDD6FE',
+                color: '#FED7AA',
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -218,14 +233,15 @@ export default function TqaLandingPage() {
                 gap: '6px',
                 padding: '6px 14px',
                 borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.18)',
+                background: 'rgba(249, 115, 22, 0.22)',
+                color: '#FED7AA',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
                 backdropFilter: 'blur(8px)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#FFFFFF',
+                fontSize: '0.8rem',
+                fontWeight: 700,
               }}
             >
-              <Award size={16} color="#FDE047" />
+              <Award size={16} color="#FB923C" />
               <span>Thailand Quality Award (TQA / EdPEx)</span>
             </div>
 
@@ -236,10 +252,11 @@ export default function TqaLandingPage() {
                 gap: '6px',
                 padding: '6px 14px',
                 borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                fontSize: '0.85rem',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#DDD6FE',
+                color: '#FED7AA',
               }}
             >
               <span>ปีงบประมาณ {currentFiscalYear}</span>
@@ -255,13 +272,22 @@ export default function TqaLandingPage() {
               lineHeight: 1.2,
             }}
           >
-            ระบบบริหารคุณภาพสู่ความเป็นเลิศ TQA
+            ระบบบริหารคุณภาพสู่ความเป็นเลิศ{' '}
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              (TQA / EdPEx)
+            </span>
           </h1>
 
           <p
             style={{
               fontSize: 'clamp(1rem, 2vw, 1.15rem)',
-              color: '#EDE9FE',
+              color: 'rgba(255, 255, 255, 0.78)',
               maxWidth: '720px',
               lineHeight: 1.6,
               margin: '0 0 2rem 0',
@@ -281,72 +307,76 @@ export default function TqaLandingPage() {
           >
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#DDD6FE', fontWeight: 600 }}>
-                <FileText size={16} color="#FDE047" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <FileText size={16} color="#FB923C" />
                 <span>OFI ทั้งหมด (ปี {currentFiscalYear})</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em' }}>
-                {totalOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#DDD6FE' }}>รายการ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                {totalOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#FED7AA' }}>รายการ</span>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#DDD6FE', fontWeight: 600 }}>
-                <CheckCircle2 size={16} color="#86EFAC" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <CheckCircle2 size={16} color="#34D399" />
                 <span>ดำเนินการเสร็จสิ้น</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#86EFAC', letterSpacing: '-0.02em' }}>
-                {completedOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#DDD6FE' }}>รายการ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#34D399', letterSpacing: '-0.02em' }}>
+                {completedOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#A7F3D0' }}>รายการ</span>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#DDD6FE', fontWeight: 600 }}>
-                <Clock size={16} color="#93C5FD" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <Clock size={16} color="#60A5FA" />
                 <span>กำลังดำเนินการ</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#93C5FD', letterSpacing: '-0.02em' }}>
-                {inProgressOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#DDD6FE' }}>รายการ</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#60A5FA', letterSpacing: '-0.02em' }}>
+                {inProgressOfis} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#BFDBFE' }}>รายการ</span>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '14px',
                 padding: '1.15rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#DDD6FE', fontWeight: 600 }}>
-                <BarChart3 size={16} color="#FDE047" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#FED7AA', fontWeight: 600 }}>
+                <BarChart3 size={16} color="#FBBF24" />
                 <span>ความก้าวหน้ารวม</span>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#FDE047', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '4px', color: '#FBBF24', letterSpacing: '-0.02em' }}>
                 {completionRate}%
               </div>
             </div>
@@ -369,13 +399,13 @@ export default function TqaLandingPage() {
               style={{
                 background: '#FFFFFF',
                 borderRadius: '1.25rem',
-                border: '1.5px solid #7C3AED',
+                border: '1.5px solid #F97316',
                 padding: '2rem',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 25px -5px rgba(109, 40, 217, 0.12)',
+                boxShadow: '0 10px 25px -5px rgba(249, 115, 22, 0.12)',
                 transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 cursor: 'pointer',
                 position: 'relative',
@@ -383,11 +413,11 @@ export default function TqaLandingPage() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(109, 40, 217, 0.25)';
+                e.currentTarget.style.boxShadow = '0 20px 30px -10px rgba(249, 115, 22, 0.25)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(109, 40, 217, 0.12)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(249, 115, 22, 0.12)';
               }}
             >
               {/* Badge */}
@@ -418,13 +448,13 @@ export default function TqaLandingPage() {
                     width: '56px',
                     height: '56px',
                     borderRadius: '1rem',
-                    background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '1.5rem',
-                    boxShadow: '0 8px 16px -4px rgba(109, 40, 217, 0.4)',
+                    boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)',
                   }}
                 >
                   <Target size={28} />
@@ -440,7 +470,7 @@ export default function TqaLandingPage() {
                   }}
                 >
                   TQA OFI Tracking
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#6D28D9', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#EA580C', marginTop: '4px' }}>
                     ระบบติดตามการพัฒนาตามข้อเสนอแนะ TQA
                   </div>
                 </h3>
@@ -462,25 +492,25 @@ export default function TqaLandingPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.5rem',
-                    background: '#FAF5FF',
+                    background: '#FFF7ED',
                     padding: '1rem',
                     borderRadius: '10px',
-                    border: '1px solid #EDE9FE',
+                    border: '1px solid #FFEDD5',
                     marginBottom: '1.5rem',
                     fontSize: '0.85rem',
-                    color: '#4C1D95',
+                    color: '#9A3412',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <CheckCircle2 size={16} color="#EA580C" />
                     <span>จำแนกตามปีงบประมาณ และหมวด 1 - 7</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <CheckCircle2 size={16} color="#EA580C" />
                     <span>มอบหมายผู้รายงานผลแบบหลายคน (Multi-assigned)</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} color="#7C3AED" />
+                    <CheckCircle2 size={16} color="#EA580C" />
                     <span>รายงานผลด้วย WYSIWYG Editor พร้อมแนบลิงก์</span>
                   </div>
                 </div>
@@ -494,7 +524,7 @@ export default function TqaLandingPage() {
                   justifyContent: 'space-between',
                   paddingTop: '1rem',
                   borderTop: '1px solid #F1F5F9',
-                  color: '#6D28D9',
+                  color: '#EA580C',
                   fontWeight: 700,
                   fontSize: '0.95rem',
                 }}
@@ -511,7 +541,7 @@ export default function TqaLandingPage() {
         {/* 7 Categories Reference Grid */}
         <div style={{ marginTop: '3rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers size={20} color="#6D28D9" />
+            <Layers size={20} color="#EA580C" />
             <span>โครงสร้างเกณฑ์รางวัลคุณภาพแห่งชาติ 7 หมวด (TQA Criteria)</span>
           </h3>
 
