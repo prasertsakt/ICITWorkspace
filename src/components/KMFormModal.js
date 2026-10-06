@@ -51,7 +51,7 @@ export default function KMFormModal({
       otherMethod: '',
     },
     documentUrls: [{ title: 'รายงานประมวลความรู้', url: '' }],
-    status: 'PENDING',
+    status: 'IN_PROGRESS',
     completedDate: '',
     notes: '',
   });
@@ -84,7 +84,7 @@ export default function KMFormModal({
                 typeof d === 'string' ? { title: 'ลิงก์เอกสาร', url: d } : { title: d.title || 'ลิงก์เอกสาร', url: d.url || '' }
               )
             : [{ title: 'รายงานประมวลความรู้', url: '' }],
-        status: recordToEdit.status || 'PENDING',
+        status: recordToEdit.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
         completedDate: recordToEdit.completedDate || '',
         notes: recordToEdit.notes || '',
       });
@@ -106,7 +106,7 @@ export default function KMFormModal({
           otherMethod: '',
         },
         documentUrls: [{ title: 'รายงานประมวลความรู้', url: '' }],
-        status: 'PENDING',
+        status: 'IN_PROGRESS',
         completedDate: '',
         notes: '',
       });
@@ -707,57 +707,176 @@ export default function KMFormModal({
               </div>
             </div>
 
-            {/* Status & Completed Date */}
-            <div className="grid-2" style={{ gap: '1rem' }}>
-              <div className="input-group">
-                <label className="input-label" style={{ fontWeight: 800 }}>
-                  สถานะการแบ่งปันความรู้
-                </label>
-                <select
-                  className="form-select"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            {/* Status (2 Checkbox Options: อยู่ระหว่างดำเนินการ / ดำเนินการเสร็จสิ้น) */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label className="input-label" style={{ fontWeight: 800, marginBottom: '0.5rem', display: 'block' }}>
+                สถานะการแบ่งปันความรู้
+              </label>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '10px',
+                }}
+              >
+                {/* Option 1: อยู่ระหว่างดำเนินการ */}
+                <label
+                  onClick={() => setFormData((prev) => ({ ...prev, status: 'IN_PROGRESS' }))}
                   style={{
-                    fontWeight: 800,
-                    color:
-                      formData.status === 'COMPLETED'
-                        ? '#059669'
-                        : formData.status === 'IN_PROGRESS'
-                        ? '#2563EB'
-                        : '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    border:
+                      formData.status === 'IN_PROGRESS' || formData.status === 'PENDING'
+                        ? '2px solid #2563EB'
+                        : '1.5px solid #E2E8F0',
+                    background:
+                      formData.status === 'IN_PROGRESS' || formData.status === 'PENDING'
+                        ? '#EFF6FF'
+                        : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow:
+                      formData.status === 'IN_PROGRESS' || formData.status === 'PENDING'
+                        ? '0 2px 8px rgba(37, 99, 235, 0.15)'
+                        : 'none',
                   }}
                 >
-                  <option value="PENDING">⏳ รอดำเนินการแบ่งปันความรู้</option>
-                  <option value="IN_PROGRESS">🔄 อยู่ระหว่างดำเนินการ</option>
-                  <option value="COMPLETED">✅ ดำเนินการเสร็จสิ้น</option>
-                </select>
+                  <input
+                    type="checkbox"
+                    checked={formData.status === 'IN_PROGRESS' || formData.status === 'PENDING'}
+                    onChange={() => setFormData((prev) => ({ ...prev, status: 'IN_PROGRESS' }))}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      accentColor: '#2563EB',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        color:
+                          formData.status === 'IN_PROGRESS' || formData.status === 'PENDING'
+                            ? '#1D4ED8'
+                            : '#334155',
+                      }}
+                    >
+                      🔄 อยู่ระหว่างดำเนินการ
+                    </div>
+                    <div style={{ fontSize: '0.725rem', color: '#64748B', marginTop: '2px' }}>
+                      อยู่ระหว่างเตรียมสรุปหรือรอจัดแบ่งปัน
+                    </div>
+                  </div>
+                </label>
+
+                {/* Option 2: ดำเนินการเสร็จสิ้น */}
+                <label
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      status: 'COMPLETED',
+                      completedDate: prev.completedDate || new Date().toISOString().split('T')[0],
+                    }))
+                  }
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    border: formData.status === 'COMPLETED' ? '2px solid #059669' : '1.5px solid #E2E8F0',
+                    background: formData.status === 'COMPLETED' ? '#ECFDF5' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow:
+                      formData.status === 'COMPLETED' ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.status === 'COMPLETED'}
+                    onChange={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: 'COMPLETED',
+                        completedDate: prev.completedDate || new Date().toISOString().split('T')[0],
+                      }))
+                    }
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      accentColor: '#059669',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        color: formData.status === 'COMPLETED' ? '#065F46' : '#334155',
+                      }}
+                    >
+                      ✅ ดำเนินการเสร็จสิ้น
+                    </div>
+                    <div style={{ fontSize: '0.725rem', color: '#64748B', marginTop: '2px' }}>
+                      แบ่งปันความรู้และแนบเอกสารเรียบร้อย
+                    </div>
+                  </div>
+                </label>
               </div>
 
+              {/* Completed Date Picker (shown if status is COMPLETED) */}
               {formData.status === 'COMPLETED' && (
-                <div className="input-group">
-                  <label className="input-label">วันที่ดำเนินการแบ่งปันเสร็จสิ้น</label>
+                <div
+                  style={{
+                    marginTop: '0.75rem',
+                    padding: '0.85rem 1rem',
+                    background: '#F0FDF4',
+                    border: '1px solid #BBF7D0',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={16} />
+                    <span>วันที่ดำเนินการแบ่งปันเสร็จสิ้น:</span>
+                  </div>
                   <div
                     onClick={() => setActiveDatePickerField('completedDate')}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '10px',
-                      border: '1px solid #CBD5E1',
+                      gap: '8px',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      border: '1.5px solid #059669',
                       background: '#FFFFFF',
                       cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      color: '#065F46',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Calendar size={16} color="#059669" />
-                      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#059669' }}>
-                        {formData.completedDate
-                          ? formatDateDDMMYYYYBE(formData.completedDate)
-                          : 'คลิกเพื่อเลือกวันที่เสร็จสิ้น'}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>เลือกวันที่</span>
+                    <span>
+                      {formData.completedDate
+                        ? formatDateDDMMYYYYBE(formData.completedDate)
+                        : 'คลิกเพื่อระบุวันที่เสร็จสิ้น'}
+                    </span>
+                    <span style={{ fontSize: '0.725rem', color: '#059669', fontWeight: 600 }}>✎ เปลี่ยน</span>
                   </div>
                 </div>
               )}
