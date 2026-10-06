@@ -33,6 +33,7 @@ export default function LeaveModal({
     leaveType: LEAVE_TYPES[1], // default 'ลาป่วย'
     startDate: '',
     endDate: '',
+    totalDays: 1,
     reason: '',
   });
 
@@ -40,6 +41,16 @@ export default function LeaveModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errors, setErrors] = useState({});
   const dropdownRef = useRef(null);
+
+  // Calculate total days automatically from date range
+  const calculateAutoDays = (startStr, endStr) => {
+    if (!startStr || !endStr) return 1;
+    const start = parseLocalDate(startStr);
+    const end = parseLocalDate(endStr);
+    if (!start || !end || end < start) return 1;
+    const diffTime = Math.abs(end - start);
+    return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,11 +64,16 @@ export default function LeaveModal({
 
   useEffect(() => {
     if (leaveToEdit) {
+      const autoDays = calculateAutoDays(leaveToEdit.startDate, leaveToEdit.endDate);
       setFormData({
         personnelId: leaveToEdit.personnelId || '',
         leaveType: leaveToEdit.leaveType || LEAVE_TYPES[1],
         startDate: leaveToEdit.startDate || '',
         endDate: leaveToEdit.endDate || '',
+        totalDays:
+          leaveToEdit.totalDays !== undefined && leaveToEdit.totalDays !== null
+            ? leaveToEdit.totalDays
+            : autoDays,
         reason: leaveToEdit.reason || '',
       });
     } else {
@@ -67,6 +83,7 @@ export default function LeaveModal({
         leaveType: LEAVE_TYPES[1],
         startDate: today,
         endDate: today,
+        totalDays: 1,
         reason: '',
       });
     }
@@ -91,23 +108,27 @@ export default function LeaveModal({
     );
   });
 
-  // Calculate total days
-  const calculateDays = () => {
-    if (!formData.startDate || !formData.endDate) return 1;
-    const start = parseLocalDate(formData.startDate);
-    const end = parseLocalDate(formData.endDate);
-    if (!start || !end || end < start) return 1;
-    const diffTime = Math.abs(end - start);
-    return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  };
-
   const handleStartDateChange = (val) => {
     setFormData((prev) => {
-      const next = { ...prev, startDate: val };
-      if (!prev.endDate || prev.endDate < val) {
-        next.endDate = val;
-      }
-      return next;
+      const nextEndDate = (!prev.endDate || prev.endDate < val) ? val : prev.endDate;
+      const autoDays = calculateAutoDays(val, nextEndDate);
+      return {
+        ...prev,
+        startDate: val,
+        endDate: nextEndDate,
+        totalDays: autoDays,
+      };
+    });
+  };
+
+  const handleEndDateChange = (val) => {
+    setFormData((prev) => {
+      const autoDays = calculateAutoDays(prev.startDate, val);
+      return {
+        ...prev,
+        endDate: val,
+        totalDays: autoDays,
+      };
     });
   };
 
@@ -120,6 +141,14 @@ export default function LeaveModal({
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
       errs.endDate = 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น';
     }
+    if (
+      formData.totalDays === '' ||
+      formData.totalDays === null ||
+      isNaN(Number(formData.totalDays)) ||
+      Number(formData.totalDays) <= 0
+    ) {
+      errs.totalDays = 'กรุณาระบุจำนวนวันลาที่ถูกต้อง (มากกว่า 0)';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -129,7 +158,10 @@ export default function LeaveModal({
     if (!validate()) return;
 
     const person = personnelList.find((p) => p.id === formData.personnelId);
-    const totalDays = calculateDays();
+    const totalDays =
+      Number(formData.totalDays) > 0
+        ? Number(formData.totalDays)
+        : calculateAutoDays(formData.startDate, formData.endDate);
 
     const payload = {
       id: isEditing ? leaveToEdit.id : `leave-${Date.now()}`,
@@ -577,7 +609,7 @@ export default function LeaveModal({
                 className={`form-input ${errors.endDate ? 'input-error' : ''}`}
                 value={formData.endDate}
                 min={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                onChange={(e) => handleEndDateChange(e.target.value)}
               />
               {errors.endDate && (
                 <span className="error-message">
@@ -587,29 +619,141 @@ export default function LeaveModal({
             </div>
           </div>
 
-          {/* สรุปจำนวนวัน */}
+          {/* ระยะเวลาการลาทั้งหมด (คำนวณอัตโนมัติ และ Admin สามารถปรับเปลี่ยนได้ก่อนบันทึก) */}
           <div
             style={{
-              padding: '0.6rem 0.85rem',
-              background: 'var(--primary-50)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--primary-100)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              padding: '0.75rem 1rem',
+              background: 'var(--primary-50, #EEF2FF)',
+              borderRadius: 'var(--radius-md, 10px)',
+              border: '1.5px solid var(--primary-200, #C7D2FE)',
               marginBottom: '1rem',
-              fontSize: '0.825rem',
-              color: 'var(--primary-700)',
-              fontWeight: 600,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Clock size={16} />
-              <span>ระยะเวลาการลาทั้งหมด:</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary-800, #3730A3)', fontWeight: 700, fontSize: '0.85rem' }}>
+                <Clock size={16} />
+                <span>ระยะเวลาการลาทั้งหมด <span style={{ color: 'var(--rose-500)' }}>*</span>:</span>
+              </div>
+
+              {/* Number Input & Stepper */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      totalDays: Math.max(0.5, Number((Number(prev.totalDays || 1) - (Number(prev.totalDays) > 1 ? 1 : 0.5)).toFixed(1))),
+                    }))
+                  }
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--primary-300, #A5B4FC)',
+                    background: '#FFFFFF',
+                    color: 'var(--primary-700, #4338CA)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                  }}
+                  title="ลดจำนวนวันลา"
+                >
+                  -
+                </button>
+
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  className={`form-input ${errors.totalDays ? 'input-error' : ''}`}
+                  value={formData.totalDays}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, totalDays: val === '' ? '' : parseFloat(val) });
+                  }}
+                  style={{
+                    width: '80px',
+                    textAlign: 'center',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    color: 'var(--primary-700, #4338CA)',
+                    background: '#FFFFFF',
+                    height: '34px',
+                    padding: '0 4px',
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      totalDays: Number((Number(prev.totalDays || 0) + (Number(prev.totalDays) >= 1 ? 1 : 0.5)).toFixed(1)),
+                    }))
+                  }
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--primary-300, #A5B4FC)',
+                    background: '#FFFFFF',
+                    color: 'var(--primary-700, #4338CA)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                  }}
+                  title="เพิ่มจำนวนวันลา"
+                >
+                  +
+                </button>
+
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--primary-700, #4338CA)', marginLeft: '2px' }}>
+                  วัน
+                </span>
+              </div>
             </div>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary-600)' }}>
-              {calculateDays()} วัน
-            </span>
+
+            {/* Hint & Reset to Auto Calculate */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', fontSize: '0.725rem', color: 'var(--text-secondary, #64748B)' }}>
+              <span>
+                💡 คำนวณเบื้องต้น: <strong>{calculateAutoDays(formData.startDate, formData.endDate)}</strong> วัน (สามารถปรับลดได้กรณีมีวันหยุด)
+              </span>
+              {Number(formData.totalDays) !== calculateAutoDays(formData.startDate, formData.endDate) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      totalDays: calculateAutoDays(prev.startDate, prev.endDate),
+                    }))
+                  }
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary-600, #4F46E5)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: '0.725rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  รีเซ็ตตามช่วงวันที่
+                </button>
+              )}
+            </div>
+
+            {errors.totalDays && (
+              <span className="error-message" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertCircle size={12} /> {errors.totalDays}
+              </span>
+            )}
           </div>
 
           {/* 4. เหตุผล / หมายเหตุ */}
