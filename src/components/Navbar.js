@@ -20,6 +20,7 @@ import {
   Target,
   Compass,
   Award,
+  BookOpen,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -155,6 +156,14 @@ export default function Navbar() {
                 >
                   <Award size={16} />
                   <span>ระบบ TQA</span>
+                </Link>
+
+                <Link
+                  href="/km-hub"
+                  className={`nav-link-item ${pathname.startsWith('/km-hub') ? 'active' : ''}`}
+                >
+                  <BookOpen size={16} />
+                  <span>KM Hub</span>
                 </Link>
 
                 <Link
@@ -382,6 +391,18 @@ export default function Navbar() {
                       <Award size={18} />
                     </div>
                     <span style={{ flex: 1 }}>ระบบบริหารงาน TQA</span>
+                    <ChevronRight size={16} opacity={0.4} />
+                  </Link>
+
+                  <Link
+                    href="/km-hub"
+                    className={`mobile-drawer-link ${pathname.startsWith('/km-hub') ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="drawer-icon-box" style={{ color: '#059669' }}>
+                      <BookOpen size={18} />
+                    </div>
+                    <span style={{ flex: 1 }}>จัดเก็บ-ติดตามองค์ความรู้ (KM Hub)</span>
                     <ChevronRight size={16} opacity={0.4} />
                   </Link>
 
