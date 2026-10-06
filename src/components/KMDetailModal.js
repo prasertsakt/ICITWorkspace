@@ -19,9 +19,11 @@ import {
   Link as LinkIcon,
   Printer,
   BellRing,
+  User,
 } from 'lucide-react';
 import { formatDateDDMMYYYYBE, formatThaiDisplayDate } from '@/lib/dateUtils';
 import { calculateKmNotificationStatus, KM_STATUSES } from '@/lib/kmHubService';
+import { formatImageDisplayUrl } from '@/lib/driveUtils';
 
 export default function KMDetailModal({
   isOpen,
@@ -277,19 +279,60 @@ export default function KMDetailModal({
               <div style={{ color: '#475569', fontWeight: 600 }}>รายชื่อผู้เข้าอบรม</div>
               <div>
                 {Array.isArray(record.attendees) && record.attendees.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {record.attendees.map((p, idx) => (
-                      <span
-                        key={p.id || p.email || idx}
-                        style={{
-                          fontWeight: 700,
-                          color: '#0F172A',
-                        }}
-                      >
-                        {p.name}
-                        {idx < record.attendees.length - 1 ? ' , ' : ''}
-                      </span>
-                    ))}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {record.attendees.map((p, idx) => {
+                      const avatarSrc = formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '');
+                      return (
+                        <div
+                          key={p.id || p.email || idx}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#F8FAFC',
+                            border: '1px solid #E2E8F0',
+                            padding: '3px 10px 3px 4px',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            color: '#0F172A',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              background: '#E2E8F0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {avatarSrc ? (
+                              <img
+                                src={avatarSrc}
+                                alt={p.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <User size={14} color="#64748B" />
+                            )}
+                          </div>
+                          <span>{p.name}</span>
+                          {p.department && (
+                            <span style={{ fontSize: '0.725rem', color: '#64748B', fontWeight: 500 }}>
+                              ({p.department})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span style={{ color: '#94A3B8' }}>-</span>

@@ -179,5 +179,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // 23. Rules for 'km_records' collection (Knowledge Management & Tracking Hub)
+    match /km_records/{kmId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
   }
 }

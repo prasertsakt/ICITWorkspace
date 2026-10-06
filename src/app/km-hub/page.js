@@ -105,8 +105,8 @@ export default function KMHubPage() {
 
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
 
-  // Filtered Records
-  const filteredRecords = useMemo(() => {
+  // Base Filtered Records by Year, Dept, Search Query, and My Trainings
+  const scopeRecords = useMemo(() => {
     return kmRecords.filter((rec) => {
       // Fiscal Year
       if (fiscalYear !== 'ALL' && String(rec.fiscalYear) !== String(fiscalYear)) {
@@ -118,13 +118,6 @@ export default function KMHubPage() {
         const hasDeptAttendee = (rec.attendees || []).some((a) => a.department === selectedDept);
         if (!hasDeptAttendee) return false;
       }
-
-      // Status Filter
-      const tracking = calculateKmNotificationStatus(rec);
-      if (statusFilter === 'COMPLETED' && rec.status !== 'COMPLETED') return false;
-      if (statusFilter === 'IN_PROGRESS' && rec.status !== 'IN_PROGRESS') return false;
-      if (statusFilter === 'PENDING' && (rec.status !== 'PENDING' || tracking.isOverdue)) return false;
-      if (statusFilter === 'OVERDUE' && (!tracking.isOverdue || rec.status === 'COMPLETED')) return false;
 
       // My Trainings Only
       if (myTrainingsOnly) {
@@ -148,19 +141,20 @@ export default function KMHubPage() {
 
       return true;
     });
-  }, [kmRecords, fiscalYear, selectedDept, statusFilter, myTrainingsOnly, searchQuery, userEmail]);
+  }, [kmRecords, fiscalYear, selectedDept, myTrainingsOnly, searchQuery, userEmail]);
 
-  // Dashboard Statistics
+  // Dashboard Statistics based on the selected filter scope
   const stats = useMemo(() => {
-    const total = kmRecords.length;
-    const completed = kmRecords.filter((r) => r.status === 'COMPLETED').length;
-    const inProgress = kmRecords.filter((r) => r.status === 'IN_PROGRESS').length;
+    const total = scopeRecords.length;
+    const completed = scopeRecords.filter((r) => r.status === 'COMPLETED').length;
+    const inProgress = scopeRecords.filter((r) => r.status === 'IN_PROGRESS').length;
 
     let totalBudget = 0;
     const uniqueAttendees = new Set();
     let overdueCount = 0;
+    let pendingWithoutOverdue = 0;
 
-    kmRecords.forEach((r) => {
+    scopeRecords.forEach((r) => {
       if (r.budget) totalBudget += Number(r.budget) || 0;
       (r.attendees || []).forEach((a) => {
         if (a.id || a.email || a.name) uniqueAttendees.add(a.id || a.email || a.name);
@@ -168,6 +162,8 @@ export default function KMHubPage() {
       const trk = calculateKmNotificationStatus(r);
       if (trk.isOverdue && r.status !== 'COMPLETED') {
         overdueCount += 1;
+      } else if (r.status === 'PENDING') {
+        pendingWithoutOverdue += 1;
       }
     });
 
@@ -179,12 +175,25 @@ export default function KMHubPage() {
       completed,
       inProgress,
       pending,
+      pendingWithoutOverdue,
       overdueCount,
       percent,
       totalBudget,
       uniqueAttendeesCount: uniqueAttendees.size,
     };
-  }, [kmRecords]);
+  }, [scopeRecords]);
+
+  // Filtered Records (applying statusFilter on top of scopeRecords)
+  const filteredRecords = useMemo(() => {
+    return scopeRecords.filter((rec) => {
+      const tracking = calculateKmNotificationStatus(rec);
+      if (statusFilter === 'COMPLETED' && rec.status !== 'COMPLETED') return false;
+      if (statusFilter === 'IN_PROGRESS' && rec.status !== 'IN_PROGRESS') return false;
+      if (statusFilter === 'PENDING' && (rec.status !== 'PENDING' || tracking.isOverdue)) return false;
+      if (statusFilter === 'OVERDUE' && (!tracking.isOverdue || rec.status === 'COMPLETED')) return false;
+      return true;
+    });
+  }, [scopeRecords, statusFilter]);
 
   // Handlers for Admin
   const handleOpenCreateModal = () => {
@@ -540,7 +549,7 @@ export default function KMHubPage() {
         </div>
       </div>
 
-      {/* Minimal Dashboard Summary Cards */}
+      {/* Minimal Dashboard Summary Cards (Clickable Filter Shortcuts) */}
       <div
         style={{
           display: 'grid',
@@ -552,12 +561,15 @@ export default function KMHubPage() {
         {/* Card 1: Total Courses */}
         <div
           className="card"
+          onClick={() => setStatusFilter('ALL')}
           style={{
             padding: '1.15rem 1.25rem',
             borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+            border: statusFilter === 'ALL' ? '2px solid #059669' : '1px solid #E2E8F0',
+            background: statusFilter === 'ALL' ? '#F0FDF4' : '#FFFFFF',
+            boxShadow: statusFilter === 'ALL' ? '0 4px 12px rgba(5, 150, 105, 0.15)' : '0 2px 4px rgba(0,0,0,0.02)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#64748B', fontSize: '0.825rem' }}>
@@ -602,12 +614,15 @@ export default function KMHubPage() {
         {/* Card 3: Completed Sharing */}
         <div
           className="card"
+          onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
           style={{
             padding: '1.15rem 1.25rem',
             borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+            border: statusFilter === 'COMPLETED' ? '2px solid #059669' : '1px solid #E2E8F0',
+            background: statusFilter === 'COMPLETED' ? '#ECFDF5' : '#FFFFFF',
+            boxShadow: statusFilter === 'COMPLETED' ? '0 4px 12px rgba(5, 150, 105, 0.15)' : '0 2px 4px rgba(0,0,0,0.02)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#64748B', fontSize: '0.825rem' }}>
@@ -627,12 +642,15 @@ export default function KMHubPage() {
         {/* Card 4: Overdue & Pending Reminders */}
         <div
           className="card"
+          onClick={() => setStatusFilter(statusFilter === 'OVERDUE' ? 'ALL' : 'OVERDUE')}
           style={{
             padding: '1.15rem 1.25rem',
             borderRadius: '14px',
-            border: stats.overdueCount > 0 ? '1.5px solid #FCA5A5' : '1px solid #E2E8F0',
-            background: stats.overdueCount > 0 ? '#FEF2F2' : '#FFFFFF',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+            border: statusFilter === 'OVERDUE' ? '2px solid #DC2626' : stats.overdueCount > 0 ? '1.5px solid #FCA5A5' : '1px solid #E2E8F0',
+            background: statusFilter === 'OVERDUE' ? '#FEF2F2' : stats.overdueCount > 0 ? '#FFF1F2' : '#FFFFFF',
+            boxShadow: statusFilter === 'OVERDUE' ? '0 4px 12px rgba(220, 38, 38, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: stats.overdueCount > 0 ? '#991B1B' : '#64748B', fontSize: '0.825rem' }}>
@@ -795,7 +813,7 @@ export default function KMHubPage() {
               whiteSpace: 'nowrap',
             }}
           >
-            ทั้งหมด ({kmRecords.length})
+            ทั้งหมด ({stats.total})
           </button>
 
           <button
@@ -849,7 +867,7 @@ export default function KMHubPage() {
               whiteSpace: 'nowrap',
             }}
           >
-            ⏳ รอดำเนินการ ({stats.pending - stats.overdueCount})
+            ⏳ รอดำเนินการ ({stats.pendingWithoutOverdue})
           </button>
 
           {stats.overdueCount > 0 && (

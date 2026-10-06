@@ -23,6 +23,7 @@ import KMAttendeeSelectModal from './KMAttendeeSelectModal';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import { getAvailableFiscalYears, getCurrentThaiFiscalYear } from '@/lib/dateUtils';
 import { KM_STATUSES } from '@/lib/kmHubService';
+import { formatImageDisplayUrl } from '@/lib/driveUtils';
 
 export default function KMFormModal({
   isOpen,
@@ -465,42 +466,55 @@ export default function KMFormModal({
                     border: '1px solid #E2E8F0',
                   }}
                 >
-                  {formData.attendees.map((p) => (
-                    <div
-                      key={p.id || p.email}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: '#ECFDF5',
-                        border: '1px solid #A7F3D0',
-                        color: '#065F46',
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <span>{p.name}</span>
-                      <span style={{ fontSize: '0.7rem', color: '#047857', fontWeight: 500 }}>
-                        ({p.department || 'สำนัก'})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAttendee(p.id || p.email)}
+                  {formData.attendees.map((p) => {
+                    const avatarSrc = formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '');
+                    return (
+                      <div
+                        key={p.id || p.email}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#059669',
-                          cursor: 'pointer',
-                          padding: 0,
-                          display: 'flex',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#ECFDF5',
+                          border: '1px solid #A7F3D0',
+                          color: '#065F46',
+                          padding: '3px 10px 3px 5px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
                         }}
                       >
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
+                        {avatarSrc ? (
+                          <img
+                            src={avatarSrc}
+                            alt=""
+                            style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        <span>{p.name}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#047857', fontWeight: 500 }}>
+                          ({p.department || 'สำนัก'})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttendee(p.id || p.email)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#059669',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                          }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               {errors.attendees && (

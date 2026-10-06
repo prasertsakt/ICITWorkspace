@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { X, Search, Users, Check, UserCheck, Building2, UserX } from 'lucide-react';
+import { X, Search, Users, Check, UserCheck, Building2, UserX, User } from 'lucide-react';
 import { MAIN_6_DEPTS } from '@/lib/constants';
+import { formatImageDisplayUrl } from '@/lib/driveUtils';
 
 export default function KMAttendeeSelectModal({
   isOpen,
@@ -86,6 +87,7 @@ export default function KMAttendeeSelectModal({
       if (exists) {
         return prev.filter((item) => !(item.id === p.id || (item.email && item.email === p.email)));
       } else {
+        const resolvedAvatar = formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '') || '';
         return [
           ...prev,
           {
@@ -94,6 +96,7 @@ export default function KMAttendeeSelectModal({
             email: p.email || '',
             department: p.department || '',
             position: p.position || 'บุคลากร',
+            avatarUrl: resolvedAvatar,
           },
         ];
       }
@@ -110,6 +113,7 @@ export default function KMAttendeeSelectModal({
         email: p.email || '',
         department: p.department || '',
         position: p.position || 'บุคลากร',
+        avatarUrl: formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '') || '',
       }));
     setSelectedPersonnel((prev) => [...prev, ...toAdd]);
   };
@@ -322,39 +326,59 @@ export default function KMAttendeeSelectModal({
                 <UserCheck size={14} />
                 <span>เลือกแล้ว ({selectedPersonnel.length} คน):</span>
               </div>
-              {selectedPersonnel.map((p) => (
-                <span
-                  key={p.id || p.email}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    background: '#ECFDF5',
-                    border: '1px solid #A7F3D0',
-                    color: '#065F46',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  <span>{p.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveChip(p.id || p.email)}
+              {selectedPersonnel.map((p) => {
+                const chipAvatar = formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '');
+                return (
+                  <span
+                    key={p.id || p.email}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#059669',
-                      cursor: 'pointer',
-                      padding: 0,
-                      display: 'flex',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: '#ECFDF5',
+                      border: '1px solid #A7F3D0',
+                      color: '#065F46',
+                      padding: '2px 8px 2px 4px',
+                      borderRadius: '16px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
                     }}
                   >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
+                    {chipAvatar ? (
+                      <img
+                        src={chipAvatar}
+                        alt=""
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <User size={12} color="#059669" />
+                    )}
+                    <span>{p.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveChip(p.id || p.email)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#059669',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
@@ -378,6 +402,8 @@ export default function KMAttendeeSelectModal({
           ) : (
             filteredList.map((p) => {
               const selected = isSelected(p.id || p.email);
+              const avatarSrc = formatImageDisplayUrl(p.avatarUrl || p.photoUrl || p.photoURL || p.image || p.imageUrl || p.avatar || p.picture || p.photo || '');
+
               return (
                 <div
                   key={p.id || p.email}
@@ -387,35 +413,92 @@ export default function KMAttendeeSelectModal({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.65rem 0.85rem',
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     border: selected ? '2px solid #059669' : '1px solid #E2E8F0',
                     background: selected ? '#ECFDF5' : '#FFFFFF',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    boxShadow: selected ? '0 2px 8px rgba(5, 150, 105, 0.12)' : '0 1px 3px rgba(0,0,0,0.02)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    {/* Personnel Picture / Avatar */}
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '38px',
+                        height: '38px',
                         borderRadius: '50%',
-                        background: selected ? '#059669' : '#F1F5F9',
-                        color: selected ? '#FFFFFF' : '#64748B',
+                        overflow: 'hidden',
+                        border: selected ? '2px solid #059669' : '1.5px solid #CBD5E1',
+                        background: selected ? '#ECFDF5' : '#F1F5F9',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
+                        position: 'relative',
+                        boxShadow: selected ? '0 0 0 2px rgba(5, 150, 105, 0.2)' : 'none',
                       }}
                     >
-                      {selected ? <Check size={16} /> : (p.name || 'บ')[0]}
+                      {avatarSrc ? (
+                        <img
+                          src={avatarSrc}
+                          alt={p.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallbackEl = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
+                            if (fallbackEl) fallbackEl.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+
+                      <div
+                        className="avatar-fallback"
+                        style={{
+                          display: avatarSrc ? 'none' : 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          color: selected ? '#059669' : '#64748B',
+                          background: selected ? '#ECFDF5' : '#F1F5F9',
+                        }}
+                      >
+                        <User size={18} />
+                      </div>
+
+                      {/* Selected Check Badge Overlay on Avatar */}
+                      {selected && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: '-1px',
+                            right: '-1px',
+                            width: '15px',
+                            height: '15px',
+                            borderRadius: '50%',
+                            background: '#059669',
+                            color: '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1.5px solid #FFFFFF',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                          }}
+                        >
+                          <Check size={9} strokeWidth={3} />
+                        </div>
+                      )}
                     </div>
+
                     <div style={{ minWidth: 0 }}>
                       <div
                         style={{
-                          fontSize: '0.85rem',
+                          fontSize: '0.875rem',
                           fontWeight: 700,
                           color: selected ? '#065F46' : '#1E293B',
                           whiteSpace: 'nowrap',
