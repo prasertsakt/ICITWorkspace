@@ -32,6 +32,8 @@ import {
   Briefcase,
   Compass,
   Target,
+  Pipette,
+  RotateCcw,
 } from 'lucide-react';
 import { PORTAL_COLOR_THEMES, PORTAL_AVAILABLE_ICONS } from '@/lib/constants';
 
@@ -61,6 +63,24 @@ export const PORTAL_ICON_COMPONENTS = {
   Target,
 };
 
+// Preset Background Colors for quick selection
+const PRESET_BG_COLORS = [
+  { label: 'ค่าเริ่มต้น', value: '', color: '#FFFFFF', isDefault: true },
+  { label: 'ขาวสว่าง', value: '#FFFFFF', color: '#FFFFFF' },
+  { label: 'ครีมอุ่น', value: '#FFFBEB', color: '#FFFBEB' },
+  { label: 'ส้มพาสเทล', value: '#FFF7ED', color: '#FFF7ED' },
+  { label: 'ชมพูอ่อน', value: '#FFF1F2', color: '#FFF1F2' },
+  { label: 'ม่วงอ่อน', value: '#FAF5FF', color: '#FAF5FF' },
+  { label: 'ครามอ่อน', value: '#EEF2FF', color: '#EEF2FF' },
+  { label: 'ฟ้าพาสเทล', value: '#F0F9FF', color: '#F0F9FF' },
+  { label: 'เขียวน้ำทะเล', value: '#F0FDFA', color: '#F0FDFA' },
+  { label: 'เขียวมิ้นท์', value: '#F0FDF4', color: '#F0FDF4' },
+  { label: 'เทาสว่าง', value: '#F8FAFC', color: '#F8FAFC' },
+  { label: 'ดาร์กสเลท', value: '#0F172A', color: '#0F172A' },
+  { label: 'ดาร์กอินดิโก', value: '#1E1B4B', color: '#1E1B4B' },
+  { label: 'ดาร์กชาร์โคล', value: '#18181B', color: '#18181B' },
+];
+
 export default function ServiceCardModal({
   isOpen,
   onClose,
@@ -78,6 +98,7 @@ export default function ServiceCardModal({
     iconName: 'Laptop',
     iconImageUrl: '',
     colorTheme: 'primary',
+    bgColor: '',
     badgeText: 'เปิดให้บริการ',
     badgeType: 'active', // 'active' | 'user' | 'neutral'
     footerLeft: '',
@@ -97,6 +118,7 @@ export default function ServiceCardModal({
         iconName: serviceToEdit.iconName || 'Laptop',
         iconImageUrl: serviceToEdit.iconImageUrl || '',
         colorTheme: serviceToEdit.colorTheme || 'primary',
+        bgColor: serviceToEdit.bgColor || serviceToEdit.customBgColor || '',
         badgeText: serviceToEdit.badgeText || 'เปิดให้บริการ',
         badgeType: serviceToEdit.badgeType || 'active',
         footerLeft: serviceToEdit.footerLeft || '',
@@ -112,6 +134,7 @@ export default function ServiceCardModal({
         iconName: 'Laptop',
         iconImageUrl: '',
         colorTheme: 'primary',
+        bgColor: '',
         badgeText: 'เปิดให้บริการ',
         badgeType: 'active',
         footerLeft: '',
@@ -153,6 +176,8 @@ export default function ServiceCardModal({
       desc: formData.desc.trim(),
       href: formData.href.trim(),
       iconImageUrl: formData.iconImageUrl.trim(),
+      bgColor: formData.bgColor.trim(),
+      customBgColor: formData.bgColor.trim(),
       footerLeft: formData.footerLeft.trim(),
       footerRightText: formData.footerRightText.trim() || 'เข้าใช้งาน',
     };
@@ -251,8 +276,9 @@ export default function ServiceCardModal({
                 padding: '1.25rem',
                 borderRadius: 'var(--radius-md)',
                 borderTop: `5px solid ${currentTheme.borderColor}`,
-                background: 'var(--bg-card)',
+                background: formData.bgColor || 'var(--bg-card)',
                 boxShadow: 'var(--shadow-sm)',
+                transition: 'background-color 0.2s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -586,6 +612,172 @@ export default function ServiceCardModal({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Card Background Color & Color Picker */}
+          <div className="input-group">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '6px' }}>
+              <label className="input-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Pipette size={14} color="#EA580C" />
+                <span>สีพื้นหลังการ์ด (Card Background Color)</span>
+              </label>
+              {formData.bgColor && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, bgColor: '' })}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#EA580C',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                  title="คืนค่าพื้นหลังกลับเป็นค่าเริ่มต้น"
+                >
+                  <RotateCcw size={11} />
+                  <span>คืนค่าเริ่มต้น</span>
+                </button>
+              )}
+            </div>
+
+            {/* Custom Color Input with Color Picker Widget */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.65rem' }}>
+              <div
+                style={{
+                  position: 'relative',
+                  width: '42px',
+                  height: '38px',
+                  borderRadius: 'var(--radius-sm, 8px)',
+                  border: '1.5px solid var(--border-subtle, #CBD5E1)',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  background: formData.bgColor || '#FFFFFF',
+                }}
+                title="คลิกเพื่อเลือกสีจาก Color Picker"
+              >
+                <input
+                  type="color"
+                  value={
+                    formData.bgColor && formData.bgColor.startsWith('#') && formData.bgColor.length === 7
+                      ? formData.bgColor
+                      : '#ffffff'
+                  }
+                  onChange={(e) => setFormData({ ...formData, bgColor: e.target.value })}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    left: '-8px',
+                    width: '60px',
+                    height: '60px',
+                    cursor: 'pointer',
+                    opacity: 0,
+                  }}
+                />
+              </div>
+
+              <input
+                type="text"
+                className="form-input"
+                placeholder="เช่น #FFFFFF, #FFF7ED หรือ rgba(255,255,255,0.9)"
+                value={formData.bgColor}
+                onChange={(e) => setFormData({ ...formData, bgColor: e.target.value })}
+                style={{ flex: 1, height: '38px', fontSize: '0.85rem', fontFamily: 'monospace' }}
+              />
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 10px',
+                  height: '38px',
+                  borderRadius: 'var(--radius-sm, 8px)',
+                  background: 'var(--bg-card-subtle)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span>ตัวอย่าง:</span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '4px',
+                    background: formData.bgColor || 'var(--bg-card)',
+                    border: '1px solid #CBD5E1',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Preset Palette Chips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                🎨 สีแนะนำยอดนิยม (Quick Palette Presets):
+              </span>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
+                  gap: '0.35rem',
+                }}
+              >
+                {PRESET_BG_COLORS.map((preset) => {
+                  const isSelected =
+                    (preset.isDefault && !formData.bgColor) ||
+                    (formData.bgColor && formData.bgColor.toLowerCase() === preset.value.toLowerCase());
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, bgColor: preset.value })}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '0.3rem 0.45rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        background: isSelected ? 'var(--primary-50, #FFF7ED)' : 'var(--bg-card-subtle)',
+                        border: isSelected
+                          ? '1.5px solid #F97316'
+                          : '1px solid var(--border-subtle, #E2E8F0)',
+                        cursor: 'pointer',
+                        fontSize: '0.725rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        color: isSelected ? '#EA580C' : 'var(--text-secondary)',
+                        textAlign: 'left',
+                        boxShadow: isSelected ? '0 1px 3px rgba(249,115,22,0.15)' : 'none',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '3px',
+                          background: preset.color,
+                          border: '1px solid #CBD5E1',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {preset.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

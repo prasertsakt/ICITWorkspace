@@ -95,7 +95,46 @@ export default function IDPModal({
   const [actionPlanData, setActionPlanData] = useState(null);
   const [existingActionPlan, setExistingActionPlan] = useState(null);
   const [selectedGapKeys, setSelectedGapKeys] = useState(new Set());
-  const { showAlert, showConfirm } = useModal();
+  // Helper to exclude executives (ผู้บริหาร) and advisors (ที่ปรึกษา) from target personnel selection
+  const isExcludedPersonnel = (p) => {
+    if (!p) return true;
+    if (p.status === 'ลาออก') return true;
+
+    // 1. Executive check (ผู้บริหาร / ผู้อำนวยการ / รองผู้อำนวยการ)
+    if (p.isExecutive) return true;
+    const dept = (p.department || '').trim();
+    if (dept === 'คณะผู้บริหาร' || dept === 'ผู้บริหาร' || dept.includes('คณะผู้บริหาร')) return true;
+
+    const pos = (p.position || p.adminPosition || '').trim();
+    if (
+      pos.includes('ผู้บริหาร') ||
+      pos.includes('ผู้อำนวยการ') ||
+      pos.includes('รองผู้อำนวยการ')
+    ) return true;
+
+    const inExecList = (executiveList || []).some(
+      (e) => (e.id && e.id === p.id) ||
+             (e.name && p.name && e.name.trim() === p.name.trim()) ||
+             (e.email && p.email && e.email.trim().toLowerCase() === p.email.trim().toLowerCase())
+    );
+    if (inExecList) return true;
+
+    // 2. Advisor check (ที่ปรึกษา)
+    if (p.isAdvisor) return true;
+    if (
+      pos.includes('ที่ปรึกษา') ||
+      (p.role || '').includes('ที่ปรึกษา') ||
+      (p.name || '').includes('ที่ปรึกษา') ||
+      dept.includes('ที่ปรึกษา')
+    ) return true;
+
+    return false;
+  };
+
+  // Filtered target personnel: excludes executives and advisors
+  const eligiblePersonnelList = useMemo(() => {
+    return (personnelList || []).filter((p) => !isExcludedPersonnel(p));
+  }, [personnelList, executiveList]);
 
   // Auto populate on personnel selection (when creating new)
   const handleSelectPersonnel = (pId) => {
@@ -597,8 +636,8 @@ export default function IDPModal({
                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                   }}
                 >
-                  <option value="">-- คลิกเพื่อเลือกรายชื่อบุคลากรเพื่อสร้างแบบประเมิน --</option>
-                  {personnelList.map((p) => (
+                  <option value="">-- คลิกเพื่อเลือกรายชื่อบุคลากรเพื่อสร้างแบบประเมิน (ไม่รวมผู้บริหารและที่ปรึกษา - {eligiblePersonnelList.length} คน) --</option>
+                  {eligiblePersonnelList.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} — {p.position || 'บุคลากร'} ({p.department || 'สำนัก'})
                     </option>

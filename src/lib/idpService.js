@@ -488,15 +488,31 @@ export async function duplicateIdpRecordsFromPreviousYear(
     }
   }
 
-  // If no source records, generate initial IDP forms for all active personnel
+  // If no source records, generate initial IDP forms for all eligible active personnel (excluding executives and advisors)
   if (sourceRecords.length === 0 && allPersonnel.length > 0) {
-    sourceRecords = allPersonnel.map((p) => ({
-      personnelId: p.id,
-      personnelName: p.name,
-      personnelEmail: p.email,
-      position: p.position || 'บุคลากร',
-      department: p.department || 'สำนักงานผู้อำนวยการ',
-    }));
+    sourceRecords = allPersonnel
+      .filter((p) => {
+        if (!p || p.status === 'ลาออก' || p.isExecutive || p.isAdvisor) return false;
+        const pos = (p.position || p.adminPosition || '').trim();
+        const dept = (p.department || '').trim();
+        if (
+          pos.includes('ผู้บริหาร') ||
+          pos.includes('ผู้อำนวยการ') ||
+          pos.includes('รองผู้อำนวยการ') ||
+          pos.includes('ที่ปรึกษา') ||
+          dept.includes('ผู้บริหาร') ||
+          dept.includes('ที่ปรึกษา')
+        ) return false;
+        if (executiveList.some((e) => (e.id && e.id === p.id) || (e.name && p.name && e.name.trim() === p.name.trim()))) return false;
+        return true;
+      })
+      .map((p) => ({
+        personnelId: p.id,
+        personnelName: p.name,
+        personnelEmail: p.email,
+        position: p.position || 'บุคลากร',
+        department: p.department || 'สำนักงานผู้อำนวยการ',
+      }));
   }
 
   const createdRecords = [];

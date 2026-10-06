@@ -544,6 +544,7 @@ export default function PortalLandingPage() {
               dynamicFooterLeft = `เข้าสู่ระบบในชื่อ: ${currentPersonnel.name}`;
             }
 
+            const cardBgColor = item.bgColor || item.customBgColor;
             const baseCardStyle = {
               padding: '1.75rem',
               display: 'flex',
@@ -556,6 +557,7 @@ export default function PortalLandingPage() {
               color: 'inherit',
               position: 'relative',
               borderRadius: 'var(--radius-lg, 16px)',
+              ...(cardBgColor ? { background: cardBgColor, backgroundColor: cardBgColor } : {}),
             };
 
             const cardInnerContent = (
