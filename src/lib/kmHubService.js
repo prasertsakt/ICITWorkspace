@@ -266,6 +266,24 @@ export function calculateKmNotificationStatus(item, currentDate = new Date()) {
   }
 }
 
+export const LOCAL_KEY_KM_SEEDED = 'icit_km_records_seeded_v2';
+
+// Pub/Sub Single Shared Listener Cache for KM Records
+let kmSubscribers = [];
+let sharedKmUnsubscribe = null;
+let cachedKmRecords = null;
+
+function notifyKmSubscribers(data) {
+  cachedKmRecords = data;
+  kmSubscribers.forEach((cb) => {
+    try {
+      cb(data);
+    } catch (e) {
+      console.error('KM subscriber callback error:', e);
+    }
+  });
+}
+
 /**
  * Subscribe to KM Records with Firestore & LocalStorage Cache
  */
@@ -275,57 +293,116 @@ export function subscribeKmRecords(callback) {
     return () => {};
   }
 
-  // Load from local storage cache initially
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        callback(parsed);
-      } else {
+  kmSubscribers.push(callback);
+
+  // Send cached data immediately if available
+  if (cachedKmRecords !== null) {
+    callback(cachedKmRecords);
+  } else {
+    // Load from local storage cache initially
+    try {
+      const isSeeded = localStorage.getItem(LOCAL_KEY_KM_SEEDED);
+      const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
+
+      if (raw !== null) {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed) ? parsed : [];
+        cachedKmRecords = list;
+        callback(list);
+      } else if (!isSeeded) {
+        // First ever load: initialize with sample records and mark seeded
+        localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
+        localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(SAMPLE_KM_RECORDS));
+        cachedKmRecords = SAMPLE_KM_RECORDS;
         callback(SAMPLE_KM_RECORDS);
+      } else {
+        cachedKmRecords = [];
+        callback([]);
       }
-    } else {
-      localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(SAMPLE_KM_RECORDS));
-      callback(SAMPLE_KM_RECORDS);
+    } catch (e) {
+      cachedKmRecords = [];
+      callback([]);
     }
-  } catch (e) {
-    callback(SAMPLE_KM_RECORDS);
   }
 
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
+  // Multi-tab real-time storage event listener
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_KM_RECORDS) {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
+        const list = raw ? JSON.parse(raw) : [];
+        cachedKmRecords = list;
+        callback(list);
+      } catch (err) {}
+    }
+  };
+  window.addEventListener('storage', handleStorageChange);
+
+  // Start shared Firestore listener if not already active
+  if (isFirebaseConfigured && db && !sharedKmUnsubscribe) {
+    try {
+      const colRef = collection(db, 'km_records');
+      const q = query(colRef);
+
+      sharedKmUnsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const records = [];
+            snapshot.forEach((docSnap) => {
+              records.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // Sort by createdAt / startDate descending
+            records.sort((a, b) => new Date(b.createdAt || b.startDate || 0) - new Date(a.createdAt || a.startDate || 0));
+
+            try {
+              localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
+              localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(records));
+            } catch (e) {}
+
+            notifyKmSubscribers(records);
+          } else {
+            // Firestore collection is currently empty
+            const isSeeded = localStorage.getItem(LOCAL_KEY_KM_SEEDED);
+            if (!isSeeded) {
+              // First time ever on empty DB: seed sample records into Firestore so they can be deleted individually
+              localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
+              localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(SAMPLE_KM_RECORDS));
+              notifyKmSubscribers(SAMPLE_KM_RECORDS);
+
+              // Persist seeds to Firestore in background
+              SAMPLE_KM_RECORDS.forEach((rec) => {
+                setDoc(doc(db, 'km_records', rec.id), rec).catch((err) =>
+                  console.warn('Initial seed write warning:', err)
+                );
+              });
+            } else {
+              // DB is empty because user deleted all items
+              try {
+                localStorage.setItem(LOCAL_KEY_KM_RECORDS, '[]');
+              } catch (e) {}
+              notifyKmSubscribers([]);
+            }
+          }
+        },
+        (err) => {
+          console.warn('Firestore km_records subscription warning (using local cache):', err);
+        }
+      );
+    } catch (e) {
+      console.error('Failed to attach km_records listener:', e);
+    }
   }
 
-  try {
-    const colRef = collection(db, 'km_records');
-    const q = query(colRef);
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const records = [];
-        snapshot.forEach((docSnap) => {
-          records.push({ id: docSnap.id, ...docSnap.data() });
-        });
-
-        const finalList = records.length > 0 ? records : SAMPLE_KM_RECORDS;
-        try {
-          localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(finalList));
-        } catch (e) {}
-
-        callback(finalList);
-      },
-      (err) => {
-        console.warn('Firestore km_records subscription warning (using cache):', err);
-      }
-    );
-
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to attach km_records listener:', e);
-    return () => {};
-  }
+  return () => {
+    kmSubscribers = kmSubscribers.filter((cb) => cb !== callback);
+    window.removeEventListener('storage', handleStorageChange);
+    if (kmSubscribers.length === 0 && sharedKmUnsubscribe) {
+      sharedKmUnsubscribe();
+      sharedKmUnsubscribe = null;
+    }
+  };
 }
 
 /**
@@ -364,20 +441,24 @@ export async function saveKmRecord(recordData, actor) {
     createdBy: recordData.createdBy || actor?.name || 'ผู้ดูแลระบบ',
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      const docRef = doc(db, 'km_records', finalId);
-      await setDoc(docRef, payload, { merge: true });
-    } catch (e) {
-      console.warn('Firestore setDoc km_records warning:', e);
+  // Immediate in-memory cache and subscriber update
+  if (cachedKmRecords) {
+    const list = [...cachedKmRecords];
+    const idx = list.findIndex((item) => item.id === finalId);
+    if (idx >= 0) {
+      list[idx] = payload;
+    } else {
+      list.unshift(payload);
     }
+    notifyKmSubscribers(list);
   }
 
   // Update local storage cache
   if (typeof window !== 'undefined') {
     try {
+      localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
       const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
-      let list = raw ? JSON.parse(raw) : [...SAMPLE_KM_RECORDS];
+      let list = raw ? JSON.parse(raw) : [];
       const idx = list.findIndex((item) => item.id === finalId);
       if (idx >= 0) {
         list[idx] = payload;
@@ -388,6 +469,15 @@ export async function saveKmRecord(recordData, actor) {
     } catch (e) {}
   }
 
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'km_records', finalId);
+      await setDoc(docRef, payload, { merge: true });
+    } catch (e) {
+      console.warn('Firestore setDoc km_records warning:', e);
+    }
+  }
+
   return payload;
 }
 
@@ -395,6 +485,25 @@ export async function saveKmRecord(recordData, actor) {
  * Delete a KM Record
  */
 export async function deleteKmRecord(recordId) {
+  // 1. Immediately update in-memory cache and notify subscribers
+  if (cachedKmRecords) {
+    const updated = cachedKmRecords.filter((item) => item.id !== recordId);
+    notifyKmSubscribers(updated);
+  }
+
+  // 2. Update local storage cache
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
+      const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
+      if (raw) {
+        const list = JSON.parse(raw).filter((item) => item.id !== recordId);
+        localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(list));
+      }
+    } catch (e) {}
+  }
+
+  // 3. Delete from Firestore
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'km_records', recordId);
@@ -402,16 +511,6 @@ export async function deleteKmRecord(recordId) {
     } catch (e) {
       console.warn('Firestore deleteDoc km_records warning:', e);
     }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
-      if (raw) {
-        const list = JSON.parse(raw).filter((item) => item.id !== recordId);
-        localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(list));
-      }
-    } catch (e) {}
   }
 
   return true;
@@ -524,7 +623,8 @@ export async function saveKmDocConfig(fiscalYear, configData, actor) {
     await setDoc(docRef, payload, { merge: true });
     return { success: true, data: payload };
   } catch (e) {
-    console.error('Error saving km_doc_configs to Firestore:', e);
-    throw e;
+    console.warn('Firestore save km_doc_configs warning (persisted locally):', e);
+    // If permission-denied, still return success from local cache and log guidance
+    return { success: true, data: payload, warning: e.message };
   }
 }

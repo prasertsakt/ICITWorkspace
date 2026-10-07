@@ -468,7 +468,7 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     experience: '',
     specialQualifications: '',
     skills: {
-      english: 'CEFR ไม่ต่ำกว่า B1',
+      english: 'ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1',
       otherLanguage: '',
       computer: 'Microsoft Word, Excel, PowerPoint, Google Workspace, Outlook, OneDrive, Teams',
       otherSkills: '',

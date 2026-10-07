@@ -182,8 +182,8 @@ service cloud.firestore {
 
     // 23. Rules for 'km_records' collection (Knowledge Management & Tracking Hub)
     match /km_records/{kmId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
     // 24. Rules for 'km_doc_configs' collection (KM Hub Guidelines & Document Attachments)
