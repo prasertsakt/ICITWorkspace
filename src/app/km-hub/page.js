@@ -30,12 +30,14 @@ import {
   RefreshCw,
   FileText,
   Layers,
+  Link2,
 } from 'lucide-react';
 import {
   subscribeKmRecords,
   saveKmRecord,
   deleteKmRecord,
   calculateKmNotificationStatus,
+  subscribeKmDocConfig,
   KM_STATUSES,
 } from '@/lib/kmHubService';
 import {
@@ -49,6 +51,7 @@ import KMFormModal from '@/components/KMFormModal';
 import KMDetailModal from '@/components/KMDetailModal';
 import KMReminderModal from '@/components/KMReminderModal';
 import KMDeleteModal from '@/components/KMDeleteModal';
+import KMDocConfigModal from '@/components/KMDocConfigModal';
 
 export default function KMHubPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
@@ -75,6 +78,8 @@ export default function KMHubPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [deletingRecord, setDeletingRecord] = useState(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [docConfig, setDocConfig] = useState(null);
+  const [isDocConfigModalOpen, setIsDocConfigModalOpen] = useState(false);
 
   // Subscriptions
   useEffect(() => {
@@ -102,6 +107,16 @@ export default function KMHubPage() {
       unsubExecs();
     };
   }, []);
+
+  // Subscribe to KM Document / Report configuration for selected fiscal year
+  useEffect(() => {
+    const unsubDoc = subscribeKmDocConfig(fiscalYear, (cfg) => {
+      setDocConfig(cfg);
+    });
+    return () => {
+      if (typeof unsubDoc === 'function') unsubDoc();
+    };
+  }, [fiscalYear]);
 
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
 
@@ -345,7 +360,7 @@ export default function KMHubPage() {
               }}
             >
               <LogIn size={18} />
-              <span>เข้าสู่ระบบด้วย Google Account มจพ.</span>
+              <span>เข้าสู่ระบบด้วยบัญชี Google KMUTNB</span>
             </button>
             <Link
               href="/"
@@ -546,6 +561,111 @@ export default function KMHubPage() {
               {stats.percent}%
             </div>
           </div>
+        </div>
+
+        {/* Document Links & Admin Config Button Bar (similar to ofi-tracking page) */}
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            flexWrap: 'wrap',
+            paddingTop: '0.85rem',
+            borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+            marginTop: '0.25rem',
+          }}
+        >
+          {/* Document Link(s) for Personnel */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {docConfig?.documentUrl && (
+              <a
+                href={docConfig.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#FFFFFF',
+                  borderColor: 'rgba(255, 255, 255, 0.25)',
+                  gap: '6px',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  backdropFilter: 'blur(6px)',
+                  maxWidth: '480px',
+                  padding: '0.45rem 0.95rem',
+                  borderRadius: '20px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                }}
+                title={docConfig.documentTitle || `คู่มือและแนวทาง KM (${fiscalYear === 'ALL' ? 'ทั่วไป' : fiscalYear})`}
+              >
+                <BookOpen size={16} color="#34D399" style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {docConfig.documentTitle || `คู่มือและแนวทาง KM (${fiscalYear === 'ALL' ? 'ทั่วไป' : fiscalYear})`}
+                </span>
+                <ExternalLink size={13} style={{ flexShrink: 0 }} />
+              </a>
+            )}
+
+            {Array.isArray(docConfig?.additionalLinks) &&
+              docConfig.additionalLinks.map((linkItem, idx) => (
+                <a
+                  key={idx}
+                  href={linkItem.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#E2E8F0',
+                    borderColor: 'rgba(255, 255, 255, 0.18)',
+                    gap: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '20px',
+                  }}
+                  title={linkItem.title || 'เอกสารแนบ'}
+                >
+                  <FileText size={14} color="#A7F3D0" style={{ flexShrink: 0 }} />
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '220px',
+                    }}
+                  >
+                    {linkItem.title || 'เอกสารแนบ'}
+                  </span>
+                  <ExternalLink size={12} style={{ flexShrink: 0 }} />
+                </a>
+              ))}
+          </div>
+
+          {/* Admin Config Button */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsDocConfigModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              style={{
+                background: 'rgba(16, 185, 129, 0.22)',
+                color: '#D1FAE5',
+                borderColor: 'rgba(16, 185, 129, 0.45)',
+                gap: '6px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                padding: '0.45rem 1rem',
+                borderRadius: '20px',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <Link2 size={16} />
+              <span>ตั้งค่าลิงก์เอกสารแนบ {fiscalYear !== 'ALL' ? `(${fiscalYear})` : ''}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1190,6 +1310,19 @@ export default function KMHubPage() {
           onClose={() => setDeletingRecord(null)}
           record={deletingRecord}
           onConfirm={handleDeleteRecord}
+        />
+      )}
+
+      {/* Admin KM Document / Attachment Config Modal */}
+      {isDocConfigModalOpen && (
+        <KMDocConfigModal
+          isOpen={isDocConfigModalOpen}
+          onClose={() => setIsDocConfigModalOpen(false)}
+          fiscalYear={fiscalYear}
+          initialConfig={docConfig}
+          onSaved={(newCfg) => setDocConfig(newCfg)}
+          currentUser={currentUser}
+          currentPersonnel={currentPersonnel}
         />
       )}
     </div>

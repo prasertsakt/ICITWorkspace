@@ -416,3 +416,115 @@ export async function deleteKmRecord(recordId) {
 
   return true;
 }
+
+export const LOCAL_KEY_KM_DOCS = 'icit_km_doc_configs';
+
+/**
+ * Subscribe to KM Document / Report Attachment Configuration for a Fiscal Year
+ */
+export function subscribeKmDocConfig(fiscalYear, callback) {
+  if (typeof window === 'undefined') {
+    callback(null);
+    return () => {};
+  }
+
+  const fy = String(fiscalYear || 'ALL');
+  const docId = fy === 'ALL' ? 'km-doc-general' : `km-doc-${fy}`;
+  const localKey = `${LOCAL_KEY_KM_DOCS}_${fy}`;
+
+  // Default empty config
+  const defaultResult = {
+    id: docId,
+    fiscalYear: fy,
+    documentTitle:
+      fy === 'ALL'
+        ? 'แนวทางและคู่มือการจัดการองค์ความรู้ KM'
+        : `แนวทางและคู่มือการจัดการองค์ความรู้ KM ประจำปีงบประมาณ ${fy}`,
+    documentUrl: '',
+    additionalLinks: [],
+  };
+
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) {
+      callback(JSON.parse(raw));
+    } else {
+      callback(defaultResult);
+    }
+  } catch (e) {
+    callback(defaultResult);
+  }
+
+  if (!isFirebaseConfigured || !db) {
+    return () => {};
+  }
+
+  try {
+    const docRef = doc(db, 'km_doc_configs', docId);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = { id: docSnap.id, ...docSnap.data() };
+          try {
+            localStorage.setItem(localKey, JSON.stringify(data));
+          } catch (e) {}
+          callback(data);
+        } else {
+          callback(defaultResult);
+        }
+      },
+      (err) => {
+        console.warn(`Firestore km_doc_configs (${fy}) warning:`, err);
+      }
+    );
+
+    return unsubscribe;
+  } catch (e) {
+    console.error('Failed to setup km_doc_configs listener:', e);
+    return () => {};
+  }
+}
+
+/**
+ * Save KM Document / Report Attachment Configuration
+ */
+export async function saveKmDocConfig(fiscalYear, configData, actor) {
+  const fy = String(fiscalYear || 'ALL');
+  const docId = fy === 'ALL' ? 'km-doc-general' : `km-doc-${fy}`;
+  const now = new Date().toISOString();
+
+  const payload = {
+    id: docId,
+    fiscalYear: fy,
+    documentTitle:
+      configData.documentTitle ||
+      (fy === 'ALL'
+        ? 'แนวทางและคู่มือการจัดการองค์ความรู้ KM'
+        : `แนวทางและคู่มือการจัดการองค์ความรู้ KM ประจำปีงบประมาณ ${fy}`),
+    documentUrl: String(configData.documentUrl || '').trim(),
+    additionalLinks: Array.isArray(configData.additionalLinks)
+      ? configData.additionalLinks.filter((l) => l && (l.url || '').trim())
+      : [],
+    updatedAt: now,
+    updatedBy: actor?.name || actor?.email || 'ผู้ดูแลระบบ',
+  };
+
+  const localKey = `${LOCAL_KEY_KM_DOCS}_${fy}`;
+  try {
+    localStorage.setItem(localKey, JSON.stringify(payload));
+  } catch (e) {}
+
+  if (!isFirebaseConfigured || !db) {
+    return { success: true, data: payload };
+  }
+
+  try {
+    const docRef = doc(db, 'km_doc_configs', docId);
+    await setDoc(docRef, payload, { merge: true });
+    return { success: true, data: payload };
+  } catch (e) {
+    console.error('Error saving km_doc_configs to Firestore:', e);
+    throw e;
+  }
+}

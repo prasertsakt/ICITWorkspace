@@ -185,5 +185,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAuthenticated();
     }
+
+    // 24. Rules for 'km_doc_configs' collection (KM Hub Guidelines & Document Attachments)
+    match /km_doc_configs/{configId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
   }
 }
