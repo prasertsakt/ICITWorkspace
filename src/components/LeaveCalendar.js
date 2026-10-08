@@ -52,6 +52,7 @@ export default function LeaveCalendar({
   onEditLeave,
   onDeleteLeave,
   onYearChange,
+  onDateChange,
   initialSearch = '',
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -97,12 +98,15 @@ export default function LeaveCalendar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Notify parent component about current active year
+  // Notify parent component about current active year and date
   useEffect(() => {
     if (onYearChange) {
       onYearChange(year);
     }
-  }, [year, onYearChange]);
+    if (onDateChange) {
+      onDateChange(currentDate);
+    }
+  }, [year, currentDate, onYearChange, onDateChange]);
 
   // Navigation handlers
   const handlePrevMonth = () => {

@@ -17,7 +17,7 @@ import {
   isDummyLeaveRecord,
 } from '@/lib/storageService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
-import { formatLocalDate } from '@/lib/dateUtils';
+import { formatLocalDate, parseLocalDate, THAI_MONTHS_FULL } from '@/lib/dateUtils';
 import LeaveCalendar from '@/components/LeaveCalendar';
 import LeaveModal from '@/components/LeaveModal';
 import LeaveReportModal from '@/components/LeaveReportModal';
@@ -65,6 +65,7 @@ function LeaveContent() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [activeCalendarDate, setActiveCalendarDate] = useState(() => new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -110,12 +111,52 @@ function LeaveContent() {
     });
   }, [leaves, todayStr]);
 
-  // Leaves this month
-  const leavesThisMonth = useMemo(() => {
-    const now = new Date();
-    const curYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return leaves.filter((l) => l.startDate?.startsWith(curYearMonth) || l.endDate?.startsWith(curYearMonth));
-  }, [leaves]);
+  // Leaves in the active calendar month (accurate overlap matching and cross-month days count)
+  const activeMonthStats = useMemo(() => {
+    const y = activeCalendarDate.getFullYear();
+    const m = activeCalendarDate.getMonth(); // 0-11
+
+    // First and last day strings of active month: YYYY-MM-DD
+    const firstDayStr = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+    const lastDayObj = new Date(y, m + 1, 0);
+    const lastDayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDayObj.getDate()).padStart(2, '0')}`;
+
+    // Filter leaves that overlap with this month: start <= lastDay && end >= firstDay
+    const list = leaves.filter((l) => {
+      if (!l.startDate || !l.endDate) return false;
+      return l.startDate <= lastDayStr && l.endDate >= firstDayStr;
+    });
+
+    // Calculate actual days of leave falling within this month
+    let totalDaysInMonth = 0;
+    list.forEach((l) => {
+      if (l.startDate >= firstDayStr && l.endDate <= lastDayStr) {
+        // Entire leave falls within this month
+        totalDaysInMonth += Number(l.totalDays) || 1;
+      } else {
+        // Cross-month leave: calculate overlapping days within this month
+        const startStr = l.startDate > firstDayStr ? l.startDate : firstDayStr;
+        const endStr = l.endDate < lastDayStr ? l.endDate : lastDayStr;
+        const start = parseLocalDate(startStr);
+        const end = parseLocalDate(endStr);
+        if (start && end && start <= end) {
+          const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+          totalDaysInMonth += diffDays;
+        }
+      }
+    });
+
+    const isCurrentRealMonth = y === new Date().getFullYear() && m === new Date().getMonth();
+
+    return {
+      list,
+      count: list.length,
+      totalDays: Number(totalDaysInMonth.toFixed(1)),
+      monthName: THAI_MONTHS_FULL[m] || '',
+      thaiYear: y + 543,
+      isCurrentRealMonth,
+    };
+  }, [leaves, activeCalendarDate]);
 
   // Breakdown by leave type
   const typeCounts = useMemo(() => {
@@ -634,7 +675,7 @@ function LeaveContent() {
           </div>
         </div>
 
-        {/* Card 2: รายการลาในเดือนนี้ */}
+        {/* Card 2: รายการลาประจำเดือน */}
         <div
           className="card-glass"
           style={{
@@ -648,7 +689,9 @@ function LeaveContent() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                รายการลาในเดือนนี้ (This Month)
+                {activeMonthStats.isCurrentRealMonth
+                  ? `รายการลาในเดือนนี้ (${activeMonthStats.monthName})`
+                  : `รายการลาประจำเดือน (${activeMonthStats.monthName} ${activeMonthStats.thaiYear})`}
               </span>
               <div
                 style={{
@@ -667,13 +710,13 @@ function LeaveContent() {
             </div>
 
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-              {leavesThisMonth.length}{' '}
+              {activeMonthStats.count}{' '}
               <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>รายการ</span>
             </div>
           </div>
 
           <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-            รวมวันลาทั้งหมด: <strong>{leavesThisMonth.reduce((acc, curr) => acc + (curr.totalDays || 1), 0)}</strong> วัน
+            รวมวันลาในเดือนนี้: <strong>{activeMonthStats.totalDays}</strong> วัน
           </div>
         </div>
 
@@ -751,6 +794,7 @@ function LeaveContent() {
         onEditLeave={handleOpenEditModal}
         onDeleteLeave={handleDeleteLeave}
         onYearChange={setSelectedYear}
+        onDateChange={setActiveCalendarDate}
         initialSearch={initialSearch}
       />
 
