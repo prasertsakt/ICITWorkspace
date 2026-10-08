@@ -227,6 +227,81 @@ export default function LeaveCalendar({
     return days;
   }, [year, month]);
 
+  // Group 42 days into 6 weeks and calculate aligned track/slot allocations for multi-day spanning bars
+  const calendarWeeks = useMemo(() => {
+    const weeks = [];
+
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      const weekDays = calendarDays.slice(i, i + 7);
+      const weekStartStr = weekDays[0].dateString;
+      const weekEndStr = weekDays[6].dateString;
+
+      // 1. Filter leaves that overlap with this week
+      const weekLeaves = filteredLeaves.filter((l) => {
+        if (!l.startDate || !l.endDate) return false;
+        return l.startDate <= weekEndStr && l.endDate >= weekStartStr;
+      });
+
+      // 2. Sort leaves: longer duration first (so spanning ribbons occupy top slots), then by startDate
+      weekLeaves.sort((a, b) => {
+        const aStart = a.startDate;
+        const bStart = b.startDate;
+        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        const aDur = (parseLocalDate(a.endDate) - parseLocalDate(a.startDate)) || 0;
+        const bDur = (parseLocalDate(b.endDate) - parseLocalDate(b.startDate)) || 0;
+        return bDur - aDur;
+      });
+
+      // 3. Assign slots (tracks: 0, 1, 2...) for each day of the week
+      const daySlots = Array.from({ length: 7 }, () => []);
+
+      weekLeaves.forEach((leave) => {
+        // Find column indices (0-6) in this week that this leave spans
+        let startCol = 0;
+        for (let c = 0; c < 7; c++) {
+          if (weekDays[c].dateString >= leave.startDate) {
+            startCol = c;
+            break;
+          }
+        }
+        let endCol = 6;
+        for (let c = 6; c >= 0; c--) {
+          if (weekDays[c].dateString <= leave.endDate) {
+            endCol = c;
+            break;
+          }
+        }
+        if (startCol > endCol) return;
+
+        // Find the lowest free slot across all columns this leave occupies
+        let slot = 0;
+        while (true) {
+          let isFree = true;
+          for (let col = startCol; col <= endCol; col++) {
+            if (daySlots[col][slot] !== undefined) {
+              isFree = false;
+              break;
+            }
+          }
+          if (isFree) break;
+          slot++;
+        }
+
+        // Fill this slot across startCol..endCol
+        for (let col = startCol; col <= endCol; col++) {
+          daySlots[col][slot] = leave;
+        }
+      });
+
+      weeks.push({
+        days: weekDays,
+        daySlots,
+      });
+    }
+
+    return weeks;
+  }, [calendarDays, filteredLeaves]);
+
   // Map leaves to dates: { 'YYYY-MM-DD': [leaves] }
   const leavesByDate = useMemo(() => {
     const map = {};
@@ -987,152 +1062,219 @@ export default function LeaveCalendar({
                 ))}
               </div>
 
-              {/* Days Cells (6 Rows x 7 Columns) */}
+              {/* Days Cells (6 Rows x 7 Columns with Multi-Day Spanning Ribbons) */}
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                  display: 'flex',
+                  flexDirection: 'column',
                   background: 'var(--border-subtle)',
                   gap: '1px',
                 }}
               >
-                {calendarDays.map((dayObj, index) => {
-                  const dayLeaves = leavesByDate[dayObj.dateString] || [];
-                  const hasLeaves = dayLeaves.length > 0;
-                  const maxVisible = 2; // Show max 2 pill events, then +X more
-                  const visibleLeaves = dayLeaves.slice(0, maxVisible);
-                  const extraCount = dayLeaves.length - maxVisible;
+                {calendarWeeks.map((week, wIdx) => (
+                  <div
+                    key={`week-${wIdx}`}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                      background: 'var(--border-subtle)',
+                      gap: '1px',
+                    }}
+                  >
+                    {week.days.map((dayObj, colIdx) => {
+                      const dayLeaves = leavesByDate[dayObj.dateString] || [];
+                      const hasLeaves = dayLeaves.length > 0;
+                      const maxSlots = 2; // Show up to 2 tracks per cell
+                      const slots = week.daySlots[colIdx] || [];
+                      const visibleSlots = slots.slice(0, maxSlots);
 
-                  return (
-                    <div
-                      key={`${dayObj.dateString}-${index}`}
-                      onClick={() => handleCellClick(dayObj, dayLeaves)}
-                      style={{
-                        background: dayObj.isToday
-                          ? 'rgba(238, 242, 255, 0.7)'
-                          : dayObj.isCurrentMonth
-                          ? 'var(--bg-card)'
-                          : 'rgba(248, 250, 252, 0.6)',
-                        minHeight: '88px',
-                        padding: '0.35rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        cursor: hasLeaves ? 'pointer' : 'default',
-                        transition: 'background 0.15s ease',
-                        position: 'relative',
-                      }}
-                      className={hasLeaves ? 'calendar-cell-active' : ''}
-                    >
-                      {/* Date Number Badge */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.25rem',
-                        }}
-                      >
-                        <span
+                      // Count additional leaves beyond the maxSlots
+                      const renderedLeaves = visibleSlots.filter(Boolean);
+                      const extraCount = dayLeaves.length - renderedLeaves.length;
+
+                      return (
+                        <div
+                          key={`${dayObj.dateString}-${colIdx}`}
+                          onClick={() => handleCellClick(dayObj, dayLeaves)}
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: dayObj.isToday ? '24px' : 'auto',
-                            height: dayObj.isToday ? '24px' : 'auto',
-                            borderRadius: dayObj.isToday ? '50%' : 'none',
-                            background: dayObj.isToday ? 'var(--primary-600)' : 'transparent',
-                            color: dayObj.isToday
-                              ? '#FFFFFF'
+                            background: dayObj.isToday
+                              ? 'rgba(238, 242, 255, 0.7)'
                               : dayObj.isCurrentMonth
-                              ? 'var(--text-primary)'
-                              : 'var(--text-muted)',
-                            fontSize: '0.8rem',
-                            fontWeight: dayObj.isToday ? 800 : dayObj.isCurrentMonth ? 600 : 400,
+                              ? 'var(--bg-card)'
+                              : 'rgba(248, 250, 252, 0.6)',
+                            minHeight: '94px',
+                            padding: '0.35rem 0.25rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            cursor: hasLeaves ? 'pointer' : 'default',
+                            transition: 'background 0.15s ease',
+                            position: 'relative',
+                            overflow: 'hidden',
                           }}
+                          className={hasLeaves ? 'calendar-cell-active' : ''}
                         >
-                          {dayObj.dayNumber}
-                        </span>
-
-                        {hasLeaves && (
-                          <span
-                            style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              color: 'var(--primary-600)',
-                              background: 'var(--primary-50)',
-                              padding: '1px 5px',
-                              borderRadius: '8px',
-                            }}
-                          >
-                            {dayLeaves.length}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Leave Event Pills */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
-                        {visibleLeaves.map((leave) => {
-                          const conf = LEAVE_TYPE_CONFIG[leave.leaveType] || {};
-                          return (
-                            <div
-                              key={`${leave.id}-${dayObj.dateString}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedLeaveItem(leave);
-                              }}
-                              style={{
-                                background: conf.bg || '#EEF2FF',
-                                color: conf.color || '#4F46E5',
-                                borderLeft: `3px solid ${conf.pillBg || '#6366F1'}`,
-                                padding: '2px 4px',
-                                borderRadius: '3px',
-                                fontSize: '0.675rem',
-                                lineHeight: 1.2,
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                              title={`${leave.personnelName} (${leave.leaveType}): ${leave.reason || 'ไม่มีหมายเหตุ'}`}
-                            >
-                              <span
-                                style={{
-                                  width: '5px',
-                                  height: '5px',
-                                  borderRadius: '50%',
-                                  background: conf.pillBg || '#6366F1',
-                                  flexShrink: 0,
-                                }}
-                              />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {leave.leaveType} {leave.personnelName}
-                              </span>
-                            </div>
-                          );
-                        })}
-
-                        {extraCount > 0 && (
+                          {/* Date Number Header */}
                           <div
                             style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              color: 'var(--primary-600)',
-                              background: 'var(--primary-50)',
-                              borderRadius: '3px',
-                              padding: '1px 4px',
-                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginBottom: '0.25rem',
+                              padding: '0 0.2rem',
                             }}
                           >
-                            +{extraCount} อื่นๆ
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: dayObj.isToday ? '24px' : 'auto',
+                                height: dayObj.isToday ? '24px' : 'auto',
+                                borderRadius: dayObj.isToday ? '50%' : 'none',
+                                background: dayObj.isToday ? 'var(--primary-600)' : 'transparent',
+                                color: dayObj.isToday
+                                  ? '#FFFFFF'
+                                  : dayObj.isCurrentMonth
+                                  ? 'var(--text-primary)'
+                                  : 'var(--text-muted)',
+                                fontSize: '0.8rem',
+                                fontWeight: dayObj.isToday ? 800 : dayObj.isCurrentMonth ? 600 : 400,
+                              }}
+                            >
+                              {dayObj.dayNumber}
+                            </span>
+
+                            {hasLeaves && (
+                              <span
+                                style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  color: 'var(--primary-600)',
+                                  background: 'var(--primary-50)',
+                                  padding: '1px 5px',
+                                  borderRadius: '8px',
+                                }}
+                              >
+                                {dayLeaves.length}
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+
+                          {/* Continuous Spanning Event Tracks */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                            {visibleSlots.map((leave, slotIdx) => {
+                              if (!leave) {
+                                // Spacer keeps subsequent slots horizontally aligned across all days
+                                return <div key={`spacer-${slotIdx}`} style={{ height: '21px' }} />;
+                              }
+
+                              const isRange = leave.startDate !== leave.endDate;
+                              const isStart = leave.startDate === dayObj.dateString || colIdx === 0;
+                              const isEnd = leave.endDate === dayObj.dateString || colIdx === 6;
+
+                              const conf = LEAVE_TYPE_CONFIG[leave.leaveType] || {};
+                              const pillColor = conf.pillBg || '#6366F1';
+                              const bgColor = conf.bg || '#EEF2FF';
+                              const textColor = conf.color || '#4F46E5';
+
+                              return (
+                                <div
+                                  key={`${leave.id}-${dayObj.dateString}-${slotIdx}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLeaveItem(leave);
+                                  }}
+                                  style={{
+                                    height: '21px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    fontSize: '0.675rem',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    background: bgColor,
+                                    color: textColor,
+                                    // Seamless continuous ribbon connection:
+                                    borderRadius: !isRange
+                                      ? '4px'
+                                      : isStart && isEnd
+                                      ? '4px'
+                                      : isStart
+                                      ? '4px 0 0 4px'
+                                      : isEnd
+                                      ? '0 4px 4px 0'
+                                      : '0',
+                                    borderLeft: (!isRange || isStart) ? `3px solid ${pillColor}` : 'none',
+                                    borderRight: (!isRange || isEnd) ? `1px solid ${conf.border || pillColor + '40'}` : 'none',
+                                    borderTop: `1px solid ${conf.border || pillColor + '25'}`,
+                                    borderBottom: `1px solid ${conf.border || pillColor + '25'}`,
+                                    marginLeft: isRange && !isStart ? '-5px' : '0',
+                                    marginRight: isRange && !isEnd ? '-5px' : '0',
+                                    paddingLeft: isRange && !isStart ? '5px' : '4px',
+                                    paddingRight: isRange && !isEnd ? '5px' : '4px',
+                                    zIndex: isStart ? 3 : 2,
+                                    transition: 'opacity 0.15s ease',
+                                  }}
+                                  title={`${leave.personnelName} (${leave.leaveType}): ${leave.startDate} ถึง ${leave.endDate} (${leave.totalDays} วัน)`}
+                                >
+                                  {isStart ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                                      <span
+                                        style={{
+                                          width: '5px',
+                                          height: '5px',
+                                          borderRadius: '50%',
+                                          background: pillColor,
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>
+                                        {leave.leaveType} {leave.personnelName}
+                                      </span>
+                                      {isRange && (
+                                        <span style={{ fontSize: '0.6rem', opacity: 0.8, flexShrink: 0, marginLeft: 'auto' }}>
+                                          ({leave.totalDays}ว.)
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : isEnd ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.85, width: '100%' }}>
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.625rem' }}>
+                                        {leave.personnelName}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.65, fontSize: '0.6rem' }}>
+                                      ↔ {leave.personnelName}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {extraCount > 0 && (
+                              <div
+                                style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  color: 'var(--primary-600)',
+                                  background: 'var(--primary-50)',
+                                  borderRadius: '3px',
+                                  padding: '1px 4px',
+                                  textAlign: 'center',
+                                  marginTop: 'auto',
+                                }}
+                              >
+                                +{extraCount} อื่นๆ
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
