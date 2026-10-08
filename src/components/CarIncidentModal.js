@@ -198,6 +198,7 @@ export default function CarIncidentModal({
   const [activeTab, setActiveTab] = useState('part1'); // 'part1', 'part2', 'part3', 'part4', 'notes'
   const [showNcImportModal, setShowNcImportModal] = useState(false);
   const [ncSearchQuery, setNcSearchQuery] = useState('');
+  const [ncYearFilter, setNcYearFilter] = useState('ALL');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [searchPersonnelKeyword, setSearchPersonnelKeyword] = useState('');
@@ -358,11 +359,10 @@ export default function CarIncidentModal({
   // Handle NC Import from IA Report
   const handleImportFromNc = (audit) => {
     if (!audit) return;
-    if (audit.auditYear || audit.fiscalYear) {
-      setFiscalYear(String(audit.auditYear || audit.fiscalYear));
-    }
-    setTopic(audit.topic || IMS_AUDIT_TOPICS[0]);
-    setStandard(audit.isoStandard || audit.standard || IMS_STANDARDS[0]);
+    const targetYr = String(audit.auditYear || audit.fiscalYear || audit.year || '2568');
+    setFiscalYear(targetYr);
+    setTopic(audit.topic || IMS_AUDIT_TOPICS[0] || '');
+    setStandard(audit.isoStandard || audit.standard || IMS_STANDARDS[1] || 'ISO 9001:2015');
     setClauses(audit.clauses || audit.clause || '');
     setDescription(audit.findings || audit.description || '');
     setSourceAuditId(audit.id);
@@ -381,6 +381,15 @@ export default function CarIncidentModal({
     // Populate Requestees from Auditees
     if (Array.isArray(audit.auditees) && audit.auditees.length > 0) {
       setRequestees(audit.auditees.map((a) => ({ id: a.id || '', name: a.name || '', email: a.email || '', department: a.department || '' })));
+    } else if (audit.auditee1Name || audit.auditeeDepartment) {
+      setRequestees([
+        {
+          id: audit.auditee1Id || '1',
+          name: audit.auditee1Name || audit.auditeeDepartment,
+          email: audit.auditee1Email || '',
+          department: audit.auditeeDepartment || '',
+        },
+      ]);
     }
 
     setShowNcImportModal(false);
@@ -2724,9 +2733,49 @@ export default function CarIncidentModal({
               </button>
             </div>
 
-            {/* Search filter for NC audits */}
-            <div style={{ padding: '0.75rem 1.25rem 0', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-              <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+            {/* Year filter & Search filter for NC audits */}
+            <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {/* Year Filter Pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>
+                  ปีงบประมาณ:
+                </span>
+                {(() => {
+                  const yearsSet = new Set(['ALL', '2569', '2568']);
+                  (availableNcAudits || []).forEach((a) => {
+                    const yr = String(a.auditYear || a.fiscalYear || a.year || '');
+                    if (yr) yearsSet.add(yr);
+                  });
+                  const yearsArr = Array.from(yearsSet);
+
+                  return yearsArr.map((yr) => {
+                    const isSelected = ncYearFilter === yr;
+                    return (
+                      <button
+                        key={yr}
+                        type="button"
+                        onClick={() => setNcYearFilter(yr)}
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          padding: '2px 10px',
+                          borderRadius: '12px',
+                          border: `1px solid ${isSelected ? '#0D9488' : '#CBD5E1'}`,
+                          background: isSelected ? '#0D9488' : '#FFFFFF',
+                          color: isSelected ? '#FFFFFF' : '#475569',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {yr === 'ALL' ? 'ทั้งหมด (All Years)' : `ปี ${yr}`}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Search Bar */}
+              <div style={{ position: 'relative' }}>
                 <Search
                   size={15}
                   style={{
@@ -2739,7 +2788,7 @@ export default function CarIncidentModal({
                 />
                 <input
                   type="text"
-                  placeholder="ค้นหารหัสตรวจ, หัวข้อตรวจ, หรือข้อบกพร่อง..."
+                  placeholder="ค้นหารหัสตรวจ, หัวข้อตรวจ, ข้อกำหนด, ผู้ตรวจ หรือข้อบกพร่อง..."
                   value={ncSearchQuery}
                   onChange={(e) => setNcSearchQuery(e.target.value)}
                   style={{
@@ -2757,13 +2806,19 @@ export default function CarIncidentModal({
             <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
               {(() => {
                 const filtered = (availableNcAudits || []).filter((audit) => {
+                  const auditYr = String(audit.auditYear || audit.fiscalYear || audit.year || '');
+                  if (ncYearFilter !== 'ALL' && auditYr !== ncYearFilter) return false;
                   if (!ncSearchQuery.trim()) return true;
                   const q = ncSearchQuery.toLowerCase();
                   const matchDoc = (audit.docNumber || audit.auditCode || audit.id || '').toLowerCase().includes(q);
                   const matchTopic = (audit.topic || '').toLowerCase().includes(q);
                   const matchFindings = (audit.findings || audit.description || '').toLowerCase().includes(q);
                   const matchClauses = (audit.clauses || audit.clause || '').toLowerCase().includes(q);
-                  return matchDoc || matchTopic || matchFindings || matchClauses;
+                  const matchAuditor =
+                    (Array.isArray(audit.auditors) && audit.auditors.some((a) => (a.name || '').toLowerCase().includes(q))) ||
+                    (audit.auditor1Name || '').toLowerCase().includes(q) ||
+                    (audit.auditor2Name || '').toLowerCase().includes(q);
+                  return matchDoc || matchTopic || matchFindings || matchClauses || matchAuditor;
                 });
 
                 if (filtered.length > 0) {
@@ -2814,7 +2869,7 @@ export default function CarIncidentModal({
                                 <span style={{ fontWeight: 800, color: '#0D9488', fontSize: '0.875rem' }}>
                                   {audit.docNumber || audit.auditCode || audit.id}
                                 </span>
-                                {audit.auditYear && (
+                                {(audit.auditYear || audit.fiscalYear) && (
                                   <span
                                     style={{
                                       fontSize: '0.725rem',
@@ -2825,10 +2880,10 @@ export default function CarIncidentModal({
                                       borderRadius: '4px',
                                     }}
                                   >
-                                    ปี {audit.auditYear}
+                                    ปี {audit.auditYear || audit.fiscalYear}
                                   </span>
                                 )}
-                                {audit.isoStandard && (
+                                {(audit.isoStandard || audit.standard) && (
                                   <span
                                     style={{
                                       fontSize: '0.725rem',
@@ -2838,7 +2893,7 @@ export default function CarIncidentModal({
                                       borderRadius: '4px',
                                     }}
                                   >
-                                    {audit.isoStandard}
+                                    {audit.isoStandard || audit.standard}
                                   </span>
                                 )}
                               </div>
@@ -2894,10 +2949,10 @@ export default function CarIncidentModal({
                   <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2.5rem 1rem' }}>
                     <AlertCircle size={32} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#64748B' }}>
-                      ไม่พบรายงานการตรวจที่มีผลเป็น NC
+                      ไม่พบรายงานการตรวจที่มีผลเป็น NC {ncYearFilter !== 'ALL' ? `(ประจำปี ${ncYearFilter})` : ''}
                     </div>
                     <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                      รายงานที่มีผลเป็น C (สอดคล้อง) หรือ OFI จะไม่ปรากฏในรายการนี้
+                      ลองเลือกปีงบประมาณอื่น หรือค้นหาด้วยคำสำคัญ
                     </div>
                   </div>
                 );

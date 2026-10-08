@@ -145,27 +145,39 @@ export default function CarIncidentHubPage() {
     return Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
   }, [carIncidents, iaAudits]);
 
-  // NC Audits available for import in the current fiscal year (เฉพาะที่ผู้ใช้เป็นผู้ตรวจติดตาม และตรวจพบ NC ในปีงบประมาณเดียวกัน)
+  // Role Checks
+  const isDCC = useMemo(() => {
+    return isDccUser(currentUser, currentPersonnel, yearlyConfig);
+  }, [currentUser, currentPersonnel, yearlyConfig]);
+
+  const isDeputy = useMemo(() => {
+    return isDeputyDirectorUser(currentUser, currentPersonnel, isAdmin);
+  }, [currentUser, currentPersonnel, isAdmin]);
+
+  // NC Audits available for import across all fiscal years (with duplicate CAR check and role support)
   const availableNcAudits = useMemo(() => {
     const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
     const personId = currentPersonnel?.id;
+    const currentName = (currentPersonnel?.name || currentUser?.displayName || '').trim();
 
     return iaAudits
       .filter((a) => {
-        // 1. Same Fiscal Year
-        const isSameYear = selectedYear === 'ALL' || String(a.auditYear || a.fiscalYear) === String(selectedYear);
-        if (!isSameYear) return false;
-
-        // 2. Result must be NC
+        // 1. Result must be NC (Non-Conformity)
+        const res = String(a.result || a.resultType || a.overallResult || '').toUpperCase().trim();
         const isNC =
-          a.result === 'NC' ||
-          a.resultType === 'NC' ||
-          a.overallResult === 'NC' ||
-          (typeof a.findings === 'string' && a.findings.includes('NC'));
+          res === 'NC' ||
+          (typeof a.findings === 'string' && a.findings.toUpperCase().includes('NC')) ||
+          (typeof a.resultDetails === 'string' && a.resultDetails.toUpperCase().includes('NC'));
         if (!isNC) return false;
 
-        // 3. User must be in ผู้ตรวจติดตาม (Auditors) of this IA report
-        const currentName = (currentPersonnel?.name || currentUser?.displayName || '').trim();
+        // 2. Permission check: Admin, DCC, Lead Auditor can see and import all NCs
+        const isPrivileged =
+          isAdmin ||
+          isDCC ||
+          isLeadAuditorUser(currentUser, currentPersonnel, yearlyConfig);
+        if (isPrivileged) return true;
+
+        // 3. Other users: must be an auditor or creator of this report
         const isUserAuditor =
           (Array.isArray(a.auditors) &&
             a.auditors.some(
@@ -177,11 +189,10 @@ export default function CarIncidentHubPage() {
           (userEmail && a.auditor1Email && a.auditor1Email.toLowerCase().trim() === userEmail) ||
           (userEmail && a.auditor2Email && a.auditor2Email.toLowerCase().trim() === userEmail) ||
           (personId && (a.auditor1Id === personId || a.auditor2Id === personId)) ||
-          (currentName && (a.auditor1Name?.trim() === currentName || a.auditor2Name?.trim() === currentName));
+          (currentName && (a.auditor1Name?.trim() === currentName || a.auditor2Name?.trim() === currentName)) ||
+          (userEmail && a.createdByEmail && a.createdByEmail.toLowerCase().trim() === userEmail);
 
-        if (!isUserAuditor) return false;
-
-        return true;
+        return Boolean(isUserAuditor);
       })
       .map((audit) => {
         // Check for duplicate: has a CAR already been created for this NC?
@@ -196,21 +207,13 @@ export default function CarIncidentHubPage() {
 
         return {
           ...audit,
+          auditYear: String(audit.auditYear || audit.fiscalYear || audit.year || '2568'),
           isAlreadyImported: Boolean(existingCar),
           existingCarDocNumber: existingCar?.docNumber || null,
           existingCarId: existingCar?.id || null,
         };
       });
-  }, [iaAudits, selectedYear, currentUser, currentPersonnel, isAdmin, carIncidents]);
-
-  // Role Checks
-  const isDCC = useMemo(() => {
-    return isDccUser(currentUser, currentPersonnel, yearlyConfig);
-  }, [currentUser, currentPersonnel, yearlyConfig]);
-
-  const isDeputy = useMemo(() => {
-    return isDeputyDirectorUser(currentUser, currentPersonnel, isAdmin);
-  }, [currentUser, currentPersonnel, isAdmin]);
+  }, [iaAudits, currentUser, currentPersonnel, isAdmin, isDCC, yearlyConfig, carIncidents]);
 
   // Filtered List
   const filteredList = useMemo(() => {
