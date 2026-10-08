@@ -44,7 +44,6 @@ import { useModal } from '@/context/ModalContext';
 export default function AdminActivityLogsTab({ logs = [], currentAdmin = null }) {
   const { showAlert, showConfirm } = useModal();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedDateRange, setSelectedDateRange] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
@@ -117,16 +116,6 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
       if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
         return false;
       }
-      // Status filter
-      if (selectedStatus !== 'ALL') {
-        const itemStatus = (item.status || '').toUpperCase();
-        if (selectedStatus === 'SUCCESS' && !['SUCCESS', 'DELIVERED'].includes(itemStatus))
-          return false;
-        if (selectedStatus === 'SIMULATED' && !['SIMULATED', 'SANDBOX'].includes(itemStatus))
-          return false;
-        if (selectedStatus === 'FAILED' && !['FAILED', 'ERROR'].includes(itemStatus))
-          return false;
-      }
       // Date Range filter
       if (!isWithinDateRange(item.loggedAt || item.timestamp, selectedDateRange)) {
         return false;
@@ -161,7 +150,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
       }
       return true;
     });
-  }, [logs, selectedCategory, selectedStatus, selectedDateRange, searchTerm]);
+  }, [logs, selectedCategory, selectedDateRange, searchTerm]);
 
   // Extended Domain Statistics Calculation
   const stats = useMemo(() => {
@@ -739,19 +728,6 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
               <option value="30D">30 วันล่าสุด</option>
             </select>
 
-            {/* Status Dropdown */}
-            <select
-              className="form-select"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{ width: 'auto', fontSize: '0.825rem', padding: '0.35rem 0.65rem' }}
-            >
-              <option value="ALL">ทุกสถานะ</option>
-              <option value="SUCCESS">🟢 สำเร็จ (Success / Delivered)</option>
-              <option value="SIMULATED">🟡 จำลอง (Simulated / Sandbox)</option>
-              <option value="FAILED">🔴 ล้มเหลว (Failed / Error)</option>
-            </select>
-
             {/* Export CSV Button */}
             <button
               onClick={handleExportCsv}
@@ -859,21 +835,29 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                   fontWeight: 600,
                 }}
               >
-                <th style={{ padding: '0.85rem 1rem', width: '135px' }}>หมวดหมู่</th>
-                <th style={{ padding: '0.85rem 1rem' }}>กิจกรรม / รายละเอียดการกระทำ</th>
-                <th style={{ padding: '0.85rem 1rem', width: '170px' }}>ผู้ดำเนินการ</th>
-                <th style={{ padding: '0.85rem 1rem', width: '110px' }}>สถานะ</th>
-                <th style={{ padding: '0.85rem 1rem', width: '155px' }}>วัน-เวลา</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'right', width: '75px' }}>ดูข้อมูล</th>
+                <th style={{ padding: '0.85rem 1rem', width: '130px' }}>หมวดหมู่</th>
+                <th style={{ padding: '0.85rem 1rem' }}>กิจกรรม / รายละเอียด</th>
+                <th style={{ padding: '0.85rem 1rem', width: '210px' }}>ข้อมูลเป้าหมาย / วัตถุ</th>
+                <th style={{ padding: '0.85rem 1rem', width: '175px' }}>ผู้ดำเนินการ</th>
+                <th style={{ padding: '0.85rem 1rem', width: '150px' }}>วัน-เวลา</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'right', width: '70px' }}>ดูข้อมูล</th>
               </tr>
             </thead>
             <tbody>
               {filteredLogs.map((item) => {
                 const meta = getCategoryMeta(item.category);
-                const isSuccess = ['SUCCESS', 'DELIVERED'].includes((item.status || '').toUpperCase());
-                const isSimulated = ['SIMULATED', 'SANDBOX'].includes((item.status || '').toUpperCase());
                 const actorName = item.actorName || item.actor?.name || 'ระบบ';
                 const actorEmail = item.actorEmail || item.actor?.email || '';
+                const targetDisplay =
+                  item.targetName ||
+                  item.target?.name ||
+                  item.targetId ||
+                  item.metadata?.path ||
+                  item.metadata?.title ||
+                  '';
+                const targetType =
+                  item.target?.type ||
+                  (item.category === ACTIVITY_CATEGORIES.PAGE_VIEW ? 'PAGE' : null);
 
                 return (
                   <tr
@@ -887,7 +871,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                     }
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {/* Category */}
+                    {/* 1. Category */}
                     <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
                       <span
                         style={{
@@ -909,7 +893,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                       </span>
                     </td>
 
-                    {/* Title & Details & Target */}
+                    {/* 2. Action & Title & Details */}
                     <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         {item.action && (
@@ -946,22 +930,6 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                         </div>
                       )}
 
-                      {item.targetName && (
-                        <div
-                          style={{
-                            fontSize: '0.7rem',
-                            color: 'var(--primary-700)',
-                            marginTop: '2px',
-                            display: 'inline-block',
-                            background: 'var(--primary-50)',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                          }}
-                        >
-                          🎯 {item.targetName}
-                        </div>
-                      )}
-
                       {item.metadata?.error && (
                         <div
                           style={{
@@ -976,7 +944,63 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                       )}
                     </td>
 
-                    {/* Actor */}
+                    {/* 3. Target Entity / Resource (New Column) */}
+                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
+                      {targetDisplay ? (
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              color: 'var(--text-primary)',
+                              fontSize: '0.8rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ color: 'var(--primary-600)' }}>🎯</span>
+                            <span style={{ wordBreak: 'break-word' }}>{targetDisplay}</span>
+                          </div>
+                          {(targetType || item.metadata?.fiscalYear || item.metadata?.department) && (
+                            <div
+                              style={{
+                                fontSize: '0.675rem',
+                                color: 'var(--text-muted)',
+                                marginTop: '2px',
+                                display: 'flex',
+                                gap: '4px',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {targetType && (
+                                <span
+                                  style={{
+                                    background: '#F1F5F9',
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    fontFamily: 'monospace',
+                                    color: '#475569',
+                                  }}
+                                >
+                                  {targetType}
+                                </span>
+                              )}
+                              {item.metadata?.fiscalYear && (
+                                <span>ปีงบฯ {item.metadata.fiscalYear}</span>
+                              )}
+                              {item.metadata?.department && (
+                                <span>• ฝ่าย{item.metadata.department}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                      )}
+                    </td>
+
+                    {/* 4. Actor */}
                     <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
                       <div
                         style={{
@@ -1012,23 +1036,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                       )}
                     </td>
 
-                    {/* Status */}
-                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
-                      <span
-                        className={`badge ${
-                          isSuccess
-                            ? 'badge-active'
-                            : isSimulated
-                            ? 'badge-user'
-                            : 'badge-resigned'
-                        }`}
-                        style={{ fontSize: '0.675rem', whiteSpace: 'nowrap' }}
-                      >
-                        {isSuccess ? '🟢 สำเร็จ' : isSimulated ? '🟡 โหมดจำลอง' : '🔴 ล้มเหลว'}
-                      </span>
-                    </td>
-
-                    {/* Time */}
+                    {/* 5. Date & Time */}
                     <td
                       style={{
                         padding: '0.75rem 1rem',
@@ -1041,7 +1049,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                       {formatDateTime(item.loggedAt || item.timestamp)}
                     </td>
 
-                    {/* Inspect Action */}
+                    {/* 6. Inspect Action */}
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', verticalAlign: 'top' }}>
                       <button
                         onClick={() => setSelectedLogForDetail(item)}
