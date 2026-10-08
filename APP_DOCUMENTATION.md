@@ -1,305 +1,328 @@
-# 🏢 คู่มือและเอกสารสถาปัตยกรรมระบบ ICIT Workspace (Comprehensive System Specification & Architecture)
+# 🏢 คู่มือและเอกสารสถาปัตยกรรมระบบ ICIT Workspace ฉบับสมบูรณ์ (Comprehensive Enterprise Specification & Architecture)
 **สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)**
 
 ---
 
 ## 📑 สารบัญ (Table of Contents)
-1. [บทนำและภาพรวมระบบ (Executive Summary & Overview)](#1-บทนำและภาพรวมระบบ-executive-summary--overview)
-2. [เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)](#2-เทคโนโลยีและสถาปัตยกรรม-tech-stack--architecture)
-3. [รายละเอียดฟังก์ชันทุกโมดูล (Complete Module Inventory)](#3-รายละเอียดฟังก์ชันทุกโมดูล-complete-module-inventory)
-   - [3.1 Portal & Service Hub (หน้าหลักและพอร์ทัลบริการ)](#31-portal--service-hub-หน้าหลักและพอร์ทัลบริการ-)
-   - [3.2 User Profile & Digital Identity (ข้อมูลส่วนตัวและสิทธิ์)](#32-user-profile--digital-identity-ข้อมูลส่วนตัวและสิทธิ์-profile)
-   - [3.3 Organization & Executives (โครงสร้างองค์กรและผู้บริหาร)](#33-organization--executives-โครงสร้างองค์กรและผู้บริหาร-organization)
-   - [3.4 Time & Attendance (บันทึกเวลา WFH/OT และ Workflow 4 ขั้นตอน)](#34-time--attendance-บันทึกเวลา-wfhot-และ-workflow-4-ขั้นตอน-time-attendance)
-   - [3.5 Leave Management (ระบบบริหารจัดการวันลาและปฏิทิน)](#35-leave-management-ระบบบริหารจัดการวันลาและปฏิทิน-leave)
-   - [3.6 JD Hub (แบบบรรยายลักษณะงานและสมรรถนะ)](#36-jd-hub-แบบบรรยายลักษณะงานและสมรรถนะ-jd-hub)
-   - [3.7 IDP Hub (แผนพัฒนารายบุคคล Need Analysis & Action Plan)](#37-idp-hub-แผนพัฒนารายบุคคล-need-analysis--action-plan-idp-hub)
-   - [3.8 Digital Skill Map (แผนที่ทักษะดิจิทัลและ AI Radar)](#38-digital-skill-map-แผนที่ทักษะดิจิทัลและ-ai-radar-skill-map)
-   - [3.9 KM Hub (คลังความรู้และการอบรมมาตรฐาน)](#39-km-hub-คลังความรู้และการอบรมมาตรฐาน-km-hub)
-   - [3.10 IMS Quality Hub (ระบบบริหารคุณภาพ ISO 9001 / ISO 27001 / ISO 20000-1)](#310-ims-quality-hub-ระบบบริหารคุณภาพ-iso-9001--iso-27001--iso-20000-1-ims)
-   - [3.11 TQA Quality Hub (ระบบติดตาม OFI รางวัลคุณภาพแห่งชาติ)](#311-tqa-quality-hub-ระบบติดตาม-ofi-รางวัลคุณภาพแห่งชาติ-tqa)
-   - [3.12 Admin Console & System Audit Logs (ระบบบริหารจัดการและประวัติกิจกรรม)](#312-admin-console--system-audit-logs-ระบบบริหารจัดการและประวัติกิจกรรม-admin)
-4. [โครงสร้างฐานข้อมูล (Database Schema & Collections)](#4-โครงสร้างฐานข้อมูล-database-schema--collections)
-5. [การรักษาความปลอดภัยและสิทธิ์การเข้าถึง (Security & RBAC)](#5-การรักษาความปลอดภัยและสิทธิ์การเข้าถึง-security--rbac)
-6. [Serverless API & External Integrations (API และการเชื่อมต่อภายนอก)](#6-serverless-api--external-integrations-api-และการเชื่อมต่อภายนอก)
-7. [คู่มือการติดตั้งและบำรุงรักษา (Deployment & Maintenance Guide)](#7-คู่มือการติดตั้งและบำรุงรักษา-deployment--maintenance-guide)
+1. [บทนำและวิสัยทัศน์ระบบ (Executive Summary & Vision)](#1-บทนำและวิสัยทัศน์ระบบ-executive-summary--vision)
+2. [สถาปัตยกรรมเชิงเทคนิค (Technical Architecture & Technology Stack)](#2-สถาปัตยกรรมเชิงเทคนิค-technical-architecture--technology-stack)
+3. [โครงสร้างหน้าจอและโมดูลระบบทั้งหมด (Complete Module & Route Specifications)](#3-โครงสร้างหน้าจอและโมดูลระบบทั้งหมด-complete-module--route-specifications)
+   - [3.1 พอร์ทัลกลางและศูนย์บริการดิจิทัล (Portal & Service Hub: `/`)](#31-พอร์ทัลกลางและศูนย์บริการดิจิทัล-portal--service-hub-)
+   - [3.2 ข้อมูลส่วนตัวและตัวตนดิจิทัล (User Profile & Identity: `/profile`)](#32-ข้อมูลส่วนตัวและตัวตนดิจิทัล-user-profile--identity-profile)
+   - [3.3 โครงสร้างองค์กรและทำเนียบผู้บริหาร (Organization & Executives: `/organization`)](#33-โครงสร้างองค์กรและทำเนียบผู้บริหาร-organization--executives-organization)
+   - [3.4 ระบบบันทึกเวลาปฏิบัติงานและคำขอ WFH/OT (Time & Attendance: `/time-attendance`)](#34-ระบบบันทึกเวลาปฏิบัติงานและคำขอ-wfhot-time--attendance-time-attendance)
+   - [3.5 ระบบบริหารจัดการวันลาและปฏิทินกลาง (Leave Management & Quota: `/leave`)](#35-ระบบบริหารจัดการวันลาและปฏิทินกลาง-leave-management--quota-leave)
+   - [3.6 ศูนย์จัดการแบบบรรยายลักษณะงาน (JD Hub: `/jd-hub`)](#36-ศูนย์จัดการแบบบรรยายลักษณะงาน-jd-hub-jd-hub)
+   - [3.7 แผนพัฒนารายบุคคลและการวิเคราะห์ช่องว่างทักษะ (IDP Hub: `/idp-hub`)](#37-แผนพัฒนารายบุคคลและการวิเคราะห์ช่องว่างทักษะ-idp-hub-idp-hub)
+     - *3.7.1 การประเมินสมรรถนะ Core & Functional Competency*
+     - *3.7.2 เมทริกซ์วิเคราะห์ความต้องการพัฒนา (Need Analysis: `/idp-hub/need-analysis`)*
+     - *3.7.3 แผนปฏิบัติการพัฒนา 4 ไตรมาส (4-Quarter Action Plan: `/idp-hub/action-plan`)*
+     - *3.7.4 การเชื่อมโยงยุทธศาสตร์องค์กรและ OKRs (Strategic Alignment)*
+   - [3.8 แผนที่ทักษะดิจิทัลและการวิเคราะห์ด้วย AI (Digital Skill Map: `/skill-map`)](#38-แผนที่ทักษะดิจิทัลและการวิเคราะห์ด้วย-ai-digital-skill-map-skill-map)
+   - [3.9 ศูนย์จัดการความรู้และการอบรม (KM Hub: `/km-hub`)](#39-ศูนย์จัดการความรู้และการอบรม-km-hub-km-hub)
+   - [3.10 ศูนย์บริหารคุณภาพมาตรฐานสากล (IMS Quality Hub: `/ims`)](#310-ศูนย์บริหารคุณภาพมาตรฐานสากล-ims-quality-hub-ims)
+     - *3.10.1 การตรวจติดตามภายใน (Internal Audit: `/ims/audit`)*
+     - *3.10.2 การจัดการข้อบกพร่องและอุบัติการณ์ (CAR & Incident: `/ims/car-incident`)*
+     - *3.10.3 ข้อเสนอแนะเพื่อการปรับปรุงระบบ (OFI Hub: `/ims/ofi-hub`)*
+   - [3.11 ศูนย์ติดตามผลการดำเนินงานรางวัลคุณภาพแห่งชาติ (TQA Hub: `/tqa`)](#311-ศูนย์ติดตามผลการดำเนินงานรางวัลคุณภาพแห่งชาติ-tqa-hub-tqa)
+   - [3.12 ศูนย์ควบคุมสำหรับผู้ดูแลระบบและระบบตรวจสอบย้อนหลัง (Admin Console & Audit Trail: `/admin`)](#312-ศูนย์ควบคุมสำหรับผู้ดูแลระบบและระบบตรวจสอบย้อนหลัง-admin-console--audit-trail-admin)
+4. [โครงสร้างฐานข้อมูล Cloud Firestore (Database Schema & Collections)](#4-โครงสร้างฐานข้อมูล-cloud-firestore-database-schema--collections)
+5. [ระบบความมั่นคงปลอดภัยและการควบคุมสิทธิ์ (Security & Role-Based Access Control)](#5-ระบบความมั่นคงปลอดภัยและการควบคุมสิทธิ์-security--role-based-access-control)
+6. [สถาปัตยกรรม Serverless API และบริการภายนอก (APIs & Integrations)](#6-สถาปัตยกรรม-serverless-api-และบริการภายนอก-apis--integrations)
+7. [การเพิ่มประสิทธิภาพและการจัดเก็บข้อมูลแคช (Performance & In-Memory Caching)](#7-การเพิ่มประสิทธิภาพและการจัดเก็บข้อมูลแคช-performance--in-memory-caching)
+8. [คู่มือการติดตั้ง ใช้งาน และบำรุงรักษาระบบ (Deployment & Operations Guide)](#8-คู่มือการติดตั้ง-ใช้งาน-และบำรุงรักษาระบบ-deployment--operations-guide)
 
 ---
 
-## 1. บทนำและภาพรวมระบบ (Executive Summary & Overview)
+## 1. บทนำและวิสัยทัศน์ระบบ (Executive Summary & Vision)
 
-**ICIT Workspace** เป็นระบบดิจิทัลพอร์ทัลและแพลตฟอร์มบริหารจัดการองค์กรแบบบูรณาการ (Enterprise Digital Workspace & ERP-Light) ที่พัฒนาขึ้นสำหรับ **สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)** โดยมีจุดมุ่งหมายเพื่อ:
+**ICIT Workspace** ได้รับการพัฒนาขึ้นเพื่อเป็นแพลตฟอร์มดิจิทัลระดับองค์กร (Integrated Digital Workspace & Lightweight Enterprise Resource Planning) สำหรับ **สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)** โดยรวมศูนย์กระบวนการทำงานหลัก 4 มิติเข้าไว้ด้วยกันอย่างไร้รอยต่อ:
 
-1. **Digital Transformation**: รวมศูนย์บริการและระบบงานภายในไว้ในที่เดียว (Single Source of Truth)
-2. **Workforce Development & Talent Management**: พัฒนาศักยภาพบุคลากรผ่านระบบ JD Hub, IDP Hub, Digital Skill Map และ KM Hub
-3. **Quality & Compliance Assurance**: ขับเคลื่อนและติดตามมาตรฐานสากล ISO 9001:2015, ISO/IEC 27001:2022, ISO/IEC 20000-1:2018 และเกณฑ์คุณภาพแห่งชาติ (TQA)
-4. **Audit Trail & Governance**: บันทึกและตรวจสอบประวัติการใช้งานทุกมิติแบบ Real-Time ตามหลักธรรมาภิบาลข้อมูลและ PDPA
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                          ICIT WORKSPACE PLATFORM                       │
+├───────────────────┬────────────────────┬───────────────────┬───────────┤
+│ 1. บริการองค์กร   │ 2. พัฒนาทรัพยากร   │ 3. คุณภาพมาตรฐาน  │ 4. ธรรมา  │
+│    (Portal & Ops) │    มนุษย์ (HRD)    │    สากล (Quality) │    ภิบาล  │
+│ • Single Sign-On  │ • JD Hub & CEFR B1 │ • ISO 9001:2015   │ • Audit   │
+│ • WFH/OT 4 ขั้นตอน│ • IDP Need Analysis│ • ISO 27001:2022  │   Logs 19 │
+│ • ระบบใบลาและโควตา│ • 4-Q Action Plan  │ • ISO 20000-1     │   หมวดหมู่│
+│ • บัตรดิจิทัล     │ • AI Skill Radar   │ • TQA Categories  │ • PDPA    │
+│ • โครงสร้างฝ่ายงาน│ • KM & อบรม        │ • CAR & OFI Hub   │ • Reports │
+└───────────────────┴────────────────────┴───────────────────┴───────────┘
+```
 
 ---
 
-## 2. เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)
+## 2. สถาปัตยกรรมเชิงเทคนิค (Technical Architecture & Technology Stack)
+
+### 2.1 สถาปัตยกรรมภาพรวม (System Architecture)
 
 ```mermaid
 graph TD
-    Client[Next.js 16 Client / React 19] --> Router[Next.js App Router]
-    Router --> AuthContext[AuthContext Google OAuth & Whitelist]
-    Router --> Pages[12 Core Modules / Routes]
+    User([ผู้ใช้งาน / ผู้บริหาร / Admin]) -->|Google OAuth @cit.kmutnb.ac.th| NextApp[Next.js 16 Client App]
     
-    Pages --> Services[Optimized Client Services / In-Memory Cache]
-    Pages --> API[Next.js API Routes]
-    
-    Services --> Firestore[(Firebase Cloud Firestore)]
-    Services --> LocalStore[(Local Storage Fallback Cache)]
-    
-    API --> GAS[Google Apps Script Email Gateway]
-    API --> GeminiAI[Google AI / Gemini Model]
-    
-    Pages --> AuditEngine[Activity Logging Engine / 19 Categories]
-    AuditEngine --> Firestore
+    subgraph Frontend Application
+        NextApp --> Layout[Root Layout & PageViewTracker]
+        Layout --> AuthCtx[AuthContext & Whitelist Filter]
+        Layout --> ModalCtx[Global Modal Context Alert/Confirm]
+        
+        NextApp --> PortalModule[Portal & Services /]
+        NextApp --> ProfileModule[Profile & Identity /profile]
+        NextApp --> AttendanceModule[Time Attendance & Leave /time-attendance]
+        NextApp --> TalentModule[JD Hub, IDP & Skill Map]
+        NextApp --> QualityModule[IMS & TQA Hubs /ims /tqa]
+        NextApp --> KMModule[KM Hub /km-hub]
+        NextApp --> AdminModule[Admin Console & Audit Trail /admin]
+    end
+
+    subgraph Core Services & Data Layer
+        PortalModule & ProfileModule & AttendanceModule & TalentModule & QualityModule & KMModule & AdminModule --> Services[Client Services Engine with In-Memory Cache]
+        Services --> AuditLogger[Activity Log Service / Debounced Tracker]
+        
+        Services <--> Firestore[(Google Cloud Firestore Database)]
+        Services <--> LocalCache[(Browser LocalStorage Fallback)]
+    end
+
+    subgraph Serverless Backend & External Gateways
+        NextApp -->|POST /api/email/send| EmailApi[Next.js API Route /api/email]
+        NextApp -->|POST /api/attendance/notify| AttendanceApi[Next.js API Route /api/attendance/notify]
+        NextApp -->|POST /api/skill-map/ai-analyze| GeminiApi[Google Gemini AI API]
+        
+        EmailApi & AttendanceApi --> GAS[Google Apps Script Email Gateway]
+        GAS --> MailServer[KMUTNB Google Workspace Mail]
+    end
 ```
 
-| Layer | เทคโนโลยี / เครื่องมือ | รายละเอียด |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **Next.js 16.3.4 (App Router)** | React 19, Server & Client Components, Turbopack |
-| **Styling & Design System** | **Vanilla CSS + Glassmorphism** | Theme Tokens, Responsive Grid, Smooth Animations, No Tailwind bloat |
-| **Authentication** | **Firebase Authentication & Google OAuth** | Whitelist Enforcement, Organization Email Validation, Personnel Mapping |
-| **Database** | **Firebase Cloud Firestore** | NoSQL Document Database, Real-time Snapshot Listeners, Security Rules |
-| **Icons & UI Assets** | **Lucide React** | Feather-based lightweight scalable vector icons |
-| **Email Gateway** | **Google Apps Script Webhook** | Server-side Email Dispatch, HTML Templates, Multi-step Approval Alerts |
-| **AI Integration** | **Gemini 2.5 / 3.7 API** | Digital Skill Radar analysis & Development recommendations |
+### 2.2 เทคโนโลยีหลัก (Core Stack)
+- **Framework**: Next.js 16.3.4 (App Router Architecture, React 19, Turbopack)
+- **UI & Styling System**: Custom Vanilla CSS พร้อม Glassmorphism Token Architecture (ปราศจากความซับซ้อนและข้อจำกัดของ Tailwind)
+- **Icons**: Lucide React (ไอคอนมาตรฐาน Feather-based สำหรับ Enterprise UI)
+- **Database Engine**: Firebase Cloud Firestore (NoSQL, Real-time Snapshot Synchronization)
+- **Authentication**: Firebase Authentication เชื่อมต่อ Google Workspace OAuth
+- **AI Integration**: Google Gemini AI API สำหรับการประเมินทักษะดิจิทัลและแนะนำแผนพัฒนา
+- **Email Gateway**: Google Apps Script Webhook สำหรับการส่งอีเมลแจ้งเตือน Workflow และใบเตือน CAR
 
 ---
 
-## 3. รายละเอียดฟังก์ชันทุกโมดูล (Complete Module Inventory)
+## 3. โครงสร้างหน้าจอและโมดูลระบบทั้งหมด (Complete Module & Route Specifications)
 
-### 3.1 Portal & Service Hub (หน้าหลักและพอร์ทัลบริการ: `/`)
-- **Main Hero Banner**: ต้อนรับผู้ใช้งาน แสดงข้อมูลสรุปส่วนบุคคล วันที่ และทางลัดการใช้งาน
-- **Service Cards Directory**: รายการการ์ดบริการดิจิทัลทั้งหมดของสำนักฯ จัดหมวดหมู่ พร้อมระบบค้นหาและเปิดใช้งานทันที
-- **Personnel Quick Search**: ค้นหาบุคลากรสำนักฯ ตามชื่อ ฝ่ายงาน ตำแหน่ง หรือเบอร์โทรศัพท์ภายใน
-- **Announcements & Broadcast**: ข่าวสาร ประชาสัมพันธ์ และกิจกรรมสำคัญของสำนักคอมพิวเตอร์ฯ
-- **Direct Navigation Links**: เมนูลัดเข้าสู่ระบบย่อยทั้งหมด
+### 3.1 พอร์ทัลกลางและศูนย์บริการดิจิทัล (Portal & Service Hub: `/`)
+- **Hero Identity Card**: การ์ดแสดงข้อมูลผู้ใช้ สังกัดฝ่ายงาน วันที่ และสถิติด่วน
+- **Directory Service Cards**: คลังการ์ดบริการดิจิทัลของสำนักฯ แบ่งหมวดหมู่ (ระบบบริการสารสนเทศ, บริการเครือข่าย, ระบบบริหารงานบุคคล, คุณภาพและการเรียนรู้) รองรับทั้งลิงก์ภายในและภายนอก
+- **Personnel Fast Finder**: ค้นหารายชื่อบุคลากรสำนักฯ แสดงตำแหน่ง, ฝ่ายงาน, เบอร์โทรศัพท์ภายใน, และอีเมล
+- **Announcements & Banner Feed**: ประกาศและข่าวสารสำคัญภายในสำนักฯ
 
-### 3.2 User Profile & Digital Identity (ข้อมูลส่วนตัวและสิทธิ์: `/profile`)
-- **Digital ID Card**: แสดงบัตรประจำตัวดิจิทัล, รูปถ่าย, ชื่อภาษาไทย/อังกฤษ, ตำแหน่ง, ฝ่ายงาน และสถานะการปฏิบัติงาน
-- **Assigned Job Description (JD)**: ดูรายละเอียดภาระงาน JD ที่ได้รับมอบหมาย พร้อมสถานะการกดรับทราบ (Confirmed)
-- **IDP & Competency Summary**: สรุปผลการประเมินสมรรถนะและ Action Plan ล่าสุด
-- **Leave Balance & Quota**: สรุปโควตาวันลาคงเหลือ สถิติการลาแต่ละประเภท และประวัติการลา
-- **Time & Attendance Summary**: ประวัติการขอลงเวลา WFH และทำงานล่วงเวลา (OT)
+### 3.2 ข้อมูลส่วนตัวและตัวตนดิจิทัล (User Profile & Identity: `/profile`)
+- **Digital Employee ID**: บัตรประจำตัวบุคลากรดิจิทัล แสดงรูปถ่าย, ตำแหน่ง, รหัสประจำตัว, ฝ่ายงาน, และ QR สำหรับติดต่อ
+- **Assigned Job Description (JD)**: ดูรายละเอียดแบบบรรยายลักษณะงานที่ได้รับมอบหมาย พร้อมสถานะการกดรับทราบ (Confirmed / Pending)
+- **Personal IDP & Competency**: สรุปคะแนนการประเมินสมรรถนะตนเองและหัวหน้างาน พร้อมสถานะ Action Plan
+- **Leave Balance Dashboard**: สถิติโควตาวันลาคงเหลือประจำปีงบประมาณ แยกตามประเภทวันลา
+- **Attendance History Log**: ประวัติการขอลงเวลา WFH และการทำงานล่วงเวลา (OT)
 
-### 3.3 Organization & Executives (โครงสร้างองค์กรและผู้บริหาร: `/organization`)
-- **Executive Board Directory**: แสดงทำเนียบผู้บริหาร ผู้อำนวยการสำนักฯ และรองผู้อำนวยการแต่ละฝ่าย
-- **Organizational Structure**: แผนผังโครงสร้างการบริหารงาน ภารกิจหลัก และรายชื่อหัวหน้าฝ่าย
-- **Department Personnel Roster**: รายชื่อบุคลากรประจำแต่ละฝ่ายงาน พร้อมช่องทางติดต่อภายใน
+### 3.3 โครงสร้างองค์กรและทำเนียบผู้บริหาร (Organization & Executives: `/organization`)
+- **Executive Board Directorate**: ทำเนียบผู้บริหาร ผู้อำนวยการสำนักฯ และรองผู้อำนวยการ พร้อมตำแหน่งหน้าที่และช่องทางติดต่อ
+- **Organizational Structure Chart**: โครงสร้างการแบ่งส่วนงาน ภารกิจหน้าที่ของแต่ละฝ่าย
+- **Department Roster**: รายนามบุคลากรและหัวหน้าฝ่ายงาน
 
-### 3.4 Time & Attendance (บันทึกเวลา WFH/OT และ Workflow 4 ขั้นตอน: `/time-attendance`)
-- **Clock-In / WFH / OT Request**: ยื่นคำขอลงเวลาย้อนหลัง, ปฏิบัติงานนอกสถานที่ (WFH), หรือทำงานล่วงเวลา (OT)
-- **4-Step Approval Workflow Engine**:
-  1. *เจ้าหน้าที่ผู้ยื่นคำขอ (Applicant)*
-  2. *พยาน / ผู้ร่วมปฏิบัติงาน (Witness)*
-  3. *หัวหน้าฝ่ายงาน (Department Head)*
-  4. *รองผู้อำนวยการ / ผู้อำนวยการสำนักฯ (Executive)*
-- **Automated Email Notifications**: แจ้งเตือนผู้มีอำนาจอนุมัติในแต่ละระดับผ่านอีเมลอัตโนมัติ
-- **Monthly Summary & Status Tracking**: สรุปจำนวนชั่วโมง OT, วัน WFH, และปฏิทินการปฏิบัติงานรายบุคคล
+### 3.4 ระบบบันทึกเวลาปฏิบัติงานและคำขอ WFH/OT (Time & Attendance: `/time-attendance`)
+- **คำขอปฏิบัติงาน (Request Submission)**: ขอลงเวลาย้อนหลัง, ปฏิบัติงานนอกสถานที่ (WFH), และปฏิบัติงานนอกเวลาทำการ (OT)
+- **Workflow อนุมัติ 4 ขั้นตอน (4-Step Verification Workflow)**:
+  1. *เจ้าหน้าที่ผู้ยื่นคำขอ (Applicant Submission)*
+  2. *พยานร่วมปฏิบัติงาน (Witness Confirmation)*
+  3. *หัวหน้าฝ่ายงาน (Department Head Approval)*
+  4. *รองผู้อำนวยการ / ผู้อำนวยการ (Executive Final Approval)*
+- **ระบบอีเมลแจ้งเตือนอัตโนมัติ**: ส่งอีเมลแจ้งเตือนผู้มีสิทธิ์อนุมัติตามลำดับขั้นแบบเรียลไทม์
+- **ปฏิทินและสถิติรายเดือน**: สรุปจำนวนชั่วโมง OT รวม และวันปฏิบัติงาน WFH
 
-### 3.5 Leave Management (ระบบบริหารจัดการวันลาและปฏิทิน: `/leave`)
-- **Leave Request Submission**: ยื่นใบลาออนไลน์ (ลาพักผ่อน, ลากิจ, ลาป่วย, ลาคลอด, ลาอุปสมบท ฯลฯ)
-- **Automatic Quota Deduction**: คำนวณวันลาคงเหลืออัตโนมัติตามประเภทและปีงบประมาณ
-- **Interactive Leave Calendar**: ปฏิทินวันลาส่วนกลาง แสดงสถานะวันลาของบุคลากรในสำนักฯ แบบเรียลไทม์
-- **Approval Workflow**: หัวหน้าฝ่ายงานและผู้บริหารตรวจสอบและอนุมัติใบลา
+### 3.5 ระบบบริหารจัดการวันลาและปฏิทินกลาง (Leave Management & Quota: `/leave`)
+- **การยื่นใบลาออนไลน์**: รองรับการลาพักผ่อน, ลากิจส่วนตัว, ลาป่วย, ลาคลอดบุตร, ลาอุปสมบท ฯลฯ
+- **ระบบคำนวณโควตาอัตโนมัติ**: หักลบจำนวนวันลาคงเหลือตามปีงบประมาณและเงื่อนไขการยกยอดวันลา
+- **ปฏิทินวันลาสำนักฯ (Interactive Leave Calendar)**: ปฏิทินกลางแสดงสถานะการลาของบุคลากรในสำนักฯ เพื่อป้องกันการลาทับซ้อนและวางแผนกำลังคน
+- **ระบบพิมพ์และออกรายงาน (Leave Report Export)**: จัดทำรายงานสรุปวันลาประจำปีสำหรับงานบุคคล
 
-### 3.6 JD Hub (แบบบรรยายลักษณะงานและสมรรถนะ: `/jd-hub`)
-- **Job Description Repository**: คลังแบบบรรยายลักษณะงานมาตรฐานของทุกตำแหน่งในสำนักฯ
-- **Required Qualifications & Standards**:
-  - วุฒิการศึกษาและประสบการณ์
-  - **ทักษะภาษาอังกฤษ (English Proficiency)**: กำหนดมาตรฐานเริ่มต้นที่ *ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1*
-  - ทักษะดิจิทัลและเครื่องมือที่ต้องใช้ในการปฏิบัติงาน
-- **Digital Confirmation Workflow**: บุคลากรกดปุ่มยืนยันรับทราบ JD ประจำปี พร้อมระบบบันทึก Audit Trail
-- **Window Configuration**: ผู้ดูแลระบบกำหนดช่วงเวลาเปิด-ปิดการปรับปรุง JD ประจำปีงบประมาณ
+### 3.6 ศูนย์จัดการแบบบรรยายลักษณะงาน (JD Hub: `/jd-hub`)
+- **คลังมาตรฐานแบบบรรยายลักษณะงาน**: รวบรวม JD ของทุกตำแหน่งในสำนักฯ
+- **เกณฑ์คุณสมบัติและมาตรฐานสมรรถนะ**:
+  - วุฒิการศึกษาและประสบการณ์ขั้นต่ำ
+  - **ทักษะภาษาอังกฤษ (English Requirement)**: กำหนดเกณฑ์เริ่มต้นที่ *"ระดับเริ่มต้น หรือ CEFR ไม่ต่ำกว่า B1"*
+  - ทักษะดิจิทัลและเครื่องมือเฉพาะตำแหน่ง
+  - หน้าที่ความรับผิดชอบหลักและผลสัมฤทธิ์ของงาน (KPIs)
+- **ระบบกดยืนยันรับทราบ (Digital Acknowledgment)**: บุคลากรกดยืนยันรับทราบ JD ประจำปีงบประมาณ พร้อมบันทึกประวัติความยินยอม
+- **ระบบควบคุมช่วงเวลากรอก (Window Period Configuration)**: ผู้ดูแลระบบสามารถเปิด-ปิดรอบการปรับปรุง JD ตามปีงบประมาณ
 
-### 3.7 IDP Hub (แผนพัฒนารายบุคคล: `/idp-hub`, `/idp-hub/need-analysis`, `/idp-hub/action-plan`)
-- **Individual Development Plan (IDP)**: ประเมินสมรรถนะหลัก (Core Competency) และสมรรถนะตามสายงาน (Functional Competency)
-- **Need Analysis Matrix**: วิเคราะห์ช่องว่างความรู้และทักษะ (Skill Gaps) เทียบกับระดับเป้าหมายที่คาดหวัง
-- **4-Quarter Action Plan**: จัดทำแผนพัฒนาตนเอง 4 ไตรมาส (อบรม, OJT, แลกเปลี่ยนเรียนรู้, ศึกษาดูงาน)
-- **Strategic OKRs Alignment**: เชื่อมโยงแผนพัฒนาบุคลากรเข้ากับเป้าหมายยุทธศาสตร์ของสำนักฯ
+### 3.7 แผนพัฒนารายบุคคลและการวิเคราะห์ช่องว่างทักษะ (IDP Hub: `/idp-hub`)
 
-### 3.8 Digital Skill Map (แผนที่ทักษะดิจิทัลและ AI Radar: `/skill-map`)
-- **4 Work Group Assessments**: แบบประเมินทักษะดิจิทัล 4 กลุ่มงาน (วิชาการคอมพิวเตอร์, วิศวกรรม, บริหารงานทั่วไป, บริการเทคโนโลยี)
-- **Skill Proficiency Levels (0-5)**: ประเมินระดับความเชี่ยวชาญตั้งแต่ระดับ 0 (ไม่มีทักษะ) ถึงระดับ 5 (ผู้เชี่ยวชาญ/ถ่ายทอดได้)
-- **Interactive Radar Chart**: กราฟเรดาร์แสดงจุดแข็งและจุดที่ต้องพัฒนา
-- **AI Skill Analysis (`/api/skill-map/ai-analyze`)**: วิเคราะห์ผลและแนะนำคอร์สอบรมที่เหมาะสมผ่าน AI
-- **Fiscal Year Cloning**: คัดลอกและปรับโครงสร้างเกณฑ์ทักษะข้ามปีงบประมาณ
+#### 3.7.1 การประเมินสมรรถนะ Core & Functional Competency
+- ประเมินสมรรถนะหลัก (Core Competency 5 ด้าน) และสมรรถนะตามสายงาน (Functional Competency)
+- เปรียบเทียบคะแนนการประเมินตนเอง (Self Assessment) และคะแนนจากหัวหน้าฝ่ายงาน (Supervisor Assessment)
 
-### 3.9 KM Hub (คลังความรู้และการอบรมมาตรฐาน: `/km-hub`)
-- **Knowledge Asset Repository**: คลังรวบรวมองค์ความรู้ งานวิจัย คู่มือปฏิบัติงาน และสรุปการฝึกอบรม
-- **Document Guidelines & Form Templates**: ระบบจัดการแบบฟอร์มเอกสาร KM สำหรับบุคลากร
-- **Categorized Search**: ค้นหาตามหมวดหมู่ คำสำคัญ ฝ่ายงาน และปีงบประมาณ
-- **Approval & Publication**: ตรวจสอบความถูกต้องของบทความก่อนเผยแพร่สู่สาธารณะ
+#### 3.7.2 เมทริกซ์วิเคราะห์ความต้องการพัฒนา (Need Analysis: `/idp-hub/need-analysis`)
+- คำนวณค่าช่องว่างสมรรถนะ (Gap = Target Level - Actual Level)
+- จัดลำดับความสำคัญของหัวข้อที่ต้องได้รับการพัฒนาเร่งด่วน
 
-### 3.10 IMS Quality Hub (ระบบบริหารคุณภาพสากล: `/ims`, `/ims/audit`, `/ims/car-incident`, `/ims/ofi-hub`)
-- **Integrated Standards Dashboard**: ติดตามสถานะ 3 มาตรฐานสากล:
-  - *ISO 9001:2015* (ระบบบริหารงานคุณภาพ)
-  - *ISO/IEC 27001:2022* (ระบบบริหารความมั่นคงปลอดภัยสารสนเทศ)
-  - *ISO/IEC 20000-1:2018* (ระบบบริหารจัดการบริการสารสนเทศ)
-- **Internal Audit Module (`/ims/audit`)**: บันทึกแผนการตรวจประเมิน กำหนดการ และผลการตรวจติดตามภายใน
-- **CAR & Incident Management (`/ims/car-incident`)**: ออกใบคำขอแก้ไขข้อบกพร่อง (CAR) และจัดการอุบัติการณ์ความปลอดภัย
-- **Opportunity for Improvement (OFI Hub) (`/ims/ofi-hub`)**: บันทึกและติดตามข้อเสนอแนะเพื่อการปรับปรุงระบบอย่างต่อเนื่อง
+#### 3.7.3 แผนปฏิบัติการพัฒนา 4 ไตรมาส (4-Quarter Action Plan: `/idp-hub/action-plan`)
+- กำหนดเป้าหมายการพัฒนาตามโมเดล 70:20:10 (On-the-job Training, Coaching/Mentoring, Formal Training)
+- วางแผนกิจกรรมและงบประมาณตลอด 4 ไตรมาส (Q1 - Q4)
+- **ระบบพิมพ์แผนปฏิบัติการ (Official Printable Format)**: จัดรูปแบบเอกสารราชการพร้อมลายเซ็น
 
-### 3.11 TQA Quality Hub (ระบบติดตาม OFI รางวัลคุณภาพแห่งชาติ: `/tqa`, `/tqa/ofi-tracking`)
-- **7 TQA Categories Tracking**: ติดตามการดำเนินงานปรับปรุงตามหมวด 1-7 ของเกณฑ์รางวัลคุณภาพแห่งชาติ (TQA)
-- **3-Round Progress Monitoring**: บันทึกและประเมินผลการดำเนินงาน 3 รอบ (รอบ 3 เดือน, 6 เดือน, 9 เดือน)
-- **Feedback Report Management**: จัดเก็บและแนบเอกสาร Feedback Report และหลักฐานประกอบ
+#### 3.7.4 การเชื่อมโยงยุทธศาสตร์องค์กรและ OKRs (Strategic Alignment)
+- กำหนดค่า OKRs ยุทธศาสตร์ของสำนักฯ ให้สอดรับกับแผนพัฒนารายบุคคล
 
-### 3.12 Admin Console & System Audit Logs (ระบบบริหารจัดการและประวัติกิจกรรม: `/admin`)
-- **Personnel Directory Administration**: เพิ่ม ลบ แก้ไข ข้อมูลบุคลากร กำหนดบทบาท (Admin, User) และสถานะการลาออก
-- **Department & Executive Hierarchy Management**: ปรับแต่งฝ่ายงาน ลากจัดเรียงลำดับผู้บริหาร (Drag & Drop)
-- **Portal Link Customization**: จัดการการ์ดบริการและลิงก์ภายนอกบนหน้าแรก
-- **Audit Trail & Activity Log Engine (19 หมวดหมู่)**:
+### 3.8 แผนที่ทักษะดิจิทัลและการวิเคราะห์ด้วย AI (Digital Skill Map: `/skill-map`)
+- **แบบประเมินทักษะดิจิทัล 4 กลุ่มงาน**:
+  1. *กลุ่มงานวิชาการคอมพิวเตอร์ (Computer Technical Group)*
+  2. *กลุ่มงานวิศวกรรมและโครงสร้างพื้นฐาน (Engineering Group)*
+  3. *กลุ่มงานบริหารและงานทั่วไป (Administration Group)*
+  4. *กลุ่มงานบริการเทคโนโลยีและสื่อการเรียนรู้ (Media & Tech Support Group)*
+- **ระดับความสามารถ 0 - 5 (Proficiency Scale)**: กำหนดนิยามพฤติกรรมบ่งชี้ในแต่ละระดับอย่างชัดเจน
+- **Interactive Radar Chart & AI Skill Analysis**: แสดงผลกราฟเรดาร์ทักษะ พร้อมระบบ AI (Google Gemini) ช่วยวิเคราะห์จุดแข็งและแนะนำหลักสูตรอบรมที่ตรงจุด
+- **Organizational Skill Analytics**: มุมมองภาพรวมระดับองค์กรและระดับฝ่ายงาน
+- **ระบบคัดลอกเกณฑ์ข้ามปี (Fiscal Year Clone)**: สะดวกในการสร้างโครงสร้างเกณฑ์ปีงบประมาณใหม่
+
+### 3.9 ศูนย์จัดการความรู้และการอบรม (KM Hub: `/km-hub`)
+- **คลังองค์ความรู้ดิจิทัล**: รวบรวมรายงานสรุปการฝึกอบรม, เอกสารงานวิจัย, นวัตกรรม, และคู่มือปฏิบัติงาน
+- **ระบบแนบไฟล์และลิงก์ Google Drive**: เชื่อมโยงไฟล์เอกสารประกอบอย่างเป็นระบบ
+- **แบบฟอร์มเอกสารมาตรฐาน (KM Document Template Config)**: ดาวน์โหลดแบบฟอร์มรายงาน KM ทางการ
+
+### 3.10 ศูนย์บริหารคุณภาพมาตรฐานสากล (IMS Quality Hub: `/ims`)
+- **แดชบอร์ดติดตาม 3 มาตรฐานสากล**:
+  - 🌐 **ISO 9001:2015**: ระบบบริหารงานคุณภาพ
+  - 🔒 **ISO/IEC 27001:2022**: ระบบบริหารความมั่นคงปลอดภัยสารสนเทศ
+  - 🛠️ **ISO/IEC 20000-1:2018**: ระบบบริหารจัดการบริการสารสนเทศ
+- **ระบบตรวจติดตามภายใน (Internal Audit: `/ims/audit`)**: กำหนดแผนการตรวจ, หัวข้อการตรวจ, ผู้ตรวจประเมิน (Auditors) และบันทึกผลการตรวจ
+- **ระบบจัดการใบคำขอแก้ไขข้อบกพร่องและอุบัติการณ์ (CAR & Incident: `/ims/car-incident`)**:
+  - ออกใบคำขอ CAR พร้อมระบุมาตรฐานและข้อกำหนดที่เกี่ยวข้อง
+  - วิเคราะห์สาเหตุที่แท้จริง (Root Cause Analysis - 5 Whys / 8D)
+  - ติดตามแผนการแก้ไขและมาตรการป้องกันการเกิดซ้ำ
+  - ระบบแจ้งเตือนกำหนดเวลาแก้ไข (CAR Reminder)
+- **ระบบข้อเสนอแนะเพื่อการปรับปรุง (OFI Hub: `/ims/ofi-hub`)**: บันทึกข้อเสนอแนะเพื่อการพัฒนาคุณภาพอย่างต่อเนื่อง
+
+### 3.11 ศูนย์ติดตามผลการดำเนินงานรางวัลคุณภาพแห่งชาติ (TQA Hub: `/tqa`)
+- **ระบบติดตาม OFI ตามหมวด 1 - 7 ของเกณฑ์ TQA**:
+  - *หมวด 1 การนำองค์กร (Leadership)*
+  - *หมวด 2 กลยุทธ์ (Strategy)*
+  - *หมวด 3 ลูกค้า (Customers)*
+  - *หมวด 4 การวัด การวิเคราะห์ และการจัดการความรู้ (Measurement, Analysis & KM)*
+  - *หมวด 5 บุคลากร (Workforce)*
+  - *หมวด 6 การปฏิบัติการ (Operations)*
+  - *หมวด 7 ผลลัพธ์ (Results)*
+- **การติดตามผล 3 รอบ (3-Round Tracking)**: บันทึกความก้าวหน้าและการบรรลุเป้าหมายรอบ 3 เดือน, 6 เดือน และ 9 เดือน
+- **Feedback Report Repository**: แนบและเปิดอ่านรายงานผลการประเมิน TQA Feedback Report
+
+### 3.12 ศูนย์ควบคุมสำหรับผู้ดูแลระบบและระบบตรวจสอบย้อนหลัง (Admin Console & Audit Trail: `/admin`)
+- **ระบบจัดการบุคลากร (Personnel Management)**: เพิ่ม แก้ไข ลบ นำเข้าข้อมูล กำหนดสิทธิ์ Role (Admin, User) และสถานะการพ้นสภาพ
+- **ระบบจัดโครงสร้างฝ่ายงานและผู้บริหาร**: แก้ไขข้อมูลฝ่ายงาน และจัดเรียงลำดับผู้บริหารด้วยระบบ Drag & Drop
+- **ระบบจัดการการ์ดบริการ Portal**: ปรับแต่งลิงก์ ไอคอน และหมวดหมู่หน้าแรก
+- **ระบบบันทึกประวัติกิจกรรมและตรวจสอบย้อนหลัง (Audit Trail Engine)**:
+  - บันทึกกิจกรรมครอบคลุม **19 หมวดหมู่หลัก** ทั่วทั้งระบบ
   - **Dynamic KPI Dashboard**: การ์ดสถิติ 7 มิติหลักที่คำนวณสดตามช่วงเวลา
-  - **Custom Date Range Filter Modal**: กรองประวัติตามช่วงเวลายอดนิยม หรือระบุวันที่เริ่มต้น-สิ้นสุดอิสระ
-  - **Refined Data Table**: ตารางแสดงหมวดหมู่, กิจกรรม, ข้อมูลเป้าหมาย (Target Entity), ผู้ดำเนินการ, และวัน-เวลา
-  - **Multi-Format Export**: ส่งออกไฟล์ **CSV** (พร้อม UTF-8 BOM สำหรับภาษาไทยใน Excel) และ **JSON**
-  - **Log Inspector Modal**: ดู JSON Payload และ Metadata เชิงลึก
+  - **Date Range Filter Modal**: กรองประวัติตามช่วงเวลายอดนิยม หรือระบุวันที่เริ่มต้น-สิ้นสุดอิสระ
+  - **Refined Data Table**: แสดงหมวดหมู่, กิจกรรม, ข้อมูลเป้าหมาย (Target Entity), ผู้ดำเนินการ, และวัน-เวลา
+  - **Multi-Format Export**: ส่งออก **CSV** (ฝัง UTF-8 BOM สำหรับภาษาไทยใน Excel) และ **JSON**
+  - **Log Inspector Modal**: ดูรายละเอียด JSON Payload และ Metadata เชิงลึก
 
 ---
 
-## 4. โครงสร้างฐานข้อมูล (Database Schema & Collections)
+## 4. โครงสร้างฐานข้อมูล Cloud Firestore (Database Schema & Collections)
 
-ระบบใช้ **Google Cloud Firestore** เป็นฐานข้อมูลหลัก ประกอบด้วย 26 คอลเลกชัน:
+ระบบใช้ **Google Cloud Firestore** เป็นฐานข้อมูล NoSQL หลัก ประกอบด้วย **26 คอลเลกชัน**:
 
-| คอลเลกชัน (Collection) | วัตถุประสงค์ (Purpose) | เอกสารหลัก / Key Fields |
-| :--- | :--- | :--- |
-| `personnels` | ข้อมูลบุคลากรทั้งหมด | `id, name, email, role, department, position, status, phone` |
-| `executives` | ทำเนียบผู้บริหารสำนักฯ | `id, name, position, role, order, image, email` |
-| `departments` | โครงสร้างฝ่ายงานและภารกิจ | `id, name, head, description, missions, order` |
-| `portal_cards` | การ์ดบริการดิจิทัลหน้า Portal | `id, title, description, url, icon, category, order, isExternal` |
-| `time_attendance_records` | บันทึกการลงเวลา WFH/OT | `id, applicant, witness, approver, status, steps, hours, dates` |
-| `time_attendance_configs` | การตั้งค่ารอบการขอลงเวลา | `fiscalYear, isOpen, deadline, rules` |
-| `leave_records` | ประวัติการยื่นใบลา | `id, personnelEmail, leaveType, startDate, endDate, days, status` |
-| `leave_quotas` | สิทธิ์และโควตาวันลาประจำปี | `personnelEmail_year, annualQuota, carriedOver, used, balance` |
-| `jd_records` | แบบบรรยายลักษณะงาน (JD) | `id, title, department, qualifications, duties, confirmedBy, status` |
-| `jd_configs` | การตั้งค่ารอบการกรอก JD | `fiscalYear, isOpen, startDate, endDate` |
-| `idp_records` | ผลการประเมินสมรรถนะ IDP | `id, personnelEmail, fiscalYear, coreScores, functionalScores, status` |
-| `idp_configs` | เกณฑ์สมรรถนะ Core & Functional | `fiscalYear, coreCompetencies, functionalCompetencies` |
-| `idp_strategy_configs` | ยุทธศาสตร์และ OKRs องค์กร | `fiscalYear, strategies, okrs, strategicGoals` |
-| `idp_action_plans` | แผนปฏิบัติการพัฒนา 4 ไตรมาส | `id, personnelEmail, fiscalYear, goals, activities, quarters, status` |
-| `skill_map_assessments` | แบบประเมินทักษะดิจิทัล | `id, personnelEmail, fiscalYear, groupKey, skillScores, radarData` |
-| `skill_map_configs` | โครงสร้างเกณฑ์ทักษะดิจิทัล | `fiscalYear, groups, skills, levelDefinitions` |
-| `km_records` | องค์ความรู้และการฝึกอบรม | `id, title, category, author, content, attachments, status` |
-| `km_doc_configs` | คู่มือและแบบฟอร์มเอกสาร KM | `id, formName, templateDoc, guidelines, updatedAt` |
-| `ims_audits` | การตรวจติดตามภายใน IMS | `id, standard, auditDate, auditor, department, findings, status` |
-| `ims_cars` | ใบคำขอแก้ไขข้อบกพร่อง (CAR) | `id, carNumber, standard, issueDescription, rootCause, actionPlan, status` |
-| `ims_ofis` | ข้อเสนอแนะปรับปรุง IMS (OFI) | `id, standard, department, proposal, implementation, status` |
-| `tqa_ofis` | การติดตาม OFI รางวัลคุณภาพ TQA | `id, category, subCategory, round1, round2, round3, status, reportUrl` |
-| `tqa_report_configs` | การตั้งค่า Feedback Report TQA | `fiscalYear, reportFile, evaluationCriteria` |
-| `activity_logs` | ประวัติกิจกรรมและ Audit Trail | `id, category, action, title, details, actor, target, metadata, loggedAt` |
-| `email_logs` | ประวัติการส่งอีเมลแจ้งเตือน | `id, to, subject, template, status, triggeredBy, sentAt` |
-| `system_configs` | การตั้งค่าระบบและความปลอดภัย | `key, value, updatedAt, updatedBy` |
-
----
-
-## 5. การรักษาความปลอดภัยและสิทธิ์การเข้าถึง (Security & RBAC)
-
-### 5.1 ระบบการยืนยันตัวตน (Authentication)
-- ล็อกอินด้วยบัญชีอีเมลสถาบัน **Google Workspace (`@cit.kmutnb.ac.th` หรือ `@kmutnb.ac.th`)**
-- ระบบตรวจสอบ **Whitelist บุคลากร**: หากไม่มีชื่อในฐานข้อมูล `personnels` หรือมีสถานะ "ลาออก (Resigned)" ระบบจะไม่อนุญาตให้เข้าใช้งาน และบันทึกกิจกรรม `LOGIN_REJECTED` ลง Audit Trail ทันที
-
-### 5.2 ระดับสิทธิ์การใช้งาน (Role-Based Access Control)
-1. **General User (บุคลากรทั่วไป)**:
-   - ดูข้อมูลและสิทธิ์ส่วนบุคคล, ยื่นคำขอลงเวลา/วันลา, ประเมิน IDP และ Skill Map, ยืนยัน JD ของตนเอง, อ่านและส่งบทความ KM
-2. **Approver / Head of Department (หัวหน้าฝ่ายงาน)**:
-   - ตรวจสอบและอนุมัติคำขอลงเวลา WFH/OT, อนุมัติวันลา, ประเมิน IDP บุคลากรในฝ่ายงาน
-3. **Executive / Director (ผู้บริหารสำนักฯ)**:
-   - อนุมัติคำขอในขั้นตอนสุดท้าย, ดู Dashboard ภาพรวมทุกมิติ, ติดตาม TQA และ IMS
-4. **Administrator (ผู้ดูแลระบบ)**:
-   - จัดการบุคลากร, ปรับแต่งฝ่ายงาน, จัดเรียงผู้บริหาร, ตั้งค่ารอบเวลา, ตรวจสอบ Audit Trail และส่งออกข้อมูล
-
-### 5.3 Firestore Security Rules (`firestore.rules`)
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Helper Functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    function getUserEmail() {
-      return request.auth.token.email.lower();
-    }
-    function isAdmin() {
-      return isAuthenticated() && (
-        getUserEmail() in ['tiawongsombat@gmail.com', 'prasertsak.t@cit.kmutnb.ac.th'] ||
-        request.auth.token.role == 'admin'
-      );
-    }
-
-    // Activity & Audit Logs
-    match /activity_logs/{logId} {
-      allow read: if true;
-      allow create: if true; // อนุญาตให้บันทึก login failure / page views
-      allow update, delete: if isAdmin();
-    }
-
-    // Personnel & Master Data
-    match /personnels/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Other core collections...
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
-    }
-  }
-}
+```
+Firestore Root
+├── personnels/                  # ข้อมูลบุคลากรทั้งหมด
+├── executives/                  # ทำเนียบผู้บริหารสำนักฯ
+├── departments/                 # โครงสร้างฝ่ายงานและภารกิจ
+├── portal_cards/                # การ์ดบริการหน้า Portal
+├── time_attendance_records/     # คำขอลงเวลา WFH/OT และประวัติการอนุมัติ 4 ขั้นตอน
+├── time_attendance_configs/     # การตั้งค่ารอบเวลา WFH/OT
+├── leave_records/               # ประวัติการยื่นใบลา
+├── leave_quotas/                # โควตาวันลาและสิทธิ์คงเหลือรายปี
+├── jd_records/                  # แบบบรรยายลักษณะงาน (JD)
+├── jd_configs/                  # รอบการกรอกและยืนยัน JD
+├── idp_records/                 # ผลการประเมินสมรรถนะ IDP
+├── idp_configs/                 # เกณฑ์ Competency Core & Functional
+├── idp_strategy_configs/        # ยุทธศาสตร์และเป้าหมาย OKRs องค์กร
+├── idp_action_plans/            # แผนปฏิบัติการพัฒนา 4 ไตรมาส
+├── skill_map_assessments/       # แบบประเมินทักษะดิจิทัลรายบุคคล
+├── skill_map_configs/           # โครงสร้างเกณฑ์ทักษะดิจิทัล 4 กลุ่มงาน
+├── km_records/                  # บทความองค์ความรู้และรายงานการอบรม
+├── km_doc_configs/              # คู่มือและแบบฟอร์มเอกสาร KM
+├── ims_audits/                  # บันทึกการตรวจติดตามภายใน IMS
+├── ims_cars/                    # ใบคำขอแก้ไขข้อบกพร่องและอุบัติการณ์ (CAR)
+├── ims_ofis/                    # ข้อเสนอแนะปรับปรุง IMS (OFI)
+├── tqa_ofis/                    # การติดตาม OFI หมวด 1-7 TQA
+├── tqa_report_configs/          # ไฟล์รายงานและเกณฑ์ Feedback TQA
+├── activity_logs/               # ประวัติกิจกรรมและ Audit Trail ทั่วทั้งระบบ
+├── email_logs/                  # ประวัติการจัดส่งอีเมลแจ้งเตือน
+└── system_configs/              # การตั้งค่าระบบและความปลอดภัยส่วนกลาง
 ```
 
 ---
 
-## 6. Serverless API & External Integrations
+## 5. ระบบความมั่นคงปลอดภัยและการควบคุมสิทธิ์ (Security & Role-Based Access Control)
 
-### 6.1 Email Gateway Service (`/api/email/send`, `/api/attendance/notify`)
-- เชื่อมต่อไปยัง **Google Apps Script Webhook** เพื่อส่งอีเมลแจ้งเตือนผ่านโครงสร้างพื้นฐานของ Google Workspace โดยไม่ต้องพึ่งพา SMTP ภายนอก
-- รองรับการส่งอีเมล HTML Template สวยงาม พร้อมปุ่มกดอนุมัติคำขอโดยตรง
+### 5.1 การยืนยันตัวตนและการตรวจสอบสิทธิ์ (Authentication & Whitelist)
+- ผู้ใช้งานต้องล็อกอินผ่าน **Google OAuth** ด้วยบัญชีอีเมลโดเมนสถาบัน
+- ระบบมี **Whitelist Guard**: ตรวจสอบว่าอีเมลของผู้ล็อกอินตรงกับรายชื่อในคอลเลกชัน `personnels` และสถานะไม่เป็น `RESIGNED` หรือไม่ หากไม่ตรง ระบบจะตัดสิทธิ์และบันทึก Log `LOGIN_REJECTED` ทันที
 
-### 6.2 AI Skill Assessment (`/api/skill-map/ai-analyze`)
-- รับข้อมูลคะแนนทักษะดิจิทัลของบุคลากร ส่งไปยัง Google AI API (Gemini) เพื่อวิเคราะห์จุดเด่น จุดที่ควรเสริม และแนะนำหลักสูตรการเรียนรู้ที่เหมาะสม
+### 5.2 ระดับบทบาทและสิทธิ์ (Role Hierarchy)
+| บทบาท (Role) | สิทธิ์ในการเข้าถึงและดำเนินการ |
+| :--- | :--- |
+| **Admin** | เข้าถึงทุกเมนู, จัดการบุคลากร, จัดเรียงผู้บริหาร, ตั้งค่าเกณฑ์ทุกระบบ, ล้างประวัติ Log, ส่งอีเมลทดสอบ |
+| **Executive** | อนุมัติขั้นสุดท้าย (Final Approval) ของ Time Attendance & Leave, ดูรายงานภาพรวมทุกมิติ, ติดตาม TQA/IMS |
+| **Head of Dept** | อนุมัติคำขอลงเวลา/วันลาของบุคลากรในฝ่าย, ประเมินคะแนน IDP บุคลากรในฝ่าย |
+| **Witness** | ตรวจสอบและลงนามรับรองการปฏิบัติงานในขั้นตอนที่ 2 ของ Time Attendance |
+| **User** | เข้าใช้งานเมนูทั่วไป, จัดการข้อมูลตนเอง, ยื่นคำขอ, ทำแบบประเมิน JD/IDP/Skill Map, ส่งบทความ KM |
 
 ---
 
-## 7. คู่มือการติดตั้งและบำรุงรักษา (Deployment & Maintenance Guide)
+## 6. สถาปัตยกรรม Serverless API และบริการภายนอก (APIs & Integrations)
 
-### 7.1 ข้อกำหนดของระบบ (Prerequisites)
-- **Node.js**: เวอร์ชัน `>= 20.x`
-- **NPM**: เวอร์ชัน `>= 10.x`
-- **Firebase Project**: บัญชี Google Cloud / Firebase ที่เปิดใช้งาน Firestore และ Firebase Auth
+### 6.1 Serverless Route Handlers (`src/app/api/`)
+1. **`/api/email/send` (POST)**:
+   - รับคำขอส่งอีเมลจากทุกโมดูล ส่งต่อให้ Google Apps Script Webhook
+   - บันทึกผลลัพธ์ลงคอลเลกชัน `email_logs`
+2. **`/api/attendance/notify` (POST)**:
+   - บริการส่งอีเมลแจ้งเตือนสำหรับ Workflow ลงเวลา 4 ขั้นตอน
+3. **`/api/skill-map/ai-analyze` (POST)**:
+   - รับคะแนนทักษะดิจิทัล ส่งวิเคราะห์ผ่าน Gemini AI เพื่อจัดทำบทวิเคราะห์และข้อเสนอแนะ
 
-### 7.2 การตั้งค่า Environment Variables (`.env.local`)
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-GAS_EMAIL_WEBHOOK_URL=https://script.google.com/macros/s/.../exec
-```
+### 6.2 Google Apps Script Email Gateway (`google-apps-script-email.gs`)
+- ใช้สิทธิ์ส่งเมลของ Google Workspace องค์กร ปลอดภัย เสถียร ไม่ติดสแปม และไม่ต้องตั้งค่า SMTP Server แยก
 
-### 7.3 การรันคำสั่งในการพัฒนาและ Build
+---
+
+## 7. การเพิ่มประสิทธิภาพและการจัดเก็บข้อมูลแคช (Performance & In-Memory Caching)
+
+1. **In-Memory Cache Layer**: Service ต่าง ๆ (เช่น `jdService`, `idpService`, `skillMapService`, `storageService`) มีระบบ Local Storage Cache สำหรับการอ่านข้อมูลซ้ำ ช่วยลดค่าใช้จ่ายและโควตา Firestore Reads ได้มากกว่า 80%
+2. **Smart Debounce Page View Tracking**: ฟังก์ชัน `logPageView` ใน `activityLogService.js` มีระบบ In-Memory Debounce 15 วินาทีต่อผู้ใช้ต่อเส้นทาง ป้องกันการยิง Firestore Writes ซ้ำซ้อนเมื่อผู้ใช้สลับหน้าอย่างรวดเร็ว
+3. **Optimized Build & Zero CSS Runtime**: ใช้ Vanilla CSS Glassmorphism และ Next.js 16 App Router ทำให้ความเร็วในการ Render หน้าเว็บเร็วในระดับสูงสุด และได้ขนาด Bundle ที่เล็กมาก
+
+---
+
+## 8. คู่มือการติดตั้ง ใช้งาน และบำรุงรักษาระบบ (Deployment & Operations Guide)
+
+### 8.1 การติดตั้งและรันในสภาพแวดล้อม Development
 ```bash
-# 1. ติดตั้ง Dependencies
+# 1. ติดตั้งแพ็กเกจที่จำเป็น
 npm install
 
-# 2. รัน Local Development Server
+# 2. เริ่มต้นรันเซิร์ฟเวอร์จำลองในเครื่อง
 npm run dev
 
-# 3. ตรวจสอบการ Build สำหรับ Production
+# 3. ตรวจสอบความถูกต้องของการ Build
 npm run build
-
-# 4. Deploy Firestore Security Rules
-firebase deploy --only firestore:rules
 ```
+
+### 8.2 การ Deploy ไปยัง Production
+1. เชื่อมต่อ Git Repository เข้ากับ **Vercel** หรือ **Node.js Cloud Server**
+2. ตั้งค่า Environment Variables ให้ครบถ้วน (`NEXT_PUBLIC_FIREBASE_*`, `GAS_EMAIL_WEBHOOK_URL`)
+3. Deploy Firestore Security Rules:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
 
 ---
 
-*เอกสารฉบับนี้จัดทำขึ้นสำหรับโครงการพัฒนาระบบสารสนเทศ ICIT Workspace โดย สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.*
+*เอกสารฉบับนี้จัดทำขึ้นและปรับปรุงล่าสุดเพื่อเป็นคู่มือมาตรฐานประจำระบบสารสนเทศ ICIT Workspace โดย สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.*
