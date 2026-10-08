@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏢 ICIT Workspace (สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.)
+> **Enterprise Digital Workspace & Integrated Organization Management Platform**  
+> *สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)*
 
-## Getting Started
+---
 
-First, run the development server:
+## 🌟 ภาพรวมระบบ (Overview)
+**ICIT Workspace** เป็นระบบดิจิทัลพอร์ทัลแบบครบวงจรที่รวมศูนย์บริการดิจิทัล, การบริหารทรัพยากรบุคคล (HR & Talent Management), การประเมินสมรรถนะและทักษะดิจิทัล, การบริหารจัดการความรู้ (KM), การตรวจติดตามคุณภาพและมาตรฐานสากล (ISO 9001 / ISO 27001 / ISO 20000-1 / TQA) พร้อมระบบบันทึกประวัติการใช้งานและ Audit Trail อัจฉริยะ 19 หมวดหมู่
+
+---
+
+## 📚 เอกสารกำกับระบบฉบับสมบูรณ์ (Documentation)
+
+- 📖 **[คู่มือและเอกสารสถาปัตยกรรมระบบทั้งแอปพลิเคชัน (Full System Documentation)](./APP_DOCUMENTATION.md)**: สารบัญและรายละเอียดครบทั้ง 12 โมดูล, โครงสร้างฐานข้อมูล 26 คอลเลกชัน, สิทธิ์ความปลอดภัย RBAC, และการเชื่อมต่อ API
+- 📋 **[เอกสารระบบบันทึกประวัติกิจกรรมและ Audit Trail (Activity Logs Specification)](./ACTIVITY_LOGS_SPECIFICATION.md)**: รายละเอียด 19 หมวดหมู่ Action Codes, โครงสร้าง Log Schema, Dynamic Dashboard Metrics, และ Date Range Filter
+
+---
+
+## 🚀 โมดูลและบริการหลัก (Core Modules)
+
+1. 🌐 **Portal & Directory (`/`)**: พอร์ทัลรวมลิงก์บริการดิจิทัล ค้นหาบุคลากร และทำเนียบบุคลากร
+2. 👤 **User Profile (`/profile`)**: บัตรดิจิทัลส่วนตัว ตรวจสอบ JD, IDP, โควตาวันลา และประวัติการลงเวลา
+3. 🏢 **Organization (`/organization`)**: แผนผังโครงสร้างฝ่ายงาน ภารกิจ และทำเนียบคณะผู้บริหาร
+4. ⏱️ **Time & Attendance (`/time-attendance`)**: ขอลงเวลาย้อนหลัง WFH และ OT พร้อม Workflow อนุมัติ 4 ขั้นตอน
+5. 📅 **Leave Management (`/leave`)**: ระบบยื่นใบลา คำนวณโควตาอัตโนมัติ และปฏิทินวันลาสำนักฯ
+6. 📄 **JD Hub (`/jd-hub`)**: แบบบรรยายลักษณะงาน กำหนดมาตรฐานภาษาอังกฤษ (CEFR B1+) และระบบกดยืนยัน
+7. 🎯 **IDP Hub (`/idp-hub`)**: แผนพัฒนารายบุคคล วิเคราะห์ Need Analysis และจัดทำ 4-Quarter Action Plan
+8. 📊 **Digital Skill Map (`/skill-map`)**: ประเมินทักษะดิจิทัล 4 กลุ่มงาน กราฟเรดาร์ และ AI ให้คำแนะนำ
+9. 📚 **KM Hub (`/km-hub`)**: คลังความรู้ สรุปการฝึกอบรม และแบบฟอร์มเอกสารมาตรฐาน
+10. 🛡️ **IMS Quality Hub (`/ims`)**: ตรวจประเมินภายใน (Audit), จัดการข้อบกพร่อง (CAR) และข้อเสนอแนะ (OFI)
+11. 🏆 **TQA Quality Hub (`/tqa`)**: ติดตามผลการดำเนินงาน 7 หมวดรางวัลคุณภาพแห่งชาติ และ Feedback Report
+12. ⚙️ **Admin Console & Audit Logs (`/admin`)**: จัดการข้อมูลบุคลากร ผู้บริหาร ฝ่ายงาน และระบบตรวจสอบย้อนหลัง
+
+---
+
+## 💻 การติดตั้งและรันในเครื่อง (Getting Started)
 
 ```bash
+# 1. ติดตั้ง Dependencies
+npm install
+
+# 2. รันโหมด Development
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 3. ตรวจสอบการ Build สำหรับ Production
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เปิดเบราว์เซอร์เข้าใช้งานที่ `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)*
