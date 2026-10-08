@@ -31,6 +31,7 @@ import {
   CheckSquare,
   XCircle,
   Info,
+  UserCheck,
 } from 'lucide-react';
 import {
   IMS_STANDARDS,
@@ -199,9 +200,36 @@ export default function CarIncidentModal({
   const [showNcImportModal, setShowNcImportModal] = useState(false);
   const [ncSearchQuery, setNcSearchQuery] = useState('');
   const [ncYearFilter, setNcYearFilter] = useState('ALL');
+  const [ncOnlyMyAudits, setNcOnlyMyAudits] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [searchPersonnelKeyword, setSearchPersonnelKeyword] = useState('');
+
+  // Check if current user is an auditor for a given audit
+  const checkIsMyAudit = (audit) => {
+    const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
+    const personId = currentPersonnel?.id;
+    const currentName = (currentPersonnel?.name || currentUser?.displayName || '').trim();
+
+    return Boolean(
+      (Array.isArray(audit?.auditors) &&
+        audit.auditors.some(
+          (aud) =>
+            (userEmail && aud.email && aud.email.toLowerCase().trim() === userEmail) ||
+            (personId && aud.id && aud.id === personId) ||
+            (currentName && aud.name && aud.name.trim() === currentName)
+        )) ||
+      (userEmail && audit?.auditor1Email && audit.auditor1Email.toLowerCase().trim() === userEmail) ||
+      (userEmail && audit?.auditor2Email && audit.auditor2Email.toLowerCase().trim() === userEmail) ||
+      (personId && (audit?.auditor1Id === personId || audit?.auditor2Id === personId)) ||
+      (currentName && (audit?.auditor1Name?.trim() === currentName || audit?.auditor2Name?.trim() === currentName)) ||
+      (userEmail && audit?.createdByEmail && audit.createdByEmail.toLowerCase().trim() === userEmail)
+    );
+  };
+
+  const myAuditsCount = useMemo(() => {
+    return (availableNcAudits || []).filter((a) => checkIsMyAudit(a)).length;
+  }, [availableNcAudits, currentUser, currentPersonnel]);
 
   // Navigation helpers & modal scroll ref (JD Modal style)
   const modalBodyRef = useRef(null);
@@ -2733,45 +2761,72 @@ export default function CarIncidentModal({
               </button>
             </div>
 
-            {/* Year filter & Search filter for NC audits */}
-            <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {/* Year Filter Pills */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>
-                  ปีงบประมาณ:
-                </span>
-                {(() => {
-                  const yearsSet = new Set(['ALL', '2569', '2568']);
-                  (availableNcAudits || []).forEach((a) => {
-                    const yr = String(a.auditYear || a.fiscalYear || a.year || '');
-                    if (yr) yearsSet.add(yr);
-                  });
-                  const yearsArr = Array.from(yearsSet);
+            {/* Year filter, My Audits filter & Search filter for NC audits */}
+            <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {/* Filter Pills Row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                {/* Year Filter Pills */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>
+                    ปีงบประมาณ:
+                  </span>
+                  {(() => {
+                    const yearsSet = new Set(['ALL', '2569', '2568']);
+                    (availableNcAudits || []).forEach((a) => {
+                      const yr = String(a.auditYear || a.fiscalYear || a.year || '');
+                      if (yr) yearsSet.add(yr);
+                    });
+                    const yearsArr = Array.from(yearsSet);
 
-                  return yearsArr.map((yr) => {
-                    const isSelected = ncYearFilter === yr;
-                    return (
-                      <button
-                        key={yr}
-                        type="button"
-                        onClick={() => setNcYearFilter(yr)}
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: isSelected ? 700 : 500,
-                          padding: '2px 10px',
-                          borderRadius: '12px',
-                          border: `1px solid ${isSelected ? '#0D9488' : '#CBD5E1'}`,
-                          background: isSelected ? '#0D9488' : '#FFFFFF',
-                          color: isSelected ? '#FFFFFF' : '#475569',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {yr === 'ALL' ? 'ทั้งหมด (All Years)' : `ปี ${yr}`}
-                      </button>
-                    );
-                  });
-                })()}
+                    return yearsArr.map((yr) => {
+                      const isSelected = ncYearFilter === yr;
+                      return (
+                        <button
+                          key={yr}
+                          type="button"
+                          onClick={() => setNcYearFilter(yr)}
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: isSelected ? 700 : 500,
+                            padding: '2px 10px',
+                            borderRadius: '12px',
+                            border: `1px solid ${isSelected ? '#0D9488' : '#CBD5E1'}`,
+                            background: isSelected ? '#0D9488' : '#FFFFFF',
+                            color: isSelected ? '#FFFFFF' : '#475569',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {yr === 'ALL' ? 'ทั้งหมด' : `ปี ${yr}`}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* My Audits Filter Toggle Pill */}
+                <button
+                  type="button"
+                  onClick={() => setNcOnlyMyAudits(!ncOnlyMyAudits)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: `1px solid ${ncOnlyMyAudits ? '#0D9488' : '#CBD5E1'}`,
+                    background: ncOnlyMyAudits ? '#0D9488' : '#FFFFFF',
+                    color: ncOnlyMyAudits ? '#FFFFFF' : '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: ncOnlyMyAudits ? '0 1px 3px rgba(13,148,136,0.3)' : 'none',
+                  }}
+                >
+                  <UserCheck size={14} color={ncOnlyMyAudits ? '#FFFFFF' : '#0D9488'} />
+                  <span>คัดเฉพาะที่ฉันเป็นผู้ตรวจติดตาม ({myAuditsCount})</span>
+                </button>
               </div>
 
               {/* Search Bar */}
@@ -2806,8 +2861,14 @@ export default function CarIncidentModal({
             <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
               {(() => {
                 const filtered = (availableNcAudits || []).filter((audit) => {
+                  // 1. Year filter
                   const auditYr = String(audit.auditYear || audit.fiscalYear || audit.year || '');
                   if (ncYearFilter !== 'ALL' && auditYr !== ncYearFilter) return false;
+
+                  // 2. Only My Audits filter
+                  if (ncOnlyMyAudits && !checkIsMyAudit(audit)) return false;
+
+                  // 3. Keyword Search filter
                   if (!ncSearchQuery.trim()) return true;
                   const q = ncSearchQuery.toLowerCase();
                   const matchDoc = (audit.docNumber || audit.auditCode || audit.id || '').toLowerCase().includes(q);
@@ -2826,6 +2887,10 @@ export default function CarIncidentModal({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {filtered.map((audit) => {
                         const isDuplicate = audit.isAlreadyImported && audit.id !== sourceAuditId;
+                        const isMyAudit = checkIsMyAudit(audit);
+                        const auditorNames = Array.isArray(audit.auditors) && audit.auditors.length > 0
+                          ? audit.auditors.map((a) => a.name).filter(Boolean).join(', ')
+                          : [audit.auditor1Name, audit.auditor2Name].filter(Boolean).join(', ');
 
                         return (
                           <div
@@ -2844,23 +2909,23 @@ export default function CarIncidentModal({
                             style={{
                               padding: '12px 14px',
                               borderRadius: '10px',
-                              border: `1px solid ${isDuplicate ? '#FDE68A' : '#E2E8F0'}`,
+                              border: `1px solid ${isDuplicate ? '#FDE68A' : isMyAudit ? '#99F6E4' : '#E2E8F0'}`,
                               cursor: isDuplicate ? 'not-allowed' : 'pointer',
                               transition: 'all 0.15s ease',
-                              backgroundColor: isDuplicate ? '#FFFDF5' : '#FFFFFF',
+                              backgroundColor: isDuplicate ? '#FFFDF5' : isMyAudit ? '#F0FDFA' : '#FFFFFF',
                               opacity: isDuplicate ? 0.75 : 1,
                               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                             }}
                             onMouseEnter={(e) => {
                               if (!isDuplicate) {
                                 e.currentTarget.style.borderColor = '#0D9488';
-                                e.currentTarget.style.backgroundColor = '#F0FDFA';
+                                e.currentTarget.style.backgroundColor = '#E6FFFA';
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isDuplicate) {
-                                e.currentTarget.style.borderColor = '#E2E8F0';
-                                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                e.currentTarget.style.borderColor = isMyAudit ? '#99F6E4' : '#E2E8F0';
+                                e.currentTarget.style.backgroundColor = isMyAudit ? '#F0FDFA' : '#FFFFFF';
                               }
                             }}
                           >
@@ -2894,6 +2959,25 @@ export default function CarIncidentModal({
                                     }}
                                   >
                                     {audit.isoStandard || audit.standard}
+                                  </span>
+                                )}
+                                {isMyAudit && (
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      background: '#CCFBF1',
+                                      color: '#0F766E',
+                                      padding: '1px 7px',
+                                      borderRadius: '999px',
+                                      fontWeight: 700,
+                                      border: '1px solid #99F6E4',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    <UserCheck size={11} />
+                                    คุณเป็นผู้ตรวจ
                                   </span>
                                 )}
                               </div>
@@ -2935,6 +3019,11 @@ export default function CarIncidentModal({
                                 ข้อกำหนด: <strong>{audit.clauses}</strong>
                               </div>
                             )}
+                            {auditorNames && (
+                              <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px' }}>
+                                ผู้ตรวจติดตาม: <strong>{auditorNames}</strong>
+                              </div>
+                            )}
                             <div style={{ fontSize: '0.8rem', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                               {audit.findings || audit.description || '-'}
                             </div>
@@ -2949,10 +3038,14 @@ export default function CarIncidentModal({
                   <div style={{ textAlign: 'center', color: '#94A3B8', padding: '2.5rem 1rem' }}>
                     <AlertCircle size={32} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#64748B' }}>
-                      ไม่พบรายงานการตรวจที่มีผลเป็น NC {ncYearFilter !== 'ALL' ? `(ประจำปี ${ncYearFilter})` : ''}
+                      {ncOnlyMyAudits
+                        ? `ไม่พบรายงานการตรวจ NC ที่คุณเป็นผู้ตรวจติดตาม ${ncYearFilter !== 'ALL' ? `(ประจำปี ${ncYearFilter})` : ''}`
+                        : `ไม่พบรายงานการตรวจที่มีผลเป็น NC ${ncYearFilter !== 'ALL' ? `(ประจำปี ${ncYearFilter})` : ''}`}
                     </div>
                     <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                      ลองเลือกปีงบประมาณอื่น หรือค้นหาด้วยคำสำคัญ
+                      {ncOnlyMyAudits
+                        ? 'ลองคลิกปิดตัวกรอง "เฉพาะที่ฉันเป็นผู้ตรวจติดตาม" เพื่อดูรายงานทั้งหมด'
+                        : 'ลองเลือกปีงบประมาณอื่น หรือค้นหาด้วยคำสำคัญ'}
                     </div>
                   </div>
                 );
