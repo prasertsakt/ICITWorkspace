@@ -10,6 +10,7 @@ import {
 } from './constants';
 import { resolveRoleEmailsFromDirectory } from './emailNotificationService';
 import { getCurrentThaiFiscalYear } from './dateUtils';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 import {
   collection,
   doc,
@@ -166,127 +167,201 @@ export function calculateIdpSummary(coreCompetencies = [], functionalCompetencie
   };
 }
 
-/**
- * Real-Time Subscription to IDP Records (Optimized by Fiscal Year)
- */
-export function subscribeIdpRecords(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
-  if (typeof window === 'undefined') return () => {};
+// Shared singleton listeners & cache maps per fiscal year
+let idpSubscribersMap = {};
+let sharedIdpUnsubMap = {};
+let cachedIdpMap = {};
 
-  const localCacheKey = `${LOCAL_KEY_IDP_RECORDS}_${fiscalYear}`;
-  try {
-    const raw = localStorage.getItem(localCacheKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) callback(parsed);
-    }
-  } catch (e) {
-    console.warn('LocalStorage read error for IDP records:', e);
-  }
+let idpConfigSubscribersMap = {};
+let sharedIdpConfigUnsubMap = {};
+let cachedIdpConfigMap = {};
 
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
-  }
-
-  try {
-    const colRef = collection(db, 'idp_records');
-    const q = query(colRef, where('fiscalYear', '==', String(fiscalYear)));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const records = [];
-        snapshot.forEach((docSnap) => {
-          records.push({ id: docSnap.id, ...docSnap.data() });
-        });
-
-        // Save local cache
-        try {
-          localStorage.setItem(localCacheKey, JSON.stringify(records));
-        } catch (e) {
-          // ignore cache full
-        }
-
-        callback(records);
-      },
-      (err) => {
-        console.warn('Firestore idp_records subscription warning (using cache):', err);
+function notifyIdpSubscribers(fy, list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedIdpMap[fy] = cloned;
+  if (idpSubscribersMap[fy]) {
+    idpSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(cloned);
+      } catch (e) {
+        console.error('IDP subscriber error:', e);
       }
-    );
+    });
+  }
+}
 
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to setup idp_records snapshot listener:', e);
-    return () => {};
+function notifyIdpConfigSubscribers(fy, data) {
+  cachedIdpConfigMap[fy] = data;
+  if (idpConfigSubscribersMap[fy]) {
+    idpConfigSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(data);
+      } catch (e) {
+        console.error('IDP config subscriber error:', e);
+      }
+    });
   }
 }
 
 /**
+ * Real-Time Subscription to IDP Records (Optimized by Fiscal Year)
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
+ */
+export function subscribeIdpRecords(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
+  if (typeof window === 'undefined') return () => {};
+
+  const fy = String(fiscalYear);
+  if (!idpSubscribersMap[fy]) {
+    idpSubscribersMap[fy] = [];
+  }
+  idpSubscribersMap[fy].push(callback);
+
+  const localCacheKey = `${LOCAL_KEY_IDP_RECORDS}_${fy}`;
+
+  // 1. Instant cache response (0ms)
+  if (cachedIdpMap[fy]) {
+    callback(cachedIdpMap[fy]);
+  } else {
+    try {
+      const raw = localStorage.getItem(localCacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          cachedIdpMap[fy] = parsed;
+          callback(parsed);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Start SINGLE shared listener per fiscal year if not active
+  if (isFirebaseConfigured && db && !sharedIdpUnsubMap[fy]) {
+    try {
+      const colRef = collection(db, 'idp_records');
+      const q = query(colRef, where('fiscalYear', '==', fy));
+
+      sharedIdpUnsubMap[fy] = onSnapshot(
+        q,
+        (snapshot) => {
+          const records = [];
+          snapshot.forEach((docSnap) => {
+            records.push({ id: docSnap.id, ...docSnap.data() });
+          });
+
+          try {
+            localStorage.setItem(localCacheKey, JSON.stringify(records));
+          } catch (e) {}
+
+          notifyIdpSubscribers(fy, records);
+        },
+        (err) => {
+          console.warn(`Firestore idp_records (${fy}) subscription warning:`, err);
+        }
+      );
+    } catch (e) {
+      console.error('Failed to setup idp_records snapshot listener:', e);
+    }
+  }
+
+  return () => {
+    if (idpSubscribersMap[fy]) {
+      idpSubscribersMap[fy] = idpSubscribersMap[fy].filter((cb) => cb !== callback);
+      if (idpSubscribersMap[fy].length === 0 && sharedIdpUnsubMap[fy]) {
+        sharedIdpUnsubMap[fy]();
+        delete sharedIdpUnsubMap[fy];
+      }
+    }
+  };
+}
+
+/**
  * Real-Time Subscription to IDP Master Config per Fiscal Year
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
  */
 export function subscribeIdpConfig(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
   if (typeof window === 'undefined') return () => {};
 
-  const configDocId = `idp-config-${fiscalYear}`;
-  const localConfigKey = `${LOCAL_KEY_IDP_CONFIG}_${fiscalYear}`;
+  const fy = String(fiscalYear);
+  if (!idpConfigSubscribersMap[fy]) {
+    idpConfigSubscribersMap[fy] = [];
+  }
+  idpConfigSubscribersMap[fy].push(callback);
 
-  const isDefaultYear2569 = String(fiscalYear) === '2569';
+  const configDocId = `idp-config-${fy}`;
+  const localConfigKey = `${LOCAL_KEY_IDP_CONFIG}_${fy}`;
+
+  const isDefaultYear2569 = fy === '2569';
   const defaultResult = isDefaultYear2569
     ? {
         id: configDocId,
-        fiscalYear: String(fiscalYear),
+        fiscalYear: fy,
         coreCompetencies: DEFAULT_IDP_CORE_COMPETENCIES,
         functionalCompetenciesByPosition: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_BY_POSITION,
         functionalCompetenciesGeneral: DEFAULT_IDP_FUNCTIONAL_COMPETENCIES_GENERAL,
       }
     : {
         id: configDocId,
-        fiscalYear: String(fiscalYear),
+        fiscalYear: fy,
         coreCompetencies: [],
         functionalCompetenciesByPosition: {},
         functionalCompetenciesGeneral: [],
       };
 
-  try {
-    const raw = localStorage.getItem(localConfigKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed) callback(parsed);
-    } else {
+  // 1. Instant cache response (0ms)
+  if (cachedIdpConfigMap[fy]) {
+    callback(cachedIdpConfigMap[fy]);
+  } else {
+    try {
+      const raw = localStorage.getItem(localConfigKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed) {
+          cachedIdpConfigMap[fy] = parsed;
+          callback(parsed);
+        }
+      } else {
+        callback(defaultResult);
+      }
+    } catch (e) {
       callback(defaultResult);
     }
-  } catch (e) {
-    callback(defaultResult);
   }
 
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
-  }
-
-  try {
-    const docRef = doc(db, 'idp_config', configDocId);
-    const unsubscribe = onSnapshot(
-      docRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() };
-          try {
-            localStorage.setItem(localConfigKey, JSON.stringify(data));
-          } catch (e) {}
-          callback(data);
-        } else {
-          callback(defaultResult);
+  // 2. Start SINGLE shared listener per fiscal year if not active
+  if (isFirebaseConfigured && db && !sharedIdpConfigUnsubMap[fy]) {
+    try {
+      const docRef = doc(db, 'idp_config', configDocId);
+      sharedIdpConfigUnsubMap[fy] = onSnapshot(
+        docRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = { id: docSnap.id, ...docSnap.data() };
+            try {
+              localStorage.setItem(localConfigKey, JSON.stringify(data));
+            } catch (e) {}
+            notifyIdpConfigSubscribers(fy, data);
+          } else {
+            notifyIdpConfigSubscribers(fy, defaultResult);
+          }
+        },
+        (err) => {
+          console.warn(`Firestore idp_config (${fy}) subscription warning:`, err);
         }
-      },
-      (err) => {
-        console.warn('Firestore idp_config subscription warning:', err);
-      }
-    );
-
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to setup idp_config subscription:', e);
-    return () => {};
+      );
+    } catch (e) {
+      console.error('Failed to setup idp_config subscription:', e);
+    }
   }
+
+  return () => {
+    if (idpConfigSubscribersMap[fy]) {
+      idpConfigSubscribersMap[fy] = idpConfigSubscribersMap[fy].filter((cb) => cb !== callback);
+      if (idpConfigSubscribersMap[fy].length === 0 && sharedIdpConfigUnsubMap[fy]) {
+        sharedIdpConfigUnsubMap[fy]();
+        delete sharedIdpConfigUnsubMap[fy];
+      }
+    }
+  };
 }
 
 /**
@@ -349,8 +424,22 @@ export async function saveIdpRecord(recordData, actor) {
         list.unshift(payload);
       }
       localStorage.setItem(cacheKey, JSON.stringify(list));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('localStorage setItem error:', e);
+    }
   }
+
+  // Audit logging
+  logActivity({
+    action: recordData.id ? 'UPDATE_IDP_RECORD' : 'CREATE_IDP_RECORD',
+    category: ACTIVITY_CATEGORIES.IDP,
+    status: 'SUCCESS',
+    title: `บันทึกแบบประเมิน IDP: ${payload.personnelName} (ปีงบฯ ${payload.fiscalYear})`,
+    details: `${actor?.name || 'ผู้ใช้งาน'} บันทึกผลการประเมินสมรรถนะ IDP ของ ${payload.personnelName} ฝ่าย${payload.department || '-'} [สถานะ: ${status}]`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    target: { id: payload.id, name: `${payload.personnelName} (IDP ${payload.fiscalYear})`, type: 'IDP_RECORD' },
+    metadata: { fiscalYear: payload.fiscalYear, status, personnelEmail: payload.personnelEmail },
+  });
 
   return payload;
 }
@@ -358,7 +447,7 @@ export async function saveIdpRecord(recordData, actor) {
 /**
  * Delete an IDP Record
  */
-export async function deleteIdpRecord(idpId, fiscalYear = String(getCurrentThaiFiscalYear())) {
+export async function deleteIdpRecord(idpId, fiscalYear = String(getCurrentThaiFiscalYear()), actor = null) {
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'idp_records', idpId);
@@ -368,16 +457,29 @@ export async function deleteIdpRecord(idpId, fiscalYear = String(getCurrentThaiF
     }
   }
 
+  let deletedItem = null;
   if (typeof window !== 'undefined') {
     const cacheKey = `${LOCAL_KEY_IDP_RECORDS}_${fiscalYear}`;
     try {
       const raw = localStorage.getItem(cacheKey);
       if (raw) {
-        const list = JSON.parse(raw).filter((item) => item.id !== idpId);
-        localStorage.setItem(cacheKey, JSON.stringify(list));
+        const list = JSON.parse(raw);
+        deletedItem = list.find((item) => item.id === idpId);
+        const filtered = list.filter((item) => item.id !== idpId);
+        localStorage.setItem(cacheKey, JSON.stringify(filtered));
       }
     } catch (e) {}
   }
+
+  logActivity({
+    action: 'DELETE_IDP_RECORD',
+    category: ACTIVITY_CATEGORIES.IDP,
+    status: 'SUCCESS',
+    title: `ลบแบบประเมิน IDP: ${deletedItem?.personnelName || idpId}`,
+    details: `ลบแบบประเมิน IDP ปีงบประมาณ ${fiscalYear} ของ ${deletedItem?.personnelName || idpId} ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    target: { id: idpId, name: `${deletedItem?.personnelName || idpId} (IDP ${fiscalYear})`, type: 'IDP_RECORD' },
+  });
 
   return true;
 }
@@ -416,6 +518,16 @@ export async function saveIdpConfig(fiscalYear, configData, actor) {
       localStorage.setItem(cacheKey, JSON.stringify(payload));
     } catch (e) {}
   }
+
+  logActivity({
+    action: 'UPDATE_IDP_CONFIG',
+    category: ACTIVITY_CATEGORIES.IDP,
+    status: 'SUCCESS',
+    title: `ปรับปรุงเกณฑ์สมรรถนะ IDP ประจำปีงบประมาณ ${fiscalYear}`,
+    details: `${actor?.name || 'เจ้าหน้าที่งานบุคคล'} บันทึกการกำหนดเกณฑ์ Core และ Functional Competencies ปี ${fiscalYear}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    metadata: { fiscalYear },
+  });
 
   return payload;
 }
@@ -741,6 +853,16 @@ export async function saveStrategyConfig(fiscalYear, configData, actor) {
       localStorage.setItem(cacheKey, JSON.stringify(payload));
     } catch (e) {}
   }
+
+  logActivity({
+    action: 'UPDATE_STRATEGY_CONFIG',
+    category: ACTIVITY_CATEGORIES.IDP,
+    status: 'SUCCESS',
+    title: `ปรับปรุงแผนยุทธศาสตร์และ OKRs ประจำปีงบประมาณ ${fiscalYear}`,
+    details: `${actor?.name || 'ผู้ดูแลระบบ'} บันทึกการกำหนดวิสัยทัศน์ พันธกิจ และตัวชี้วัดกลยุทธ์ (CKPI) ปี ${fiscalYear}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    metadata: { fiscalYear },
+  });
 
   return payload;
 }

@@ -2,6 +2,7 @@
 import { db, isFirebaseConfigured } from './firebase';
 import { SAMPLE_SEED_JD, normalizeCoreCompetencies } from './jdTemplateData';
 import { formatLocalDate } from './dateUtils';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 import {
   collection,
   doc,
@@ -24,14 +25,21 @@ export const DEFAULT_JD_CONFIG = {
   updatedBy: 'ผู้ดูแลระบบ',
 };
 
-// Internal pub/sub subscribers
+// Internal pub/sub subscribers & Single Shared Listeners
 let jdSubscribers = [];
+let sharedJDUnsub = null;
+let cachedJDList = null;
+
 let jdConfigSubscribers = [];
+let sharedJDConfigUnsub = null;
+let cachedJDConfig = null;
 
 function notifyJDSubscribers(data) {
+  const cloned = Array.isArray(data) ? [...data] : [];
+  cachedJDList = cloned;
   jdSubscribers.forEach((cb) => {
     try {
-      cb(data);
+      cb(cloned);
     } catch (e) {
       console.error('JD subscriber error:', e);
     }
@@ -39,6 +47,7 @@ function notifyJDSubscribers(data) {
 }
 
 function notifyJDConfigSubscribers(data) {
+  cachedJDConfig = data;
   jdConfigSubscribers.forEach((cb) => {
     try {
       cb(data);
@@ -117,11 +126,14 @@ export function isRevisionWindowOpen(config = null) {
  * Get cached JD config
  */
 export function getJDConfig() {
+  if (cachedJDConfig !== null) return cachedJDConfig;
   initJDLocalStorage();
   if (typeof window === 'undefined') return DEFAULT_JD_CONFIG;
   try {
     const raw = localStorage.getItem(LOCAL_KEY_JD_CONFIG);
-    return raw ? JSON.parse(raw) : DEFAULT_JD_CONFIG;
+    const parsed = raw ? JSON.parse(raw) : DEFAULT_JD_CONFIG;
+    cachedJDConfig = parsed;
+    return parsed;
   } catch {
     return DEFAULT_JD_CONFIG;
   }
@@ -158,25 +170,35 @@ export async function saveJDConfig(newConfig, actorPersonnel) {
     }
   }
 
+  logActivity({
+    action: 'UPDATE_JD_CONFIG',
+    category: ACTIVITY_CATEGORIES.JD_HUB,
+    status: 'SUCCESS',
+    title: `ปรับปรุงการตั้งค่าช่วงเวลาแก้ไขแบบบรรยายลักษณะงาน (JD)`,
+    details: `สถานะเปิดรับ: ${isRevisionOpen ? 'เปิด' : 'ปิด'} (${updated.startDate || '-'} ถึง ${updated.endDate || '-'})`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : null,
+    metadata: { isRevisionOpen, startDate: updated.startDate, endDate: updated.endDate },
+  });
+
   return { success: true, config: updated };
 }
 
 /**
  * Subscribe to JD Config changes
+ * OPTIMIZED: Single shared Firestore onSnapshot listener
  */
 export function subscribeJDConfig(callback) {
   initJDLocalStorage();
   jdConfigSubscribers.push(callback);
 
-  // Emit cached config immediately
+  // 1. Emit cached config immediately (0ms)
   const cached = getJDConfig();
   callback(cached);
 
-  // Real-time Firestore listener
-  let unsubscribeFirestore = () => {};
-  if (isFirebaseConfigured && db) {
+  // 2. Start SINGLE shared listener if not already active
+  if (isFirebaseConfigured && db && !sharedJDConfigUnsub) {
     try {
-      unsubscribeFirestore = onSnapshot(
+      sharedJDConfigUnsub = onSnapshot(
         doc(db, 'settings', 'jd_hub_config'),
         (snap) => {
           if (snap.exists()) {
@@ -184,7 +206,7 @@ export function subscribeJDConfig(callback) {
             if (typeof window !== 'undefined') {
               localStorage.setItem(LOCAL_KEY_JD_CONFIG, JSON.stringify(data));
             }
-            callback(data);
+            notifyJDConfigSubscribers(data);
           }
         },
         (err) => {
@@ -198,7 +220,10 @@ export function subscribeJDConfig(callback) {
 
   return () => {
     jdConfigSubscribers = jdConfigSubscribers.filter((cb) => cb !== callback);
-    unsubscribeFirestore();
+    if (jdConfigSubscribers.length === 0 && sharedJDConfigUnsub) {
+      sharedJDConfigUnsub();
+      sharedJDConfigUnsub = null;
+    }
   };
 }
 
@@ -254,56 +279,49 @@ export async function getJDById(id) {
 
 /**
  * Subscribe to Real-Time Job Descriptions list
+ * OPTIMIZED: Single shared Firestore onSnapshot listener
  */
 export function subscribeJDList(callback) {
   initJDLocalStorage();
   jdSubscribers.push(callback);
 
-  // Immediately emit cached local data
-  const cached = getJDList();
-  callback(cached);
+  // 1. Immediately emit cached local data (0ms)
+  if (cachedJDList !== null) {
+    callback(cachedJDList);
+  } else {
+    const cached = getJDList();
+    cachedJDList = cached;
+    callback(cached);
+  }
 
-  // Attach Firestore real-time listener
-  let unsubscribeFirestore = () => {};
-  if (isFirebaseConfigured && db) {
+  // 2. Attach SINGLE shared Firestore real-time listener
+  if (isFirebaseConfigured && db && !sharedJDUnsub) {
     try {
       const jdCollection = collection(db, 'job_descriptions');
-      unsubscribeFirestore = onSnapshot(
+      sharedJDUnsub = onSnapshot(
         jdCollection,
         (snapshot) => {
-          const remoteList = [];
-          let hasOutdatedRecords = false;
+          if (!snapshot.empty) {
+            const remoteList = [];
+            snapshot.forEach((docSnap) => {
+              const rawData = { id: docSnap.id, ...docSnap.data() };
+              const sanitized = sanitizeJDRecord(rawData);
+              remoteList.push(sanitized);
+            });
 
-          snapshot.forEach((docSnap) => {
-            const rawData = { id: docSnap.id, ...docSnap.data() };
-            const sanitized = sanitizeJDRecord(rawData);
-            
-            // Check if any core competency was updated during sanitization
-            const rawNames = JSON.stringify(rawData.coreCompetencies?.map((c) => c.name) || []);
-            const cleanNames = JSON.stringify(sanitized.coreCompetencies?.map((c) => c.name) || []);
-            if (rawNames !== cleanNames) {
-              hasOutdatedRecords = true;
-              // Auto-fix the document in Firestore
-              setDoc(doc(db, 'job_descriptions', docSnap.id), { coreCompetencies: sanitized.coreCompetencies }, { merge: true }).catch(() => {});
-            }
-
-            remoteList.push(sanitized);
-          });
-
-          if (remoteList.length > 0) {
             if (typeof window !== 'undefined') {
               localStorage.setItem(LOCAL_KEY_JDS, JSON.stringify(remoteList));
             }
-            callback(remoteList);
+            notifyJDSubscribers(remoteList);
           } else {
-            // Seed sample if Firestore collection is empty
             const seed = [sanitizeJDRecord(SAMPLE_SEED_JD)];
-            callback(seed);
-            setDoc(doc(db, 'job_descriptions', SAMPLE_SEED_JD.id), seed[0]).catch(() => {});
+            notifyJDSubscribers(seed);
           }
         },
         (error) => {
           console.warn('Firestore JD onSnapshot error, fallback to local storage', error);
+          const cached = getJDList();
+          notifyJDSubscribers(cached);
         }
       );
     } catch (err) {
@@ -313,7 +331,10 @@ export function subscribeJDList(callback) {
 
   return () => {
     jdSubscribers = jdSubscribers.filter((cb) => cb !== callback);
-    unsubscribeFirestore();
+    if (jdSubscribers.length === 0 && sharedJDUnsub) {
+      sharedJDUnsub();
+      sharedJDUnsub = null;
+    }
   };
 }
 
@@ -383,6 +404,18 @@ export async function saveJDRecord(jdData, actorPersonnel, isAdmin = false) {
     }
   }
 
+  const isNew = existingIdx < 0;
+  logActivity({
+    action: isNew ? 'CREATE_JD' : 'UPDATE_JD',
+    category: ACTIVITY_CATEGORIES.JD_HUB,
+    status: 'SUCCESS',
+    title: `${isNew ? 'สร้าง' : 'แก้ไข'}แบบบรรยายลักษณะงาน (JD): ${fullRecord.jobTitle || fullRecord.positionTitle || 'JD'} (${fullRecord.personnelName || fullRecord.personnelEmail || '-'})`,
+    details: `${actorPersonnel?.name || 'ผู้ใช้งาน'} ${isNew ? 'สร้างแบบบรรยายลักษณะงานใหม่' : 'บันทึกแก้ไขแบบบรรยายลักษณะงาน'} ของ ${fullRecord.personnelName} ตำแหน่ง ${fullRecord.positionTitle || '-'} [สถานะ: ${fullRecord.status || 'DRAFT'}]`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : null,
+    target: { id: fullRecord.id, name: `${fullRecord.personnelName} - ${fullRecord.jobTitle || fullRecord.positionTitle}`, type: 'JD_RECORD' },
+    metadata: { status: fullRecord.status, userConfirmed: fullRecord.userConfirmed, personnelEmail: fullRecord.personnelEmail },
+  });
+
   return fullRecord;
 }
 
@@ -428,7 +461,19 @@ export async function confirmJDVersion(idOrData, actorPersonnel, isAdmin = false
     lastUpdatedBy: actorPersonnel?.name || 'ผู้ใช้งาน',
   };
 
-  return await saveJDRecord(updated, actorPersonnel, isAdmin);
+  const saved = await saveJDRecord(updated, actorPersonnel, isAdmin);
+
+  logActivity({
+    action: 'CONFIRM_JD',
+    category: ACTIVITY_CATEGORIES.JD_HUB,
+    status: 'SUCCESS',
+    title: `ยืนยันความถูกต้องแบบบรรยายลักษณะงาน (JD): ${saved.personnelName || saved.personnelEmail}`,
+    details: `${actorPersonnel?.name || 'ผู้ใช้งาน'} ยืนยันความถูกต้องของแบบบรรยายลักษณะงาน (JD) ประจำปีงบประมาณ`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : null,
+    target: { id: saved.id, name: `${saved.personnelName} - ${saved.jobTitle || saved.positionTitle}`, type: 'JD_RECORD' },
+  });
+
+  return saved;
 }
 
 /**
@@ -441,6 +486,7 @@ export async function deleteJDRecord(id, actorPersonnel, isAdmin = false) {
   }
 
   const list = getJDList();
+  const target = list.find((j) => j.id === id);
   const filtered = list.filter((j) => j.id !== id);
 
   if (typeof window !== 'undefined') {
@@ -455,6 +501,16 @@ export async function deleteJDRecord(id, actorPersonnel, isAdmin = false) {
       console.error('Failed to delete JD from Firestore', e);
     }
   }
+
+  logActivity({
+    action: 'DELETE_JD',
+    category: ACTIVITY_CATEGORIES.JD_HUB,
+    status: 'SUCCESS',
+    title: `ลบแบบบรรยายลักษณะงาน (JD): ${target?.personnelName || id}`,
+    details: `ผู้ดูแลระบบลบแบบบรรยายลักษณะงานของ ${target?.personnelName || id} ตำแหน่ง ${target?.positionTitle || '-'} ออกจากระบบ`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : null,
+    target: { id, name: `${target?.personnelName || id} - ${target?.jobTitle || target?.positionTitle}`, type: 'JD_RECORD' },
+  });
 
   return true;
 }

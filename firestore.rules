@@ -18,7 +18,6 @@ service cloud.firestore {
       return isAuthenticated() && (
         exists(/databases/$(database)/documents/personnel/$(request.auth.uid)) ||
         userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
-        userEmail() == "tiawongsombat@gmail.com" ||
         userEmail() == "jarucha.j@icit.kmutnb.ac.th"
       );
     }
@@ -28,8 +27,7 @@ service cloud.firestore {
       return isAuthenticated() && (
         isAdmin() ||
         userEmail() == "jarucha.j@icit.kmutnb.ac.th" ||
-        userEmail() == "prasertsak.t@cit.kmutnb.ac.th" ||
-        userEmail() == "tiawongsombat@gmail.com"
+        userEmail() == "prasertsak.t@cit.kmutnb.ac.th"
       );
     }
 
@@ -191,5 +189,20 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // 25. Rules for 'activity_logs' collection (System Audit & User Activities)
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if true;
+      allow update, delete: if isHrOrAdmin();
+    }
+
+    // 26. Rules for 'email_logs' collection (Email Dispatch Audit Logs)
+    match /email_logs/{emailId} {
+      allow read: if isAuthenticated();
+      allow create: if true;
+      allow update, delete: if isHrOrAdmin();
+    }
   }
 }
+

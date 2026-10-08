@@ -13,6 +13,7 @@ import {
   orderBy,
   deleteDoc,
 } from 'firebase/firestore';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 
 export const LOCAL_KEY_SKILL_MAP_CONFIGS = 'icit_skill_map_configs';
 export const LOCAL_KEY_SKILL_MAP_ASSESSMENTS = 'icit_skill_map_assessments';
@@ -492,13 +493,194 @@ export function getSkillMapConfig(fiscalYear) {
   };
 }
 
-export async function saveSkillMapConfig(configData) {
+/**
+ * Recursively removes undefined fields so Firestore writes never fail with invalid data
+ * and ensures minimal payload size
+ */
+export function cleanForFirestore(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj === undefined ? null : obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanForFirestore(item));
+  }
+  const cleaned = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      cleaned[key] = cleanForFirestore(val);
+    }
+  });
+  return cleaned;
+}
+
+// Shared singleton listeners & cache maps
+let skillConfigSubscribersMap = {};
+let sharedSkillConfigUnsubMap = {};
+let cachedSkillConfigMap = {};
+
+let skillAssessmentsSubscribersMap = {};
+let sharedSkillAssessmentsUnsubMap = {};
+let cachedSkillAssessmentsMap = {};
+
+function notifySkillConfigSubscribers(fy, data) {
+  cachedSkillConfigMap[fy] = data;
+  if (skillConfigSubscribersMap[fy]) {
+    skillConfigSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(data);
+      } catch (e) {
+        console.error('Skill config subscriber error:', e);
+      }
+    });
+  }
+}
+
+function notifySkillAssessmentsSubscribers(fy, list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedSkillAssessmentsMap[fy] = cloned;
+  if (skillAssessmentsSubscribersMap[fy]) {
+    skillAssessmentsSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(cloned);
+      } catch (e) {
+        console.error('Skill assessment subscriber error:', e);
+      }
+    });
+  }
+}
+
+/**
+ * Real-Time Subscription to Skill Map Config for a specific Fiscal Year
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
+ */
+export function subscribeSkillMapConfig(fiscalYear, callback) {
+  const targetYear = Number(fiscalYear) || getDefaultFiscalYear();
+  if (typeof window === 'undefined') {
+    callback(getSkillMapConfig(targetYear));
+    return () => {};
+  }
+
+  if (!skillConfigSubscribersMap[targetYear]) {
+    skillConfigSubscribersMap[targetYear] = [];
+  }
+  skillConfigSubscribersMap[targetYear].push(callback);
+
+  // 1. Instant Cache response (0ms)
+  const cached = getSkillMapConfig(targetYear);
+  callback(cached);
+
+  // 2. Start SINGLE shared listener per fiscal year
+  if (isFirebaseConfigured && db && !sharedSkillConfigUnsubMap[targetYear]) {
+    try {
+      const docRef = doc(db, 'skill_map_configs', `config-${targetYear}`);
+      sharedSkillConfigUnsubMap[targetYear] = onSnapshot(
+        docRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            try {
+              const raw = localStorage.getItem(LOCAL_KEY_SKILL_MAP_CONFIGS);
+              const allConfigs = raw ? JSON.parse(raw) : {};
+              allConfigs[targetYear] = data;
+              localStorage.setItem(LOCAL_KEY_SKILL_MAP_CONFIGS, JSON.stringify(allConfigs));
+            } catch (e) {}
+            notifySkillConfigSubscribers(targetYear, data);
+          } else {
+            const defaults = getSkillMapConfig(targetYear);
+            notifySkillConfigSubscribers(targetYear, defaults);
+          }
+        },
+        (err) => {
+          console.warn(`Firestore skill_map_configs (${targetYear}) warning:`, err);
+        }
+      );
+    } catch (e) {
+      console.error('Failed to setup skill_map_configs listener:', e);
+    }
+  }
+
+  return () => {
+    if (skillConfigSubscribersMap[targetYear]) {
+      skillConfigSubscribersMap[targetYear] = skillConfigSubscribersMap[targetYear].filter((cb) => cb !== callback);
+      if (skillConfigSubscribersMap[targetYear].length === 0 && sharedSkillConfigUnsubMap[targetYear]) {
+        sharedSkillConfigUnsubMap[targetYear]();
+        delete sharedSkillConfigUnsubMap[targetYear];
+      }
+    }
+  };
+}
+
+/**
+ * Real-Time Subscription to Skill Map Assessments for a specific Fiscal Year
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
+ */
+export function subscribeSkillMapAssessments(fiscalYear, callback) {
+  const targetYear = Number(fiscalYear) || getDefaultFiscalYear();
+  if (typeof window === 'undefined') {
+    callback([]);
+    return () => {};
+  }
+
+  if (!skillAssessmentsSubscribersMap[targetYear]) {
+    skillAssessmentsSubscribersMap[targetYear] = [];
+  }
+  skillAssessmentsSubscribersMap[targetYear].push(callback);
+
+  // 1. Instant Cache response (0ms)
+  const initialAssessments = getAllAssessments(targetYear);
+  callback(initialAssessments);
+
+  // 2. Start SINGLE shared listener per fiscal year
+  if (isFirebaseConfigured && db && !sharedSkillAssessmentsUnsubMap[targetYear]) {
+    try {
+      const colRef = collection(db, 'skill_map_assessments');
+      sharedSkillAssessmentsUnsubMap[targetYear] = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const allItems = [];
+            snapshot.forEach((docSnap) => {
+              allItems.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            try {
+              localStorage.setItem(LOCAL_KEY_SKILL_MAP_ASSESSMENTS, JSON.stringify(allItems));
+            } catch (e) {}
+
+            const forThisYear = allItems.filter((a) => Number(a.fiscalYear) === targetYear);
+            notifySkillAssessmentsSubscribers(targetYear, forThisYear);
+          } else {
+            notifySkillAssessmentsSubscribers(targetYear, []);
+          }
+        },
+        (err) => {
+          console.warn(`Firestore skill_map_assessments warning:`, err);
+        }
+      );
+    } catch (e) {
+      console.error('Failed to setup skill_map_assessments listener:', e);
+    }
+  }
+
+  return () => {
+    if (skillAssessmentsSubscribersMap[targetYear]) {
+      skillAssessmentsSubscribersMap[targetYear] = skillAssessmentsSubscribersMap[targetYear].filter((cb) => cb !== callback);
+      if (skillAssessmentsSubscribersMap[targetYear].length === 0 && sharedSkillAssessmentsUnsubMap[targetYear]) {
+        sharedSkillAssessmentsUnsubMap[targetYear]();
+        delete sharedSkillAssessmentsUnsubMap[targetYear];
+      }
+    }
+  };
+}
+
+export async function saveSkillMapConfig(configData, actor = null) {
   const fiscalYear = Number(configData.fiscalYear) || getDefaultFiscalYear();
-  const payload = {
+  const payload = cleanForFirestore({
     ...configData,
     fiscalYear,
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   // 1. Save LocalStorage
   if (typeof window !== 'undefined') {
@@ -511,6 +693,7 @@ export async function saveSkillMapConfig(configData) {
       console.error('LocalStorage write error for skill configs', e);
     }
   }
+  notifySkillConfigSubscribers(fiscalYear, payload);
 
   // 2. Sync to Firebase
   if (isFirebaseConfigured && db) {
@@ -521,10 +704,20 @@ export async function saveSkillMapConfig(configData) {
     }
   }
 
+  logActivity({
+    action: 'UPDATE_SKILL_MAP_CONFIG',
+    category: ACTIVITY_CATEGORIES.SKILL_MAP,
+    status: 'SUCCESS',
+    title: `ปรับปรุงโครงสร้างแผนที่ทักษะ (Skill Map) ปี ${fiscalYear}`,
+    details: `${actor?.name || 'ผู้ดูแลระบบ'} บันทึกโครงสร้าง 4 กลุ่มงาน และทักษะเฉพาะด้านประจำปีงบประมาณ ${fiscalYear}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    metadata: { fiscalYear, workAreasCount: payload.workAreas?.length || 0 },
+  });
+
   return payload;
 }
 
-export async function cloneSkillMapConfigFromYear(sourceYear, targetYear, operatorName = 'Admin') {
+export async function cloneSkillMapConfigFromYear(sourceYear, targetYear, operatorName = 'Admin', actor = null) {
   const srcConfig = getSkillMapConfig(sourceYear);
   const clonedPayload = {
     fiscalYear: Number(targetYear),
@@ -533,7 +726,19 @@ export async function cloneSkillMapConfigFromYear(sourceYear, targetYear, operat
     updatedBy: `โคลนจากปี ${sourceYear} โดย ${operatorName}`,
   };
 
-  return await saveSkillMapConfig(clonedPayload);
+  const saved = await saveSkillMapConfig(clonedPayload, actor);
+
+  logActivity({
+    action: 'CLONE_SKILL_MAP_CONFIG',
+    category: ACTIVITY_CATEGORIES.SKILL_MAP,
+    status: 'SUCCESS',
+    title: `คัดลอกโครงสร้างทักษะ (Skill Map) จากปี ${sourceYear} สู่ปี ${targetYear}`,
+    details: `${operatorName} คัดลอกฐานข้อมูลทักษะและกลุ่มงานจากปีงบประมาณ ${sourceYear} สู่ปีงบประมาณ ${targetYear}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    metadata: { sourceYear, targetYear },
+  });
+
+  return saved;
 }
 
 // -------------------------------------------------------------
@@ -631,17 +836,17 @@ export function getAssessmentByPersonnel(personnelId, fiscalYear) {
   return all.find((a) => a.personnelId === personnelId && Number(a.fiscalYear) === targetYear) || null;
 }
 
-export async function saveSkillMapAssessment(assessmentData) {
+export async function saveSkillMapAssessment(assessmentData, actor = null) {
   const fiscalYear = Number(assessmentData.fiscalYear) || getDefaultFiscalYear();
   const id = assessmentData.id || `eval-${fiscalYear}-${assessmentData.personnelId}`;
   
-  const payload = {
+  const payload = cleanForFirestore({
     ...assessmentData,
     id,
     fiscalYear,
     updatedAt: new Date().toISOString(),
     submittedAt: assessmentData.submittedAt || new Date().toISOString(),
-  };
+  });
 
   // 1. LocalStorage
   if (typeof window !== 'undefined') {
@@ -659,6 +864,8 @@ export async function saveSkillMapAssessment(assessmentData) {
       console.error('LocalStorage write error for assessment', e);
     }
   }
+  const currentList = getAllAssessments(fiscalYear);
+  notifySkillAssessmentsSubscribers(fiscalYear, currentList);
 
   // 2. Firebase
   if (isFirebaseConfigured && db) {
@@ -668,6 +875,17 @@ export async function saveSkillMapAssessment(assessmentData) {
       console.warn('Firebase sync error for assessment', e);
     }
   }
+
+  logActivity({
+    action: 'SUBMIT_SKILL_MAP_ASSESSMENT',
+    category: ACTIVITY_CATEGORIES.SKILL_MAP,
+    status: 'SUCCESS',
+    title: `ส่งผลการประเมินทักษะ (Skill Map): ${payload.personnelName || payload.personnelId} (ปี ${fiscalYear})`,
+    details: `${actor?.name || payload.personnelName || 'บุคลากร'} ส่งผลการประเมินตนเองด้านทักษะและความรู้ความสามารถ ประจำปีงบประมาณ ${fiscalYear}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : { id: payload.personnelId, name: payload.personnelName },
+    target: { id: payload.id, name: `${payload.personnelName} (Skill Map ${fiscalYear})`, type: 'SKILL_MAP_ASSESSMENT' },
+    metadata: { fiscalYear, ratingsCount: Object.keys(payload.ratings || {}).length },
+  });
 
   return payload;
 }

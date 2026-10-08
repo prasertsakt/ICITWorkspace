@@ -35,6 +35,8 @@ import {
   getSkillMapConfig,
   saveSkillMapAssessment,
   getAllAssessments,
+  subscribeSkillMapConfig,
+  subscribeSkillMapAssessments,
   calculateAssessmentSummary,
   getDefaultFiscalYear,
   SKILL_RATING_LEVELS,
@@ -133,16 +135,20 @@ export default function IDPSkillMapPage() {
     );
   }, [isAdmin, currentPersonnel, currentUser]);
 
-  // Load config & assessments when fiscalYear changes
-  const loadYearData = (year) => {
-    const cfg = getSkillMapConfig(year);
-    setWorkAreas(cfg.workAreas || []);
-    const all = getAllAssessments(year);
-    setAssessments(all);
-  };
-
+  // Real-time subscription to config & assessments when fiscalYear changes
   useEffect(() => {
-    loadYearData(fiscalYear);
+    const unsubConfig = subscribeSkillMapConfig(fiscalYear, (cfg) => {
+      setWorkAreas(cfg?.workAreas || []);
+    });
+
+    const unsubAssessments = subscribeSkillMapAssessments(fiscalYear, (list) => {
+      setAssessments(list || []);
+    });
+
+    return () => {
+      if (typeof unsubConfig === 'function') unsubConfig();
+      if (typeof unsubAssessments === 'function') unsubAssessments();
+    };
   }, [fiscalYear]);
 
   // Total subskills count across all areas

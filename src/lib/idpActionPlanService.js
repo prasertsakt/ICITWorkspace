@@ -20,56 +20,98 @@ import {
   IDP_MISSIONS_5,
   IDP_ACTION_PLAN_STATUSES,
 } from './constants';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 
 export const LOCAL_KEY_IDP_ACTION_PLANS = 'icit_idp_action_plans';
 
+// Shared singleton listeners & cache maps per fiscal year
+let actionPlanSubscribersMap = {};
+let sharedActionPlanUnsubMap = {};
+let cachedActionPlanMap = {};
+
+function notifyActionPlanSubscribers(fy, list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedActionPlanMap[fy] = cloned;
+  if (actionPlanSubscribersMap[fy]) {
+    actionPlanSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(cloned);
+      } catch (e) {
+        console.error('IDP Action Plan subscriber error:', e);
+      }
+    });
+  }
+}
+
 /**
  * Real-time Subscription to IDP Action Plans per Fiscal Year
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
  */
 export function subscribeActionPlans(fiscalYear, callback) {
   if (typeof window === 'undefined') return () => {};
 
-  const localKey = `${LOCAL_KEY_IDP_ACTION_PLANS}_${fiscalYear}`;
-  try {
-    const raw = localStorage.getItem(localKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) callback(parsed);
-    }
-  } catch (e) {}
-
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
+  const fy = String(fiscalYear);
+  if (!actionPlanSubscribersMap[fy]) {
+    actionPlanSubscribersMap[fy] = [];
   }
+  actionPlanSubscribersMap[fy].push(callback);
 
-  try {
-    const colRef = collection(db, 'idp_action_plans');
-    const q = query(colRef, where('fiscalYear', '==', String(fiscalYear)));
+  const localKey = `${LOCAL_KEY_IDP_ACTION_PLANS}_${fy}`;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-
-        try {
-          localStorage.setItem(localKey, JSON.stringify(list));
-        } catch (e) {}
-
-        callback(list);
-      },
-      (err) => {
-        console.warn('Firestore idp_action_plans subscription warning:', err);
+  // 1. Instant cache response (0ms)
+  if (cachedActionPlanMap[fy]) {
+    callback(cachedActionPlanMap[fy]);
+  } else {
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          cachedActionPlanMap[fy] = parsed;
+          callback(parsed);
+        }
       }
-    );
-
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to setup idp_action_plans subscription:', e);
-    return () => {};
+    } catch (e) {}
   }
+
+  // 2. Start SINGLE shared listener per fiscal year if not already active
+  if (isFirebaseConfigured && db && !sharedActionPlanUnsubMap[fy]) {
+    try {
+      const colRef = collection(db, 'idp_action_plans');
+      const q = query(colRef, where('fiscalYear', '==', fy));
+
+      sharedActionPlanUnsubMap[fy] = onSnapshot(
+        q,
+        (snapshot) => {
+          const list = snapshot.docs.map((docSnap) => ({
+            id: docSnap.id,
+            ...docSnap.data(),
+          }));
+
+          try {
+            localStorage.setItem(localKey, JSON.stringify(list));
+          } catch (e) {}
+
+          notifyActionPlanSubscribers(fy, list);
+        },
+        (err) => {
+          console.warn(`Firestore idp_action_plans (${fy}) subscription warning:`, err);
+        }
+      );
+    } catch (e) {
+      console.error('Failed to setup idp_action_plans subscription:', e);
+    }
+  }
+
+  return () => {
+    if (actionPlanSubscribersMap[fy]) {
+      actionPlanSubscribersMap[fy] = actionPlanSubscribersMap[fy].filter((cb) => cb !== callback);
+      if (actionPlanSubscribersMap[fy].length === 0 && sharedActionPlanUnsubMap[fy]) {
+        sharedActionPlanUnsubMap[fy]();
+        delete sharedActionPlanUnsubMap[fy];
+      }
+    }
+  };
 }
 
 /**
@@ -153,6 +195,17 @@ export async function saveActionPlan(planData, actor) {
     }
   }
 
+  logActivity({
+    action: planData.id ? 'UPDATE_IDP_ACTION_PLAN' : 'CREATE_IDP_ACTION_PLAN',
+    category: ACTIVITY_CATEGORIES.IDP_ACTION_PLAN,
+    status: 'SUCCESS',
+    title: `บันทึกแผนปฏิบัติการ IDP: ${payload.personnelName} (ปีงบฯ ${fiscalYear})`,
+    details: `${actor?.name || 'ผู้จัดทำแผน'} บันทึกแผนปฏิบัติการพัฒนาตนเอง IDP ของ ${payload.personnelName} [สถานะ: ${payload.status || 'DRAFT'}]`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    target: { id: planId, name: `${payload.personnelName} (Action Plan ${fiscalYear})`, type: 'IDP_ACTION_PLAN' },
+    metadata: { fiscalYear, status: payload.status, itemsCount: payload.items?.length || 0 },
+  });
+
   return payload;
 }
 
@@ -160,14 +213,17 @@ export async function saveActionPlan(planData, actor) {
  * Delete an IDP Action Plan
  */
 export async function deleteActionPlan(planId, fiscalYear, actor) {
+  let deletedPlan = null;
   // 1. LocalStorage
   if (typeof window !== 'undefined') {
     try {
       const localKey = `${LOCAL_KEY_IDP_ACTION_PLANS}_${fiscalYear}`;
       const raw = localStorage.getItem(localKey);
       if (raw) {
-        const list = JSON.parse(raw).filter((p) => p.id !== planId);
-        localStorage.setItem(localKey, JSON.stringify(list));
+        const list = JSON.parse(raw);
+        deletedPlan = list.find((p) => p.id === planId);
+        const filtered = list.filter((p) => p.id !== planId);
+        localStorage.setItem(localKey, JSON.stringify(filtered));
       }
     } catch (e) {}
   }
@@ -181,6 +237,16 @@ export async function deleteActionPlan(planId, fiscalYear, actor) {
       console.warn('Firestore deleteActionPlan warning:', e);
     }
   }
+
+  logActivity({
+    action: 'DELETE_IDP_ACTION_PLAN',
+    category: ACTIVITY_CATEGORIES.IDP_ACTION_PLAN,
+    status: 'SUCCESS',
+    title: `ลบแผนปฏิบัติการ IDP: ${deletedPlan?.personnelName || planId}`,
+    details: `ลบแผนปฏิบัติการ IDP ปีงบประมาณ ${fiscalYear} ของ ${deletedPlan?.personnelName || planId} ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name || actor.displayName, email: actor.email, role: actor.role } : null,
+    target: { id: planId, name: `${deletedPlan?.personnelName || planId} (Action Plan ${fiscalYear})`, type: 'IDP_ACTION_PLAN' },
+  });
 
   return true;
 }

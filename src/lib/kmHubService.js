@@ -13,6 +13,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 
 export const LOCAL_KEY_KM_RECORDS = 'icit_km_records';
 
@@ -469,7 +470,7 @@ export async function saveKmRecord(recordData, actor) {
     } catch (e) {}
   }
 
-  if (isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'km_records', finalId);
       await setDoc(docRef, payload, { merge: true });
@@ -478,15 +479,28 @@ export async function saveKmRecord(recordData, actor) {
     }
   }
 
+  logActivity({
+    action: recordData.id ? 'UPDATE_KM_RECORD' : 'CREATE_KM_RECORD',
+    category: ACTIVITY_CATEGORIES.KM_HUB,
+    status: 'SUCCESS',
+    title: `${recordData.id ? 'แก้ไข' : 'บันทึก'}องค์ความรู้/การอบรม: ${payload.courseTitle}`,
+    details: `${actor?.name || 'ผู้ดูแลระบบ'} บันทึกหลักสูตร "${payload.courseTitle}" จัดโดย ${payload.organizer || '-'} (ปีงบฯ ${payload.fiscalYear}) [สถานะ: ${payload.status}]`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: payload.id, name: payload.courseTitle, type: 'KM_RECORD' },
+    metadata: { fiscalYear: payload.fiscalYear, status: payload.status, budget: payload.budget, attendeesCount: payload.attendees?.length || 0 },
+  });
+
   return payload;
 }
 
 /**
  * Delete a KM Record
  */
-export async function deleteKmRecord(recordId) {
+export async function deleteKmRecord(recordId, actor = null) {
+  let deletedItem = null;
   // 1. Immediately update in-memory cache and notify subscribers
   if (cachedKmRecords) {
+    deletedItem = cachedKmRecords.find((item) => item.id === recordId);
     const updated = cachedKmRecords.filter((item) => item.id !== recordId);
     notifyKmSubscribers(updated);
   }
@@ -497,8 +511,10 @@ export async function deleteKmRecord(recordId) {
       localStorage.setItem(LOCAL_KEY_KM_SEEDED, 'true');
       const raw = localStorage.getItem(LOCAL_KEY_KM_RECORDS);
       if (raw) {
-        const list = JSON.parse(raw).filter((item) => item.id !== recordId);
-        localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(list));
+        const list = JSON.parse(raw);
+        if (!deletedItem) deletedItem = list.find((item) => item.id === recordId);
+        const filtered = list.filter((item) => item.id !== recordId);
+        localStorage.setItem(LOCAL_KEY_KM_RECORDS, JSON.stringify(filtered));
       }
     } catch (e) {}
   }
@@ -512,6 +528,16 @@ export async function deleteKmRecord(recordId) {
       console.warn('Firestore deleteDoc km_records warning:', e);
     }
   }
+
+  logActivity({
+    action: 'DELETE_KM_RECORD',
+    category: ACTIVITY_CATEGORIES.KM_HUB,
+    status: 'SUCCESS',
+    title: `ลบหลักสูตรองค์ความรู้: ${deletedItem?.courseTitle || recordId}`,
+    details: `ลบข้อมูลหลักสูตร "${deletedItem?.courseTitle || recordId}" ออกจากฐานข้อมูล KM Hub`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: recordId, name: deletedItem?.courseTitle || recordId, type: 'KM_RECORD' },
+  });
 
   return true;
 }
@@ -613,6 +639,16 @@ export async function saveKmDocConfig(fiscalYear, configData, actor) {
   try {
     localStorage.setItem(localKey, JSON.stringify(payload));
   } catch (e) {}
+
+  logActivity({
+    action: 'UPDATE_KM_DOC_CONFIG',
+    category: ACTIVITY_CATEGORIES.KM_HUB,
+    status: 'SUCCESS',
+    title: `อัปเดตเอกสารแนบ KM Hub: ${payload.documentTitle}`,
+    details: `${actor?.name || 'ผู้ดูแลระบบ'} บันทึกการกำหนดลิงก์เอกสารคู่มือและลิงก์แนบเพิ่มเติม (${fy === 'ALL' ? 'ภาพรวมทั่วไป' : `ปีงบประมาณ ${fy}`})`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    metadata: { fiscalYear: fy, linksCount: payload.additionalLinks?.length || 0 },
+  });
 
   if (!isFirebaseConfigured || !db) {
     return { success: true, data: payload };

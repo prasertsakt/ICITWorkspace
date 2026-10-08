@@ -4,6 +4,7 @@ import { ModalProvider } from '@/context/ModalContext';
 import Navbar from '@/components/Navbar';
 import MobileNav from '@/components/MobileNav';
 import UnauthorizedModal from '@/components/UnauthorizedModal';
+import PageViewTracker from '@/components/PageViewTracker';
 
 export const metadata = {
   title: 'ระบบบริหารจัดการองค์กร | ICIT Workspace',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>
+          <PageViewTracker />
           <ModalProvider>
             <div className="app-layout">
               <Navbar />

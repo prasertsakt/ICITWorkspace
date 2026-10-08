@@ -17,14 +17,198 @@ import {
 export const LOCAL_KEY_ACTIVITY_LOGS = 'icit_system_activity_logs';
 
 export const ACTIVITY_CATEGORIES = {
-  EMAIL: 'EMAIL',
+  AUTH: 'AUTH',
+  PAGE_VIEW: 'PAGE_VIEW',
   PERSONNEL: 'PERSONNEL',
   ATTENDANCE: 'ATTENDANCE',
   LEAVE: 'LEAVE',
   EXECUTIVE: 'EXECUTIVE',
   DEPARTMENT: 'DEPARTMENT',
+  JD_HUB: 'JD_HUB',
+  IDP: 'IDP',
+  IDP_ACTION_PLAN: 'IDP_ACTION_PLAN',
+  SKILL_MAP: 'SKILL_MAP',
+  KM_HUB: 'KM_HUB',
+  IMS_AUDIT: 'IMS_AUDIT',
+  IMS_CAR: 'IMS_CAR',
+  IMS_OFI: 'IMS_OFI',
+  TQA_OFI: 'TQA_OFI',
+  EMAIL: 'EMAIL',
+  PORTAL: 'PORTAL',
   SYSTEM: 'SYSTEM',
 };
+
+export const CATEGORY_DEFINITIONS = {
+  [ACTIVITY_CATEGORIES.AUTH]: {
+    label: 'การเข้าสู่ระบบ (Auth)',
+    shortLabel: 'เข้าสู่ระบบ',
+    color: '#0284C7',
+    bgColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  [ACTIVITY_CATEGORIES.PAGE_VIEW]: {
+    label: 'การเข้าชมหน้าเว็บ (Page View)',
+    shortLabel: 'เข้าชมหน้า',
+    color: '#64748B',
+    bgColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  [ACTIVITY_CATEGORIES.PERSONNEL]: {
+    label: 'จัดการบุคลากร (Personnel)',
+    shortLabel: 'บุคลากร',
+    color: '#059669',
+    bgColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  [ACTIVITY_CATEGORIES.ATTENDANCE]: {
+    label: 'ขอลงเวลา/WFH/OT (Attendance)',
+    shortLabel: 'ลงเวลา',
+    color: '#7C3AED',
+    bgColor: '#F5F3FF',
+    borderColor: '#DDD6FE',
+  },
+  [ACTIVITY_CATEGORIES.LEAVE]: {
+    label: 'ปฏิทินวันลา (Leave)',
+    shortLabel: 'วันลา',
+    color: '#EA580C',
+    bgColor: '#FFF7ED',
+    borderColor: '#FED7AA',
+  },
+  [ACTIVITY_CATEGORIES.EXECUTIVE]: {
+    label: 'คณะผู้บริหาร (Executive)',
+    shortLabel: 'ผู้บริหาร',
+    color: '#D97706',
+    bgColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  [ACTIVITY_CATEGORIES.DEPARTMENT]: {
+    label: 'โครงสร้างฝ่ายงาน (Department)',
+    shortLabel: 'ฝ่ายงาน',
+    color: '#475569',
+    bgColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+  [ACTIVITY_CATEGORIES.JD_HUB]: {
+    label: 'แบบบรรยายลักษณะงาน (JD Hub)',
+    shortLabel: 'JD Hub',
+    color: '#4F46E5',
+    bgColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  [ACTIVITY_CATEGORIES.IDP]: {
+    label: 'แผนพัฒนารายบุคคล (IDP Hub)',
+    shortLabel: 'IDP',
+    color: '#0891B2',
+    bgColor: '#ECFEFF',
+    borderColor: '#A5F3FC',
+  },
+  [ACTIVITY_CATEGORIES.IDP_ACTION_PLAN]: {
+    label: 'แผนปฏิบัติการ IDP (Action Plan)',
+    shortLabel: 'Action Plan',
+    color: '#2563EB',
+    bgColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  [ACTIVITY_CATEGORIES.SKILL_MAP]: {
+    label: 'แผนที่ทักษะ (Skill Map)',
+    shortLabel: 'Skill Map',
+    color: '#9333EA',
+    bgColor: '#FAF5FF',
+    borderColor: '#E9D5FF',
+  },
+  [ACTIVITY_CATEGORIES.KM_HUB]: {
+    label: 'องค์ความรู้ & ติดตาม (KM Hub)',
+    shortLabel: 'KM Hub',
+    color: '#047857',
+    bgColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  [ACTIVITY_CATEGORIES.IMS_AUDIT]: {
+    label: 'ตรวจติดตามภายใน (IMS Audit)',
+    shortLabel: 'IMS Audit',
+    color: '#4338CA',
+    bgColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  [ACTIVITY_CATEGORIES.IMS_CAR]: {
+    label: 'จัดการ CAR & เหตุการณ์ (IMS CAR)',
+    shortLabel: 'IMS CAR',
+    color: '#DC2626',
+    bgColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  [ACTIVITY_CATEGORIES.IMS_OFI]: {
+    label: 'ติดตาม OFI ภายใน (IMS OFI)',
+    shortLabel: 'IMS OFI',
+    color: '#1D4ED8',
+    bgColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  [ACTIVITY_CATEGORIES.TQA_OFI]: {
+    label: 'รายงานผล TQA OFI (TQA Hub)',
+    shortLabel: 'TQA OFI',
+    color: '#B45309',
+    bgColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  [ACTIVITY_CATEGORIES.EMAIL]: {
+    label: 'การส่งอีเมลแจ้งเตือน (Email)',
+    shortLabel: 'อีเมล',
+    color: '#2563EB',
+    bgColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  [ACTIVITY_CATEGORIES.PORTAL]: {
+    label: 'ตั้งค่าหน้าหลัก (Portal Config)',
+    shortLabel: 'Portal',
+    color: '#059669',
+    bgColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  [ACTIVITY_CATEGORIES.SYSTEM]: {
+    label: 'ระบบและความปลอดภัย (System)',
+    shortLabel: 'ระบบ',
+    color: '#334155',
+    bgColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+};
+
+// In-memory debounce map for page views to avoid spamming Firestore
+let lastPageViewMap = new Map();
+
+/**
+ * Log a user's page visit with smart 15-second debounce per path
+ */
+export function logPageView(path, title, user = null) {
+  if (typeof window === 'undefined' || !path) return;
+  const userKey = user?.email || 'guest';
+  const debounceKey = `${userKey}:${path}`;
+  const now = Date.now();
+  const lastTime = lastPageViewMap.get(debounceKey) || 0;
+
+  // Debounce duplicate page visits within 15 seconds
+  if (now - lastTime < 15000) return;
+  lastPageViewMap.set(debounceKey, now);
+
+  logActivity({
+    category: ACTIVITY_CATEGORIES.PAGE_VIEW,
+    action: 'VISIT',
+    title: `เข้าชมหน้า: ${title || path}`,
+    details: `เข้าใช้งานหน้าเว็บเส้นทาง ${path}`,
+    actorName: user?.displayName || user?.name || 'ผู้ใช้งาน',
+    actorEmail: user?.email || '',
+    targetName: title || path,
+    targetId: path,
+    status: 'SUCCESS',
+    metadata: {
+      path,
+      title: title || path,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      screenWidth: typeof window !== 'undefined' ? window.innerWidth : null,
+    },
+  }).catch(() => {});
+}
 
 /**
  * Record a system activity event to Firestore and LocalStorage

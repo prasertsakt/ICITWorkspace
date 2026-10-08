@@ -22,16 +22,93 @@ import {
   Info,
   ChevronRight,
   Eye,
+  FileText,
+  Target,
+  Layers,
+  Award,
+  BookOpen,
+  FileSpreadsheet,
+  Globe,
+  Sliders,
+  Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { ACTIVITY_CATEGORIES, clearAllActivityLogs } from '@/lib/activityLogService';
+import {
+  ACTIVITY_CATEGORIES,
+  CATEGORY_DEFINITIONS,
+  clearAllActivityLogs,
+} from '@/lib/activityLogService';
 import { useModal } from '@/context/ModalContext';
 
 export default function AdminActivityLogsTab({ logs = [], currentAdmin = null }) {
   const { showAlert, showConfirm } = useModal();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedDateRange, setSelectedDateRange] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
+  const [copiedId, setCopiedId] = useState(false);
+
+  // Grouped Category Options for Filter
+  const CATEGORY_GROUPS = [
+    {
+      groupLabel: 'การเข้าใช้งาน & หน้าเว็บ',
+      items: [ACTIVITY_CATEGORIES.AUTH, ACTIVITY_CATEGORIES.PAGE_VIEW],
+    },
+    {
+      groupLabel: 'บุคลากร & โครงสร้าง',
+      items: [
+        ACTIVITY_CATEGORIES.PERSONNEL,
+        ACTIVITY_CATEGORIES.DEPARTMENT,
+        ACTIVITY_CATEGORIES.EXECUTIVE,
+      ],
+    },
+    {
+      groupLabel: 'เวลา & วันลา',
+      items: [ACTIVITY_CATEGORIES.ATTENDANCE, ACTIVITY_CATEGORIES.LEAVE],
+    },
+    {
+      groupLabel: 'การพัฒนาบุคลากร (HRD)',
+      items: [
+        ACTIVITY_CATEGORIES.JD_HUB,
+        ACTIVITY_CATEGORIES.IDP,
+        ACTIVITY_CATEGORIES.IDP_ACTION_PLAN,
+        ACTIVITY_CATEGORIES.SKILL_MAP,
+      ],
+    },
+    {
+      groupLabel: 'คุณภาพ & ความรู้',
+      items: [
+        ACTIVITY_CATEGORIES.KM_HUB,
+        ACTIVITY_CATEGORIES.IMS_AUDIT,
+        ACTIVITY_CATEGORIES.IMS_CAR,
+        ACTIVITY_CATEGORIES.IMS_OFI,
+        ACTIVITY_CATEGORIES.TQA_OFI,
+      ],
+    },
+    {
+      groupLabel: 'ระบบ & การสื่อสาร',
+      items: [ACTIVITY_CATEGORIES.EMAIL, ACTIVITY_CATEGORIES.PORTAL, ACTIVITY_CATEGORIES.SYSTEM],
+    },
+  ];
+
+  // Helper: Date filter check
+  const isWithinDateRange = (isoString, range) => {
+    if (!isoString || range === 'ALL') return true;
+    const itemDate = new Date(isoString).getTime();
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    if (range === 'TODAY') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      return itemDate >= todayStart.getTime();
+    }
+    if (range === '7D') return now - itemDate <= 7 * oneDay;
+    if (range === '30D') return now - itemDate <= 30 * oneDay;
+    return true;
+  };
 
   // Filter logs
   const filteredLogs = useMemo(() => {
@@ -42,35 +119,91 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
       }
       // Status filter
       if (selectedStatus !== 'ALL') {
-        if (selectedStatus === 'SUCCESS' && item.status !== 'SUCCESS') return false;
-        if (selectedStatus === 'SIMULATED' && item.status !== 'SIMULATED') return false;
-        if (selectedStatus === 'FAILED' && item.status !== 'FAILED') return false;
+        const itemStatus = (item.status || '').toUpperCase();
+        if (selectedStatus === 'SUCCESS' && !['SUCCESS', 'DELIVERED'].includes(itemStatus))
+          return false;
+        if (selectedStatus === 'SIMULATED' && !['SIMULATED', 'SANDBOX'].includes(itemStatus))
+          return false;
+        if (selectedStatus === 'FAILED' && !['FAILED', 'ERROR'].includes(itemStatus))
+          return false;
+      }
+      // Date Range filter
+      if (!isWithinDateRange(item.loggedAt || item.timestamp, selectedDateRange)) {
+        return false;
       }
       // Search term
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase().trim();
         const matchTitle = item.title?.toLowerCase().includes(q);
         const matchDetails = item.details?.toLowerCase().includes(q);
-        const matchActor = item.actorName?.toLowerCase().includes(q) || item.actorEmail?.toLowerCase().includes(q);
-        const matchTarget = item.targetName?.toLowerCase().includes(q) || item.targetId?.toLowerCase().includes(q);
-        const matchSubject = item.metadata?.subject?.toLowerCase().includes(q);
-        const matchRecipient = item.metadata?.to?.toLowerCase().includes(q);
+        const matchAction = item.action?.toLowerCase().includes(q);
+        const matchCategory = item.category?.toLowerCase().includes(q);
+        const matchActor =
+          item.actorName?.toLowerCase().includes(q) ||
+          item.actorEmail?.toLowerCase().includes(q) ||
+          item.actor?.name?.toLowerCase().includes(q) ||
+          item.actor?.email?.toLowerCase().includes(q);
+        const matchTarget =
+          item.targetName?.toLowerCase().includes(q) ||
+          item.targetId?.toLowerCase().includes(q) ||
+          item.target?.name?.toLowerCase().includes(q);
+        const matchMeta = JSON.stringify(item.metadata || {}).toLowerCase().includes(q);
 
-        return matchTitle || matchDetails || matchActor || matchTarget || matchSubject || matchRecipient;
+        return (
+          matchTitle ||
+          matchDetails ||
+          matchAction ||
+          matchCategory ||
+          matchActor ||
+          matchTarget ||
+          matchMeta
+        );
       }
       return true;
     });
-  }, [logs, selectedCategory, selectedStatus, searchTerm]);
+  }, [logs, selectedCategory, selectedStatus, selectedDateRange, searchTerm]);
 
-  // Statistics calculation
+  // Extended Domain Statistics Calculation
   const stats = useMemo(() => {
     const total = logs.length;
-    const emails = logs.filter((l) => l.category === ACTIVITY_CATEGORIES.EMAIL).length;
-    const personnel = logs.filter((l) => l.category === ACTIVITY_CATEGORIES.PERSONNEL).length;
-    const attendance = logs.filter(
+    const authAndVisits = logs.filter(
+      (l) => l.category === ACTIVITY_CATEGORIES.AUTH || l.category === ACTIVITY_CATEGORIES.PAGE_VIEW
+    ).length;
+    const personnel = logs.filter(
+      (l) =>
+        l.category === ACTIVITY_CATEGORIES.PERSONNEL ||
+        l.category === ACTIVITY_CATEGORIES.DEPARTMENT ||
+        l.category === ACTIVITY_CATEGORIES.EXECUTIVE
+    ).length;
+    const attendanceAndLeave = logs.filter(
       (l) => l.category === ACTIVITY_CATEGORIES.ATTENDANCE || l.category === ACTIVITY_CATEGORIES.LEAVE
     ).length;
-    return { total, emails, personnel, attendance };
+    const developmentHubs = logs.filter(
+      (l) =>
+        l.category === ACTIVITY_CATEGORIES.JD_HUB ||
+        l.category === ACTIVITY_CATEGORIES.IDP ||
+        l.category === ACTIVITY_CATEGORIES.IDP_ACTION_PLAN ||
+        l.category === ACTIVITY_CATEGORIES.SKILL_MAP
+    ).length;
+    const qualityAndKm = logs.filter(
+      (l) =>
+        l.category === ACTIVITY_CATEGORIES.KM_HUB ||
+        l.category === ACTIVITY_CATEGORIES.IMS_AUDIT ||
+        l.category === ACTIVITY_CATEGORIES.IMS_CAR ||
+        l.category === ACTIVITY_CATEGORIES.IMS_OFI ||
+        l.category === ACTIVITY_CATEGORIES.TQA_OFI
+    ).length;
+    const emails = logs.filter((l) => l.category === ACTIVITY_CATEGORIES.EMAIL).length;
+
+    return {
+      total,
+      authAndVisits,
+      personnel,
+      attendanceAndLeave,
+      developmentHubs,
+      qualityAndKm,
+      emails,
+    };
   }, [logs]);
 
   // Helper to format Thai date time
@@ -79,91 +212,155 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
     try {
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return isoString;
-      return d.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      }) + ' น.';
+      return (
+        d.toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }) + ' น.'
+      );
     } catch (e) {
       return isoString;
     }
   };
 
-  // Helper to get category icon and colors
+  // Helper to get Category Icon and Definition
   const getCategoryMeta = (category) => {
+    const def = CATEGORY_DEFINITIONS[category];
+    let icon = <Activity size={14} />;
+
     switch (category) {
-      case ACTIVITY_CATEGORIES.EMAIL:
-        return {
-          icon: <Mail size={16} />,
-          label: 'อีเมล (Email)',
-          bg: '#EFF6FF',
-          color: '#2563EB',
-          border: '#BFDBFE',
-        };
+      case ACTIVITY_CATEGORIES.AUTH:
+        icon = <Shield size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.PAGE_VIEW:
+        icon = <Globe size={14} />;
+        break;
       case ACTIVITY_CATEGORIES.PERSONNEL:
-        return {
-          icon: <User size={16} />,
-          label: 'บุคลากร (Personnel)',
-          bg: '#ECFDF5',
-          color: '#059669',
-          border: '#A7F3D0',
-        };
-      case ACTIVITY_CATEGORIES.ATTENDANCE:
-        return {
-          icon: <Clock size={16} />,
-          label: 'ขอลงเวลา (Attendance)',
-          bg: '#F5F3FF',
-          color: '#7C3AED',
-          border: '#DDD6FE',
-        };
-      case ACTIVITY_CATEGORIES.LEAVE:
-        return {
-          icon: <Calendar size={16} />,
-          label: 'ปฏิทินวันลา (Leave)',
-          bg: '#FFF7ED',
-          color: '#EA580C',
-          border: '#FED7AA',
-        };
+        icon = <User size={14} />;
+        break;
       case ACTIVITY_CATEGORIES.DEPARTMENT:
-        return {
-          icon: <Building2 size={16} />,
-          label: 'ฝ่ายงาน (Department)',
-          bg: '#F8FAFC',
-          color: '#475569',
-          border: '#CBD5E1',
-        };
+        icon = <Building2 size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.EXECUTIVE:
+        icon = <Award size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.ATTENDANCE:
+        icon = <Clock size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.LEAVE:
+        icon = <Calendar size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.JD_HUB:
+        icon = <FileText size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.IDP:
+      case ACTIVITY_CATEGORIES.IDP_ACTION_PLAN:
+        icon = <Target size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.SKILL_MAP:
+        icon = <Layers size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.KM_HUB:
+        icon = <BookOpen size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.EMAIL:
+        icon = <Mail size={14} />;
+        break;
+      case ACTIVITY_CATEGORIES.PORTAL:
+        icon = <Sliders size={14} />;
+        break;
       default:
-        return {
-          icon: <Activity size={16} />,
-          label: 'ระบบ (System)',
-          bg: '#F1F5F9',
-          color: '#334155',
-          border: '#E2E8F0',
-        };
+        icon = <Activity size={14} />;
     }
+
+    if (def) {
+      return {
+        ...def,
+        icon,
+      };
+    }
+
+    return {
+      label: category || 'ระบบ',
+      shortLabel: category || 'ระบบ',
+      color: '#475569',
+      bgColor: '#F1F5F9',
+      borderColor: '#CBD5E1',
+      icon,
+    };
   };
 
   // Export logs to JSON
   const handleExportJson = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(logs, null, 2));
+    const dataStr =
+      'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(filteredLogs, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `icit_activity_logs_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute(
+      'download',
+      `icit_activity_logs_${new Date().toISOString().slice(0, 10)}.json`
+    );
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+  };
+
+  // Export logs to CSV
+  const handleExportCsv = () => {
+    if (!filteredLogs.length) return;
+
+    const headers = [
+      'ID',
+      'วัน-เวลา (ISO)',
+      'หมวดหมู่ (Category)',
+      'รหัสกิจกรรม (Action)',
+      'หัวข้อกิจกรรม (Title)',
+      'รายละเอียด (Details)',
+      'ผู้ดำเนินการ (Actor Name)',
+      'อีเมลผู้ดำเนินการ (Actor Email)',
+      'สถานะ (Status)',
+      'เป้าหมาย (Target)',
+    ];
+
+    const rows = filteredLogs.map((l) => [
+      `"${l.id || ''}"`,
+      `"${l.loggedAt || l.timestamp || ''}"`,
+      `"${l.category || ''}"`,
+      `"${l.action || ''}"`,
+      `"${(l.title || '').replace(/"/g, '""')}"`,
+      `"${(l.details || '').replace(/"/g, '""')}"`,
+      `"${(l.actorName || l.actor?.name || '').replace(/"/g, '""')}"`,
+      `"${(l.actorEmail || l.actor?.email || '').replace(/"/g, '""')}"`,
+      `"${l.status || ''}"`,
+      `"${(l.targetName || l.target?.name || l.targetId || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `icit_activity_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleClearLogs = async () => {
     const confirmed = await showConfirm({
       type: 'danger',
       title: 'ล้างประวัติกิจกรรมทั้งหมด',
-      message: 'คุณต้องการล้างประวัติกิจกรรมทั้งหมดในระบบใช่หรือไม่? (การกระทำนี้ไม่สามารถย้อนกลับได้)',
-      confirmText: 'ล้างประวัติ',
+      message:
+        'คุณต้องการล้างประวัติกิจกรรมทั้งหมดในระบบใช่หรือไม่? ข้อมูลบันทึก Audit Trail ทั้งหมดจะถูกลบถาวร (ไม่สามารถย้อนกลับได้)',
+      confirmText: 'ล้างประวัติถาวร',
     });
     if (confirmed) {
       await clearAllActivityLogs();
@@ -175,14 +372,27 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
     }
   };
 
+  const handleCopyId = (id) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* KPI Stats Header */}
-      <div className="grid-4" style={{ gap: '0.75rem' }}>
+      {/* 1. Extended KPI Stats Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '0.75rem',
+        }}
+      >
+        {/* Total Activities */}
         <div
           className="card-glass"
           style={{
-            padding: '1rem 1.25rem',
+            padding: '0.85rem 1rem',
             borderLeft: '4px solid var(--primary-500)',
             display: 'flex',
             alignItems: 'center',
@@ -190,18 +400,25 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
               กิจกรรมทั้งหมด
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginTop: '2px',
+              }}
+            >
               {stats.total}
             </div>
           </div>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
               background: 'var(--primary-50)',
               color: 'var(--primary-600)',
               display: 'flex',
@@ -209,48 +426,57 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
               justifyContent: 'center',
             }}
           >
-            <Activity size={20} />
+            <Activity size={18} />
           </div>
         </div>
 
+        {/* Auth & Page Visits */}
         <div
           className="card-glass"
           style={{
-            padding: '1rem 1.25rem',
-            borderLeft: '4px solid #2563EB',
+            padding: '0.85rem 1rem',
+            borderLeft: '4px solid #0284C7',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              การส่งอีเมล (Emails)
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              เข้าสู่ระบบ & เข้าชม
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563EB', marginTop: '2px' }}>
-              {stats.emails}
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#0284C7',
+                marginTop: '2px',
+              }}
+            >
+              {stats.authAndVisits}
             </div>
           </div>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: '#EFF6FF',
-              color: '#2563EB',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#F0F9FF',
+              color: '#0284C7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Mail size={20} />
+            <Shield size={18} />
           </div>
         </div>
 
+        {/* Personnel & Org */}
         <div
           className="card-glass"
           style={{
-            padding: '1rem 1.25rem',
+            padding: '0.85rem 1rem',
             borderLeft: '4px solid #059669',
             display: 'flex',
             alignItems: 'center',
@@ -258,18 +484,25 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              การจัดการบุคลากร
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              บุคลากร & ฝ่ายงาน
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#059669',
+                marginTop: '2px',
+              }}
+            >
               {stats.personnel}
             </div>
           </div>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
               background: '#ECFDF5',
               color: '#059669',
               display: 'flex',
@@ -277,14 +510,15 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
               justifyContent: 'center',
             }}
           >
-            <User size={20} />
+            <User size={18} />
           </div>
         </div>
 
+        {/* Attendance & Leave */}
         <div
           className="card-glass"
           style={{
-            padding: '1rem 1.25rem',
+            padding: '0.85rem 1rem',
             borderLeft: '4px solid #7C3AED',
             display: 'flex',
             alignItems: 'center',
@@ -292,18 +526,25 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              ขอลงเวลา & ปฏิทินวันลา
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              ขอลงเวลา & วันลา
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7C3AED', marginTop: '2px' }}>
-              {stats.attendance}
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#7C3AED',
+                marginTop: '2px',
+              }}
+            >
+              {stats.attendanceAndLeave}
             </div>
           </div>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
               background: '#F5F3FF',
               color: '#7C3AED',
               display: 'flex',
@@ -311,16 +552,142 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
               justifyContent: 'center',
             }}
           >
-            <Clock size={20} />
+            <Clock size={18} />
+          </div>
+        </div>
+
+        {/* HRD / Competency Hubs */}
+        <div
+          className="card-glass"
+          style={{
+            padding: '0.85rem 1rem',
+            borderLeft: '4px solid #4F46E5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              JD, IDP & Skill Map
+            </div>
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#4F46E5',
+                marginTop: '2px',
+              }}
+            >
+              {stats.developmentHubs}
+            </div>
+          </div>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#EEF2FF',
+              color: '#4F46E5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Target size={18} />
+          </div>
+        </div>
+
+        {/* Quality & KM */}
+        <div
+          className="card-glass"
+          style={{
+            padding: '0.85rem 1rem',
+            borderLeft: '4px solid #D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              KM Hub & IMS / TQA
+            </div>
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#D97706',
+                marginTop: '2px',
+              }}
+            >
+              {stats.qualityAndKm}
+            </div>
+          </div>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#FEF3C7',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <BookOpen size={18} />
+          </div>
+        </div>
+
+        {/* Email Dispatches */}
+        <div
+          className="card-glass"
+          style={{
+            padding: '0.85rem 1rem',
+            borderLeft: '4px solid #2563EB',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              อีเมลแจ้งเตือน
+            </div>
+            <div
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#2563EB',
+                marginTop: '2px',
+              }}
+            >
+              {stats.emails}
+            </div>
+          </div>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#EFF6FF',
+              color: '#2563EB',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Mail size={18} />
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* 2. Search & Filter Bar */}
       <div
         className="card-glass"
         style={{
-          padding: '1.25rem',
+          padding: '1.15rem',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.85rem',
@@ -350,40 +717,68 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
             <input
               type="text"
               className="form-input"
-              placeholder="ค้นหาชื่อผู้ดำเนินการ, หัวข้ออีเมล, ผู้รับ, รายละเอียด..."
+              placeholder="ค้นหาชื่อผู้กระทำ, หัวข้อ, รหัสกิจกรรม, ข้อมูลเป้าหมาย, อีเมล..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '2.2rem' }}
+              style={{ paddingLeft: '2.2rem', fontSize: '0.85rem' }}
             />
           </div>
 
-          {/* Status Dropdown */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Filters & Actions Controls */}
+          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Date Range Dropdown */}
+            <select
+              className="form-select"
+              value={selectedDateRange}
+              onChange={(e) => setSelectedDateRange(e.target.value)}
+              style={{ width: 'auto', fontSize: '0.825rem', padding: '0.35rem 0.65rem' }}
+            >
+              <option value="ALL">ทุกช่วงเวลา</option>
+              <option value="TODAY">วันนี้ (Today)</option>
+              <option value="7D">7 วันล่าสุด</option>
+              <option value="30D">30 วันล่าสุด</option>
+            </select>
+
+            {/* Status Dropdown */}
             <select
               className="form-select"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{ width: 'auto' }}
+              style={{ width: 'auto', fontSize: '0.825rem', padding: '0.35rem 0.65rem' }}
             >
               <option value="ALL">ทุกสถานะ</option>
               <option value="SUCCESS">🟢 สำเร็จ (Success / Delivered)</option>
               <option value="SIMULATED">🟡 จำลอง (Simulated / Sandbox)</option>
-              <option value="FAILED">🔴 ไม่สำเร็จ (Failed)</option>
+              <option value="FAILED">🔴 ล้มเหลว (Failed / Error)</option>
             </select>
 
+            {/* Export CSV Button */}
+            <button
+              onClick={handleExportCsv}
+              className="btn btn-secondary btn-sm"
+              title="ส่งออกบันทึก Audit Trail เป็นไฟล์ CSV"
+              style={{ fontSize: '0.8rem', gap: '4px' }}
+            >
+              <FileSpreadsheet size={14} />
+              <span>ส่งออก CSV</span>
+            </button>
+
+            {/* Export JSON Button */}
             <button
               onClick={handleExportJson}
               className="btn btn-secondary btn-sm"
-              title="ส่งออกข้อมูลบันทึกประวัติ (Export JSON)"
+              title="ส่งออกบันทึกประวัติเป็น JSON"
+              style={{ fontSize: '0.8rem', gap: '4px' }}
             >
-              <Download size={15} />
-              <span>ส่งออก JSON</span>
+              <Download size={14} />
+              <span>JSON</span>
             </button>
 
+            {/* Clear All Logs Button */}
             <button
               onClick={handleClearLogs}
               className="btn btn-ghost btn-sm"
-              style={{ color: 'var(--rose-500)' }}
+              style={{ color: 'var(--rose-500)', fontSize: '0.8rem' }}
               title="ล้างบันทึกประวัติทั้งหมด"
             >
               <Trash2 size={15} />
@@ -391,59 +786,60 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
           </div>
         </div>
 
-        {/* Category Filter Chips */}
-        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+        {/* 3. Category Filter Chips (Categorized & Visualized) */}
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={() => setSelectedCategory('ALL')}
             className={`btn btn-sm ${selectedCategory === 'ALL' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
           >
             ทั้งหมด ({logs.length})
           </button>
-          <button
-            onClick={() => setSelectedCategory(ACTIVITY_CATEGORIES.EMAIL)}
-            className={`btn btn-sm ${selectedCategory === ACTIVITY_CATEGORIES.EMAIL ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-          >
-            <Mail size={13} />
-            <span>อีเมล ({stats.emails})</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory(ACTIVITY_CATEGORIES.PERSONNEL)}
-            className={`btn btn-sm ${selectedCategory === ACTIVITY_CATEGORIES.PERSONNEL ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-          >
-            <User size={13} />
-            <span>บุคลากร ({stats.personnel})</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory(ACTIVITY_CATEGORIES.ATTENDANCE)}
-            className={`btn btn-sm ${selectedCategory === ACTIVITY_CATEGORIES.ATTENDANCE ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-          >
-            <Clock size={13} />
-            <span>ขอลงเวลา</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory(ACTIVITY_CATEGORIES.LEAVE)}
-            className={`btn btn-sm ${selectedCategory === ACTIVITY_CATEGORIES.LEAVE ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-          >
-            <Calendar size={13} />
-            <span>ปฏิทินวันลา</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory(ACTIVITY_CATEGORIES.DEPARTMENT)}
-            className={`btn btn-sm ${selectedCategory === ACTIVITY_CATEGORIES.DEPARTMENT ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-          >
-            <Building2 size={13} />
-            <span>ฝ่ายงาน</span>
-          </button>
+
+          {Object.keys(CATEGORY_DEFINITIONS).map((catKey) => {
+            const meta = getCategoryMeta(catKey);
+            const count = logs.filter((l) => l.category === catKey).length;
+            const isSelected = selectedCategory === catKey;
+
+            return (
+              <button
+                key={catKey}
+                onClick={() => setSelectedCategory(isSelected ? 'ALL' : catKey)}
+                className="btn btn-sm"
+                style={{
+                  fontSize: '0.725rem',
+                  padding: '0.2rem 0.55rem',
+                  background: isSelected ? meta.color : meta.bgColor,
+                  color: isSelected ? '#FFFFFF' : meta.color,
+                  border: `1px solid ${meta.borderColor}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {meta.icon}
+                <span>{meta.shortLabel}</span>
+                {count > 0 && (
+                  <span
+                    style={{
+                      background: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                      padding: '1px 5px',
+                      borderRadius: '10px',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Activity Logs Timeline / Table */}
+      {/* 4. Activity Logs Table */}
       <div className="card-glass" style={{ overflowX: 'auto', padding: 0 }}>
         {filteredLogs.length > 0 ? (
           <table
@@ -457,88 +853,167 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
             <thead>
               <tr
                 style={{
-                  background: 'var(--bg-card-subtle)',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
+                  background: 'var(--bg-card-subtle, #F8FAFC)',
+                  borderBottom: '1px solid var(--border-subtle, #E2E8F0)',
+                  color: 'var(--text-secondary, #64748B)',
                   fontWeight: 600,
                 }}
               >
-                <th style={{ padding: '0.85rem 1rem', width: '130px' }}>ประเภท</th>
-                <th style={{ padding: '0.85rem 1rem' }}>กิจกรรม / รายละเอียด</th>
-                <th style={{ padding: '0.85rem 1rem' }}>ผู้ดำเนินการ</th>
-                <th style={{ padding: '0.85rem 1rem', width: '120px' }}>สถานะ</th>
-                <th style={{ padding: '0.85rem 1rem', width: '160px' }}>วัน-เวลา</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'right', width: '80px' }}>ดูข้อมูล</th>
+                <th style={{ padding: '0.85rem 1rem', width: '135px' }}>หมวดหมู่</th>
+                <th style={{ padding: '0.85rem 1rem' }}>กิจกรรม / รายละเอียดการกระทำ</th>
+                <th style={{ padding: '0.85rem 1rem', width: '170px' }}>ผู้ดำเนินการ</th>
+                <th style={{ padding: '0.85rem 1rem', width: '110px' }}>สถานะ</th>
+                <th style={{ padding: '0.85rem 1rem', width: '155px' }}>วัน-เวลา</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'right', width: '75px' }}>ดูข้อมูล</th>
               </tr>
             </thead>
             <tbody>
               {filteredLogs.map((item) => {
                 const meta = getCategoryMeta(item.category);
-                const isSuccess = item.status === 'SUCCESS' || item.status === 'DELIVERED';
-                const isSimulated = item.status === 'SIMULATED' || item.status === 'SANDBOX';
+                const isSuccess = ['SUCCESS', 'DELIVERED'].includes((item.status || '').toUpperCase());
+                const isSimulated = ['SIMULATED', 'SANDBOX'].includes((item.status || '').toUpperCase());
+                const actorName = item.actorName || item.actor?.name || 'ระบบ';
+                const actorEmail = item.actorEmail || item.actor?.email || '';
 
                 return (
                   <tr
                     key={item.id}
                     style={{
-                      borderBottom: '1px solid var(--border-subtle)',
+                      borderBottom: '1px solid var(--border-subtle, #E2E8F0)',
                       transition: 'var(--transition)',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-card-subtle)')}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = 'var(--bg-card-subtle, #F8FAFC)')
+                    }
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     {/* Category */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
+                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
                       <span
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '5px',
-                          padding: '0.2rem 0.55rem',
+                          gap: '4px',
+                          padding: '0.2rem 0.5rem',
                           borderRadius: 'var(--radius-full)',
-                          fontSize: '0.725rem',
+                          fontSize: '0.7rem',
                           fontWeight: 600,
-                          background: meta.bg,
+                          background: meta.bgColor,
                           color: meta.color,
-                          border: `1px solid ${meta.border}`,
+                          border: `1px solid ${meta.borderColor}`,
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {meta.icon}
-                        <span>{item.category}</span>
+                        <span>{meta.shortLabel}</span>
                       </span>
                     </td>
 
-                    {/* Title & Details */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <strong style={{ color: 'var(--text-primary)', display: 'block' }}>
-                        {item.title}
-                      </strong>
+                    {/* Title & Details & Target */}
+                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {item.action && (
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: '#F1F5F9',
+                              color: '#475569',
+                              border: '1px solid #E2E8F0',
+                            }}
+                          >
+                            {item.action}
+                          </span>
+                        )}
+                        <strong style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                          {item.title}
+                        </strong>
+                      </div>
+
                       {item.details && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-muted)',
+                            marginTop: '3px',
+                            lineHeight: 1.4,
+                          }}
+                        >
                           {item.details}
                         </div>
                       )}
+
+                      {item.targetName && (
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--primary-700)',
+                            marginTop: '2px',
+                            display: 'inline-block',
+                            background: 'var(--primary-50)',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          🎯 {item.targetName}
+                        </div>
+                      )}
+
                       {item.metadata?.error && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--rose-600)', marginTop: '2px' }}>
+                        <div
+                          style={{
+                            fontSize: '0.725rem',
+                            color: 'var(--rose-600)',
+                            marginTop: '2px',
+                            fontWeight: 500,
+                          }}
+                        >
                           ⚠️ ข้อผิดพลาด: {item.metadata.error}
                         </div>
                       )}
                     </td>
 
                     {/* Actor */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                        {item.actorName || 'ระบบ'}
+                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--text-primary)',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {actorName}
                       </div>
-                      {item.actorEmail && (
-                        <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-                          {item.actorEmail}
+                      {actorEmail && (
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {actorEmail}
                         </div>
+                      )}
+                      {item.actor?.role && (
+                        <span
+                          style={{
+                            fontSize: '0.625rem',
+                            color: '#64748B',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          [{item.actor.role}]
+                        </span>
                       )}
                     </td>
 
                     {/* Status */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
+                    <td style={{ padding: '0.75rem 1rem', verticalAlign: 'top' }}>
                       <span
                         className={`badge ${
                           isSuccess
@@ -547,22 +1022,30 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                             ? 'badge-user'
                             : 'badge-resigned'
                         }`}
-                        style={{ fontSize: '0.7rem' }}
+                        style={{ fontSize: '0.675rem', whiteSpace: 'nowrap' }}
                       >
                         {isSuccess ? '🟢 สำเร็จ' : isSimulated ? '🟡 โหมดจำลอง' : '🔴 ล้มเหลว'}
                       </span>
                     </td>
 
                     {/* Time */}
-                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {formatDateTime(item.loggedAt)}
+                    <td
+                      style={{
+                        padding: '0.75rem 1rem',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        verticalAlign: 'top',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {formatDateTime(item.loggedAt || item.timestamp)}
                     </td>
 
-                    {/* Actions */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                    {/* Inspect Action */}
+                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', verticalAlign: 'top' }}>
                       <button
                         onClick={() => setSelectedLogForDetail(item)}
-                        className="btn btn-ghost btn-icon"
+                        className="btn btn-ghost btn-icon btn-sm"
                         title="ดูรายละเอียดข้อมูลบันทึกนี้"
                         style={{ color: 'var(--primary-600)' }}
                       >
@@ -575,23 +1058,31 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
             </tbody>
           </table>
         ) : (
-          <div style={{ padding: '3.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <div
+            style={{
+              padding: '3.5rem 1rem',
+              textAlign: 'center',
+              color: 'var(--text-secondary)',
+            }}
+          >
             <Activity size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 0.75rem' }} />
-            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>ยังไม่มีบันทึกประวัติกิจกรรมที่ตรงกับเงื่อนไข</div>
+            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+              ยังไม่มีบันทึกประวัติกิจกรรมที่ตรงกับเงื่อนไขการค้นหา
+            </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              เมื่อมีการส่งอีเมล หรือดำเนินการใดๆ ในระบบ ประวัติจะปรากฏที่นี่แบบ Real-time
+              กิจกรรมของผู้ใช้ การแก้ไขข้อมูล การเข้าชมหน้าเว็บ และการส่งอีเมล จะถูกบันทึกที่นี่แบบ Real-time
             </div>
           </div>
         )}
       </div>
 
-      {/* Log Detail Modal */}
+      {/* 5. Comprehensive Log Detail Modal */}
       {selectedLogForDetail && (
         <div className="modal-overlay">
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '640px', width: '95%' }}
+            style={{ maxWidth: '680px', width: '95%' }}
           >
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -600,72 +1091,192 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
                     width: '36px',
                     height: '36px',
                     borderRadius: '8px',
-                    background: 'var(--primary-50)',
-                    color: 'var(--primary-600)',
+                    background: getCategoryMeta(selectedLogForDetail.category).bgColor,
+                    color: getCategoryMeta(selectedLogForDetail.category).color,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Info size={18} />
+                  {getCategoryMeta(selectedLogForDetail.category).icon}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>รายละเอียดบันทึกกิจกรรม (Log Details)</h3>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    ID: {selectedLogForDetail.id}
-                  </p>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem' }}>
+                    รายละเอียดบันทึกกิจกรรม (Audit Log Details)
+                  </h3>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.725rem',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    <span>ID: {selectedLogForDetail.id}</span>
+                    <button
+                      onClick={() => handleCopyId(selectedLogForDetail.id)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: copiedId ? '#10B981' : 'var(--text-muted)',
+                        padding: 0,
+                      }}
+                      title="คัดลอก ID"
+                    >
+                      {copiedId ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setSelectedLogForDetail(null)} className="btn btn-ghost btn-icon">
+              <button
+                onClick={() => setSelectedLogForDetail(null)}
+                className="btn btn-ghost btn-icon"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>หัวข้อกิจกรรม:</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+            <div
+              className="modal-body"
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+            >
+              {/* Activity Banner */}
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginBottom: '4px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      background: '#E2E8F0',
+                      color: '#334155',
+                    }}
+                  >
+                    {selectedLogForDetail.action || 'ACTIVITY'}
+                  </span>
+                  <span
+                    className={`badge ${
+                      selectedLogForDetail.status === 'SUCCESS' ? 'badge-active' : 'badge-resigned'
+                    }`}
+                    style={{ fontSize: '0.65rem' }}
+                  >
+                    {selectedLogForDetail.status || 'SUCCESS'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    marginTop: '2px',
+                  }}
+                >
                   {selectedLogForDetail.title}
                 </div>
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  {selectedLogForDetail.details}
-                </div>
+                {selectedLogForDetail.details && (
+                  <div
+                    style={{
+                      fontSize: '0.825rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '4px',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {selectedLogForDetail.details}
+                  </div>
+                )}
               </div>
 
-              <div className="grid-2" style={{ gap: '0.75rem', fontSize: '0.825rem' }}>
+              {/* Grid Metadata */}
+              <div
+                className="grid-2"
+                style={{
+                  gap: '0.75rem',
+                  fontSize: '0.825rem',
+                  background: '#FFFFFF',
+                  padding: '0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>หมวดหมู่: </span>
-                  <strong>{selectedLogForDetail.category}</strong>
+                  <strong>
+                    {getCategoryMeta(selectedLogForDetail.category).label} ({selectedLogForDetail.category})
+                  </strong>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>สถานะ: </span>
-                  <strong>{selectedLogForDetail.status}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>เวลาบันทึก: </span>
+                  <span>{formatDateTime(selectedLogForDetail.loggedAt || selectedLogForDetail.timestamp)}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>ผู้ดำเนินการ: </span>
-                  <strong>{selectedLogForDetail.actorName}</strong>
+                  <strong>
+                    {selectedLogForDetail.actorName || selectedLogForDetail.actor?.name || 'ระบบ'}
+                  </strong>
+                  {(selectedLogForDetail.actorEmail || selectedLogForDetail.actor?.email) && (
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block' }}>
+                      {selectedLogForDetail.actorEmail || selectedLogForDetail.actor?.email}
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>เวลาที่บันทึก: </span>
-                  <span>{formatDateTime(selectedLogForDetail.loggedAt)}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>เป้าหมาย (Target): </span>
+                  <strong>
+                    {selectedLogForDetail.targetName ||
+                      selectedLogForDetail.target?.name ||
+                      selectedLogForDetail.targetId ||
+                      '-'}
+                  </strong>
+                  {selectedLogForDetail.target?.type && (
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block' }}>
+                      ประเภท: {selectedLogForDetail.target.type}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Metadata Details */}
+              {/* Raw Payload / Metadata Viewer */}
               {selectedLogForDetail.metadata && Object.keys(selectedLogForDetail.metadata).length > 0 && (
                 <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    ข้อมูลเพิ่มเติม (Metadata):
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    ข้อมูลบันทึกเชิงลึก (Payload & Metadata):
                   </div>
                   <pre
                     style={{
-                      background: '#1E293B',
-                      color: '#F8FAFC',
-                      padding: '0.75rem',
+                      background: '#0F172A',
+                      color: '#38BDF8',
+                      padding: '0.85rem',
                       borderRadius: '8px',
                       fontSize: '0.75rem',
-                      maxHeight: '180px',
+                      maxHeight: '220px',
                       overflow: 'auto',
+                      fontFamily: 'Consolas, monospace',
+                      border: '1px solid #334155',
                     }}
                   >
                     {JSON.stringify(selectedLogForDetail.metadata, null, 2)}
@@ -675,7 +1286,10 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
             </div>
 
             <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setSelectedLogForDetail(null)} className="btn btn-secondary btn-sm">
+              <button
+                onClick={() => setSelectedLogForDetail(null)}
+                className="btn btn-secondary btn-sm"
+              >
                 ปิดหน้าต่าง
               </button>
             </div>

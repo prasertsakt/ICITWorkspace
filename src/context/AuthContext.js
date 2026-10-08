@@ -14,6 +14,7 @@ import {
   hasAnyAdmin,
 } from '@/lib/storageService';
 import { PERSONNEL_STATUS, USER_ROLES, SESSION_TIMEOUT_MS, SESSION_TIMEOUT_HOURS } from '@/lib/constants';
+import { logActivity, ACTIVITY_CATEGORIES } from '@/lib/activityLogService';
 import { showAppAlert } from './ModalContext';
 
 const AuthContext = createContext(null);
@@ -75,6 +76,24 @@ export function AuthProvider({ children }) {
         displayName: userObj?.displayName || '',
         photoURL: userObj?.photoURL || '',
       });
+      logActivity({
+        action: 'LOGIN_REJECTED',
+        category: ACTIVITY_CATEGORIES.AUTH,
+        status: 'FAILED',
+        title: `เข้าสู่ระบบไม่สำเร็จ: บัญชีไม่อยู่ในรายชื่อ (${cleanEmail})`,
+        details: `ผู้ใช้ ${cleanEmail} พยายามเข้าสู่ระบบแต่ไม่พบในฐานข้อมูลบุคลากรที่ได้รับอนุญาต`,
+        actor: {
+          id: cleanEmail,
+          name: userObj?.displayName || cleanEmail,
+          email: cleanEmail,
+          role: 'UNAUTHORIZED',
+        },
+        metadata: {
+          email: cleanEmail,
+          reason: 'EMAIL_NOT_WHITELISTED',
+          displayName: userObj?.displayName || '',
+        },
+      });
       if (isFirebaseConfigured) {
         await logOut();
       }
@@ -88,6 +107,23 @@ export function AuthProvider({ children }) {
       setAuthError('STATUS_RESIGNED');
       setUnauthorizedEmail(cleanEmail);
       setPendingUserData(null);
+      logActivity({
+        action: 'LOGIN_REJECTED',
+        category: ACTIVITY_CATEGORIES.AUTH,
+        status: 'FAILED',
+        title: `เข้าสู่ระบบไม่สำเร็จ: บุคลากรลาออกแล้ว (${personnel.name})`,
+        details: `ผู้ใช้ ${cleanEmail} (${personnel.name}) พยายามเข้าสู่ระบบแต่มีสถานะพ้นสภาพ/ลาออก`,
+        actor: {
+          id: personnel.id || cleanEmail,
+          name: personnel.name || cleanEmail,
+          email: cleanEmail,
+          role: personnel.role || 'USER',
+        },
+        metadata: {
+          email: cleanEmail,
+          reason: 'STATUS_RESIGNED',
+        },
+      });
       if (isFirebaseConfigured) {
         await logOut();
       }
@@ -102,6 +138,28 @@ export function AuthProvider({ children }) {
     setAuthError(null);
     setUnauthorizedEmail('');
     setPendingUserData(null);
+
+    // Audit log successful login
+    logActivity({
+      action: 'LOGIN_SUCCESS',
+      category: ACTIVITY_CATEGORIES.AUTH,
+      status: 'SUCCESS',
+      title: `เข้าสู่ระบบสำเร็จ: ${personnel.name} (${personnel.role || 'USER'})`,
+      details: `${personnel.name} (${personnel.email}) ฝ่าย${personnel.department || '-'} เข้าสู่ระบบเรียบร้อย`,
+      actor: {
+        id: personnel.id || cleanEmail,
+        name: personnel.name,
+        email: cleanEmail,
+        role: personnel.role || 'USER',
+        department: personnel.department || '',
+      },
+      metadata: {
+        email: cleanEmail,
+        role: personnel.role,
+        department: personnel.department,
+        position: personnel.position,
+      },
+    });
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(SESSION_KEY, cleanEmail);
@@ -324,6 +382,22 @@ export function AuthProvider({ children }) {
   // Action: Sign Out
   const handleSignOut = async () => {
     setIsLoading(true);
+    if (currentPersonnel || currentUser) {
+      const userToLog = currentPersonnel || currentUser;
+      logActivity({
+        action: 'LOGOUT',
+        category: ACTIVITY_CATEGORIES.AUTH,
+        status: 'SUCCESS',
+        title: `ออกจากระบบ: ${userToLog.name || userToLog.displayName || userToLog.email}`,
+        details: `${userToLog.name || userToLog.displayName || userToLog.email} ออกจากระบบเรียบร้อย`,
+        actor: {
+          id: userToLog.id || userToLog.email,
+          name: userToLog.name || userToLog.displayName || userToLog.email,
+          email: userToLog.email,
+          role: userToLog.role || 'USER',
+        },
+      });
+    }
     if (isFirebaseConfigured) {
       await logOut();
     }

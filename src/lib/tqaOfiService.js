@@ -15,6 +15,7 @@ import {
   orderBy,
   writeBatch,
 } from 'firebase/firestore';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 
 export const LOCAL_KEY_TQA_OFI = 'icit_tqa_ofi_items';
 export const LOCAL_KEY_TQA_REPORTS = 'icit_tqa_reports';
@@ -188,98 +189,149 @@ export function normalizeActionReportHtml(html) {
   return processed;
 }
 
+// Shared singleton listeners & cache maps per fiscal year
+let tqaSubscribersMap = {};
+let sharedTqaUnsubMap = {};
+let cachedTqaMap = {};
+
+let tqaReportsSubscribersMap = {};
+let sharedTqaReportsUnsubMap = {};
+let cachedTqaReportsMap = {};
+
+function notifyTqaSubscribers(fy, list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedTqaMap[fy] = cloned;
+  if (tqaSubscribersMap[fy]) {
+    tqaSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(cloned);
+      } catch (e) {
+        console.error('TQA subscriber error:', e);
+      }
+    });
+  }
+}
+
+function notifyTqaReportsSubscribers(fy, data) {
+  cachedTqaReportsMap[fy] = data;
+  if (tqaReportsSubscribersMap[fy]) {
+    tqaReportsSubscribersMap[fy].forEach((cb) => {
+      try {
+        cb(data);
+      } catch (e) {
+        console.error('TQA Reports subscriber error:', e);
+      }
+    });
+  }
+}
+
 /**
  * Real-Time Subscription to TQA OFI Items for a specific Fiscal Year
- * Default: 2568 is pre-seeded with Feedback Report data.
- * Other / future years start completely empty unless populated by admin.
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
  */
 export function subscribeTqaOfiItems(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
   if (typeof window === 'undefined') return () => {};
 
-  const localKey = `${LOCAL_KEY_TQA_OFI}_${fiscalYear}`;
+  const fy = String(fiscalYear);
+  if (!tqaSubscribersMap[fy]) {
+    tqaSubscribersMap[fy] = [];
+  }
+  tqaSubscribersMap[fy].push(callback);
 
-  // Initial Seed for 2568 if first time
-  const getDefaultItemsForYear = (fy) => {
-    if (String(fy) === '2568') {
+  const localKey = `${LOCAL_KEY_TQA_OFI}_${fy}`;
+
+  const getDefaultItemsForYear = (targetFy) => {
+    if (String(targetFy) === '2568') {
       return SEED_TQA_OFI_2568;
     }
     return [];
   };
 
-  // 1. Instant Cache load
-  try {
-    const raw = localStorage.getItem(localKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        callback(parsed);
+  // 1. Instant Cache load (0ms)
+  if (cachedTqaMap[fy]) {
+    callback(cachedTqaMap[fy]);
+  } else {
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          cachedTqaMap[fy] = parsed;
+          callback(parsed);
+        } else {
+          const defaults = getDefaultItemsForYear(fy);
+          cachedTqaMap[fy] = defaults;
+          callback(defaults);
+        }
       } else {
-        const defaults = getDefaultItemsForYear(fiscalYear);
+        const defaults = getDefaultItemsForYear(fy);
+        if (defaults.length > 0) {
+          localStorage.setItem(localKey, JSON.stringify(defaults));
+        }
+        cachedTqaMap[fy] = defaults;
         callback(defaults);
       }
-    } else {
-      const defaults = getDefaultItemsForYear(fiscalYear);
-      if (defaults.length > 0) {
-        localStorage.setItem(localKey, JSON.stringify(defaults));
-      }
-      callback(defaults);
+    } catch (e) {
+      callback(getDefaultItemsForYear(fy));
     }
-  } catch (e) {
-    callback(getDefaultItemsForYear(fiscalYear));
   }
 
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
-  }
+  // 2. Start SINGLE shared listener per fiscal year if not active
+  if (isFirebaseConfigured && db && !sharedTqaUnsubMap[fy]) {
+    try {
+      const q = query(collection(db, 'tqa_ofi_items'), where('fiscalYear', '==', fy));
+      sharedTqaUnsubMap[fy] = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items = [];
+            snapshot.forEach((docSnap) => {
+              items.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            // Sort items cleanly by categoryNum and itemRef
+            items.sort((a, b) => {
+              if ((a.categoryNum || 0) !== (b.categoryNum || 0)) {
+                return (a.categoryNum || 0) - (b.categoryNum || 0);
+              }
+              return (a.itemRef || '').localeCompare(b.itemRef || '');
+            });
 
-  // 2. Firestore Real-time listener
-  try {
-    const q = query(collection(db, 'tqa_ofi_items'), where('fiscalYear', '==', String(fiscalYear)));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const items = [];
-          snapshot.forEach((docSnap) => {
-            items.push({ id: docSnap.id, ...docSnap.data() });
-          });
-          // Sort items cleanly by categoryNum and itemRef
-          items.sort((a, b) => {
-            if ((a.categoryNum || 0) !== (b.categoryNum || 0)) {
-              return (a.categoryNum || 0) - (b.categoryNum || 0);
-            }
-            return (a.itemRef || '').localeCompare(b.itemRef || '');
-          });
-
-          try {
-            localStorage.setItem(localKey, JSON.stringify(items));
-          } catch (e) {}
-          callback(items);
-        } else {
-          // If Firestore is empty for 2568, seed it
-          if (String(fiscalYear) === '2568') {
-            const defaults = SEED_TQA_OFI_2568;
-            seedInitialTqaToFirestore(defaults, '2568');
-            callback(defaults);
-          } else {
-            // Future / other years: clean empty state
             try {
-              localStorage.setItem(localKey, JSON.stringify([]));
+              localStorage.setItem(localKey, JSON.stringify(items));
             } catch (e) {}
-            callback([]);
+            notifyTqaSubscribers(fy, items);
+          } else {
+            // If Firestore is empty for 2568, seed it once
+            if (fy === '2568') {
+              const defaults = SEED_TQA_OFI_2568;
+              seedInitialTqaToFirestore(defaults, '2568');
+              notifyTqaSubscribers(fy, defaults);
+            } else {
+              try {
+                localStorage.setItem(localKey, JSON.stringify([]));
+              } catch (e) {}
+              notifyTqaSubscribers(fy, []);
+            }
           }
+        },
+        (err) => {
+          console.warn(`Firestore tqa_ofi_items (${fy}) warning:`, err);
         }
-      },
-      (err) => {
-        console.warn(`Firestore tqa_ofi_items (${fiscalYear}) warning:`, err);
-      }
-    );
-
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to setup tqa_ofi_items snapshot listener:', e);
-    return () => {};
+      );
+    } catch (e) {
+      console.error('Failed to setup tqa_ofi_items snapshot listener:', e);
+    }
   }
+
+  return () => {
+    if (tqaSubscribersMap[fy]) {
+      tqaSubscribersMap[fy] = tqaSubscribersMap[fy].filter((cb) => cb !== callback);
+      if (tqaSubscribersMap[fy].length === 0 && sharedTqaUnsubMap[fy]) {
+        sharedTqaUnsubMap[fy]();
+        delete sharedTqaUnsubMap[fy];
+      }
+    }
+  };
 }
 
 /**
@@ -342,43 +394,66 @@ export async function saveTqaOfiItem(itemData, fiscalYear = String(getCurrentTha
   try {
     const docRef = doc(db, 'tqa_ofi_items', id);
     await setDoc(docRef, payload, { merge: true });
-    return { success: true, item: payload };
   } catch (e) {
     console.error('Error saving TQA OFI item to Firestore:', e);
     throw e;
   }
+
+  logActivity({
+    action: itemData.id ? 'UPDATE_TQA_OFI' : 'CREATE_TQA_OFI',
+    category: ACTIVITY_CATEGORIES.TQA_OFI,
+    status: 'SUCCESS',
+    title: `บันทึกความก้าวหน้า TQA OFI: ${payload.itemRef || payload.title || 'OFI'} (ปี ${fy})`,
+    details: `${updatedByName || 'ผู้ใช้งาน'} บันทึกผลการดำเนินงานและรายงานรอบของ ${payload.itemRef || ''}: ${payload.title || ''} [สถานะ: ${payload.status}]`,
+    actor: { name: updatedByName || 'Admin', role: 'OPERATOR' },
+    target: { id: payload.id, name: `${payload.itemRef || ''} - ${payload.title || ''}`, type: 'TQA_OFI' },
+    metadata: { fiscalYear: fy, status: payload.status, categoryNum: payload.categoryNum },
+  });
+
+  return { success: true, item: payload };
 }
 
 /**
  * Delete a TQA OFI item
  */
-export async function deleteTqaOfiItem(itemId, fiscalYear = String(getCurrentThaiFiscalYear())) {
+export async function deleteTqaOfiItem(itemId, fiscalYear = String(getCurrentThaiFiscalYear()), actorName = 'Admin') {
   const fy = String(fiscalYear);
   const localKey = `${LOCAL_KEY_TQA_OFI}_${fy}`;
+  let deletedItem = null;
 
   try {
     const raw = localStorage.getItem(localKey);
     if (raw) {
       const list = JSON.parse(raw);
       if (Array.isArray(list)) {
+        deletedItem = list.find((x) => x.id === itemId);
         const filtered = list.filter((x) => x.id !== itemId);
         localStorage.setItem(localKey, JSON.stringify(filtered));
       }
     }
   } catch (e) {}
 
-  if (!isFirebaseConfigured || !db) {
-    return { success: true };
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'tqa_ofi_items', itemId);
+      await deleteDoc(docRef);
+    } catch (e) {
+      console.error('Error deleting TQA OFI item:', e);
+      throw e;
+    }
   }
 
-  try {
-    const docRef = doc(db, 'tqa_ofi_items', itemId);
-    await deleteDoc(docRef);
-    return { success: true };
-  } catch (e) {
-    console.error('Error deleting TQA OFI item:', e);
-    throw e;
-  }
+  logActivity({
+    action: 'DELETE_TQA_OFI',
+    category: ACTIVITY_CATEGORIES.TQA_OFI,
+    status: 'SUCCESS',
+    title: `ลบรายการ TQA OFI: ${deletedItem?.itemRef || itemId}`,
+    details: `ลบหัวข้อ OFI ${deletedItem?.itemRef || ''} (${deletedItem?.title || ''}) ออกจากระบบปี ${fy}`,
+    actor: { name: actorName || 'Admin', role: 'ADMIN' },
+    target: { id: itemId, name: `${deletedItem?.itemRef || ''} - ${deletedItem?.title || ''}`, type: 'TQA_OFI' },
+  });
+
+  return { success: true };
 }
 
 /**
@@ -457,61 +532,82 @@ export async function duplicateTqaOfiFromPreviousYear(sourceYear, targetYear, up
 
 /**
  * Real-Time Subscription to TQA Report URL Config per Fiscal Year
+ * OPTIMIZED: Single shared Firestore listener per fiscal year
  */
 export function subscribeTqaReportConfig(fiscalYear = String(getCurrentThaiFiscalYear()), callback) {
   if (typeof window === 'undefined') return () => {};
 
-  const docId = `report-${fiscalYear}`;
-  const localKey = `${LOCAL_KEY_TQA_REPORTS}_${fiscalYear}`;
+  const fy = String(fiscalYear);
+  if (!tqaReportsSubscribersMap[fy]) {
+    tqaReportsSubscribersMap[fy] = [];
+  }
+  tqaReportsSubscribersMap[fy].push(callback);
+
+  const docId = `report-${fy}`;
+  const localKey = `${LOCAL_KEY_TQA_REPORTS}_${fy}`;
 
   const defaultResult = {
-    fiscalYear: String(fiscalYear),
+    fiscalYear: fy,
     reportUrl: '',
-    reportTitle: `รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ประจำปีการศึกษา ${fiscalYear} (Feedback Report)`,
+    reportTitle: `รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ประจำปีการศึกษา ${fy} (Feedback Report)`,
     updatedAt: null,
   };
 
-  try {
-    const raw = localStorage.getItem(localKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed) callback(parsed);
-    } else {
+  // 1. Instant Cache load (0ms)
+  if (cachedTqaReportsMap[fy]) {
+    callback(cachedTqaReportsMap[fy]);
+  } else {
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed) {
+          cachedTqaReportsMap[fy] = parsed;
+          callback(parsed);
+        }
+      } else {
+        callback(defaultResult);
+      }
+    } catch (e) {
       callback(defaultResult);
     }
-  } catch (e) {
-    callback(defaultResult);
   }
 
-  if (!isFirebaseConfigured || !db) {
-    return () => {};
-  }
-
-  try {
-    const docRef = doc(db, 'tqa_reports', docId);
-    const unsubscribe = onSnapshot(
-      docRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() };
-          try {
-            localStorage.setItem(localKey, JSON.stringify(data));
-          } catch (e) {}
-          callback(data);
-        } else {
-          callback(defaultResult);
+  // 2. Start SINGLE shared listener per fiscal year if not active
+  if (isFirebaseConfigured && db && !sharedTqaReportsUnsubMap[fy]) {
+    try {
+      const docRef = doc(db, 'tqa_reports', docId);
+      sharedTqaReportsUnsubMap[fy] = onSnapshot(
+        docRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = { id: docSnap.id, ...docSnap.data() };
+            try {
+              localStorage.setItem(localKey, JSON.stringify(data));
+            } catch (e) {}
+            notifyTqaReportsSubscribers(fy, data);
+          } else {
+            notifyTqaReportsSubscribers(fy, defaultResult);
+          }
+        },
+        (err) => {
+          console.warn(`Firestore tqa_reports (${fy}) warning:`, err);
         }
-      },
-      (err) => {
-        console.warn(`Firestore tqa_reports (${fiscalYear}) warning:`, err);
-      }
-    );
-
-    return unsubscribe;
-  } catch (e) {
-    console.error('Failed to setup tqa_reports listener:', e);
-    return () => {};
+      );
+    } catch (e) {
+      console.error('Failed to setup tqa_reports listener:', e);
+    }
   }
+
+  return () => {
+    if (tqaReportsSubscribersMap[fy]) {
+      tqaReportsSubscribersMap[fy] = tqaReportsSubscribersMap[fy].filter((cb) => cb !== callback);
+      if (tqaReportsSubscribersMap[fy].length === 0 && sharedTqaReportsUnsubMap[fy]) {
+        sharedTqaReportsUnsubMap[fy]();
+        delete sharedTqaReportsUnsubMap[fy];
+      }
+    }
+  };
 }
 
 /**
@@ -535,6 +631,16 @@ export async function saveTqaReportConfig(fiscalYear, reportUrl, reportTitle = '
   try {
     localStorage.setItem(localKey, JSON.stringify(payload));
   } catch (e) {}
+
+  logActivity({
+    action: 'UPDATE_TQA_REPORT_CONFIG',
+    category: ACTIVITY_CATEGORIES.TQA_OFI,
+    status: 'SUCCESS',
+    title: `อัปเดตเอกสารรายงาน TQA: ${payload.reportTitle}`,
+    details: `${updatedByName || 'ผู้ดูแลระบบ'} บันทึกลิงก์รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ปีการศึกษา ${fy}`,
+    actor: { name: updatedByName || 'Admin', role: 'ADMIN' },
+    metadata: { fiscalYear: fy, reportUrl: payload.reportUrl },
+  });
 
   if (!isFirebaseConfigured || !db) {
     return { success: true, data: payload };

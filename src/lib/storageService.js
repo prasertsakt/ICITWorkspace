@@ -14,6 +14,7 @@ import {
   resolveRoleEmailsFromDirectory,
 } from './emailNotificationService';
 import { DEFAULT_PORTAL_SERVICES, USER_ROLES, PERSONNEL_STATUS } from './constants';
+import { logActivity, ACTIVITY_CATEGORIES } from './activityLogService';
 import { showAppAlert } from '../context/ModalContext';
 import {
   collection,
@@ -243,6 +244,20 @@ const executiveSubscribers = new Set();
 const leaveSubscribers = new Set();
 const portalServiceSubscribers = new Set();
 const timeAttendanceSubscribers = new Set();
+// Single Shared Listeners & Cached State for High-Efficiency Reads
+let sharedPersonnelUnsub = null;
+let cachedPersonnel = null;
+
+let sharedDeptUnsub = null;
+let cachedDepartments = null;
+
+let sharedExecUnsub = null;
+let cachedExecutives = null;
+
+let sharedPortalServicesUnsub = null;
+let cachedPortalServices = null;
+
+let sharedTimeAttendanceUnsub = null;
 let cachedTimeAttendances = null;
 
 function notifyTimeAttendanceSubscribers(list) {
@@ -257,10 +272,12 @@ function notifyTimeAttendanceSubscribers(list) {
   });
 }
 
-function notifyPortalServiceSubscribers(order) {
+function notifyPortalServiceSubscribers(cards) {
+  const cloned = Array.isArray(cards) ? [...cards] : [];
+  cachedPortalServices = cloned;
   portalServiceSubscribers.forEach((cb) => {
     try {
-      cb(order);
+      cb(cloned);
     } catch (e) {
       console.error('Error notifying portal service subscriber', e);
     }
@@ -268,9 +285,11 @@ function notifyPortalServiceSubscribers(order) {
 }
 
 function notifyPersonnelSubscribers(list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedPersonnel = cloned;
   personnelSubscribers.forEach((cb) => {
     try {
-      cb(list);
+      cb(cloned);
     } catch (e) {
       console.error('Error notifying personnel subscriber', e);
     }
@@ -278,9 +297,11 @@ function notifyPersonnelSubscribers(list) {
 }
 
 function notifyDepartmentSubscribers(list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedDepartments = cloned;
   departmentSubscribers.forEach((cb) => {
     try {
-      cb(list);
+      cb(cloned);
     } catch (e) {
       console.error('Error notifying department subscriber', e);
     }
@@ -288,9 +309,11 @@ function notifyDepartmentSubscribers(list) {
 }
 
 function notifyExecutiveSubscribers(list) {
+  const cloned = Array.isArray(list) ? [...list] : [];
+  cachedExecutives = cloned;
   executiveSubscribers.forEach((cb) => {
     try {
-      cb(list);
+      cb(cloned);
     } catch (e) {
       console.error('Error notifying executive subscriber', e);
     }
@@ -309,6 +332,7 @@ function notifyLeaveSubscribers(list) {
 
 /**
  * Subscribe to real-time changes of Personnel list
+ * OPTIMIZED: Uses a SINGLE shared Firestore onSnapshot listener for the entire app.
  */
 export function subscribePersonnelList(callback) {
   if (typeof window === 'undefined') {
@@ -318,38 +342,30 @@ export function subscribePersonnelList(callback) {
 
   personnelSubscribers.add(callback);
 
-  let firestoreUnsub = null;
-  if (isFirebaseConfigured && db) {
+  // 1. Immediate sync response from memory cache or LocalStorage (0ms)
+  if (cachedPersonnel !== null) {
+    callback(cachedPersonnel);
+  } else {
+    initLocalStorage();
+    const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
+    cachedPersonnel = cachedList;
+    callback(cachedList);
+  }
+
+  // 2. Start SINGLE shared listener if not already active
+  if (isFirebaseConfigured && db && !sharedPersonnelUnsub) {
     try {
-      firestoreUnsub = onSnapshot(
+      sharedPersonnelUnsub = onSnapshot(
         collection(db, 'personnel'),
         (snapshot) => {
           if (!snapshot.empty) {
             const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             const list = rawList.filter((p) => !isDummyPersonnel(p));
-            // Asynchronously delete any legacy dummy records from Firestore
-            rawList.forEach((p) => {
-              if (isDummyPersonnel(p) && p.id) {
-                deleteDoc(doc(db, 'personnel', p.id)).catch(() => {});
-              }
-            });
-
-            // Self-healing: if any essential personnel is missing, auto-restore
-            ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
-              if (!list.some((p) => p.email && p.email.toLowerCase() === esp.email.toLowerCase())) {
-                list.push(esp);
-                setDoc(doc(db, 'personnel', esp.id), esp, { merge: true }).catch(() => {});
-              }
-            });
 
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
             notifyPersonnelSubscribers(list);
           } else {
-            // Self-healing fallback if collection is empty
             const list = [...ESSENTIAL_STAFF_RECORDS];
-            ESSENTIAL_STAFF_RECORDS.forEach((esp) => {
-              setDoc(doc(db, 'personnel', esp.id), esp, { merge: true }).catch(() => {});
-            });
             localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(list));
             notifyPersonnelSubscribers(list);
           }
@@ -358,7 +374,7 @@ export function subscribePersonnelList(callback) {
           console.warn('Firestore personnel snapshot error, fallback to local', error);
           initLocalStorage();
           const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
-          callback(list);
+          notifyPersonnelSubscribers(list);
         }
       );
     } catch (e) {
@@ -366,22 +382,22 @@ export function subscribePersonnelList(callback) {
     }
   }
 
-  // Immediate invoke with cached data
-  initLocalStorage();
-  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
-  callback(cachedList);
-
-  const handleStorageChange = () => {
-    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
-    callback(list);
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_PERSONNEL) {
+      try {
+        const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]').filter((p) => !isDummyPersonnel(p));
+        notifyPersonnelSubscribers(list);
+      } catch (err) {}
+    }
   };
   window.addEventListener('storage', handleStorageChange);
 
   return () => {
     personnelSubscribers.delete(callback);
     window.removeEventListener('storage', handleStorageChange);
-    if (firestoreUnsub) {
-      firestoreUnsub();
+    if (personnelSubscribers.size === 0 && sharedPersonnelUnsub) {
+      sharedPersonnelUnsub();
+      sharedPersonnelUnsub = null;
     }
   };
 }
@@ -391,11 +407,14 @@ export function subscribePersonnelList(callback) {
  */
 export function getPersonnelListSync() {
   if (typeof window === 'undefined') return [...ESSENTIAL_STAFF_RECORDS];
+  if (cachedPersonnel !== null) return cachedPersonnel;
   try {
     initLocalStorage();
     const raw = localStorage.getItem(LOCAL_KEY_PERSONNEL);
     if (raw) {
-      return JSON.parse(raw).filter((p) => !isDummyPersonnel(p));
+      const list = JSON.parse(raw).filter((p) => !isDummyPersonnel(p));
+      cachedPersonnel = list;
+      return list;
     }
   } catch (e) {
     console.error('getPersonnelListSync error', e);
@@ -405,6 +424,7 @@ export function getPersonnelListSync() {
 
 /**
  * Subscribe to real-time changes of Departments list
+ * OPTIMIZED: Single shared Firestore listener
  */
 export function subscribeDepartmentList(callback) {
   if (typeof window === 'undefined') {
@@ -414,10 +434,20 @@ export function subscribeDepartmentList(callback) {
 
   departmentSubscribers.add(callback);
 
-  let firestoreUnsub = null;
-  if (isFirebaseConfigured && db) {
+  // 1. Immediate sync response from memory cache or LocalStorage (0ms)
+  if (cachedDepartments !== null) {
+    callback(cachedDepartments);
+  } else {
+    initLocalStorage();
+    const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+    cachedDepartments = cachedList;
+    callback(cachedList);
+  }
+
+  // 2. Start SINGLE shared listener if not already active
+  if (isFirebaseConfigured && db && !sharedDeptUnsub) {
     try {
-      firestoreUnsub = onSnapshot(
+      sharedDeptUnsub = onSnapshot(
         collection(db, 'departments'),
         (snapshot) => {
           if (!snapshot.empty) {
@@ -425,26 +455,17 @@ export function subscribeDepartmentList(callback) {
               const data = { id: d.id, ...d.data() };
               let head = data.headPersonnelId || '';
               let exec = data.supervisingExecutiveId || '';
-              let changed = false;
               if (head.startsWith('pers-') && (head === 'pers-1' || head === 'pers-3' || head === 'pers-4' || head === 'pers-5' || head === 'pers-6' || head === 'pers-11')) {
                 head = '';
-                changed = true;
               }
               if (exec.startsWith('exec-') && (exec === 'exec-1' || exec === 'exec-2' || exec === 'exec-3' || exec === 'exec-4')) {
                 exec = '';
-                changed = true;
-              }
-              if (changed && isFirebaseConfigured && db) {
-                setDoc(doc(db, 'departments', d.id), { ...data, headPersonnelId: head, supervisingExecutiveId: exec }, { merge: true }).catch(() => {});
               }
               return { ...data, headPersonnelId: head, supervisingExecutiveId: exec };
             });
             localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
             notifyDepartmentSubscribers(list);
           } else {
-            for (const d of INITIAL_DEPARTMENTS) {
-              setDoc(doc(db, 'departments', d.id), d);
-            }
             notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
           }
         },
@@ -452,7 +473,7 @@ export function subscribeDepartmentList(callback) {
           console.warn('Firestore department snapshot error', error);
           initLocalStorage();
           const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-          callback(list);
+          notifyDepartmentSubscribers(list);
         }
       );
     } catch (e) {
@@ -460,21 +481,22 @@ export function subscribeDepartmentList(callback) {
     }
   }
 
-  initLocalStorage();
-  const cachedList = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-  callback(cachedList);
-
-  const handleStorageChange = () => {
-    const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-    callback(list);
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_DEPTS) {
+      try {
+        const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
+        notifyDepartmentSubscribers(list);
+      } catch (err) {}
+    }
   };
   window.addEventListener('storage', handleStorageChange);
 
   return () => {
     departmentSubscribers.delete(callback);
     window.removeEventListener('storage', handleStorageChange);
-    if (firestoreUnsub) {
-      firestoreUnsub();
+    if (departmentSubscribers.size === 0 && sharedDeptUnsub) {
+      sharedDeptUnsub();
+      sharedDeptUnsub = null;
     }
   };
 }
@@ -494,6 +516,7 @@ export function sortExecutives(list) {
 
 /**
  * Subscribe to real-time changes of Executives list
+ * OPTIMIZED: Single shared Firestore listener
  */
 export function subscribeExecutiveList(callback) {
   if (typeof window === 'undefined') {
@@ -503,21 +526,25 @@ export function subscribeExecutiveList(callback) {
 
   executiveSubscribers.add(callback);
 
-  let firestoreUnsub = null;
-  if (isFirebaseConfigured && db) {
+  // 1. Immediate sync response from memory cache or LocalStorage (0ms)
+  if (cachedExecutives !== null) {
+    callback(cachedExecutives);
+  } else {
+    initLocalStorage();
+    const cachedList = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]').filter((ex) => !isDummyExecutive(ex)));
+    cachedExecutives = cachedList;
+    callback(cachedList);
+  }
+
+  // 2. Start SINGLE shared listener if not already active
+  if (isFirebaseConfigured && db && !sharedExecUnsub) {
     try {
-      firestoreUnsub = onSnapshot(
+      sharedExecUnsub = onSnapshot(
         collection(db, 'executives'),
         (snapshot) => {
           if (!snapshot.empty) {
             const rawList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             const list = sortExecutives(rawList.filter((ex) => !isDummyExecutive(ex)));
-            // Asynchronously delete any legacy dummy executives from Firestore
-            rawList.forEach((ex) => {
-              if (isDummyExecutive(ex) && ex.id) {
-                deleteDoc(doc(db, 'executives', ex.id)).catch(() => {});
-              }
-            });
             localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(list));
             notifyExecutiveSubscribers(list);
           } else {
@@ -529,7 +556,7 @@ export function subscribeExecutiveList(callback) {
           console.warn('Firestore executive snapshot error', error);
           initLocalStorage();
           const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]').filter((ex) => !isDummyExecutive(ex)));
-          callback(list);
+          notifyExecutiveSubscribers(list);
         }
       );
     } catch (e) {
@@ -537,21 +564,22 @@ export function subscribeExecutiveList(callback) {
     }
   }
 
-  initLocalStorage();
-  const cachedList = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]').filter((ex) => !isDummyExecutive(ex)));
-  callback(cachedList);
-
-  const handleStorageChange = () => {
-    const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
-    callback(list);
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_EXECS) {
+      try {
+        const list = sortExecutives(JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]'));
+        notifyExecutiveSubscribers(list);
+      } catch (err) {}
+    }
   };
   window.addEventListener('storage', handleStorageChange);
 
   return () => {
     executiveSubscribers.delete(callback);
     window.removeEventListener('storage', handleStorageChange);
-    if (firestoreUnsub) {
-      firestoreUnsub();
+    if (executiveSubscribers.size === 0 && sharedExecUnsub) {
+      sharedExecUnsub();
+      sharedExecUnsub = null;
     }
   };
 }
@@ -762,6 +790,7 @@ function mergePortalServicesWithDefaults(storedServices, storedOrder) {
 
 /**
  * Subscribe to real-time changes of Portal Services Cards & Order
+ * OPTIMIZED: Single shared Firestore listener
  */
 export function subscribePortalServices(callback) {
   if (typeof window === 'undefined') {
@@ -771,10 +800,24 @@ export function subscribePortalServices(callback) {
 
   portalServiceSubscribers.add(callback);
 
-  let firestoreUnsub = null;
-  if (isFirebaseConfigured && db) {
+  // 1. Initial emit from memory cache or localStorage
+  if (cachedPortalServices !== null) {
+    callback(cachedPortalServices);
+  } else {
+    let initialCards = [...DEFAULT_PORTAL_SERVICES];
     try {
-      firestoreUnsub = onSnapshot(
+      const cachedCards = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
+      const cachedOrder = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES) || '[]');
+      initialCards = mergePortalServicesWithDefaults(cachedCards, cachedOrder);
+    } catch {}
+    cachedPortalServices = initialCards;
+    callback(initialCards);
+  }
+
+  // 2. Start SINGLE shared listener if not already active
+  if (isFirebaseConfigured && db && !sharedPortalServicesUnsub) {
+    try {
+      sharedPortalServicesUnsub = onSnapshot(
         doc(db, 'settings', 'portal_services'),
         (docSnap) => {
           if (docSnap.exists()) {
@@ -797,21 +840,12 @@ export function subscribePortalServices(callback) {
     }
   }
 
-  // Initial emit from localStorage or defaults
-  let initialCards = [...DEFAULT_PORTAL_SERVICES];
-  try {
-    const cachedCards = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_CUSTOM_ITEMS) || '[]');
-    const cachedOrder = JSON.parse(localStorage.getItem(LOCAL_KEY_PORTAL_SERVICES) || '[]');
-    initialCards = mergePortalServicesWithDefaults(cachedCards, cachedOrder);
-  } catch {}
-  callback(initialCards);
-
   const handleStorageChange = (e) => {
     if (e.key === LOCAL_KEY_PORTAL_CUSTOM_ITEMS && e.newValue) {
       try {
         const parsed = JSON.parse(e.newValue);
         if (Array.isArray(parsed)) {
-          callback(parsed);
+          notifyPortalServiceSubscribers(parsed);
         }
       } catch {}
     }
@@ -821,8 +855,9 @@ export function subscribePortalServices(callback) {
   return () => {
     portalServiceSubscribers.delete(callback);
     window.removeEventListener('storage', handleStorageChange);
-    if (firestoreUnsub) {
-      firestoreUnsub();
+    if (portalServiceSubscribers.size === 0 && sharedPortalServicesUnsub) {
+      sharedPortalServicesUnsub();
+      sharedPortalServicesUnsub = null;
     }
   };
 }
@@ -871,7 +906,7 @@ export async function savePortalServices(cards) {
 /**
  * Save / Update Single Portal Service Card
  */
-export async function savePortalServiceCard(card) {
+export async function savePortalServiceCard(card, actor = null) {
   if (!card || !card.id) return null;
   let currentCards = [...DEFAULT_PORTAL_SERVICES];
   if (typeof window !== 'undefined') {
@@ -883,6 +918,7 @@ export async function savePortalServiceCard(card) {
   }
 
   const existingIdx = currentCards.findIndex((c) => c.id === card.id);
+  const isNew = existingIdx < 0;
   let updatedCards;
   if (existingIdx >= 0) {
     updatedCards = [...currentCards];
@@ -892,13 +928,24 @@ export async function savePortalServiceCard(card) {
   }
 
   await savePortalServices(updatedCards);
+
+  logActivity({
+    action: isNew ? 'CREATE_PORTAL_CARD' : 'UPDATE_PORTAL_CARD',
+    category: ACTIVITY_CATEGORIES.PORTAL,
+    status: 'SUCCESS',
+    title: `${isNew ? 'เพิ่ม' : 'แก้ไข'}การ์ดบริการหน้าหลัก: ${card.title}`,
+    details: `${isNew ? 'เพิ่มการ์ดบริการ' : 'แก้ไขการ์ดบริการ'}: ${card.title} (ประเภท: ${card.type || 'internal'}, ลิงก์: ${card.path || card.externalUrl || '-'})`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: card.id, name: card.title, type: 'PORTAL_CARD' },
+  });
+
   return card;
 }
 
 /**
  * Delete Single Portal Service Card
  */
-export async function deletePortalServiceCard(cardId) {
+export async function deletePortalServiceCard(cardId, actor = null) {
   if (!cardId) return false;
   let currentCards = [...DEFAULT_PORTAL_SERVICES];
   if (typeof window !== 'undefined') {
@@ -909,15 +956,27 @@ export async function deletePortalServiceCard(cardId) {
     } catch {}
   }
 
+  const target = currentCards.find((c) => c.id === cardId);
   const filtered = currentCards.filter((c) => c.id !== cardId);
   await savePortalServices(filtered);
+
+  logActivity({
+    action: 'DELETE_PORTAL_CARD',
+    category: ACTIVITY_CATEGORIES.PORTAL,
+    status: 'SUCCESS',
+    title: `ลบการ์ดบริการหน้าหลัก: ${target?.title || cardId}`,
+    details: `ลบการ์ดบริการ ${target?.title || cardId} ออกจากการแสดงผลหน้าหลัก`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: cardId, name: target?.title || cardId, type: 'PORTAL_CARD' },
+  });
+
   return true;
 }
 
 /**
  * Save Portal Services Order
  */
-export async function savePortalServicesOrder(order) {
+export async function savePortalServicesOrder(order, actor = null) {
   if (!Array.isArray(order)) return order;
   let currentCards = [...DEFAULT_PORTAL_SERVICES];
   if (typeof window !== 'undefined') {
@@ -938,6 +997,16 @@ export async function savePortalServicesOrder(order) {
   });
 
   await savePortalServices(reordered);
+
+  logActivity({
+    action: 'REORDER_PORTAL_CARDS',
+    category: ACTIVITY_CATEGORIES.PORTAL,
+    status: 'SUCCESS',
+    title: 'จัดเรียงลำดับการ์ดบริการหน้าหลัก',
+    details: `บันทึกลำดับการแสดงผลการ์ดบริการหน้าหลักใหม่ (${reordered.length} รายการ)`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+  });
+
   return order;
 }
 
@@ -948,11 +1017,12 @@ export async function savePortalServicesOrder(order) {
 /**
  * Save / Update Personnel
  */
-export async function savePersonnelRecord(personnel) {
+export async function savePersonnelRecord(personnel, actor = null) {
   // 1. Immediately update local storage and notify all subscribers with zero latency
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
   const idx = list.findIndex((p) => p.id === personnel.id);
+  const isNew = idx < 0;
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...personnel };
   } else {
@@ -977,6 +1047,18 @@ export async function savePersonnelRecord(personnel) {
       }
     }
   }
+
+  // 3. System Audit Log
+  logActivity({
+    action: isNew ? 'CREATE_PERSONNEL' : 'UPDATE_PERSONNEL',
+    category: ACTIVITY_CATEGORIES.PERSONNEL,
+    status: 'SUCCESS',
+    title: `${isNew ? 'เพิ่ม' : 'แก้ไข'}ข้อมูลบุคลากร: ${personnel.name || personnel.email}`,
+    details: `${isNew ? 'เพิ่มบุคลากรใหม่' : 'แก้ไขข้อมูล'}: ${personnel.name} (${personnel.position || '-'}) ฝ่าย${personnel.department || '-'} [สถานะ: ${personnel.status || 'ปกติ'}]`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: personnel.id, name: personnel.name, type: 'PERSONNEL' },
+    metadata: { email: personnel.email, department: personnel.department, role: personnel.role, status: personnel.status },
+  });
 
   return personnel;
 }
@@ -1057,10 +1139,11 @@ export async function restoreEssentialPersonnel() {
 /**
  * Delete Personnel
  */
-export async function deletePersonnelRecord(id) {
+export async function deletePersonnelRecord(id, actor = null) {
   // 1. Immediately update local storage and notify all subscribers with zero latency
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_PERSONNEL) || '[]');
+  const target = list.find((p) => p.id === id);
   const filtered = list.filter((p) => p.id !== id);
   localStorage.setItem(LOCAL_KEY_PERSONNEL, JSON.stringify(filtered));
   notifyPersonnelSubscribers(filtered);
@@ -1082,16 +1165,29 @@ export async function deletePersonnelRecord(id) {
     }
   }
 
+  // 3. System Audit Log
+  logActivity({
+    action: 'DELETE_PERSONNEL',
+    category: ACTIVITY_CATEGORIES.PERSONNEL,
+    status: 'SUCCESS',
+    title: `ลบข้อมูลบุคลากร: ${target?.name || id}`,
+    details: `ลบข้อมูลบุคลากร ${target?.name || id} (${target?.email || '-'}) ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id, name: target?.name || id, type: 'PERSONNEL' },
+    metadata: { email: target?.email, department: target?.department },
+  });
+
   return true;
 }
 
 /**
  * Save / Update Department
  */
-export async function saveDepartmentRecord(department) {
+export async function saveDepartmentRecord(department, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
   const idx = list.findIndex((d) => d.id === department.id);
+  const isNew = idx < 0;
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...department };
   } else {
@@ -1108,16 +1204,27 @@ export async function saveDepartmentRecord(department) {
     }
   }
 
+  logActivity({
+    action: isNew ? 'CREATE_DEPARTMENT' : 'UPDATE_DEPARTMENT',
+    category: ACTIVITY_CATEGORIES.DEPARTMENT,
+    status: 'SUCCESS',
+    title: `${isNew ? 'เพิ่ม' : 'แก้ไข'}ข้อมูลฝ่ายงาน: ${department.name}`,
+    details: `${isNew ? 'เพิ่มฝ่ายงานใหม่' : 'แก้ไขฝ่ายงาน'}: ${department.name} (${department.shortName || department.name})`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: department.id, name: department.name, type: 'DEPARTMENT' },
+  });
+
   return department;
 }
 
 /**
  * Save / Update Executive
  */
-export async function saveExecutiveRecord(executive) {
+export async function saveExecutiveRecord(executive, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
   const idx = list.findIndex((ex) => ex.id === executive.id);
+  const isNew = idx < 0;
   const execWithOrder = {
     ...executive,
     order: executive.order !== undefined ? executive.order : (idx >= 0 && list[idx].order !== undefined ? list[idx].order : list.length),
@@ -1140,13 +1247,23 @@ export async function saveExecutiveRecord(executive) {
     }
   }
 
+  logActivity({
+    action: isNew ? 'CREATE_EXECUTIVE' : 'UPDATE_EXECUTIVE',
+    category: ACTIVITY_CATEGORIES.EXECUTIVE,
+    status: 'SUCCESS',
+    title: `${isNew ? 'เพิ่ม' : 'แก้ไข'}ข้อมูลผู้บริหาร: ${executive.name}`,
+    details: `${isNew ? 'เพิ่มคณะผู้บริหารใหม่' : 'แก้ไขข้อมูลผู้บริหาร'}: ${executive.name} ตำแหน่ง ${executive.position || '-'}`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: executive.id, name: executive.name, type: 'EXECUTIVE' },
+  });
+
   return execWithOrder;
 }
 
 /**
  * Save / Update Executive Order (Moveable Executive Cards)
  */
-export async function saveExecutiveOrder(reorderedList) {
+export async function saveExecutiveOrder(reorderedList, actor = null) {
   initLocalStorage();
   const updatedList = reorderedList.map((exec, idx) => ({
     ...exec,
@@ -1177,15 +1294,25 @@ export async function saveExecutiveOrder(reorderedList) {
     }
   }
 
+  logActivity({
+    action: 'REORDER_EXECUTIVES',
+    category: ACTIVITY_CATEGORIES.EXECUTIVE,
+    status: 'SUCCESS',
+    title: 'จัดเรียงลำดับคณะผู้บริหารใหม่',
+    details: `บันทึกการจัดเรียงลำดับการแสดงผลคณะผู้บริหาร (${updatedList.length} ท่าน)`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+  });
+
   return updatedList;
 }
 
 /**
  * Delete Executive
  */
-export async function deleteExecutiveRecord(id) {
+export async function deleteExecutiveRecord(id, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+  const target = list.find((ex) => ex.id === id);
   const filtered = list.filter((ex) => ex.id !== id);
   const reindexed = filtered.map((ex, idx) => ({ ...ex, order: idx }));
   localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(reindexed));
@@ -1199,16 +1326,27 @@ export async function deleteExecutiveRecord(id) {
     }
   }
 
+  logActivity({
+    action: 'DELETE_EXECUTIVE',
+    category: ACTIVITY_CATEGORIES.EXECUTIVE,
+    status: 'SUCCESS',
+    title: `ลบข้อมูลผู้บริหาร: ${target?.name || id}`,
+    details: `ลบข้อมูลคณะผู้บริหาร ${target?.name || id} ตำแหน่ง ${target?.position || '-'} ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id, name: target?.name || id, type: 'EXECUTIVE' },
+  });
+
   return true;
 }
 
 /**
  * Save / Update Leave Record
  */
-export async function saveLeaveRecord(leave) {
+export async function saveLeaveRecord(leave, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
   const idx = list.findIndex((l) => l.id === leave.id);
+  const isNew = idx < 0;
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...leave };
   } else {
@@ -1233,15 +1371,27 @@ export async function saveLeaveRecord(leave) {
     }
   }
 
+  logActivity({
+    action: isNew ? 'CREATE_LEAVE' : 'UPDATE_LEAVE',
+    category: ACTIVITY_CATEGORIES.LEAVE,
+    status: 'SUCCESS',
+    title: `${isNew ? 'บันทึก' : 'แก้ไข'}รายการวันลา: ${leave.personnelName || leave.personnelEmail} (${leave.leaveType || 'วันลา'})`,
+    details: `${leave.personnelName} (${leave.department || '-'}) ลาประเภท ${leave.leaveType} ตั้งแต่วันที่ ${leave.startDate} ถึง ${leave.endDate} (รวม ${leave.days || 1} วัน)`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: leave.id, name: `${leave.personnelName} - ${leave.leaveType}`, type: 'LEAVE' },
+    metadata: { leaveType: leave.leaveType, startDate: leave.startDate, endDate: leave.endDate, days: leave.days },
+  });
+
   return leave;
 }
 
 /**
  * Delete Leave Record
  */
-export async function deleteLeaveRecord(id) {
+export async function deleteLeaveRecord(id, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_LEAVES) || '[]');
+  const target = list.find((l) => l.id === id);
   const filtered = list.filter((l) => l.id !== id);
   localStorage.setItem(LOCAL_KEY_LEAVES, JSON.stringify(filtered));
   notifyLeaveSubscribers(filtered);
@@ -1261,6 +1411,16 @@ export async function deleteLeaveRecord(id) {
       }
     }
   }
+
+  logActivity({
+    action: 'DELETE_LEAVE',
+    category: ACTIVITY_CATEGORIES.LEAVE,
+    status: 'SUCCESS',
+    title: `ลบรายการวันลา: ${target?.personnelName || id} (${target?.leaveType || '-'})`,
+    details: `ลบรายการวันลาของ ${target?.personnelName || id} (${target?.startDate} ถึง ${target?.endDate}) ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id, name: `${target?.personnelName || id} - ${target?.leaveType}`, type: 'LEAVE' },
+  });
 
   return true;
 }
@@ -1683,20 +1843,23 @@ export function getTimeAttendanceById(id) {
  * Subscribe to Time Attendance Requests with Real-Time Firestore Sync & Dummy Purge
  */
 export function subscribeTimeAttendanceList(callback, options = {}) {
-  // 1. Immediate sync response (0ms)
-  const initialData = getTimeAttendanceList();
-  callback(initialData);
+  // 1. Immediate sync response from memory cache or LocalStorage (0ms)
+  if (cachedTimeAttendances !== null) {
+    callback(cachedTimeAttendances);
+  } else {
+    const initialData = getTimeAttendanceList();
+    cachedTimeAttendances = initialData;
+    callback(initialData);
+  }
 
   // 2. Register in-memory pub-sub callback
   timeAttendanceSubscribers.add(callback);
 
-  let unsubscribeFirestore = () => {};
-
-  // 3. Connect to Firestore if configured
-  if (isFirebaseConfigured && db) {
+  // 3. Connect SINGLE shared listener to Firestore if not already running
+  if (isFirebaseConfigured && db && !sharedTimeAttendanceUnsub) {
     try {
       const q = query(collection(db, 'time_attendances'), orderBy('createdAt', 'desc'));
-      unsubscribeFirestore = onSnapshot(
+      sharedTimeAttendanceUnsub = onSnapshot(
         q,
         (snapshot) => {
           if (!snapshot.empty) {
@@ -1706,16 +1869,10 @@ export function subscribeTimeAttendanceList(callback, options = {}) {
               localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify(list));
             }
             notifyTimeAttendanceSubscribers(list);
-
-            // Clean up any lingering dummy records in Firestore
-            rawDocs.forEach((docItem) => {
-              if (isDummyTimeAttendanceRecord(docItem) && docItem.id) {
-                try {
-                  deleteDoc(doc(db, 'time_attendances', docItem.id)).catch(() => {});
-                } catch (e) {}
-              }
-            });
           } else {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_KEY_TIME_ATTENDANCES, JSON.stringify([]));
+            }
             notifyTimeAttendanceSubscribers([]);
           }
         },
@@ -1746,9 +1903,12 @@ export function subscribeTimeAttendanceList(callback, options = {}) {
 
   return () => {
     timeAttendanceSubscribers.delete(callback);
-    unsubscribeFirestore();
     if (typeof window !== 'undefined') {
       window.removeEventListener('storage', handleStorageChange);
+    }
+    if (timeAttendanceSubscribers.size === 0 && sharedTimeAttendanceUnsub) {
+      sharedTimeAttendanceUnsub();
+      sharedTimeAttendanceUnsub = null;
     }
   };
 }
@@ -1842,6 +2002,18 @@ export async function saveTimeAttendanceRecord(record, createdByPersonnel = null
       console.warn('Initial email dispatch error', err);
     }
   }
+
+  // System Audit Log
+  logActivity({
+    action: isNew ? 'CREATE_TIME_ATTENDANCE' : 'UPDATE_TIME_ATTENDANCE',
+    category: ACTIVITY_CATEGORIES.ATTENDANCE,
+    status: 'SUCCESS',
+    title: `${isNew ? 'ยื่นคำขอ' : 'แก้ไข'}${fullRecord.requestType || 'ใบลงเวลา'}: ${fullRecord.requesterName}`,
+    details: `${fullRecord.requesterName} (${fullRecord.department || '-'}) ยื่นคำขอ ${fullRecord.requestType || 'ใบลงเวลา'} สำหรับวันที่ ${fullRecord.date || fullRecord.workDate || '-'} [สถานะ: ${fullRecord.currentStep}]`,
+    actor: createdByPersonnel ? { id: createdByPersonnel.id || createdByPersonnel.email, name: createdByPersonnel.name, email: createdByPersonnel.email, role: createdByPersonnel.role } : { id: fullRecord.requesterEmail, name: fullRecord.requesterName, email: fullRecord.requesterEmail },
+    target: { id: fullRecord.id, name: `${fullRecord.requesterName} - ${fullRecord.requestType}`, type: 'TIME_ATTENDANCE' },
+    metadata: { requestType: fullRecord.requestType, currentStep: fullRecord.currentStep, requesterEmail: fullRecord.requesterEmail },
+  });
 
   return { ...fullRecord, _notifiedRecipient: notifiedRecipient, _emailDispatchResult: emailDispatchResult };
 }
@@ -1963,6 +2135,18 @@ export async function updateTimeAttendanceApproval(
     }
   }
 
+  // System Audit Log
+  logActivity({
+    action: `APPROVE_ATTENDANCE_${step}`,
+    category: ACTIVITY_CATEGORIES.ATTENDANCE,
+    status: decision === 'approve' ? 'SUCCESS' : 'FAILED',
+    title: `พิจารณา${rec.requestType || 'ใบลงเวลา'}: ${actionText}`,
+    details: `${actorName} ดำเนินการ ${actionText} สำหรับคำขอของ ${rec.requesterName} (ข้อคิดเห็น: ${comment || '-'})`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : { id: actorEmail, name: actorName, email: actorEmail },
+    target: { id: rec.id, name: `${rec.requesterName} - ${rec.requestType}`, type: 'TIME_ATTENDANCE' },
+    metadata: { step, decision, comment, nextStep },
+  });
+
   // Dispatch Email Notification to next actor
   try {
     const allPersonnel = await getPersonnelList();
@@ -2010,7 +2194,7 @@ export async function executeOneClickApproval(actionId, step, decision, token, a
 /**
  * Cancel Time Attendance Request (by requester before finished by Deputy Director)
  */
-export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel) {
+export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel = null) {
   initLocalStorage();
   const list = getTimeAttendanceList();
   const idx = list.findIndex((item) => item.id === id);
@@ -2069,6 +2253,17 @@ export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel
     }
   }
 
+  // System Audit Log
+  logActivity({
+    action: 'CANCEL_TIME_ATTENDANCE',
+    category: ACTIVITY_CATEGORIES.ATTENDANCE,
+    status: 'SUCCESS',
+    title: `ยกเลิกคำขอ${rec.requestType || 'ใบลงเวลา'}: ${rec.requesterName}`,
+    details: `${actorName} ยกเลิกคำขอ ${rec.requestType || 'ใบลงเวลา'} (เหตุผล: ${reason || '-'})`,
+    actor: actorPersonnel ? { id: actorPersonnel.id || actorPersonnel.email, name: actorPersonnel.name, email: actorPersonnel.email, role: actorPersonnel.role } : null,
+    target: { id: rec.id, name: `${rec.requesterName} - ${rec.requestType}`, type: 'TIME_ATTENDANCE' },
+  });
+
   // Dispatch Cancellation Email Notification
   try {
     const allPersonnel = await getPersonnelList();
@@ -2088,9 +2283,10 @@ export async function cancelTimeAttendanceRecord(id, reason = '', actorPersonnel
 /**
  * Delete Time Attendance Record
  */
-export async function deleteTimeAttendanceRecord(id) {
+export async function deleteTimeAttendanceRecord(id, actor = null) {
   initLocalStorage();
   const list = getTimeAttendanceList();
+  const target = list.find((item) => item.id === id);
   const filtered = list.filter((item) => item.id !== id);
 
   if (typeof window !== 'undefined') {
@@ -2105,6 +2301,17 @@ export async function deleteTimeAttendanceRecord(id) {
       console.error('Failed to delete time attendance in Firestore', e);
     }
   }
+
+  logActivity({
+    action: 'DELETE_TIME_ATTENDANCE',
+    category: ACTIVITY_CATEGORIES.ATTENDANCE,
+    status: 'SUCCESS',
+    title: `ลบคำขอลงเวลา: ${target?.requesterName || id}`,
+    details: `ลบคำขอลงเวลาของ ${target?.requesterName || id} (${target?.requestType || '-'}) ออกจากระบบ`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id, name: `${target?.requesterName || id} - ${target?.requestType || ''}`, type: 'TIME_ATTENDANCE' },
+  });
+
   return true;
 }
 
