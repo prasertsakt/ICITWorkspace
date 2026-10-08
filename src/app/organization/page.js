@@ -9,8 +9,8 @@ import {
   subscribeExecutiveList,
   saveExecutiveOrder,
 } from '@/lib/storageService';
-import { PREDEFINED_DEPARTMENTS, PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
-import { formatThaiDisplayDate } from '@/lib/dateUtils';
+import { PREDEFINED_DEPARTMENTS, MAIN_6_DEPTS, PERSONNEL_STATUS, USER_ROLES } from '@/lib/constants';
+import { INITIAL_DEPARTMENTS } from '@/lib/initialData';
 import {
   Users,
   Building2,
@@ -593,10 +593,11 @@ export default function OrganizationPage() {
         </div>
 
         <div className="grid-2">
-          {PREDEFINED_DEPARTMENTS.map((deptName) => {
-            const deptConfig = departmentList.find((d) => d.name === deptName) || {};
-            const head = personnelList.find((p) => p.id === deptConfig.headPersonnelId);
-            const supervisingExec = executiveList.find((e) => e.id === deptConfig.supervisingExecutiveId);
+          {MAIN_6_DEPTS.map((deptName, idx) => {
+            const defaultDef = INITIAL_DEPARTMENTS.find((d) => d.name === deptName) || { id: `dept-${idx + 1}`, name: deptName };
+            const deptConfig = departmentList.find((d) => d.name === deptName || d.id === defaultDef.id) || defaultDef;
+            const head = personnelList.find((p) => p.id === deptConfig.headPersonnelId || p.email === deptConfig.headPersonnelId);
+            const supervisingExec = executiveList.find((e) => e.id === deptConfig.supervisingExecutiveId || e.personnelId === deptConfig.supervisingExecutiveId);
             const deptStaff = personnelList.filter((p) => p.department === deptName && p.status === PERSONNEL_STATUS.ACTIVE);
 
             return (
@@ -620,9 +621,9 @@ export default function OrganizationPage() {
                       {deptStaff.length} คน
                     </span>
                   </div>
-                  {deptConfig.description && (
+                  {(deptConfig.description || defaultDef.description) && (
                     <p style={{ fontSize: '0.785rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.5 }}>
-                      {deptConfig.description}
+                      {deptConfig.description || defaultDef.description}
                     </p>
                   )}
                 </div>
@@ -644,7 +645,7 @@ export default function OrganizationPage() {
                     <Award size={16} style={{ color: 'var(--peach-500)', flexShrink: 0 }} />
                     <span style={{ color: 'var(--text-muted)' }}>ผู้บริหารกำกับดูแล:</span>
                     <strong style={{ color: 'var(--text-primary)' }}>
-                      {supervisingExec ? `${supervisingExec.name} (${supervisingExec.position})` : 'ยังไม่ได้กำหนด'}
+                      {supervisingExec ? `${supervisingExec.name} (${supervisingExec.position})` : '⚠️ ยังไม่ได้กำหนด'}
                     </strong>
                   </div>
 
@@ -653,7 +654,7 @@ export default function OrganizationPage() {
                     <UserCheck size={16} style={{ color: 'var(--mint-500)', flexShrink: 0 }} />
                     <span style={{ color: 'var(--text-muted)' }}>หัวหน้าฝ่าย:</span>
                     <strong style={{ color: 'var(--text-primary)' }}>
-                      {head ? `${head.name} (${head.position})` : 'ยังไม่ได้กำหนด'}
+                      {head ? `${head.name} (${head.position})` : '⚠️ ยังไม่ได้กำหนด'}
                     </strong>
                   </div>
                 </div>

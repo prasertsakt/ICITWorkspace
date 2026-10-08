@@ -20,10 +20,12 @@ import {
 } from '@/lib/storageService';
 import {
   PREDEFINED_DEPARTMENTS,
+  MAIN_6_DEPTS,
   PERSONNEL_STATUS,
   USER_ROLES,
   PERSONNEL_TYPES,
 } from '@/lib/constants';
+import { INITIAL_DEPARTMENTS } from '@/lib/initialData';
 import { formatThaiDisplayDate } from '@/lib/dateUtils';
 import PersonnelModal from '@/components/PersonnelModal';
 import ExecutiveModal from '@/components/ExecutiveModal';
@@ -411,26 +413,40 @@ export default function AdminPage() {
 
   // Handle Department Actions with Immediate State Update
   const handleSaveDepartment = async (data) => {
-    setDepartmentList((prev) => {
-      const idx = prev.findIndex((d) => d.id === data.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...data };
-        return next;
-      }
-      return [...prev, data];
-    });
-    await saveDepartmentRecord(data);
-    await logActivity({
-      category: ACTIVITY_CATEGORIES.DEPARTMENT,
-      action: 'SAVE_DEPARTMENT',
-      title: `กำหนดข้อมูลฝ่าย: ${data.name}`,
-      details: `คำอธิบาย / ผู้บริหารกำกับดูแล`,
-      actorName: currentPersonnel?.name,
-      actorEmail: currentPersonnel?.email,
-      targetName: data.name,
-      targetId: data.id,
-    });
+    try {
+      setDepartmentList((prev) => {
+        const idx = prev.findIndex((d) => d.id === data.id || d.name === data.name);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...data };
+          return next;
+        }
+        return [...prev, data];
+      });
+      await saveDepartmentRecord(data, currentPersonnel);
+      await logActivity({
+        category: ACTIVITY_CATEGORIES.DEPARTMENT,
+        action: 'SAVE_DEPARTMENT',
+        title: `กำหนดโครงสร้างฝ่าย: ${data.name}`,
+        details: `บันทึกหัวหน้าฝ่ายและผู้บริหารที่กำกับดูแลเรียบร้อยแล้ว`,
+        actorName: currentPersonnel?.name,
+        actorEmail: currentPersonnel?.email,
+        targetName: data.name,
+        targetId: data.id,
+      });
+      await showAlert({
+        type: 'success',
+        title: 'บันทึกสำเร็จ',
+        message: `บันทึกข้อมูลโครงสร้าง "${data.name}" เรียบร้อยแล้ว`,
+      });
+    } catch (err) {
+      console.error('Error saving department:', err);
+      await showAlert({
+        type: 'danger',
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถบันทึกข้อมูลฝ่ายได้: ' + (err.message || 'กรุณาลองใหม่อีกครั้ง'),
+      });
+    }
   };
 
   const handleClearDummyData = async () => {
@@ -959,11 +975,19 @@ export default function AdminPage() {
           </div>
 
           <div className="grid-2">
-            {PREDEFINED_DEPARTMENTS.map((deptName) => {
-              const deptConfig = departmentList.find((d) => d.name === deptName) || { name: deptName };
-              const head = personnelList.find((p) => p.id === deptConfig.headPersonnelId);
-              const supervisingExec = executiveList.find((e) => e.id === deptConfig.supervisingExecutiveId);
-              const staffCount = personnelList.filter((p) => p.department === deptName).length;
+            {MAIN_6_DEPTS.map((deptName, idx) => {
+              const defaultDef = INITIAL_DEPARTMENTS.find((d) => d.name === deptName) || { id: `dept-${idx + 1}`, name: deptName };
+              const deptConfig = departmentList.find((d) => d.name === deptName || d.id === defaultDef.id) || defaultDef;
+              const head = personnelList.find((p) => p.id === deptConfig.headPersonnelId || p.email === deptConfig.headPersonnelId);
+              const supervisingExec = executiveList.find((e) => e.id === deptConfig.supervisingExecutiveId || e.personnelId === deptConfig.supervisingExecutiveId);
+              const staffCount = personnelList.filter((p) => p.department === deptName && p.status === PERSONNEL_STATUS.ACTIVE).length;
+
+              const fullDeptConfig = {
+                ...defaultDef,
+                ...deptConfig,
+                id: deptConfig.id || defaultDef.id || `dept-${idx + 1}`,
+                name: deptName,
+              };
 
               return (
                 <div
@@ -987,7 +1011,7 @@ export default function AdminPage() {
                     </div>
 
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.5 }}>
-                      {deptConfig.description || 'ยังไม่ได้ระบุรายละเอียดภารกิจ'}
+                      {deptConfig.description || defaultDef.description || 'ยังไม่ได้ระบุรายละเอียดภารกิจ'}
                     </p>
                   </div>
 
@@ -1020,7 +1044,7 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => {
-                        setEditingDepartment(deptConfig);
+                        setEditingDepartment(fullDeptConfig);
                         setIsDepartmentModalOpen(true);
                       }}
                       className="btn btn-secondary btn-sm"

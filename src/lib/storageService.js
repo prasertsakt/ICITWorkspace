@@ -154,37 +154,9 @@ function initLocalStorage() {
     }
   }
 
-  // 2. Departments (Initialize clean structure and sanitize fake head/executive links)
+  // 2. Departments (Initialize structure if empty)
   if (!localStorage.getItem(LOCAL_KEY_DEPTS)) {
     localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(INITIAL_DEPARTMENTS));
-  } else {
-    try {
-      const storedDepts = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-      let updated = false;
-      const cleanedDepts = (Array.isArray(storedDepts) ? storedDepts : []).map((d) => {
-        let changed = false;
-        let head = d.headPersonnelId || '';
-        let exec = d.supervisingExecutiveId || '';
-        if (head.startsWith('pers-') && (head === 'pers-1' || head === 'pers-3' || head === 'pers-4' || head === 'pers-5' || head === 'pers-6' || head === 'pers-11')) {
-          head = '';
-          changed = true;
-        }
-        if (exec.startsWith('exec-') && (exec === 'exec-1' || exec === 'exec-2' || exec === 'exec-3' || exec === 'exec-4')) {
-          exec = '';
-          changed = true;
-        }
-        if (changed) {
-          updated = true;
-          return { ...d, headPersonnelId: head, supervisingExecutiveId: exec };
-        }
-        return d;
-      });
-      if (updated) {
-        localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(cleanedDepts));
-      }
-    } catch (e) {
-      console.warn('Error sanitizing departments in localStorage', e);
-    }
   }
 
   // 3. Executives (Start empty or purge legacy dummy executives)
@@ -451,19 +423,12 @@ export function subscribeDepartmentList(callback) {
         collection(db, 'departments'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((d) => {
-              const data = { id: d.id, ...d.data() };
-              let head = data.headPersonnelId || '';
-              let exec = data.supervisingExecutiveId || '';
-              if (head.startsWith('pers-') && (head === 'pers-1' || head === 'pers-3' || head === 'pers-4' || head === 'pers-5' || head === 'pers-6' || head === 'pers-11')) {
-                head = '';
-              }
-              if (exec.startsWith('exec-') && (exec === 'exec-1' || exec === 'exec-2' || exec === 'exec-3' || exec === 'exec-4')) {
-                exec = '';
-              }
-              return { ...data, headPersonnelId: head, supervisingExecutiveId: exec };
-            });
+            const list = snapshot.docs.map((d) => ({
+              id: d.id,
+              ...d.data(),
+            }));
             localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
+            cachedDepartments = list;
             notifyDepartmentSubscribers(list);
           } else {
             notifyDepartmentSubscribers(INITIAL_DEPARTMENTS);
@@ -1186,19 +1151,38 @@ export async function deletePersonnelRecord(id, actor = null) {
 export async function saveDepartmentRecord(department, actor = null) {
   initLocalStorage();
   const list = JSON.parse(localStorage.getItem(LOCAL_KEY_DEPTS) || '[]');
-  const idx = list.findIndex((d) => d.id === department.id);
+  
+  // Ensure target ID is determined reliably
+  let targetId = department.id;
+  if (!targetId) {
+    const existing = list.find((d) => d.name === department.name) || INITIAL_DEPARTMENTS.find((d) => d.name === department.name);
+    targetId = existing?.id || `dept-${Date.now()}`;
+  }
+  
+  const payload = {
+    ...department,
+    id: targetId,
+    name: department.name || '',
+    headPersonnelId: department.headPersonnelId || '',
+    supervisingExecutiveId: department.supervisingExecutiveId || '',
+    description: department.description || '',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const idx = list.findIndex((d) => d.id === targetId || d.name === payload.name);
   const isNew = idx < 0;
   if (idx >= 0) {
-    list[idx] = { ...list[idx], ...department };
+    list[idx] = { ...list[idx], ...payload };
   } else {
-    list.push(department);
+    list.push(payload);
   }
   localStorage.setItem(LOCAL_KEY_DEPTS, JSON.stringify(list));
+  cachedDepartments = list;
   notifyDepartmentSubscribers(list);
 
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'departments', department.id), department, { merge: true });
+      await setDoc(doc(db, 'departments', targetId), payload, { merge: true });
     } catch (e) {
       console.error('Firestore save department failed', e);
     }
@@ -1208,13 +1192,13 @@ export async function saveDepartmentRecord(department, actor = null) {
     action: isNew ? 'CREATE_DEPARTMENT' : 'UPDATE_DEPARTMENT',
     category: ACTIVITY_CATEGORIES.DEPARTMENT,
     status: 'SUCCESS',
-    title: `${isNew ? 'เพิ่ม' : 'แก้ไข'}ข้อมูลฝ่ายงาน: ${department.name}`,
-    details: `${isNew ? 'เพิ่มฝ่ายงานใหม่' : 'แก้ไขฝ่ายงาน'}: ${department.name} (${department.shortName || department.name})`,
+    title: `กำหนดข้อมูลฝ่าย: ${payload.name}`,
+    details: `บันทึกหัวหน้าฝ่าย / ผู้บริหารกำกับดูแลฝ่าย ${payload.name}`,
     actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
-    target: { id: department.id, name: department.name, type: 'DEPARTMENT' },
+    target: { id: targetId, name: payload.name, type: 'DEPARTMENT' },
   });
 
-  return department;
+  return payload;
 }
 
 /**
