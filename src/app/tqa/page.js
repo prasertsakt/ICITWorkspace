@@ -134,7 +134,7 @@ export default function TqaLandingPage() {
             }}
           >
             <Sparkles size={14} color="#EA580C" />
-            <span>Thailand Quality Award (TQA / EdPEx)</span>
+            <span>Thailand Quality Award (TQA)</span>
           </div>
 
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>
@@ -242,7 +242,7 @@ export default function TqaLandingPage() {
               }}
             >
               <Award size={16} color="#FB923C" />
-              <span>Thailand Quality Award (TQA / EdPEx)</span>
+              <span>Thailand Quality Award (TQA)</span>
             </div>
 
             <div
@@ -280,7 +280,7 @@ export default function TqaLandingPage() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              (TQA / EdPEx)
+              (TQA)
             </span>
           </h1>
 
