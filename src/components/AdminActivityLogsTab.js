@@ -45,6 +45,12 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
   const { showAlert, showConfirm } = useModal();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedDateRange, setSelectedDateRange] = useState('ALL');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [tempPreset, setTempPreset] = useState('ALL');
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
@@ -93,9 +99,10 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
   ];
 
   // Helper: Date filter check
-  const isWithinDateRange = (isoString, range) => {
-    if (!isoString || range === 'ALL') return true;
+  const isWithinDateRange = (isoString, range, startStr, endStr) => {
+    if (!isoString) return true;
     const itemDate = new Date(isoString).getTime();
+    if (isNaN(itemDate)) return true;
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
 
@@ -106,18 +113,87 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
     }
     if (range === '7D') return now - itemDate <= 7 * oneDay;
     if (range === '30D') return now - itemDate <= 30 * oneDay;
+    if (range === 'THIS_MONTH') {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      return itemDate >= monthStart.getTime();
+    }
+    if (range === 'CUSTOM') {
+      if (startStr) {
+        const s = new Date(startStr);
+        s.setHours(0, 0, 0, 0);
+        if (itemDate < s.getTime()) return false;
+      }
+      if (endStr) {
+        const e = new Date(endStr);
+        e.setHours(23, 59, 59, 999);
+        if (itemDate > e.getTime()) return false;
+      }
+      return true;
+    }
     return true;
   };
 
-  // Filter logs
+  const handleOpenDateModal = () => {
+    setTempPreset(selectedDateRange);
+    setTempStartDate(customStartDate);
+    setTempEndDate(customEndDate);
+    setIsDateModalOpen(true);
+  };
+
+  const handleApplyDateModal = () => {
+    setSelectedDateRange(tempPreset);
+    setCustomStartDate(tempStartDate);
+    setCustomEndDate(tempEndDate);
+    setIsDateModalOpen(false);
+  };
+
+  const handleResetDateModal = () => {
+    setTempPreset('ALL');
+    setTempStartDate('');
+    setTempEndDate('');
+    setSelectedDateRange('ALL');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setIsDateModalOpen(false);
+  };
+
+  const getDateRangeLabel = () => {
+    if (selectedDateRange === 'TODAY') return 'วันนี้';
+    if (selectedDateRange === '7D') return '7 วันล่าสุด';
+    if (selectedDateRange === '30D') return '30 วันล่าสุด';
+    if (selectedDateRange === 'THIS_MONTH') return 'เดือนนี้';
+    if (selectedDateRange === 'CUSTOM') {
+      if (customStartDate && customEndDate) {
+        return `${customStartDate} ถึง ${customEndDate}`;
+      } else if (customStartDate) {
+        return `ตั้งแต่ ${customStartDate}`;
+      } else if (customEndDate) {
+        return `ถึง ${customEndDate}`;
+      }
+      return 'กำหนดช่วงเวลา';
+    }
+    return 'ทุกช่วงเวลา';
+  };
+
+  // 1. Logs filtered by Date Range (used dynamically for Dashboard stats & Category pill counts)
+  const dateFilteredLogs = useMemo(() => {
+    return logs.filter((item) =>
+      isWithinDateRange(
+        item.loggedAt || item.timestamp,
+        selectedDateRange,
+        customStartDate,
+        customEndDate
+      )
+    );
+  }, [logs, selectedDateRange, customStartDate, customEndDate]);
+
+  // 2. Filtered logs for the table (Date + Category + Search query)
   const filteredLogs = useMemo(() => {
-    return logs.filter((item) => {
+    return dateFilteredLogs.filter((item) => {
       // Category filter
       if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
-        return false;
-      }
-      // Date Range filter
-      if (!isWithinDateRange(item.loggedAt || item.timestamp, selectedDateRange)) {
         return false;
       }
       // Search term
@@ -135,7 +211,8 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
         const matchTarget =
           item.targetName?.toLowerCase().includes(q) ||
           item.targetId?.toLowerCase().includes(q) ||
-          item.target?.name?.toLowerCase().includes(q);
+          item.target?.name?.toLowerCase().includes(q) ||
+          item.metadata?.path?.toLowerCase().includes(q);
         const matchMeta = JSON.stringify(item.metadata || {}).toLowerCase().includes(q);
 
         return (
@@ -150,31 +227,31 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
       }
       return true;
     });
-  }, [logs, selectedCategory, selectedDateRange, searchTerm]);
+  }, [dateFilteredLogs, selectedCategory, searchTerm]);
 
-  // Extended Domain Statistics Calculation
+  // 3. Extended Domain Statistics Calculation (Dynamically updated according to date filter)
   const stats = useMemo(() => {
-    const total = logs.length;
-    const authAndVisits = logs.filter(
+    const total = dateFilteredLogs.length;
+    const authAndVisits = dateFilteredLogs.filter(
       (l) => l.category === ACTIVITY_CATEGORIES.AUTH || l.category === ACTIVITY_CATEGORIES.PAGE_VIEW
     ).length;
-    const personnel = logs.filter(
+    const personnel = dateFilteredLogs.filter(
       (l) =>
         l.category === ACTIVITY_CATEGORIES.PERSONNEL ||
         l.category === ACTIVITY_CATEGORIES.DEPARTMENT ||
         l.category === ACTIVITY_CATEGORIES.EXECUTIVE
     ).length;
-    const attendanceAndLeave = logs.filter(
+    const attendanceAndLeave = dateFilteredLogs.filter(
       (l) => l.category === ACTIVITY_CATEGORIES.ATTENDANCE || l.category === ACTIVITY_CATEGORIES.LEAVE
     ).length;
-    const developmentHubs = logs.filter(
+    const developmentHubs = dateFilteredLogs.filter(
       (l) =>
         l.category === ACTIVITY_CATEGORIES.JD_HUB ||
         l.category === ACTIVITY_CATEGORIES.IDP ||
         l.category === ACTIVITY_CATEGORIES.IDP_ACTION_PLAN ||
         l.category === ACTIVITY_CATEGORIES.SKILL_MAP
     ).length;
-    const qualityAndKm = logs.filter(
+    const qualityAndKm = dateFilteredLogs.filter(
       (l) =>
         l.category === ACTIVITY_CATEGORIES.KM_HUB ||
         l.category === ACTIVITY_CATEGORIES.IMS_AUDIT ||
@@ -182,7 +259,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
         l.category === ACTIVITY_CATEGORIES.IMS_OFI ||
         l.category === ACTIVITY_CATEGORIES.TQA_OFI
     ).length;
-    const emails = logs.filter((l) => l.category === ACTIVITY_CATEGORIES.EMAIL).length;
+    const emails = dateFilteredLogs.filter((l) => l.category === ACTIVITY_CATEGORIES.EMAIL).length;
 
     return {
       total,
@@ -193,7 +270,7 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
       qualityAndKm,
       emails,
     };
-  }, [logs]);
+  }, [dateFilteredLogs]);
 
   // Helper to format Thai date time
   const formatDateTime = (isoString) => {
@@ -369,6 +446,68 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* 0. Timeframe Header / Indicator */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          paddingBottom: '0.25rem',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <div
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              background: 'var(--primary-50)',
+              color: 'var(--primary-600)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Activity size={16} />
+          </div>
+          <span>สถิติกิจกรรมตามช่วงเวลา (Dashboard Metrics)</span>
+          <span
+            style={{
+              background: selectedDateRange !== 'ALL' ? 'var(--primary-50)' : '#F1F5F9',
+              color: selectedDateRange !== 'ALL' ? 'var(--primary-700)' : '#475569',
+              border: `1px solid ${selectedDateRange !== 'ALL' ? 'var(--primary-200)' : '#E2E8F0'}`,
+              padding: '2px 9px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '0.725rem',
+              fontWeight: 600,
+            }}
+          >
+            📅 {getDateRangeLabel()} • {dateFilteredLogs.length} รายการ
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleOpenDateModal}
+          className="btn btn-secondary btn-sm"
+          style={{ fontSize: '0.775rem', gap: '5px', padding: '0.3rem 0.65rem' }}
+        >
+          <Calendar size={14} style={{ color: 'var(--primary-600)' }} />
+          <span>กำหนดช่วงเวลา Dashboard</span>
+        </button>
+      </div>
+
       {/* 1. Extended KPI Stats Cards */}
       <div
         style={{
@@ -715,18 +854,45 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
 
           {/* Filters & Actions Controls */}
           <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Date Range Dropdown */}
-            <select
-              className="form-select"
-              value={selectedDateRange}
-              onChange={(e) => setSelectedDateRange(e.target.value)}
-              style={{ width: 'auto', fontSize: '0.825rem', padding: '0.35rem 0.65rem' }}
+            {/* Custom Date Range Filter Trigger Button */}
+            <button
+              type="button"
+              onClick={handleOpenDateModal}
+              className={`btn btn-sm ${selectedDateRange !== 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+              title="คลิกเพื่อเลือกช่วงเวลาที่ต้องการตรวจสอบประวัติ"
+              style={{
+                fontSize: '0.8rem',
+                gap: '5px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '0.35rem 0.75rem',
+              }}
             >
-              <option value="ALL">ทุกช่วงเวลา</option>
-              <option value="TODAY">วันนี้ (Today)</option>
-              <option value="7D">7 วันล่าสุด</option>
-              <option value="30D">30 วันล่าสุด</option>
-            </select>
+              <Calendar size={14} />
+              <span>{getDateRangeLabel()}</span>
+              {selectedDateRange !== 'ALL' && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleResetDateModal();
+                  }}
+                  style={{
+                    marginLeft: '4px',
+                    background: 'rgba(255,255,255,0.3)',
+                    borderRadius: '50%',
+                    width: '16px',
+                    height: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                  title="ล้างตัวกรองช่วงเวลา (แสดงทั้งหมด)"
+                >
+                  <X size={10} />
+                </span>
+              )}
+            </button>
 
             {/* Export CSV Button */}
             <button
@@ -762,19 +928,19 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
           </div>
         </div>
 
-        {/* 3. Category Filter Chips (Categorized & Visualized) */}
+        {/* 3. Category Filter Chips (Categorized & Visualized according to Date Range) */}
         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={() => setSelectedCategory('ALL')}
             className={`btn btn-sm ${selectedCategory === 'ALL' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
           >
-            ทั้งหมด ({logs.length})
+            ทั้งหมด ({dateFilteredLogs.length})
           </button>
 
           {Object.keys(CATEGORY_DEFINITIONS).map((catKey) => {
             const meta = getCategoryMeta(catKey);
-            const count = logs.filter((l) => l.category === catKey).length;
+            const count = dateFilteredLogs.filter((l) => l.category === catKey).length;
             const isSelected = selectedCategory === catKey;
 
             return (
@@ -1300,6 +1466,261 @@ export default function AdminActivityLogsTab({ logs = [], currentAdmin = null })
               >
                 ปิดหน้าต่าง
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Range Selection Modal */}
+      {isDateModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsDateModalOpen(false)}>
+          <div
+            className="modal-container card-glass"
+            style={{
+              maxWidth: '520px',
+              width: '90%',
+              padding: 0,
+              overflow: 'hidden',
+              animation: 'modalSlideIn 0.2s ease',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              className="modal-header"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.25rem',
+                borderBottom: '1px solid var(--border-subtle)',
+                background: 'var(--bg-card-subtle, #F8FAFC)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'var(--primary-50)',
+                    color: 'var(--primary-600)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                    กำหนดช่วงเวลาบันทึกประวัติ
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    กรอง Dashboard และตารางกิจกรรมตามวันที่ที่ต้องการ
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDateModalOpen(false)}
+                className="btn btn-ghost btn-icon btn-sm"
+                title="ปิดหน้าต่าง"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              className="modal-body"
+              style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              {/* Quick Presets */}
+              <div>
+                <label
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    display: 'block',
+                    marginBottom: '6px',
+                  }}
+                >
+                  เลือกช่วงเวลายอดนิยม (Quick Presets):
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  {[
+                    { id: 'ALL', label: 'ทั้งหมด (All Time)' },
+                    { id: 'TODAY', label: 'วันนี้ (Today)' },
+                    { id: '7D', label: '7 วันล่าสุด' },
+                    { id: '30D', label: '30 วันล่าสุด' },
+                    { id: 'THIS_MONTH', label: 'เดือนนี้' },
+                    { id: 'CUSTOM', label: 'ระบุเอง (Custom)' },
+                  ].map((p) => {
+                    const isSelected = tempPreset === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setTempPreset(p.id);
+                          if (p.id !== 'CUSTOM') {
+                            setTempStartDate('');
+                            setTempEndDate('');
+                          }
+                        }}
+                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.45rem 0.5rem',
+                          borderRadius: '6px',
+                          border: isSelected
+                            ? '1px solid var(--primary-600)'
+                            : '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Date Inputs */}
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  ระบุช่วงวันที่เริ่มต้น - สิ้นสุด:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.725rem',
+                        color: 'var(--text-muted)',
+                        display: 'block',
+                        marginBottom: '3px',
+                      }}
+                    >
+                      วันที่เริ่มต้น (Start Date)
+                    </label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={tempStartDate}
+                      onChange={(e) => {
+                        setTempStartDate(e.target.value);
+                        setTempPreset('CUSTOM');
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.725rem',
+                        color: 'var(--text-muted)',
+                        display: 'block',
+                        marginBottom: '3px',
+                      }}
+                    >
+                      วันที่สิ้นสุด (End Date)
+                    </label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={tempEndDate}
+                      onChange={(e) => {
+                        setTempEndDate(e.target.value);
+                        setTempPreset('CUSTOM');
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live matching logs count */}
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  background: 'var(--primary-50)',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Info size={14} style={{ color: 'var(--primary-600)' }} />
+                <span>
+                  ผลลัพธ์ที่จะแสดง: บันทึกกิจกรรม{' '}
+                  <strong style={{ color: 'var(--primary-700)' }}>
+                    {
+                      logs.filter((l) =>
+                        isWithinDateRange(
+                          l.loggedAt || l.timestamp,
+                          tempPreset,
+                          tempStartDate,
+                          tempEndDate
+                        )
+                      ).length
+                    }
+                  </strong>{' '}
+                  รายการ
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              className="modal-footer"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.85rem 1.25rem',
+                borderTop: '1px solid var(--border-subtle)',
+                background: 'var(--bg-card-subtle, #F8FAFC)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleResetDateModal}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+              >
+                ล้างตัวกรองทั้งหมด
+              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsDateModalOpen(false)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '0.8rem' }}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyDateModal}
+                  className="btn btn-primary btn-sm"
+                  style={{ fontSize: '0.8rem', gap: '4px' }}
+                >
+                  <Check size={14} />
+                  <span>นำไปใช้ (Apply)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
