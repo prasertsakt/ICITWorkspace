@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Clock,
   X,
@@ -17,6 +17,8 @@ import {
   User,
   History,
   Sparkles,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import { saveLeaveRecord, deleteLeaveRecord } from '@/lib/storageService';
 import { PREDEFINED_DEPARTMENTS } from '@/lib/constants';
@@ -41,6 +43,558 @@ function formatThaiDate(dateStr) {
   }
 }
 
+/**
+ * Dedicated Sub-Modal for Editing Late Record
+ */
+function LateRecordEditModal({
+  isOpen,
+  record,
+  onClose,
+  currentUser,
+  onSaved,
+}) {
+  const [formData, setFormData] = useState({
+    startDate: '',
+    endDate: '',
+    totalDays: 1,
+    reason: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && record) {
+      setFormData({
+        startDate: record.startDate ? record.startDate.split('T')[0] : '',
+        endDate: record.endDate ? record.endDate.split('T')[0] : (record.startDate ? record.startDate.split('T')[0] : ''),
+        totalDays: record.totalDays ?? record.days ?? 1,
+        reason: record.reason || 'มาสาย',
+      });
+      setErrorMsg(null);
+      setSaveSuccess(false);
+    }
+  }, [isOpen, record]);
+
+  // ESC key handler
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isSaving) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSaving, onClose]);
+
+  if (!isOpen || !record) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.startDate) {
+      setErrorMsg('กรุณาระบุวันที่เริ่มต้น');
+      return;
+    }
+
+    const start = formData.startDate;
+    const end = formData.endDate || start;
+
+    if (start > end) {
+      setErrorMsg('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด');
+      return;
+    }
+
+    const durationDays = Number(formData.totalDays) > 0 ? Number(formData.totalDays) : 1;
+
+    setIsSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const updatedData = {
+        ...record,
+        leaveType: 'สาย',
+        startDate: start,
+        endDate: end,
+        totalDays: durationDays,
+        days: durationDays,
+        reason: formData.reason || 'มาสาย',
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveLeaveRecord(updatedData, currentUser);
+      setSaveSuccess(true);
+      if (onSaved) onSaved(updatedData);
+
+      setTimeout(() => {
+        onClose();
+      }, 700);
+    } catch (err) {
+      console.error('Failed to update late record:', err);
+      setErrorMsg('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="modal-overlay"
+      onClick={() => {
+        if (!isSaving) onClose();
+      }}
+      style={{
+        zIndex: 1200,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+      }}
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: '540px',
+          width: '100%',
+          borderRadius: '20px',
+          padding: 0,
+          overflow: 'hidden',
+          backgroundColor: '#FFFFFF',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
+          border: '1px solid rgba(249, 115, 22, 0.25)',
+          animation: 'modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+            borderBottom: '1px solid #FED7AA',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+              }}
+            >
+              <Edit2 size={20} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#9A3412' }}>
+                  แก้ไขรายการมาสาย
+                </h3>
+                <span
+                  style={{
+                    background: '#FFEDD5',
+                    color: '#C2410C',
+                    border: '1px solid #FDBA74',
+                    borderRadius: '999px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '1px 8px',
+                  }}
+                >
+                  Admin Action
+                </span>
+              </div>
+              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#C2410C' }}>
+                ปรับปรุงวันที่เริ่มต้น วันที่สิ้นสุด และระยะเวลามาสาย
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="btn-close"
+            style={{ padding: '6px', color: '#9A3412' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Personnel Summary Card */}
+        <div style={{ padding: '1.25rem 1.5rem 0' }}>
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              borderRadius: '12px',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '10px',
+                  background: '#EEF2FF',
+                  color: '#4F46E5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <User size={18} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0F172A' }}>
+                  {record.personnelName || 'ไม่ระบุชื่อ'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                  {record.department || '-'}
+                </div>
+              </div>
+            </div>
+
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '12px',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                border: '1px solid #FEE2E2',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Clock size={12} />
+              <span>มาสาย</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} style={{ padding: '1.25rem 1.5rem' }}>
+          {errorMsg && (
+            <div
+              style={{
+                padding: '0.65rem 0.85rem',
+                background: '#FEE2E2',
+                border: '1px solid #FCA5A5',
+                borderRadius: '8px',
+                color: '#DC2626',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '1rem',
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {saveSuccess && (
+            <div
+              style={{
+                padding: '0.65rem 0.85rem',
+                background: '#ECFDF5',
+                border: '1px solid #6EE7B7',
+                borderRadius: '8px',
+                color: '#059669',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '1rem',
+              }}
+            >
+              <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+              <span>บันทึกการแก้ไขเรียบร้อยแล้ว</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Start & End Date Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                  วันที่เริ่มต้น (Start Date) *
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#FFFFFF',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '0 8px',
+                  }}
+                >
+                  <Calendar size={15} color="#F97316" />
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: newStart,
+                        endDate: prev.endDate && prev.endDate >= newStart ? prev.endDate : newStart,
+                      }));
+                    }}
+                    required
+                    style={{
+                      flex: 1,
+                      padding: '8px 6px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      background: 'transparent',
+                    }}
+                  />
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+                  {formData.startDate ? formatThaiDate(formData.startDate) : '-'}
+                </span>
+              </div>
+
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                  วันที่สิ้นสุด (End Date) *
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#FFFFFF',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '0 8px',
+                  }}
+                >
+                  <Calendar size={15} color="#F97316" />
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
+                    required
+                    style={{
+                      flex: 1,
+                      padding: '8px 6px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      background: 'transparent',
+                    }}
+                  />
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+                  {formData.endDate ? formatThaiDate(formData.endDate) : '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Total Duration Days */}
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                  ระยะเวลาทั้งหมด (Total Duration) *
+                </label>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, totalDays: 0.5 }))}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      background: formData.totalDays === 0.5 ? '#FFEDD5' : '#F1F5F9',
+                      color: formData.totalDays === 0.5 ? '#C2410C' : '#475569',
+                      border: `1px solid ${formData.totalDays === 0.5 ? '#FDBA74' : '#E2E8F0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    0.5 วัน
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, totalDays: 1 }))}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      background: formData.totalDays === 1 ? '#FFEDD5' : '#F1F5F9',
+                      color: formData.totalDays === 1 ? '#C2410C' : '#475569',
+                      border: `1px solid ${formData.totalDays === 1 ? '#FDBA74' : '#E2E8F0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    1 วัน
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#FFFFFF',
+                  border: '1.5px solid #CBD5E1',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
+              >
+                <input
+                  type="number"
+                  min="0.1"
+                  max="365"
+                  step="0.1"
+                  value={formData.totalDays}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, totalDays: e.target.value }))}
+                  required
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    background: 'transparent',
+                  }}
+                />
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: '#F8FAFC',
+                    borderLeft: '1px solid #E2E8F0',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: '#64748B',
+                  }}
+                >
+                  วัน / ครั้ง
+                </div>
+              </div>
+            </div>
+
+            {/* Reason Input */}
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                เหตุผล / หมายเหตุบันทึกเพิ่มเติม
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#FFFFFF',
+                  border: '1.5px solid #CBD5E1',
+                  borderRadius: '8px',
+                  padding: '0 8px',
+                }}
+              >
+                <FileText size={15} color="#94A3B8" />
+                <input
+                  type="text"
+                  placeholder="เช่น มาสาย, ติดภารกิจด่วน, รถติด ฯลฯ"
+                  value={formData.reason}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
+                  style={{
+                    flex: 1,
+                    padding: '8px 6px',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '0.85rem',
+                    background: 'transparent',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer Actions */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '0.75rem',
+              marginTop: '1.5rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #E2E8F0',
+            }}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="btn btn-secondary btn-sm"
+              style={{
+                padding: '0.55rem 1.25rem',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+              }}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn btn-primary btn-sm"
+              style={{
+                padding: '0.55rem 1.35rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                borderColor: '#EA580C',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+              }}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 size={16} className="spin" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>บันทึกการแก้ไข</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function LateRecordsManageModal({
   isOpen,
   onClose,
@@ -53,13 +607,10 @@ export default function LateRecordsManageModal({
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterYear, setFilterYear] = useState('ALL');
   
-  // Editing Record State
+  // Editing Record State (opens LateRecordEditModal)
   const [editingRecord, setEditingRecord] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
 
-  // Deleting Record State
+  // Deleting Record State (opens LeaveDeleteModal)
   const [leaveToDelete, setLeaveToDelete] = useState(null);
 
   // Filter only 'สาย' records
@@ -120,75 +671,6 @@ export default function LateRecordsManageModal({
 
   if (!isOpen) return null;
 
-  const handleStartEdit = (record) => {
-    setEditingRecord({
-      ...record,
-      startDate: record.startDate ? record.startDate.split('T')[0] : '',
-      endDate: record.endDate ? record.endDate.split('T')[0] : (record.startDate ? record.startDate.split('T')[0] : ''),
-      totalDays: record.totalDays ?? record.days ?? 1,
-      reason: record.reason || 'มาสาย',
-    });
-    setErrorMsg(null);
-    setSaveSuccessMsg(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingRecord(null);
-    setErrorMsg(null);
-  };
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    if (!editingRecord) return;
-
-    if (!editingRecord.startDate) {
-      setErrorMsg('กรุณาระบุวันที่เริ่มต้น');
-      return;
-    }
-
-    if (!editingRecord.endDate) {
-      editingRecord.endDate = editingRecord.startDate;
-    }
-
-    if (editingRecord.startDate > editingRecord.endDate) {
-      setErrorMsg('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด');
-      return;
-    }
-
-    const durationDays = Number(editingRecord.totalDays) > 0 ? Number(editingRecord.totalDays) : 1;
-
-    setIsSaving(true);
-    setErrorMsg(null);
-    setSaveSuccessMsg(null);
-
-    try {
-      const updatedData = {
-        ...editingRecord,
-        leaveType: 'สาย',
-        startDate: editingRecord.startDate,
-        endDate: editingRecord.endDate,
-        totalDays: durationDays,
-        days: durationDays,
-        reason: editingRecord.reason || 'มาสาย',
-        updatedAt: new Date().toISOString(),
-      };
-
-      await saveLeaveRecord(updatedData, currentUser);
-      setSaveSuccessMsg(`บันทึกข้อมูลของ ${editingRecord.personnelName} เรียบร้อยแล้ว`);
-      if (onSaved) onSaved(updatedData);
-
-      setTimeout(() => {
-        setEditingRecord(null);
-        setSaveSuccessMsg(null);
-      }, 900);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleConfirmDelete = async (id, personnelName) => {
     try {
       await deleteLeaveRecord(id, currentUser);
@@ -196,7 +678,12 @@ export default function LateRecordsManageModal({
       setLeaveToDelete(null);
     } catch (err) {
       console.error('Delete error', err);
+      throw err;
     }
+  };
+
+  const handleSaveSuccess = (updatedData) => {
+    if (onSaved) onSaved(updatedData);
   };
 
   return (
@@ -444,265 +931,6 @@ export default function LateRecordsManageModal({
             </div>
           </div>
 
-          {/* Edit Drawer / Modal Form when editing */}
-          {editingRecord && (
-            <form
-              onSubmit={handleSaveEdit}
-              style={{
-                padding: '1.25rem 1.5rem',
-                background: '#FFF7ED',
-                borderBottom: '2px solid #F97316',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      background: '#F97316',
-                      color: '#FFFFFF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Edit2 size={15} />
-                  </div>
-                  <strong style={{ fontSize: '0.95rem', color: '#9A3412' }}>
-                    แก้ไขรายการมาสาย: {editingRecord.personnelName} ({editingRecord.department || '-'})
-                  </strong>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#9A3412',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  ปิดหน้าแก้ไข
-                </button>
-              </div>
-
-              {errorMsg && (
-                <div
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    background: '#FEE2E2',
-                    border: '1px solid #FCA5A5',
-                    borderRadius: '6px',
-                    color: '#DC2626',
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <AlertCircle size={15} />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {saveSuccessMsg && (
-                <div
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    background: '#ECFDF5',
-                    border: '1px solid #6EE7B7',
-                    borderRadius: '6px',
-                    color: '#059669',
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <CheckCircle2 size={15} />
-                  <span>{saveSuccessMsg}</span>
-                </div>
-              )}
-
-              <div className="grid-3" style={{ gap: '1rem' }}>
-                {/* วันที่เริ่มต้น */}
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
-                    วันที่เริ่มต้น (Start Date) *
-                  </label>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      background: '#FFFFFF',
-                      border: '1.5px solid #FDBA74',
-                      borderRadius: '8px',
-                      padding: '0 8px',
-                    }}
-                  >
-                    <Calendar size={15} color="#F97316" />
-                    <input
-                      type="date"
-                      value={editingRecord.startDate}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, startDate: e.target.value })}
-                      required
-                      style={{
-                        flex: 1,
-                        padding: '6px 8px',
-                        border: 'none',
-                        outline: 'none',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        background: 'transparent',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* วันที่สิ้นสุด */}
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
-                    วันที่สิ้นสุด (End Date) *
-                  </label>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      background: '#FFFFFF',
-                      border: '1.5px solid #FDBA74',
-                      borderRadius: '8px',
-                      padding: '0 8px',
-                    }}
-                  >
-                    <Calendar size={15} color="#F97316" />
-                    <input
-                      type="date"
-                      value={editingRecord.endDate}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, endDate: e.target.value })}
-                      required
-                      style={{
-                        flex: 1,
-                        padding: '6px 8px',
-                        border: 'none',
-                        outline: 'none',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        background: 'transparent',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* ระยะเวลาทั้งหมด */}
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
-                    ระยะเวลาทั้งหมด (Total Duration) *
-                  </label>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      background: '#FFFFFF',
-                      border: '1.5px solid #FDBA74',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min="0.1"
-                      max="365"
-                      step="0.1"
-                      value={editingRecord.totalDays}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, totalDays: e.target.value })}
-                      required
-                      style={{
-                        flex: 1,
-                        padding: '6px 8px',
-                        border: 'none',
-                        outline: 'none',
-                        fontSize: '0.95rem',
-                        fontWeight: 700,
-                        background: 'transparent',
-                      }}
-                    />
-                    <div
-                      style={{
-                        padding: '6px 10px',
-                        background: '#FFF7ED',
-                        borderLeft: '1px solid #FED7AA',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: '#EA580C',
-                      }}
-                    >
-                      วัน
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <input
-                    type="text"
-                    placeholder="เหตุผล / บันทึกเพิ่มเติม (เช่น ติดภารกิจ, รถติด ฯลฯ)"
-                    value={editingRecord.reason}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, reason: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      fontSize: '0.825rem',
-                      border: '1px solid #FDBA74',
-                      borderRadius: '6px',
-                      background: '#FFFFFF',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="btn btn-primary btn-sm"
-                    style={{
-                      padding: '6px 14px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                      border: 'none',
-                      color: '#FFFFFF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                    }}
-                  >
-                    <Save size={14} />
-                    <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-
           {/* List Table Body */}
           <div
             style={{
@@ -776,18 +1004,13 @@ export default function LateRecordsManageModal({
                       const dateRangeDisplay = isSameDay
                         ? formatThaiDate(record.startDate)
                         : `${formatThaiDate(record.startDate)} - ${formatThaiDate(record.endDate)}`;
-                      const isCurrentEditing = editingRecord?.id === record.id;
 
                       return (
                         <tr
                           key={record.id || idx}
                           style={{
                             borderBottom: '1px solid #F1F5F9',
-                            background: isCurrentEditing
-                              ? '#FFF7ED'
-                              : idx % 2 === 0
-                              ? '#FFFFFF'
-                              : '#F8FAFC',
+                            background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
                             transition: 'background 0.15s ease',
                           }}
                         >
@@ -846,7 +1069,7 @@ export default function LateRecordsManageModal({
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                               <button
                                 type="button"
-                                onClick={() => handleStartEdit(record)}
+                                onClick={() => setEditingRecord(record)}
                                 title="แก้ไข วันที่เริ่มต้น, สิ้นสุด และระยะเวลา"
                                 style={{
                                   padding: '4px 8px',
@@ -904,7 +1127,7 @@ export default function LateRecordsManageModal({
             }}
           >
             <div style={{ fontSize: '0.785rem', color: '#64748B' }}>
-              💡 การแก้ไขรายการมาสายจะมีผลต่อสถิติการจำกัดการลาและบันทึกลง Cloud Firestore ทันที
+              💡 การแก้ไขหรือลบรายการมาสายจะมีผลต่อสถิติการจำกัดการลาและบันทึกลง Cloud Firestore ทันที
             </div>
 
             <button
@@ -919,14 +1142,24 @@ export default function LateRecordsManageModal({
         </div>
       </div>
 
+      {/* Edit Modal */}
+      {editingRecord && (
+        <LateRecordEditModal
+          isOpen={Boolean(editingRecord)}
+          record={editingRecord}
+          currentUser={currentUser}
+          onClose={() => setEditingRecord(null)}
+          onSaved={handleSaveSuccess}
+        />
+      )}
+
       {/* Delete Confirmation Modal */}
       {leaveToDelete && (
         <LeaveDeleteModal
-          isOpen={true}
-          leaveId={leaveToDelete.id}
-          personnelName={leaveToDelete.personnelName}
+          isOpen={Boolean(leaveToDelete)}
+          leaveRecord={leaveToDelete}
           onClose={() => setLeaveToDelete(null)}
-          onConfirm={handleConfirmDelete}
+          onConfirmDelete={handleConfirmDelete}
         />
       )}
     </>

@@ -93,7 +93,7 @@ export default function LeaveDeleteModal({
         if (!isDeleting) onClose();
       }}
       style={{
-        zIndex: 1100,
+        zIndex: 1250,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
