@@ -142,10 +142,26 @@ export default function LeaveLimitConfigModal({
   currentUser = null,
   onSaved = null,
 }) {
-  const [formData, setFormData] = useState(() => ({
-    ...DEFAULT_LEAVE_LIMIT_CONFIG,
-    ...(currentConfig || {}),
-  }));
+  const [formData, setFormData] = useState(() => {
+    const base = { ...DEFAULT_LEAVE_LIMIT_CONFIG, ...(currentConfig || {}) };
+    return {
+      ...base,
+      customCycles: {
+        round1: {
+          ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycles.round1,
+          ...(currentConfig?.customCycles?.round1 || {
+            startDate: currentConfig?.customCycle?.startDate || '',
+            endDate: currentConfig?.customCycle?.endDate || '',
+            name: currentConfig?.customCycle?.name || 'รอบที่ 1 (กำหนดเอง)',
+          }),
+        },
+        round2: {
+          ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycles.round2,
+          ...(currentConfig?.customCycles?.round2 || {}),
+        },
+      },
+    };
+  });
 
   const [activeTab, setActiveTab] = useState('university'); // 'university' | 'special' | 'cycles' | 'types'
   const [isSaving, setIsSaving] = useState(false);
@@ -164,6 +180,20 @@ export default function LeaveLimitConfigModal({
         specialStaffLimits: {
           ...DEFAULT_LEAVE_LIMIT_CONFIG.specialStaffLimits,
           ...(currentConfig.specialStaffLimits || {}),
+        },
+        customCycles: {
+          round1: {
+            ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycles.round1,
+            ...(currentConfig.customCycles?.round1 || {
+              startDate: currentConfig.customCycle?.startDate || '',
+              endDate: currentConfig.customCycle?.endDate || '',
+              name: currentConfig.customCycle?.name || 'รอบที่ 1 (กำหนดเอง)',
+            }),
+          },
+          round2: {
+            ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycles.round2,
+            ...(currentConfig.customCycles?.round2 || {}),
+          },
         },
         customCycle: {
           ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycle,
@@ -193,6 +223,19 @@ export default function LeaveLimitConfigModal({
       specialStaffLimits: {
         ...prev.specialStaffLimits,
         [field]: Number(value) >= 0 ? Number(value) : 0,
+      },
+    }));
+  };
+
+  const handleCustomCycleChange = (roundKey, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      customCycles: {
+        ...prev.customCycles,
+        [roundKey]: {
+          ...(prev.customCycles?.[roundKey] || {}),
+          [field]: value,
+        },
       },
     }));
   };
@@ -510,7 +553,7 @@ export default function LeaveLimitConfigModal({
                   <div style={{ fontSize: '0.825rem', color: '#9A3412', lineHeight: 1.5 }}>
                     <strong>เกณฑ์จำกัดการลา: พนักงานมหาวิทยาลัย (University Employee)</strong>
                     <br />
-                    กำหนดเพดานสำหรับการประเมินแต่ละรอบ (6 เดือน) และเพดานสะสมตลอดทั้งปีงบประมาณ (12 เดือน)
+                    การลาป่วยและการลากิจ แบ่งเป็น 2 ช่วง: รอบที่ 1 (ส.ค. - ม.ค.) และรอบที่ 2 (ก.พ. - ก.ค.) ลาป่วยและลากิจได้ไม่เกิน <strong>10 ครั้ง 23 วัน</strong>, สาย ไม่เกิน <strong>18 ครั้ง</strong>
                   </div>
                 </div>
 
@@ -544,33 +587,44 @@ export default function LeaveLimitConfigModal({
                         เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน
+                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน (ส.ค. - ม.ค. / ก.พ. - ก.ค.)
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                  <div className="grid-2" style={{ gap: '1.25rem' }}>
                     <MetricInputField
-                      label="จำนวนวันลาสูงสุด"
+                      label="จำนวนวันลาสูงสุด (ป่วย + กิจ)"
                       value={formData.universityStaffLimits.roundMaxDays}
                       onChange={(val) => handleUniversityChange('roundMaxDays', val)}
                       unit="วัน / รอบ"
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="ค่ามาตรฐาน: 15 วัน / รอบ"
+                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 23 วัน / รอบ"
                       accentColor="#F97316"
                     />
 
                     <MetricInputField
-                      label="จำนวนครั้งการลาสูงสุด"
+                      label="จำนวนครั้งการลาสูงสุด (ป่วย + กิจ)"
                       value={formData.universityStaffLimits.roundMaxTimes}
                       onChange={(val) => handleUniversityChange('roundMaxTimes', val)}
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="ค่ามาตรฐาน: 6 ครั้ง / รอบ"
+                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 10 ครั้ง / รอบ"
                       accentColor="#F97316"
+                    />
+
+                    <MetricInputField
+                      label="จำนวนครั้งมาสายสูงสุด"
+                      value={formData.universityStaffLimits.roundMaxLate ?? 18}
+                      onChange={(val) => handleUniversityChange('roundMaxLate', val)}
+                      unit="ครั้ง / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="เกณฑ์ มจพ.: สายไม่เกิน 18 ครั้ง / รอบ"
+                      accentColor="#EA580C"
                     />
 
                     <MetricInputField
@@ -580,7 +634,7 @@ export default function LeaveLimitConfigModal({
                       unit="รายการ / รอบ"
                       min={1}
                       max={100}
-                      benchmark="ค่ามาตรฐาน: 6 รายการ / รอบ"
+                      benchmark="ค่ามาตรฐาน: 10 รายการ / รอบ"
                       accentColor="#F97316"
                     />
                   </div>
@@ -616,12 +670,12 @@ export default function LeaveLimitConfigModal({
                         เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ 1 ต.ค. - 30 ก.ย.
+                        คำนวณสะสมยอดรวมตลอด 12 เดือนของรอบการประเมิน
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                  <div className="grid-2" style={{ gap: '1.25rem' }}>
                     <MetricInputField
                       label="จำนวนวันลาสูงสุดทั้งปี"
                       value={formData.universityStaffLimits.fullYearMaxDays}
@@ -630,7 +684,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={365}
                       step={0.5}
-                      benchmark="ค่ามาตรฐาน: 23 วัน / ปี"
+                      benchmark="ค่ามาตรฐาน: 46 วัน / ปี"
                       accentColor="#2563EB"
                     />
 
@@ -641,7 +695,18 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / ปี"
                       min={1}
                       max={200}
-                      benchmark="ค่ามาตรฐาน: 10 ครั้ง / ปี"
+                      benchmark="ค่ามาตรฐาน: 20 ครั้ง / ปี"
+                      accentColor="#2563EB"
+                    />
+
+                    <MetricInputField
+                      label="จำนวนครั้งมาสายสูงสุดทั้งปี"
+                      value={formData.universityStaffLimits.fullYearMaxLate ?? 36}
+                      onChange={(val) => handleUniversityChange('fullYearMaxLate', val)}
+                      unit="ครั้ง / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 36 ครั้ง / ปี"
                       accentColor="#2563EB"
                     />
 
@@ -652,7 +717,7 @@ export default function LeaveLimitConfigModal({
                       unit="รายการ / ปี"
                       min={1}
                       max={200}
-                      benchmark="ค่ามาตรฐาน: 10 รายการ / ปี"
+                      benchmark="ค่ามาตรฐาน: 20 รายการ / ปี"
                       accentColor="#2563EB"
                     />
                   </div>
@@ -681,7 +746,11 @@ export default function LeaveLimitConfigModal({
                   <div style={{ fontSize: '0.825rem', color: '#5B21B6', lineHeight: 1.5 }}>
                     <strong>เกณฑ์จำกัดการลา: พนักงานพิเศษ (Special Employee)</strong>
                     <br />
-                    กำหนดเพดานวันลา/ครั้ง/รายการ สำหรับลูกจ้างชั่วคราวและพนักงานจ้างเหมาบริการตามรอบการประเมิน
+                    • ปฏิบัติงานยังไม่ครบ 6 เดือน: ลาป่วยได้ไม่เกิน <strong>5 วันทำการ</strong>
+                    <br />
+                    • ปฏิบัติงานมากกว่า 6 เดือน: ลาป่วยและลากิจ รวมกันต้องไม่เกิน <strong>15 วันทำการ</strong>
+                    <br />
+                    • สาย ไม่เกิน <strong>18 ครั้ง</strong> ต่อรอบการประเมิน
                   </div>
                 </div>
 
@@ -720,17 +789,29 @@ export default function LeaveLimitConfigModal({
                     </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                  <div className="grid-2" style={{ gap: '1.25rem' }}>
                     <MetricInputField
-                      label="จำนวนวันลาสูงสุด"
+                      label="วันลาสูงสุด (ปฏิบัติงาน > 6 เดือน)"
                       value={formData.specialStaffLimits.roundMaxDays}
                       onChange={(val) => handleSpecialChange('roundMaxDays', val)}
-                      unit="วัน / รอบ"
+                      unit="วันทำการ / รอบ"
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="ค่ามาตรฐาน: 8 วัน / รอบ"
+                      benchmark="เกณฑ์ มจพ.: รวมไม่เกิน 15 วันทำการ / รอบ"
                       accentColor="#8B5CF6"
+                    />
+
+                    <MetricInputField
+                      label="วันลาป่วยสูงสุด (ปฏิบัติงาน < 6 เดือน)"
+                      value={formData.specialStaffLimits.probationMaxDays ?? 5}
+                      onChange={(val) => handleSpecialChange('probationMaxDays', val)}
+                      unit="วันทำการ / รอบ"
+                      min={1}
+                      max={180}
+                      step={0.5}
+                      benchmark="เกณฑ์ มจพ.: ลาป่วยไม่เกิน 5 วันทำการ"
+                      accentColor="#A855F7"
                     />
 
                     <MetricInputField
@@ -740,8 +821,19 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="ค่ามาตรฐาน: 4 ครั้ง / รอบ"
+                      benchmark="ค่ามาตรฐาน: 8 ครั้ง / รอบ"
                       accentColor="#8B5CF6"
+                    />
+
+                    <MetricInputField
+                      label="จำนวนครั้งมาสายสูงสุด"
+                      value={formData.specialStaffLimits.roundMaxLate ?? 18}
+                      onChange={(val) => handleSpecialChange('roundMaxLate', val)}
+                      unit="ครั้ง / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="เกณฑ์ มจพ.: สายไม่เกิน 18 ครั้ง ต่อรอบ"
+                      accentColor="#7C3AED"
                     />
 
                     <MetricInputField
@@ -751,7 +843,7 @@ export default function LeaveLimitConfigModal({
                       unit="รายการ / รอบ"
                       min={1}
                       max={100}
-                      benchmark="ค่ามาตรฐาน: 4 รายการ / รอบ"
+                      benchmark="ค่ามาตรฐาน: 8 รายการ / รอบ"
                       accentColor="#8B5CF6"
                     />
                   </div>
@@ -787,12 +879,12 @@ export default function LeaveLimitConfigModal({
                         เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ 1 ต.ค. - 30 ก.ย.
+                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                  <div className="grid-2" style={{ gap: '1.25rem' }}>
                     <MetricInputField
                       label="จำนวนวันลาสูงสุดทั้งปี"
                       value={formData.specialStaffLimits.fullYearMaxDays}
@@ -801,7 +893,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={365}
                       step={0.5}
-                      benchmark="ค่ามาตรฐาน: 15 วัน / ปี"
+                      benchmark="ค่ามาตรฐาน: 30 วัน / ปี"
                       accentColor="#7C3AED"
                     />
 
@@ -812,7 +904,18 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / ปี"
                       min={1}
                       max={200}
-                      benchmark="ค่ามาตรฐาน: 8 ครั้ง / ปี"
+                      benchmark="ค่ามาตรฐาน: 16 ครั้ง / ปี"
+                      accentColor="#7C3AED"
+                    />
+
+                    <MetricInputField
+                      label="จำนวนครั้งมาสายสูงสุดทั้งปี"
+                      value={formData.specialStaffLimits.fullYearMaxLate ?? 36}
+                      onChange={(val) => handleSpecialChange('fullYearMaxLate', val)}
+                      unit="ครั้ง / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 36 ครั้ง / ปี"
                       accentColor="#7C3AED"
                     />
 
@@ -823,7 +926,7 @@ export default function LeaveLimitConfigModal({
                       unit="รายการ / ปี"
                       min={1}
                       max={200}
-                      benchmark="ค่ามาตรฐาน: 8 รายการ / ปี"
+                      benchmark="ค่ามาตรฐาน: 16 รายการ / ปี"
                       accentColor="#7C3AED"
                     />
                   </div>
@@ -872,10 +975,10 @@ export default function LeaveLimitConfigModal({
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          รอบการประเมิน 2 รอบ (6 เดือน/รอบ) - มาตรฐานมหาวิทยาลัย
+                          รอบการประเมิน 2 รอบ (6 เดือน/รอบ) - มาตรฐานมหาวิทยาลัย (สิงหาคม - กรกฎาคม)
                         </strong>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                          • รอบที่ 1: 1 ต.ค. - 31 มี.ค. &nbsp;|&nbsp; • รอบที่ 2: 1 เม.ย. - 30 ก.ย. (ระบบจะสลับรอบและคำนวณอัตโนมัติตามช่วงเวลา)
+                          • <strong>รอบที่ 1</strong>: เดือนสิงหาคมถึงเดือนมกราคม (1 ส.ค. - 31 ม.ค.) &nbsp;|&nbsp; • <strong>รอบที่ 2</strong>: เดือนกุมภาพันธ์ถึงเดือนกรกฎาคม (1 ก.พ. - 31 ก.ค.)
                         </div>
                       </div>
                     </label>
@@ -903,10 +1006,10 @@ export default function LeaveLimitConfigModal({
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          ตลอดทั้งปีงบประมาณ (Full Fiscal Year: 1 ต.ค. - 30 ก.ย.)
+                          ตลอดทั้งปีงบประมาณ (Full Year: 1 ส.ค. - 31 ก.ค.)
                         </strong>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                          คำนวณสะสมยอดการลาต่อเนื่องทั้ง 12 เดือนของปีงบประมาณ
+                          คำนวณสะสมยอดการลาต่อเนื่องทั้ง 12 เดือนของรอบการประเมิน
                         </div>
                       </div>
                     </label>
@@ -934,10 +1037,10 @@ export default function LeaveLimitConfigModal({
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          กำหนดช่วงวันที่เอง (Custom Date Range)
+                          กำหนดช่วงวันที่เอง (Custom Date Range) - กำหนดรอบที่ 1 และ รอบที่ 2
                         </strong>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                          ระบุช่วงวันที่เริ่มต้นและสิ้นสุดเฉพาะกิจ
+                          ระบุช่วงวันที่เริ่มต้นและสิ้นสุดเฉพาะกิจสำหรับรอบที่ 1 และรอบที่ 2 อย่างอิสระ
                         </div>
                       </div>
                     </label>
@@ -947,98 +1050,219 @@ export default function LeaveLimitConfigModal({
                     <div
                       style={{
                         marginTop: '1.25rem',
-                        padding: '1.15rem',
-                        background: '#F8FAFC',
-                        borderRadius: '10px',
-                        border: '1.5px dashed #CBD5E1',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
                       }}
                     >
-                      <div className="grid-2" style={{ gap: '1rem' }}>
-                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            วันที่เริ่มต้นรอบ
-                          </label>
+                      {/* Round 1 Custom Config */}
+                      <div
+                        style={{
+                          padding: '1.15rem',
+                          background: '#FFF7ED',
+                          borderRadius: '12px',
+                          border: '1.5px solid #FDBA74',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.85rem' }}>
                           <div
                             style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: '#EA580C',
+                              color: '#FFFFFF',
                               display: 'flex',
                               alignItems: 'center',
-                              background: 'var(--bg-card, #FFFFFF)',
-                              border: '1.5px solid var(--border-color, #E2E8F0)',
-                              borderRadius: '10px',
-                              padding: '0 0.85rem',
-                              gap: '8px',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
                             }}
                           >
-                            <CalendarDays size={16} color="#8B5CF6" />
-                            <input
-                              type="date"
-                              value={formData.customCycle?.startDate || ''}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  customCycle: {
-                                    ...formData.customCycle,
-                                    startDate: e.target.value,
-                                  },
-                                })
-                              }
-                              required={formData.cycleMode === 'CUSTOM'}
-                              style={{
-                                flex: 1,
-                                padding: '0.65rem 0.25rem',
-                                border: 'none',
-                                outline: 'none',
-                                background: 'transparent',
-                                fontSize: '0.9rem',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                fontFamily: 'inherit',
-                              }}
-                            />
+                            1
                           </div>
+                          <strong style={{ fontSize: '0.875rem', color: '#9A3412' }}>
+                            กำหนดช่วงเวลารอบที่ 1 (Custom Round 1)
+                          </strong>
                         </div>
 
-                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            วันที่สิ้นสุดรอบ
-                          </label>
+                        <div className="grid-2" style={{ gap: '1rem' }}>
+                          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
+                              วันที่เริ่มต้นรอบที่ 1
+                            </label>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: '#FFFFFF',
+                                border: '1.5px solid #FDBA74',
+                                borderRadius: '10px',
+                                padding: '0 0.85rem',
+                                gap: '8px',
+                              }}
+                            >
+                              <CalendarDays size={16} color="#EA580C" />
+                              <input
+                                type="date"
+                                value={formData.customCycles?.round1?.startDate || ''}
+                                onChange={(e) => handleCustomCycleChange('round1', 'startDate', e.target.value)}
+                                required={formData.cycleMode === 'CUSTOM'}
+                                style={{
+                                  flex: 1,
+                                  padding: '0.65rem 0.25rem',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 700,
+                                  color: 'var(--text-primary)',
+                                  fontFamily: 'inherit',
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
+                              วันที่สิ้นสุดรอบที่ 1
+                            </label>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: '#FFFFFF',
+                                border: '1.5px solid #FDBA74',
+                                borderRadius: '10px',
+                                padding: '0 0.85rem',
+                                gap: '8px',
+                              }}
+                            >
+                              <CalendarDays size={16} color="#EA580C" />
+                              <input
+                                type="date"
+                                value={formData.customCycles?.round1?.endDate || ''}
+                                onChange={(e) => handleCustomCycleChange('round1', 'endDate', e.target.value)}
+                                required={formData.cycleMode === 'CUSTOM'}
+                                style={{
+                                  flex: 1,
+                                  padding: '0.65rem 0.25rem',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 700,
+                                  color: 'var(--text-primary)',
+                                  fontFamily: 'inherit',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Round 2 Custom Config */}
+                      <div
+                        style={{
+                          padding: '1.15rem',
+                          background: '#EFF6FF',
+                          borderRadius: '12px',
+                          border: '1.5px solid #93C5FD',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.85rem' }}>
                           <div
                             style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: '#2563EB',
+                              color: '#FFFFFF',
                               display: 'flex',
                               alignItems: 'center',
-                              background: 'var(--bg-card, #FFFFFF)',
-                              border: '1.5px solid var(--border-color, #E2E8F0)',
-                              borderRadius: '10px',
-                              padding: '0 0.85rem',
-                              gap: '8px',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
                             }}
                           >
-                            <CalendarDays size={16} color="#8B5CF6" />
-                            <input
-                              type="date"
-                              value={formData.customCycle?.endDate || ''}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  customCycle: {
-                                    ...formData.customCycle,
-                                    endDate: e.target.value,
-                                  },
-                                })
-                              }
-                              required={formData.cycleMode === 'CUSTOM'}
+                            2
+                          </div>
+                          <strong style={{ fontSize: '0.875rem', color: '#1E40AF' }}>
+                            กำหนดช่วงเวลารอบที่ 2 (Custom Round 2)
+                          </strong>
+                        </div>
+
+                        <div className="grid-2" style={{ gap: '1rem' }}>
+                          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E40AF' }}>
+                              วันที่เริ่มต้นรอบที่ 2
+                            </label>
+                            <div
                               style={{
-                                flex: 1,
-                                padding: '0.65rem 0.25rem',
-                                border: 'none',
-                                outline: 'none',
-                                background: 'transparent',
-                                fontSize: '0.9rem',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                fontFamily: 'inherit',
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: '#FFFFFF',
+                                border: '1.5px solid #93C5FD',
+                                borderRadius: '10px',
+                                padding: '0 0.85rem',
+                                gap: '8px',
                               }}
-                            />
+                            >
+                              <CalendarDays size={16} color="#2563EB" />
+                              <input
+                                type="date"
+                                value={formData.customCycles?.round2?.startDate || ''}
+                                onChange={(e) => handleCustomCycleChange('round2', 'startDate', e.target.value)}
+                                required={formData.cycleMode === 'CUSTOM'}
+                                style={{
+                                  flex: 1,
+                                  padding: '0.65rem 0.25rem',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 700,
+                                  color: 'var(--text-primary)',
+                                  fontFamily: 'inherit',
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E40AF' }}>
+                              วันที่สิ้นสุดรอบที่ 2
+                            </label>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: '#FFFFFF',
+                                border: '1.5px solid #93C5FD',
+                                borderRadius: '10px',
+                                padding: '0 0.85rem',
+                                gap: '8px',
+                              }}
+                            >
+                              <CalendarDays size={16} color="#2563EB" />
+                              <input
+                                type="date"
+                                value={formData.customCycles?.round2?.endDate || ''}
+                                onChange={(e) => handleCustomCycleChange('round2', 'endDate', e.target.value)}
+                                required={formData.cycleMode === 'CUSTOM'}
+                                style={{
+                                  flex: 1,
+                                  padding: '0.65rem 0.25rem',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 700,
+                                  color: 'var(--text-primary)',
+                                  fontFamily: 'inherit',
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

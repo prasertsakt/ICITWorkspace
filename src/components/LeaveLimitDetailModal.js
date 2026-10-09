@@ -267,6 +267,8 @@ export default function LeaveLimitDetailModal({
       '% การใช้วันลา',
       'จำนวนครั้งที่ลา (ครั้ง)',
       'เพดานครั้งที่ลา (ครั้ง)',
+      'จำนวนครั้งมาสาย (ครั้ง)',
+      'เพดานครั้งมาสาย (ครั้ง)',
       'จำนวนรายการ (รายการ)',
       'สาเหตุการเตือน/เกินเกณฑ์',
     ];
@@ -295,6 +297,8 @@ export default function LeaveLimitDetailModal({
         `${p.percentages.daysPercent}%`,
         p.totalTimes,
         p.limits.maxTimes,
+        p.totalLateTimes || 0,
+        p.limits.maxLate || 18,
         p.totalTransactions,
         `"${reasons}"`,
       ];
@@ -982,11 +986,11 @@ export default function LeaveLimitDetailModal({
                     </div>
                   </div>
 
-                  {/* 3 Metric Gauges Grid */}
+                  {/* 4 Metric Gauges Grid */}
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
                       gap: '0.75rem',
                       background: '#F8FAFC',
                       padding: '0.75rem 1rem',
@@ -1052,10 +1056,39 @@ export default function LeaveLimitDetailModal({
                       </div>
                     </div>
 
-                    {/* Gauge 3: จำนวนรายการ */}
+                    {/* Gauge 3: จำนวนครั้งมาสาย */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>3. จำนวนรายการ</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>3. จำนวนครั้งมาสาย</span>
+                        <strong
+                          style={{
+                            color: person.flags.isExceededLate ? '#DC2626' : person.flags.isNearLate ? '#D97706' : 'var(--text-primary)',
+                          }}
+                        >
+                          {person.totalLateTimes || 0} / {person.limits.maxLate || 18} ครั้ง ({person.percentages.latePercent || 0}%)
+                        </strong>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '999px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            width: `${Math.min(person.percentages.latePercent || 0, 100)}%`,
+                            height: '100%',
+                            background: person.flags.isExceededLate
+                              ? '#EF4444'
+                              : person.flags.isNearLate
+                              ? '#F59E0B'
+                              : '#EA580C',
+                            borderRadius: '999px',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gauge 4: จำนวนรายการ */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>4. จำนวนรายการ</span>
                         <strong
                           style={{
                             color: person.flags.isExceededTrans ? '#DC2626' : person.flags.isNearTrans ? '#D97706' : 'var(--text-primary)',

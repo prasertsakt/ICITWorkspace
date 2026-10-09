@@ -610,12 +610,13 @@ export default function LeaveReportModal({
                   color: '#9A3412',
                 }}
               >
-                <option value="round_1">รอบที่ 1 (1 ต.ค. - 31 มี.ค.)</option>
-                <option value="round_2">รอบที่ 2 (1 เม.ย. - 30 ก.ย.)</option>
-                <option value="full_year">ตลอดทั้งปีงบประมาณ</option>
-                {leaveLimitConfig.cycleMode === 'CUSTOM' && (
-                  <option value="custom">รอบพิเศษกำหนดเอง</option>
-                )}
+                <option value="round_1">
+                  {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 1 (กำหนดเอง)' : 'รอบที่ 1 (1 ส.ค. - 31 ม.ค.)'}
+                </option>
+                <option value="round_2">
+                  {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
+                </option>
+                <option value="full_year">ตลอดทั้งปี (12 เดือน)</option>
               </select>
             </div>
 

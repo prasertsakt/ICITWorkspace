@@ -25,24 +25,44 @@ export const DEFAULT_LEAVE_LIMIT_CONFIG = {
     'อื่น ๆ',
   ],
   // 1. พนักงานมหาวิทยาลัย (University Employee)
+  // เกณฑ์ มจพ.: ลาป่วยและลากิจ ไม่เกิน 10 ครั้ง 23 วัน, สาย ไม่เกิน 18 ครั้ง ต่อรอบ 6 เดือน
   universityStaffLimits: {
-    roundMaxDays: 15,
-    roundMaxTimes: 6,
-    roundMaxTransactions: 6,
-    fullYearMaxDays: 23,
-    fullYearMaxTimes: 10,
-    fullYearMaxTransactions: 10,
+    roundMaxDays: 23,
+    roundMaxTimes: 10,
+    roundMaxLate: 18,
+    roundMaxTransactions: 10,
+    fullYearMaxDays: 46,
+    fullYearMaxTimes: 20,
+    fullYearMaxLate: 36,
+    fullYearMaxTransactions: 20,
   },
   // 2. พนักงานพิเศษ (Special Employee)
+  // เกณฑ์ มจพ.: ทำงาน < 6 เดือน ลาป่วยไม่เกิน 5 วัน | ทำงาน > 6 เดือน ลาป่วย+กิจ ไม่เกิน 15 วันทำการ | สายไม่เกิน 18 ครั้งต่อรอบ
   specialStaffLimits: {
-    roundMaxDays: 8,
-    roundMaxTimes: 4,
-    roundMaxTransactions: 4,
-    fullYearMaxDays: 15,
-    fullYearMaxTimes: 8,
-    fullYearMaxTransactions: 8,
+    roundMaxDays: 15, // กรณีทำงาน > 6 เดือน
+    probationMaxDays: 5, // กรณีทำงาน < 6 เดือน (ลาป่วยได้ไม่เกิน 5 วันทำการ)
+    roundMaxTimes: 8,
+    roundMaxLate: 18,
+    roundMaxTransactions: 8,
+    fullYearMaxDays: 30,
+    fullYearMaxTimes: 16,
+    fullYearMaxLate: 36,
+    fullYearMaxTransactions: 16,
   },
-  // Custom Date Range (when cycleMode === 'CUSTOM')
+  // Custom Date Ranges (when cycleMode === 'CUSTOM')
+  customCycles: {
+    round1: {
+      name: 'รอบที่ 1 (กำหนดเอง)',
+      startDate: '',
+      endDate: '',
+    },
+    round2: {
+      name: 'รอบที่ 2 (กำหนดเอง)',
+      startDate: '',
+      endDate: '',
+    },
+  },
+  // Fallback single custom cycle for backwards compatibility
   customCycle: {
     name: 'รอบประเมินพิเศษ',
     startDate: '',
@@ -234,67 +254,111 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
   const beYear = fy + 543;
   const prevBeYear = beYear - 1;
 
-  if (cycleKey === 'custom' || config.cycleMode === 'CUSTOM') {
+  const isCustomMode = config.cycleMode === 'CUSTOM';
+
+  // 1. Custom Evaluation Mode
+  if (isCustomMode || cycleKey === 'custom') {
+    const round1Custom = config.customCycles?.round1 || {};
+    const round2Custom = config.customCycles?.round2 || {};
+    const singleCustom = config.customCycle || {};
+
+    if (cycleKey === 'round_2') {
+      const r2Start = round2Custom.startDate || `${fy}-02-01`;
+      const r2End = round2Custom.endDate || `${fy}-07-31`;
+      const r2Name = round2Custom.name || 'รอบที่ 2 (กำหนดเอง)';
+      return {
+        key: 'round_2',
+        name: `${r2Name} (${r2Start} - ${r2End})`,
+        startDate: r2Start,
+        endDate: r2End,
+        isRound: true,
+        fiscalYear: fy,
+        buddhistYear: beYear,
+        label: `${r2Name} (${r2Start} ถึง ${r2End})`,
+      };
+    }
+
+    if (cycleKey === 'full_year') {
+      const fyStart = round1Custom.startDate || singleCustom.startDate || `${fy - 1}-08-01`;
+      const fyEnd = round2Custom.endDate || singleCustom.endDate || `${fy}-07-31`;
+      return {
+        key: 'full_year',
+        name: `ทั้งปีงบประมาณ (กำหนดเอง)`,
+        startDate: fyStart,
+        endDate: fyEnd,
+        isRound: false,
+        fiscalYear: fy,
+        buddhistYear: beYear,
+        label: `ทั้งปีงบประมาณกำหนดเอง (${fyStart} ถึง ${fyEnd})`,
+      };
+    }
+
+    // Default round_1 or 'custom'
+    const r1Start = round1Custom.startDate || singleCustom.startDate || `${fy - 1}-08-01`;
+    const r1End = round1Custom.endDate || singleCustom.endDate || `${fy}-01-31`;
+    const r1Name = round1Custom.name || singleCustom.name || 'รอบที่ 1 (กำหนดเอง)';
     return {
-      key: 'custom',
-      name: config.customCycle?.name || 'รอบพิเศษกำหนดเอง',
-      startDate: config.customCycle?.startDate || `${fy - 1}-10-01`,
-      endDate: config.customCycle?.endDate || `${fy}-09-30`,
+      key: 'round_1',
+      name: `${r1Name} (${r1Start} - ${r1End})`,
+      startDate: r1Start,
+      endDate: r1End,
       isRound: true,
       fiscalYear: fy,
       buddhistYear: beYear,
-      label: `${config.customCycle?.name || 'รอบพิเศษ'} (${config.customCycle?.startDate || '-'} ถึง ${config.customCycle?.endDate || '-'})`,
+      label: `${r1Name} (${r1Start} ถึง ${r1End})`,
     };
   }
 
+  // 2. Full Year Mode (1 ส.ค. - 31 ก.ค.)
   if (cycleKey === 'full_year' || config.cycleMode === 'FULL_YEAR') {
     return {
       key: 'full_year',
       name: `ตลอดปีงบประมาณ ${beYear}`,
-      startDate: `${fy - 1}-10-01`,
-      endDate: `${fy}-09-30`,
+      startDate: `${fy - 1}-08-01`,
+      endDate: `${fy}-07-31`,
       isRound: false,
       fiscalYear: fy,
       buddhistYear: beYear,
-      label: `ตลอดปีงบประมาณ ${beYear} (1 ต.ค. ${prevBeYear} - 30 ก.ย. ${beYear})`,
+      label: `ตลอดปีงบประมาณ ${beYear} (1 ส.ค. ${prevBeYear} - 31 ก.ค. ${beYear})`,
     };
   }
 
+  // 3. Round 2: กุมภาพันธ์ ถึง กรกฎาคม (1 ก.พ. - 31 ก.ค.)
   if (cycleKey === 'round_2') {
     return {
       key: 'round_2',
-      name: `รอบที่ 2 (1 เม.ย. - 30 ก.ย. ${beYear})`,
-      startDate: `${fy}-04-01`,
-      endDate: `${fy}-09-30`,
+      name: `รอบที่ 2 (1 ก.พ. - 31 ก.ค. ${beYear})`,
+      startDate: `${fy}-02-01`,
+      endDate: `${fy}-07-31`,
       isRound: true,
       fiscalYear: fy,
       buddhistYear: beYear,
-      label: `รอบที่ 2/ปี ${beYear} (1 เม.ย. ${beYear} - 30 ก.ย. ${beYear})`,
+      label: `รอบที่ 2/ปี ${beYear} (1 ก.พ. ${beYear} - 31 ก.ค. ${beYear})`,
     };
   }
 
-  // Default: round_1
+  // 4. Round 1 (Default): สิงหาคม ถึง มกราคม (1 ส.ค. - 31 ม.ค.)
   return {
     key: 'round_1',
-    name: `รอบที่ 1 (1 ต.ค. ${prevBeYear} - 31 มี.ค. ${beYear})`,
-    startDate: `${fy - 1}-10-01`,
-    endDate: `${fy}-03-31`,
+    name: `รอบที่ 1 (1 ส.ค. ${prevBeYear} - 31 ม.ค. ${beYear})`,
+    startDate: `${fy - 1}-08-01`,
+    endDate: `${fy}-01-31`,
     isRound: true,
     fiscalYear: fy,
     buddhistYear: beYear,
-    label: `รอบที่ 1/ปี ${beYear} (1 ต.ค. ${prevBeYear} - 31 มี.ค. ${beYear})`,
+    label: `รอบที่ 1/ปี ${beYear} (1 ส.ค. ${prevBeYear} - 31 ม.ค. ${beYear})`,
   };
 }
 
 /**
  * Determine the current active round based on today's date
+ * รอบที่ 1: เดือนสิงหาคม (7) ถึง เดือนมกราคม (0)
+ * รอบที่ 2: เดือนกุมภาพันธ์ (1) ถึง เดือนกรกฎาคม (6)
  */
 export function getCurrentActiveCycleKey(targetDate = new Date()) {
   const d = typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
-  const month = d.getMonth(); // 0 = Jan, 9 = Oct, etc.
-  // Oct (9) to March (2) -> Round 1
-  // April (3) to Sept (8) -> Round 2
-  if (month >= 9 || month <= 2) {
+  const month = d.getMonth(); // 0 = Jan, 1 = Feb, ..., 6 = Jul, 7 = Aug, 11 = Dec
+  if (month >= 7 || month === 0) {
     return 'round_1';
   }
   return 'round_2';
@@ -311,7 +375,7 @@ export function calculatePersonnelLeaveLimitStats({
   selectedCycleKey = null,
 }) {
   const fy = Number(fiscalYear) || getFiscalYear(new Date());
-  const cycleKey = selectedCycleKey || (config.cycleMode === 'FULL_YEAR' ? 'full_year' : config.cycleMode === 'CUSTOM' ? 'custom' : getCurrentActiveCycleKey());
+  const cycleKey = selectedCycleKey || (config.cycleMode === 'FULL_YEAR' ? 'full_year' : config.cycleMode === 'CUSTOM' ? (getCurrentActiveCycleKey()) : getCurrentActiveCycleKey());
   const cycleInfo = getEvaluationCycleInfo(config, fy, cycleKey);
 
   const startDate = cycleInfo.startDate;
@@ -373,15 +437,17 @@ export function calculatePersonnelLeaveLimitStats({
       : config.universityStaffLimits || DEFAULT_LEAVE_LIMIT_CONFIG.universityStaffLimits;
 
     const isFullYear = cycleInfo.key === 'full_year';
-    const maxDays = isFullYear ? Number(limitsConfig.fullYearMaxDays) || 23 : Number(limitsConfig.roundMaxDays) || 15;
-    const maxTimes = isFullYear ? Number(limitsConfig.fullYearMaxTimes) || 10 : Number(limitsConfig.roundMaxTimes) || 6;
-    const maxTransactions = isFullYear ? Number(limitsConfig.fullYearMaxTransactions) || 10 : Number(limitsConfig.roundMaxTransactions) || 6;
+    const maxDays = isFullYear ? Number(limitsConfig.fullYearMaxDays) || (isSpecialStaff ? 30 : 46) : Number(limitsConfig.roundMaxDays) || (isSpecialStaff ? 15 : 23);
+    const maxTimes = isFullYear ? Number(limitsConfig.fullYearMaxTimes) || (isSpecialStaff ? 16 : 20) : Number(limitsConfig.roundMaxTimes) || (isSpecialStaff ? 8 : 10);
+    const maxLate = isFullYear ? Number(limitsConfig.fullYearMaxLate) || 36 : Number(limitsConfig.roundMaxLate) || 18;
+    const maxTransactions = isFullYear ? Number(limitsConfig.fullYearMaxTransactions) || (isSpecialStaff ? 16 : 20) : Number(limitsConfig.roundMaxTransactions) || (isSpecialStaff ? 8 : 10);
 
     // Find person's leaves (by ID or Name match)
     const personLeaves = leavesByPerson[person.id] || leavesByPerson[person.name] || [];
 
-    // Calculate actual days of leave overlapping this cycle
+    // Calculate actual days, times, and late counts of leave overlapping this cycle
     let totalDays = 0;
+    let totalLateTimes = 0;
     const matchingRecords = [];
 
     personLeaves.forEach((l) => {
@@ -404,6 +470,11 @@ export function calculatePersonnelLeaveLimitStats({
         }
       }
 
+      // Check if this record is 'สาย' (Late)
+      if (l.leaveType === 'สาย') {
+        totalLateTimes += 1;
+      }
+
       totalDays += leaveDaysInCycle;
       matchingRecords.push({
         ...l,
@@ -415,23 +486,26 @@ export function calculatePersonnelLeaveLimitStats({
     const totalTimes = matchingRecords.length; // จำนวนครั้ง / การลา
     const totalTransactions = matchingRecords.length; // จำนวนการทำรายการ
 
-    // Calculate usage percentage
+    // Calculate usage percentages
     const daysPercent = maxDays > 0 ? Number(((totalDays / maxDays) * 100).toFixed(1)) : 0;
     const timesPercent = maxTimes > 0 ? Number(((totalTimes / maxTimes) * 100).toFixed(1)) : 0;
+    const latePercent = maxLate > 0 ? Number(((totalLateTimes / maxLate) * 100).toFixed(1)) : 0;
     const transPercent = maxTransactions > 0 ? Number(((totalTransactions / maxTransactions) * 100).toFixed(1)) : 0;
-    const highestPercent = Math.max(daysPercent, timesPercent, transPercent);
+    const highestPercent = Math.max(daysPercent, timesPercent, latePercent, transPercent);
 
-    // Evaluate exceeded condition (>= max limit)
+    // Evaluate exceeded conditions (>= max limit)
     const isExceededDays = totalDays >= maxDays && maxDays > 0;
     const isExceededTimes = totalTimes >= maxTimes && maxTimes > 0;
+    const isExceededLate = totalLateTimes >= maxLate && maxLate > 0;
     const isExceededTrans = totalTransactions >= maxTransactions && maxTransactions > 0;
-    const isExceeded = isExceededDays || isExceededTimes || isExceededTrans;
+    const isExceeded = isExceededDays || isExceededTimes || isExceededLate || isExceededTrans;
 
     // Evaluate near-limit condition (>= warningThreshold % but not exceeded)
     const isNearDays = !isExceededDays && daysPercent >= warningThreshold;
     const isNearTimes = !isExceededTimes && timesPercent >= warningThreshold;
+    const isNearLate = !isExceededLate && latePercent >= warningThreshold;
     const isNearTrans = !isExceededTrans && transPercent >= warningThreshold;
-    const isNearLimit = !isExceeded && (isNearDays || isNearTimes || isNearTrans);
+    const isNearLimit = !isExceeded && (isNearDays || isNearTimes || isNearLate || isNearTrans);
 
     let status = 'NORMAL';
     if (isExceeded) {
@@ -448,11 +522,14 @@ export function calculatePersonnelLeaveLimitStats({
 
     // Trigger reasons list
     const alertTriggers = [];
-    if (isExceededDays) alertTriggers.push({ metric: 'จำนวนวัน', type: 'EXCEEDED', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
-    else if (isNearDays) alertTriggers.push({ metric: 'จำนวนวัน', type: 'NEAR_LIMIT', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
+    if (isExceededDays) alertTriggers.push({ metric: 'จำนวนวันลา', type: 'EXCEEDED', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
+    else if (isNearDays) alertTriggers.push({ metric: 'จำนวนวันลา', type: 'NEAR_LIMIT', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
 
-    if (isExceededTimes) alertTriggers.push({ metric: 'จำนวนครั้ง', type: 'EXCEEDED', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
-    else if (isNearTimes) alertTriggers.push({ metric: 'จำนวนครั้ง', type: 'NEAR_LIMIT', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+    if (isExceededTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'EXCEEDED', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+    else if (isNearTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'NEAR_LIMIT', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+
+    if (isExceededLate) alertTriggers.push({ metric: 'จำนวนครั้งมาสาย', type: 'EXCEEDED', current: totalLateTimes, limit: maxLate, unit: 'ครั้ง', percent: latePercent });
+    else if (isNearLate) alertTriggers.push({ metric: 'จำนวนครั้งมาสาย', type: 'NEAR_LIMIT', current: totalLateTimes, limit: maxLate, unit: 'ครั้ง', percent: latePercent });
 
     if (isExceededTrans) alertTriggers.push({ metric: 'จำนวนรายการ', type: 'EXCEEDED', current: totalTransactions, limit: maxTransactions, unit: 'รายการ', percent: transPercent });
     else if (isNearTrans) alertTriggers.push({ metric: 'จำนวนรายการ', type: 'NEAR_LIMIT', current: totalTransactions, limit: maxTransactions, unit: 'รายการ', percent: transPercent });
@@ -468,24 +545,29 @@ export function calculatePersonnelLeaveLimitStats({
       avatar: person.avatar || '',
       totalDays,
       totalTimes,
+      totalLateTimes,
       totalTransactions,
       limits: {
         maxDays,
         maxTimes,
+        maxLate,
         maxTransactions,
       },
       percentages: {
         daysPercent,
         timesPercent,
+        latePercent,
         transPercent,
         highestPercent,
       },
       flags: {
         isExceededDays,
         isExceededTimes,
+        isExceededLate,
         isExceededTrans,
         isNearDays,
         isNearTimes,
+        isNearLate,
         isNearTrans,
       },
       status, // 'EXCEEDED' | 'NEAR_LIMIT' | 'NORMAL'
@@ -648,20 +730,26 @@ export function generateLeaveLimitEmailContent({
           <tr style="border-bottom: 1px solid #E2E8F0;">
             <td style="padding: 10px; font-weight: bold; color: #1E293B;">1. จำนวนวันลา</td>
             <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.flags?.isExceededDays ? '#DC2626' : personStat.flags?.isNearDays ? '#D97706' : '#0F172A'};">${personStat.totalDays} วัน</td>
-            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits.maxDays} วัน</td>
-            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages.daysPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages.daysPercent}%</td>
+            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits?.maxDays || '-'} วัน</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages?.daysPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages?.daysPercent || 0}%</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0;">
-            <td style="padding: 10px; font-weight: bold; color: #1E293B;">2. จำนวนครั้งที่ลา</td>
+            <td style="padding: 10px; font-weight: bold; color: #1E293B;">2. จำนวนครั้งการลา</td>
             <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.flags?.isExceededTimes ? '#DC2626' : personStat.flags?.isNearTimes ? '#D97706' : '#0F172A'};">${personStat.totalTimes} ครั้ง</td>
-            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits.maxTimes} ครั้ง</td>
-            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages.timesPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages.timesPercent}%</td>
+            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits?.maxTimes || '-'} ครั้ง</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages?.timesPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages?.timesPercent || 0}%</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0;">
-            <td style="padding: 10px; font-weight: bold; color: #1E293B;">3. จำนวนรายการลา</td>
+            <td style="padding: 10px; font-weight: bold; color: #1E293B;">3. จำนวนครั้งมาสาย</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.flags?.isExceededLate ? '#DC2626' : personStat.flags?.isNearLate ? '#D97706' : '#0F172A'};">${personStat.totalLateTimes || 0} ครั้ง</td>
+            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits?.maxLate || '-'} ครั้ง</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages?.latePercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages?.latePercent || 0}%</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding: 10px; font-weight: bold; color: #1E293B;">4. จำนวนรายการลา</td>
             <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.flags?.isExceededTrans ? '#DC2626' : personStat.flags?.isNearTrans ? '#D97706' : '#0F172A'};">${personStat.totalTransactions} รายการ</td>
-            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits.maxTransactions} รายการ</td>
-            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages.transPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages.transPercent}%</td>
+            <td style="padding: 10px; text-align: center; color: #64748B;">${personStat.limits?.maxTransactions || '-'} รายการ</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${personStat.percentages?.transPercent >= 80 ? '#DC2626' : '#059669'};">${personStat.percentages?.transPercent || 0}%</td>
           </tr>
         </tbody>
       </table>

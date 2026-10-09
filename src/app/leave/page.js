@@ -775,7 +775,7 @@ function LeaveContent() {
                 transition: 'all 0.15s ease',
               }}
             >
-              รอบที่ 1 (1 ต.ค. - 31 มี.ค.)
+              {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 1 (กำหนดเอง)' : 'รอบที่ 1 (1 ส.ค. - 31 ม.ค.)'}
             </button>
             <button
               type="button"
@@ -792,7 +792,7 @@ function LeaveContent() {
                 transition: 'all 0.15s ease',
               }}
             >
-              รอบที่ 2 (1 เม.ย. - 30 ก.ย.)
+              {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
             </button>
             <button
               type="button"
@@ -809,7 +809,7 @@ function LeaveContent() {
                 transition: 'all 0.15s ease',
               }}
             >
-              ทั้งปีงบประมาณ
+              ตลอดทั้งปี (12 เดือน)
             </button>
           </div>
         </div>
