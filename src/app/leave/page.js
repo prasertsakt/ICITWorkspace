@@ -21,6 +21,14 @@ import { formatLocalDate, parseLocalDate, THAI_MONTHS_FULL } from '@/lib/dateUti
 import LeaveCalendar from '@/components/LeaveCalendar';
 import LeaveModal from '@/components/LeaveModal';
 import LeaveReportModal from '@/components/LeaveReportModal';
+import LeaveLimitConfigModal from '@/components/LeaveLimitConfigModal';
+import LeaveLimitDetailModal from '@/components/LeaveLimitDetailModal';
+import {
+  subscribeLeaveLimitConfig,
+  calculatePersonnelLeaveLimitStats,
+  getCurrentActiveCycleKey,
+  DEFAULT_LEAVE_LIMIT_CONFIG,
+} from '@/lib/leaveLimitService';
 import {
   Calendar,
   Clock,
@@ -30,6 +38,8 @@ import {
   ShieldCheck,
   Users,
   AlertTriangle,
+  AlertOctagon,
+  SlidersHorizontal,
   HeartPulse,
   Sun,
   Baby,
@@ -40,7 +50,10 @@ import {
   CheckCircle2,
   Archive,
   FileText,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
+
 
 function LeaveContent() {
   const { currentPersonnel, isAdmin, handleGoogleSignIn, isLoading: isAuthLoading } = useAuth();
@@ -61,6 +74,11 @@ function LeaveContent() {
   const [personnelList, setPersonnelList] = useState([]);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isLimitConfigModalOpen, setIsLimitConfigModalOpen] = useState(false);
+  const [isLimitDetailModalOpen, setIsLimitDetailModalOpen] = useState(false);
+  const [limitDetailFilterStatus, setLimitDetailFilterStatus] = useState('AT_RISK');
+  const [leaveLimitConfig, setLeaveLimitConfig] = useState(DEFAULT_LEAVE_LIMIT_CONFIG);
+  const [selectedLimitCycleKey, setSelectedLimitCycleKey] = useState(() => getCurrentActiveCycleKey());
   const [editingLeave, setEditingLeave] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -70,7 +88,7 @@ function LeaveContent() {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
-  // Subscribe to leaves scoped by selectedYear with Smart Cache TTL & Real-time for Admin
+  // Subscribe to leaves, personnel, and leave limit config
   useEffect(() => {
     const unsubLeaves = subscribeLeaveList(
       (list) => {
@@ -84,13 +102,34 @@ function LeaveContent() {
       setPersonnelList(list || []);
     });
 
+    const unsubLimitConfig = subscribeLeaveLimitConfig((conf) => {
+      setLeaveLimitConfig(conf || DEFAULT_LEAVE_LIMIT_CONFIG);
+    });
+
     setLastSyncTime(getLastLeaveSyncTime());
 
     return () => {
       unsubLeaves();
       unsubPersonnel();
+      unsubLimitConfig();
     };
   }, [selectedYear, isAdmin]);
+
+  // Leave Limit & Risk Monitoring Calculations
+  const leaveLimitStats = useMemo(() => {
+    return calculatePersonnelLeaveLimitStats({
+      leaves,
+      personnelList,
+      config: leaveLimitConfig,
+      fiscalYear: selectedYear,
+      selectedCycleKey: selectedLimitCycleKey,
+    });
+  }, [leaves, personnelList, leaveLimitConfig, selectedYear, selectedLimitCycleKey]);
+
+  const handleOpenLimitDetails = (statusFilter = 'AT_RISK') => {
+    setLimitDetailFilterStatus(statusFilter);
+    setIsLimitDetailModalOpen(true);
+  };
 
   // Handle URL query parameters for action=new (Admin only)
   useEffect(() => {
@@ -100,6 +139,7 @@ function LeaveContent() {
       setIsLeaveModalOpen(true);
     }
   }, [searchParams, isAdmin]);
+
 
   // Dashboard Metrics Calculations
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
@@ -517,6 +557,30 @@ function LeaveContent() {
 
             {isAdmin && (
               <>
+                {/* Admin Leave Limit Rules Configuration Button */}
+                <button
+                  onClick={() => setIsLimitConfigModalOpen(true)}
+                  className="btn"
+                  title="ตั้งค่าเพดานจำกัดการลา (วัน/ครั้ง/รายการ) แยกตามประเภทบุคลากร และกำหนดรอบการคำนวณ"
+                  style={{
+                    padding: '0.65rem 1rem',
+                    fontSize: '0.825rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(249, 115, 22, 0.25)',
+                    color: '#FED7AA',
+                    border: '1px solid rgba(249, 115, 22, 0.5)',
+                    borderRadius: 'var(--radius-md)',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                >
+                  <SlidersHorizontal size={14} color="#FB923C" />
+                  <span>ตั้งค่าเกณฑ์จำกัดการลา</span>
+                </button>
+
                 {/* Batch Sync to Firebase */}
                 <button
                   onClick={handleSyncToCloud}
@@ -597,6 +661,354 @@ function LeaveContent() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Leave Limit & Risk Alert Monitoring Bar */}
+      <section
+        className="card-glass"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '1.5rem',
+          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+          border: '1.5px solid #FDE68A',
+          boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
+        }}
+      >
+        {/* Risk Monitor Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            marginBottom: '1rem',
+            paddingBottom: '0.75rem',
+            borderBottom: '1px solid rgba(217, 119, 6, 0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#F59E0B',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+              }}
+            >
+              <AlertTriangle size={17} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '0.95rem', color: '#92400E' }}>
+                  ระบบติดตามและแจ้งเตือนการลาใกล้เกิน / เกินเกณฑ์ (Leave Limit & Quota Monitor)
+                </strong>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: '#FEF3C7',
+                    color: '#B45309',
+                    border: '1px solid #FCD34D',
+                  }}
+                >
+                  เกณฑ์เตือนที่ {leaveLimitConfig.warningThresholdPercent}%
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#B45309', marginTop: '2px' }}>
+                รอบที่กำลังประเมิน: <strong>{leaveLimitStats.cycleInfo.label}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Cycle Switcher Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400E' }}>เลือกรอบ:</span>
+            <button
+              type="button"
+              onClick={() => setSelectedLimitCycleKey('round_1')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: selectedLimitCycleKey === 'round_1' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: selectedLimitCycleKey === 'round_1' ? '#D97706' : '#FFFFFF',
+                color: selectedLimitCycleKey === 'round_1' ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              รอบที่ 1 (1 ต.ค. - 31 มี.ค.)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLimitCycleKey('round_2')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: selectedLimitCycleKey === 'round_2' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: selectedLimitCycleKey === 'round_2' ? '#D97706' : '#FFFFFF',
+                color: selectedLimitCycleKey === 'round_2' ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              รอบที่ 2 (1 เม.ย. - 30 ก.ย.)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLimitCycleKey('full_year')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: selectedLimitCycleKey === 'full_year' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: selectedLimitCycleKey === 'full_year' ? '#D97706' : '#FFFFFF',
+                color: selectedLimitCycleKey === 'full_year' ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              ทั้งปีงบประมาณ
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Clickable Monitoring Cards */}
+        <div className="grid-3" style={{ gap: '1rem' }}>
+          {/* Card A: เกินเกณฑ์กำหนด (Exceeded) */}
+          <div
+            onClick={() => handleOpenLimitDetails('EXCEEDED')}
+            className="card-glass"
+            style={{
+              padding: '1.1rem 1.25rem',
+              borderRadius: 'var(--radius-lg)',
+              background: '#FFFFFF',
+              border: '1.5px solid #FCA5A5',
+              borderLeft: '5px solid #EF4444',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.16)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.08)';
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#DC2626' }}>
+                  🚨 บุคลากรที่เกินเกณฑ์ (Exceeded)
+                </span>
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
+                    background: '#FEE2E2',
+                    color: '#DC2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AlertOctagon size={16} />
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#991B1B', lineHeight: 1.1, marginBottom: '0.35rem' }}>
+                {leaveLimitStats.summary.exceededCount}{' '}
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#DC2626' }}>ท่าน</span>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.725rem', color: '#B91C1C', marginBottom: '0.4rem', fontWeight: 600 }}>
+                • พนง.มหาวิทยาลัย: {leaveLimitStats.summary.exceededByStaffType?.university || 0} ท่าน | • พนง.พิเศษ: {leaveLimitStats.summary.exceededByStaffType?.special || 0} ท่าน
+              </div>
+              <div
+                style={{
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  color: '#DC2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>คลิกเพื่อดูรายชื่อและประวัติการลา</span>
+                <ChevronRight size={14} />
+              </div>
+            </div>
+          </div>
+
+          {/* Card B: ใกล้เกินเกณฑ์ (Near Limit) */}
+          <div
+            onClick={() => handleOpenLimitDetails('NEAR_LIMIT')}
+            className="card-glass"
+            style={{
+              padding: '1.1rem 1.25rem',
+              borderRadius: 'var(--radius-lg)',
+              background: '#FFFFFF',
+              border: '1.5px solid #FDE68A',
+              borderLeft: '5px solid #F59E0B',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.16)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.08)';
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#D97706' }}>
+                  ⚠️ บุคลากรที่ใกล้เกินเกณฑ์ (Near Limit)
+                </span>
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
+                    background: '#FEF3C7',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AlertTriangle size={16} />
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#92400E', lineHeight: 1.1, marginBottom: '0.35rem' }}>
+                {leaveLimitStats.summary.nearLimitCount}{' '}
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#D97706' }}>ท่าน</span>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.725rem', color: '#B45309', marginBottom: '0.4rem', fontWeight: 600 }}>
+                • พนง.มหาวิทยาลัย: {leaveLimitStats.summary.nearLimitByStaffType?.university || 0} ท่าน | • พนง.พิเศษ: {leaveLimitStats.summary.nearLimitByStaffType?.special || 0} ท่าน
+              </div>
+              <div
+                style={{
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  color: '#D97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>คลิกเพื่อดูรายชื่อและประวัติการลา</span>
+                <ChevronRight size={14} />
+              </div>
+            </div>
+          </div>
+
+          {/* Card C: ภาพรวมการเฝ้าระวัง & เข้าดูทั้งหมด */}
+          <div
+            onClick={() => handleOpenLimitDetails('AT_RISK')}
+            className="card-glass"
+            style={{
+              padding: '1.1rem 1.25rem',
+              borderRadius: 'var(--radius-lg)',
+              background: '#FFFFFF',
+              border: '1.5px solid #FED7AA',
+              borderLeft: '5px solid #F97316',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.16)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(249, 115, 22, 0.08)';
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#EA580C' }}>
+                  📊 รวมบุคลากรที่ต้องเฝ้าระวัง
+                </span>
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
+                    background: '#FFF7ED',
+                    color: '#EA580C',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TrendingUp size={16} />
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#C2410C', lineHeight: 1.1, marginBottom: '0.35rem' }}>
+                {leaveLimitStats.summary.atRiskCount}{' '}
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#EA580C' }}>
+                  / {leaveLimitStats.summary.totalPersonnel} ท่าน
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.725rem', color: '#9A3412', marginBottom: '0.4rem', fontWeight: 600 }}>
+                สถานะปกติ: <strong>{leaveLimitStats.summary.normalCount}</strong> ท่าน ({leaveLimitStats.summary.totalPersonnel > 0 ? ((leaveLimitStats.summary.normalCount / leaveLimitStats.summary.totalPersonnel) * 100).toFixed(0) : 100}%)
+              </div>
+              <div
+                style={{
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  color: '#EA580C',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>เปิดดูรายงานและรายละเอียดทั้งหมด</span>
+                <ChevronRight size={14} />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -819,9 +1231,33 @@ function LeaveContent() {
           currentPersonnel={currentPersonnel}
         />
       )}
+
+      {/* Admin Leave Limit Configuration Modal */}
+      {isLimitConfigModalOpen && (
+        <LeaveLimitConfigModal
+          isOpen={isLimitConfigModalOpen}
+          onClose={() => setIsLimitConfigModalOpen(false)}
+          currentConfig={leaveLimitConfig}
+          currentUser={currentPersonnel}
+          onSaved={(newConfig) => setLeaveLimitConfig(newConfig)}
+        />
+      )}
+
+      {/* Personnel Leave Limit Risk & Details Modal */}
+      {isLimitDetailModalOpen && (
+        <LeaveLimitDetailModal
+          isOpen={isLimitDetailModalOpen}
+          onClose={() => setIsLimitDetailModalOpen(false)}
+          limitStats={leaveLimitStats}
+          initialFilterStatus={limitDetailFilterStatus}
+          currentUser={currentPersonnel}
+        />
+      )}
     </div>
+
   );
 }
+
 
 export default function LeavePage() {
   return (

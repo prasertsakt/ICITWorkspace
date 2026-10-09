@@ -203,6 +203,13 @@ service cloud.firestore {
       allow create: if true;
       allow update, delete: if isHrOrAdmin();
     }
+
+    // 27. Rules for 'leave_configs' collection (Leave Limits & Quota Master Configurations)
+    match /leave_configs/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }
+
 
