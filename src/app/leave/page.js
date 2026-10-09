@@ -23,6 +23,7 @@ import LeaveModal from '@/components/LeaveModal';
 import LeaveReportModal from '@/components/LeaveReportModal';
 import LeaveLimitConfigModal from '@/components/LeaveLimitConfigModal';
 import LeaveLimitDetailModal from '@/components/LeaveLimitDetailModal';
+import LateRecordsManageModal from '@/components/LateRecordsManageModal';
 import {
   subscribeLeaveLimitConfig,
   calculatePersonnelLeaveLimitStats,
@@ -75,6 +76,7 @@ function LeaveContent() {
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isLimitConfigModalOpen, setIsLimitConfigModalOpen] = useState(false);
+  const [isLateRecordsModalOpen, setIsLateRecordsModalOpen] = useState(false);
   const [isLimitDetailModalOpen, setIsLimitDetailModalOpen] = useState(false);
   const [limitDetailFilterStatus, setLimitDetailFilterStatus] = useState('AT_RISK');
   const [leaveLimitConfig, setLeaveLimitConfig] = useState(DEFAULT_LEAVE_LIMIT_CONFIG);
@@ -579,6 +581,30 @@ function LeaveContent() {
                 >
                   <SlidersHorizontal size={14} color="#FB923C" />
                   <span>ตั้งค่าเกณฑ์จำกัดการลา</span>
+                </button>
+
+                {/* Admin Late Records Management Button */}
+                <button
+                  onClick={() => setIsLateRecordsModalOpen(true)}
+                  className="btn"
+                  title="จัดการและแก้ไขรายการมาสาย (เฉพาะ Admin: แก้ไขวันที่เริ่มต้น วันที่สิ้นสุด และระยะเวลาทั้งหมด)"
+                  style={{
+                    padding: '0.65rem 1rem',
+                    fontSize: '0.825rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(239, 68, 68, 0.22)',
+                    color: '#FECACA',
+                    border: '1px solid rgba(239, 68, 68, 0.45)',
+                    borderRadius: 'var(--radius-md)',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Clock size={14} color="#F87171" />
+                  <span>จัดการรายการมาสาย</span>
                 </button>
 
                 {/* Batch Sync to Firebase */}
@@ -1251,6 +1277,18 @@ function LeaveContent() {
           limitStats={leaveLimitStats}
           initialFilterStatus={limitDetailFilterStatus}
           currentUser={currentPersonnel}
+        />
+      )}
+
+      {/* Admin Late Records Management Modal */}
+      {isLateRecordsModalOpen && (
+        <LateRecordsManageModal
+          isOpen={isLateRecordsModalOpen}
+          onClose={() => setIsLateRecordsModalOpen(false)}
+          leaves={leaves}
+          currentUser={currentPersonnel}
+          onSaved={() => refreshLeaveList()}
+          onDeleted={() => refreshLeaveList()}
         />
       )}
     </div>

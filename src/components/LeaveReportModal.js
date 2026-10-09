@@ -9,9 +9,22 @@ import {
   Calendar,
   ChevronDown,
   Check,
+  AlertTriangle,
+  AlertOctagon,
+  ShieldCheck,
+  Building2,
+  Clock,
+  User,
 } from 'lucide-react';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG, PREDEFINED_DEPARTMENTS } from '@/lib/constants';
 import { getQuarterRange, getFiscalYear, getFiscalYearRange, formatLocalDate } from '@/lib/dateUtils';
+import {
+  getLeaveLimitConfig,
+  subscribeLeaveLimitConfig,
+  calculatePersonnelLeaveLimitStats,
+  getCurrentActiveCycleKey,
+  DEFAULT_LEAVE_LIMIT_CONFIG,
+} from '@/lib/leaveLimitService';
 
 // Format Date Thai: e.g. 15 ก.ย. 2569
 function formatThaiDate(dateStr) {
@@ -77,6 +90,16 @@ export default function LeaveReportModal({
   const typeDropdownRef = useRef(null);
   const [activePreset, setActivePreset] = useState('this_month');
   const [quarterMode, setQuarterMode] = useState('fiscal'); // 'fiscal' = ปีงบประมาณ, 'calendar' = ปีปฏิทิน
+  const [leaveLimitConfig, setLeaveLimitConfig] = useState(DEFAULT_LEAVE_LIMIT_CONFIG);
+  const [reportLimitCycleKey, setReportLimitCycleKey] = useState(() => getCurrentActiveCycleKey());
+
+  // Subscribe to Leave Limit Config
+  useEffect(() => {
+    const unsub = subscribeLeaveLimitConfig((conf) => {
+      setLeaveLimitConfig(conf || DEFAULT_LEAVE_LIMIT_CONFIG);
+    });
+    return () => unsub();
+  }, []);
 
   // Close type dropdown on click outside
   useEffect(() => {
@@ -169,7 +192,7 @@ export default function LeaveReportModal({
     }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
   }, [leaves, startDate, endDate, filterDept, selectedTypes]);
 
-  // Aggregate Metrics
+  // Aggregate Metrics for Section 1 and 2
   const summaryMetrics = useMemo(() => {
     const totalRecords = filteredLeaves.length;
     let totalDays = 0;
@@ -182,7 +205,7 @@ export default function LeaveReportModal({
     });
 
     filteredLeaves.forEach((item) => {
-      const days = Number(item.totalDays) || 1;
+      const days = Number(item.totalDays || item.days) || 1;
       totalDays += days;
       if (item.personnelId || item.personnelName) {
         uniquePersonnel.add(item.personnelId || item.personnelName);
@@ -214,6 +237,25 @@ export default function LeaveReportModal({
       deptBreakdown,
     };
   }, [filteredLeaves]);
+
+  // Leave Limit & Risk Personnel Calculation for Table 3
+  const leaveLimitStats = useMemo(() => {
+    const targetFiscalYear = getFiscalYear(new Date(startDate || today));
+    return calculatePersonnelLeaveLimitStats({
+      leaves,
+      personnelList,
+      config: leaveLimitConfig,
+      fiscalYear: targetFiscalYear,
+      selectedCycleKey: reportLimitCycleKey,
+    });
+  }, [leaves, personnelList, leaveLimitConfig, startDate, reportLimitCycleKey, today]);
+
+  // Filter Table 3 risk personnel by department if filterDept is selected
+  const filteredRiskPersonnel = useMemo(() => {
+    const list = leaveLimitStats.riskPersonnel || [];
+    if (filterDept === 'ALL') return list;
+    return list.filter((p) => p.department === filterDept);
+  }, [leaveLimitStats.riskPersonnel, filterDept]);
 
   // Print Handler
   const handlePrint = () => {
@@ -277,7 +319,7 @@ export default function LeaveReportModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                ออกรายงานสรุปประวัติวันลาบุคลากร (PDF)
+                ออกรายงานสรุปประวัติและสถิติวันลาบุคลากร (PDF)
               </h3>
               <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748B' }}>
                 กำหนดช่วงเวลา เลือกฝ่ายงาน ตรวจสอบตัวอย่างเอกสาร และกดพิมพ์หรือบันทึกเป็น PDF
@@ -363,7 +405,7 @@ export default function LeaveReportModal({
             <span style={{ color: '#CBD5E1', margin: '0 2px' }}>|</span>
             <span style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748B' }}>ไตรมาส:</span>
 
-            {/* Quarter Mode Toggle (ปีงบประมาณราชการ vs ปีปฏิทิน) */}
+            {/* Quarter Mode Toggle */}
             <div
               style={{
                 display: 'inline-flex',
@@ -459,93 +501,121 @@ export default function LeaveReportModal({
             })}
           </div>
 
-          {/* Date Pickers & Dropdowns */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>จากวันที่:</span>
+          {/* Row 2: Custom Date Picker, Dept Filter, Leave Types, and Limit Cycle Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Start Date */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>ตั้งแต่วันที่:</span>
               <input
                 type="date"
-                className="form-input"
                 value={startDate}
                 onChange={(e) => {
                   setStartDate(e.target.value);
                   setActivePreset('custom');
                 }}
-                style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', height: '34px', width: '140px' }}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  background: '#FFFFFF',
+                }}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {/* End Date */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>ถึงวันที่:</span>
               <input
                 type="date"
-                className="form-input"
                 value={endDate}
                 onChange={(e) => {
                   setEndDate(e.target.value);
                   setActivePreset('custom');
                 }}
-                style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', height: '34px', width: '140px' }}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  background: '#FFFFFF',
+                }}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {/* Department Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>ฝ่ายงาน:</span>
               <select
-                className="form-input"
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
-                style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', height: '34px', width: '160px' }}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  background: '#FFFFFF',
+                }}
               >
                 <option value="ALL">🏢 ทุกฝ่ายงาน</option>
-                {PREDEFINED_DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {PREDEFINED_DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Multi-Select ประเภทการลา */}
-            <div ref={typeDropdownRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>ประเภท:</span>
-              <button
-                type="button"
-                onClick={() => setIsTypeDropdownOpen((prev) => !prev)}
-                className="form-input"
+            {/* Evaluation Cycle Selector for Section 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#EA580C' }}>รอบเกณฑ์จำกัดการลา (ตาราง ๓):</span>
+              <select
+                value={reportLimitCycleKey}
+                onChange={(e) => setReportLimitCycleKey(e.target.value)}
                 style={{
-                  fontSize: '0.8rem',
-                  padding: '0.35rem 0.6rem',
-                  height: '34px',
-                  minWidth: '150px',
-                  maxWidth: '210px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '6px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  background: selectedTypes.length > 0 ? '#EEF2FF' : '#FFFFFF',
-                  borderColor: selectedTypes.length > 0 ? '#A5B4FC' : '#CBD5E1',
-                  color: selectedTypes.length > 0 ? '#4338CA' : '#0F172A',
-                  fontWeight: selectedTypes.length > 0 ? 600 : 400,
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  border: '1.5px solid #FDBA74',
+                  borderRadius: '6px',
+                  background: '#FFF7ED',
+                  color: '#9A3412',
                 }}
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <option value="round_1">รอบที่ 1 (1 ต.ค. - 31 มี.ค.)</option>
+                <option value="round_2">รอบที่ 2 (1 เม.ย. - 30 ก.ย.)</option>
+                <option value="full_year">ตลอดทั้งปีงบประมาณ</option>
+                {leaveLimitConfig.cycleMode === 'CUSTOM' && (
+                  <option value="custom">รอบพิเศษกำหนดเอง</option>
+                )}
+              </select>
+            </div>
+
+            {/* Leave Types Multi-Select Dropdown */}
+            <div style={{ position: 'relative' }} ref={typeDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  border: selectedTypes.length > 0 ? '1px solid #4F46E5' : '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  background: selectedTypes.length > 0 ? '#EEF2FF' : '#FFFFFF',
+                  color: selectedTypes.length > 0 ? '#4F46E5' : '#334155',
+                  fontWeight: selectedTypes.length > 0 ? 600 : 400,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>
                   {selectedTypes.length === 0 || selectedTypes.length === LEAVE_TYPES.length
                     ? '📋 ทุกประเภทการลา'
-                    : selectedTypes.length === 1
-                    ? `📋 ${selectedTypes[0]}`
                     : `📋 เลือก ${selectedTypes.length} ประเภท`}
                 </span>
-                <ChevronDown size={14} style={{ flexShrink: 0, marginLeft: '4px', opacity: 0.7 }} />
+                <ChevronDown size={14} />
               </button>
 
               {/* Multi-Select Popover Menu */}
@@ -556,19 +626,18 @@ export default function LeaveReportModal({
                     top: '100%',
                     right: 0,
                     marginTop: '4px',
-                    width: '240px',
+                    width: '230px',
                     background: '#FFFFFF',
                     border: '1px solid #CBD5E1',
-                    borderRadius: '10px',
+                    borderRadius: '8px',
                     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                    zIndex: 60,
+                    zIndex: 50,
                     padding: '0.5rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
                   }}
                 >
-                  {/* Popover Header Actions */}
                   <div
                     style={{
                       display: 'flex',
@@ -579,7 +648,7 @@ export default function LeaveReportModal({
                       fontSize: '0.7rem',
                     }}
                   >
-                    <span style={{ fontWeight: 700, color: '#475569' }}>ประเภทการลา (Enum)</span>
+                    <span style={{ fontWeight: 700, color: '#475569' }}>ประเภทการลา</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         type="button"
@@ -708,7 +777,7 @@ export default function LeaveReportModal({
               height: 'fit-content',
               backgroundColor: '#FFFFFF',
               color: '#0F172A',
-              padding: '28mm 20mm',
+              padding: '24mm 18mm',
               boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
               borderRadius: '6px',
               fontSize: '13px',
@@ -723,16 +792,16 @@ export default function LeaveReportModal({
                 textAlign: 'center',
                 paddingBottom: '16px',
                 borderBottom: '2px solid #0F172A',
-                marginBottom: '20px',
+                marginBottom: '18px',
               }}
             >
               {/* Official ICIT Logo Header */}
-              <div style={{ marginBottom: '12px' }}>
+              <div style={{ marginBottom: '10px' }}>
                 <img
                   src="/icit-logo.png"
                   alt="ICIT Logo"
                   style={{
-                    height: '62px',
+                    height: '58px',
                     width: 'auto',
                     objectFit: 'contain',
                     display: 'inline-block',
@@ -743,7 +812,7 @@ export default function LeaveReportModal({
               <h2
                 style={{
                   margin: '0 0 2px 0',
-                  fontSize: '17px',
+                  fontSize: '16px',
                   fontWeight: 800,
                   color: '#0F172A',
                   letterSpacing: '0.2px',
@@ -753,10 +822,10 @@ export default function LeaveReportModal({
               </h2>
               <div
                 style={{
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 600,
                   color: '#475569',
-                  marginBottom: '10px',
+                  marginBottom: '8px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.4px',
                 }}
@@ -766,8 +835,8 @@ export default function LeaveReportModal({
 
               <h1
                 style={{
-                  margin: '8px 0 4px 0',
-                  fontSize: '19px',
+                  margin: '6px 0 4px 0',
+                  fontSize: '18px',
                   fontWeight: 800,
                   color: '#1E293B',
                 }}
@@ -775,7 +844,7 @@ export default function LeaveReportModal({
                 รายงานสรุปประวัติและสถิติการลาของบุคลากร
               </h1>
 
-              <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#334155' }}>
                 ช่วงวันที่ <strong>{formatThaiDateFull(startDate)}</strong> ถึงวันที่{' '}
                 <strong>{formatThaiDateFull(endDate)}</strong>
                 {filterDept !== 'ALL' && <span> • ฝ่ายงาน: <strong>{filterDept}</strong></span>}
@@ -791,8 +860,8 @@ export default function LeaveReportModal({
                   alignItems: 'center',
                   fontSize: '11px',
                   color: '#64748B',
-                  marginTop: '12px',
-                  paddingTop: '8px',
+                  marginTop: '10px',
+                  paddingTop: '6px',
                   borderTop: '1px dashed #E2E8F0',
                 }}
               >
@@ -812,13 +881,13 @@ export default function LeaveReportModal({
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
-                marginBottom: '20px',
+                gap: '10px',
+                marginBottom: '18px',
               }}
             >
               <div
                 style={{
-                  padding: '10px 14px',
+                  padding: '8px 12px',
                   background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
                   borderRadius: '6px',
@@ -826,7 +895,7 @@ export default function LeaveReportModal({
                 }}
               >
                 <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>จำนวนครั้งที่ลา</div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
                   {summaryMetrics.totalRecords}{' '}
                   <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748B' }}>ครั้ง</span>
                 </div>
@@ -834,7 +903,7 @@ export default function LeaveReportModal({
 
               <div
                 style={{
-                  padding: '10px 14px',
+                  padding: '8px 12px',
                   background: '#EEF2FF',
                   border: '1px solid #C7D2FE',
                   borderRadius: '6px',
@@ -842,7 +911,7 @@ export default function LeaveReportModal({
                 }}
               >
                 <div style={{ fontSize: '11px', color: '#4F46E5', fontWeight: 600 }}>รวมจำนวนวันลา</div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: '#4F46E5', marginTop: '2px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#4F46E5', marginTop: '2px' }}>
                   {summaryMetrics.totalDays}{' '}
                   <span style={{ fontSize: '11px', fontWeight: 500, color: '#6366F1' }}>วัน</span>
                 </div>
@@ -850,7 +919,7 @@ export default function LeaveReportModal({
 
               <div
                 style={{
-                  padding: '10px 14px',
+                  padding: '8px 12px',
                   background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
                   borderRadius: '6px',
@@ -858,20 +927,20 @@ export default function LeaveReportModal({
                 }}
               >
                 <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>บุคลากรที่ลา</div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
                   {summaryMetrics.totalPeople}{' '}
                   <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748B' }}>คน</span>
                 </div>
               </div>
             </div>
 
-            {/* Leave Type Breakdown Table */}
-            <div style={{ marginBottom: '22px' }}>
+            {/* SECTION 1: Leave Type Breakdown Table */}
+            <div style={{ marginBottom: '20px' }}>
               <h3
                 style={{
                   fontSize: '13px',
                   fontWeight: 700,
-                  margin: '0 0 8px 0',
+                  margin: '0 0 6px 0',
                   color: '#1E293B',
                   display: 'flex',
                   alignItems: 'center',
@@ -884,22 +953,22 @@ export default function LeaveReportModal({
                 style={{
                   width: '100%',
                   borderCollapse: 'collapse',
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   border: '1px solid #CBD5E1',
                 }}
               >
                 <thead>
                   <tr style={{ background: '#F1F5F9' }}>
-                    <th style={{ padding: '6px 10px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
+                    <th style={{ padding: '5px 8px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
                       ประเภทการลา
                     </th>
-                    <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
+                    <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
                       จำนวน (ครั้ง)
                     </th>
-                    <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
+                    <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
                       รวม (วัน)
                     </th>
-                    <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
+                    <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
                       สัดส่วน (%)
                     </th>
                   </tr>
@@ -919,30 +988,30 @@ export default function LeaveReportModal({
                       : '0.0';
                     return (
                       <tr key={type} style={{ backgroundColor: data.count > 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                        <td style={{ padding: '5px 10px', border: '1px solid #CBD5E1' }}>
+                        <td style={{ padding: '4px 8px', border: '1px solid #CBD5E1' }}>
                           <span style={{ fontWeight: data.count > 0 ? 600 : 400 }}>{type}</span>
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                           {data.count}
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1', fontWeight: data.days > 0 ? 700 : 400 }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1', fontWeight: data.days > 0 ? 700 : 400 }}>
                           {data.days}
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1', color: '#64748B' }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1', color: '#64748B' }}>
                           {percent}%
                         </td>
                       </tr>
                     );
                   })}
                   <tr style={{ background: '#F8FAFC', fontWeight: 800 }}>
-                    <td style={{ padding: '6px 10px', border: '1px solid #CBD5E1' }}>รวมทั้งสิ้น</td>
-                    <td style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                    <td style={{ padding: '5px 8px', border: '1px solid #CBD5E1' }}>รวมทั้งสิ้น</td>
+                    <td style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                       {summaryMetrics.totalRecords}
                     </td>
-                    <td style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', color: '#4F46E5' }}>
+                    <td style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', color: '#4F46E5' }}>
                       {summaryMetrics.totalDays}
                     </td>
-                    <td style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                    <td style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                       100.0%
                     </td>
                   </tr>
@@ -950,14 +1019,14 @@ export default function LeaveReportModal({
               </table>
             </div>
 
-            {/* Department Breakdown Table */}
+            {/* SECTION 2: Department Breakdown Table */}
             {filterDept === 'ALL' && Object.keys(summaryMetrics.deptBreakdown).length > 0 && (
-              <div style={{ marginBottom: '22px' }}>
+              <div style={{ marginBottom: '20px' }}>
                 <h3
                   style={{
                     fontSize: '13px',
                     fontWeight: 700,
-                    margin: '0 0 8px 0',
+                    margin: '0 0 6px 0',
                     color: '#1E293B',
                   }}
                 >
@@ -967,22 +1036,22 @@ export default function LeaveReportModal({
                   style={{
                     width: '100%',
                     borderCollapse: 'collapse',
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     border: '1px solid #CBD5E1',
                   }}
                 >
                   <thead>
                     <tr style={{ background: '#F1F5F9' }}>
-                      <th style={{ padding: '6px 10px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
+                      <th style={{ padding: '5px 8px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
                         ฝ่ายงาน / หน่วยงาน
                       </th>
-                      <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '100px' }}>
+                      <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '100px' }}>
                         จำนวนบุคลากร
                       </th>
-                      <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
+                      <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
                         จำนวน (ครั้ง)
                       </th>
-                      <th style={{ padding: '6px 10px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
+                      <th style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '90px' }}>
                         รวม (วัน)
                       </th>
                     </tr>
@@ -990,16 +1059,16 @@ export default function LeaveReportModal({
                   <tbody>
                     {Object.entries(summaryMetrics.deptBreakdown).map(([deptName, stats]) => (
                       <tr key={deptName}>
-                        <td style={{ padding: '5px 10px', border: '1px solid #CBD5E1', fontWeight: 500 }}>
+                        <td style={{ padding: '4px 8px', border: '1px solid #CBD5E1', fontWeight: 500 }}>
                           {deptName}
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                           {stats.personnel.size} คน
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                           {stats.count}
                         </td>
-                        <td style={{ padding: '5px 10px', textAlign: 'center', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                        <td style={{ padding: '4px 8px', textAlign: 'center', border: '1px solid #CBD5E1', fontWeight: 700 }}>
                           {stats.days}
                         </td>
                       </tr>
@@ -1009,32 +1078,111 @@ export default function LeaveReportModal({
               </div>
             )}
 
-            {/* Detailed Records Log Table */}
-            <div style={{ marginBottom: '25px' }}>
-              <h3
+            {/* SECTION 3: NEW REPLACED TABLE 3 - บุคลากรที่เกินเกณฑ์ ใกล้เกินเกณฑ์ และต้องเฝ้าระวัง */}
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap' }}>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      margin: '0 0 2px 0',
+                      color: '#1E293B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>๓. สรุปรายชื่อบุคลากรที่เกินเกณฑ์ ใกล้เกินเกณฑ์ และต้องเฝ้าระวัง (Leave Limit & Risk Watchlist)</span>
+                  </h3>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>
+                    อิงตามรอบการประเมิน: <strong>{leaveLimitStats.cycleInfo.label}</strong> • เกณฑ์แจ้งเตือนเมื่อแตะถึง <strong>{leaveLimitStats.summary.warningThreshold}%</strong> ของเพดาน
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini Risk Summary Strip for Report */}
+              <div
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  margin: '0 0 8px 0',
-                  color: '#1E293B',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '8px',
+                  marginBottom: '10px',
                 }}
               >
-                <span>๓. รายละเอียดประวัติการลาของบุคลากรรายบุคคล</span>
-              </h3>
-
-              {filteredLeaves.length === 0 ? (
                 <div
                   style={{
-                    padding: '2rem',
-                    textAlign: 'center',
-                    background: '#F8FAFC',
-                    border: '1px dashed #CBD5E1',
-                    borderRadius: '6px',
-                    color: '#64748B',
-                    fontSize: '12px',
+                    padding: '6px 10px',
+                    background: '#FEF2F2',
+                    border: '1px solid #FCA5A5',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  ไม่พบข้อมูลการลาในช่วงเวลาและเงื่อนไขที่กำหนด
+                  <span style={{ fontWeight: 700, color: '#DC2626' }}>🚨 เกินเกณฑ์ (Exceeded):</span>
+                  <strong style={{ fontSize: '13px', color: '#991B1B' }}>
+                    {leaveLimitStats.summary.exceededCount} ท่าน
+                  </strong>
+                </div>
+
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    background: '#FFFBEB',
+                    border: '1px solid #FDE68A',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: '#D97706' }}>⚠️ ใกล้เกินเกณฑ์ (Near Limit):</span>
+                  <strong style={{ fontSize: '13px', color: '#92400E' }}>
+                    {leaveLimitStats.summary.nearLimitCount} ท่าน
+                  </strong>
+                </div>
+
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: '#475569' }}>👁️ รวมกลุ่มที่ต้องเฝ้าระวัง:</span>
+                  <strong style={{ fontSize: '13px', color: '#0F172A' }}>
+                    {leaveLimitStats.summary.atRiskCount} ท่าน
+                  </strong>
+                </div>
+              </div>
+
+              {filteredRiskPersonnel.length === 0 ? (
+                <div
+                  style={{
+                    padding: '1.25rem',
+                    textAlign: 'center',
+                    background: '#F0FDF4',
+                    border: '1px solid #86EFAC',
+                    borderRadius: '6px',
+                    color: '#166534',
+                    fontSize: '11.5px',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong>✅ ในรอบการประเมินนี้ บุคลากรทุกคนมีสถิติการลาอยู่ในเกณฑ์มาตรฐาน</strong>
+                  <br />
+                  <span style={{ fontSize: '10.5px', color: '#15803D' }}>
+                    ไม่พบบุคลากรที่ใช้วันลาเกินเกณฑ์ หรือแตะถึงเกณฑ์เฝ้าระวัง {leaveLimitStats.summary.warningThreshold}% ในรอบ {leaveLimitStats.cycleInfo.label}
+                  </span>
                 </div>
               ) : (
                 <table
@@ -1047,64 +1195,128 @@ export default function LeaveReportModal({
                 >
                   <thead>
                     <tr style={{ background: '#F1F5F9' }}>
-                      <th style={{ padding: '6px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '36px' }}>
-                        ลำดับ
+                      <th style={{ padding: '5px 4px', textAlign: 'center', border: '1px solid #CBD5E1', width: '32px' }}>
+                        #
                       </th>
-                      <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #CBD5E1', width: '130px' }}>
+                      <th style={{ padding: '5px 6px', textAlign: 'left', border: '1px solid #CBD5E1', width: '120px' }}>
                         ชื่อ - นามสกุล
                       </th>
-                      <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #CBD5E1', width: '130px' }}>
+                      <th style={{ padding: '5px 6px', textAlign: 'left', border: '1px solid #CBD5E1', width: '110px' }}>
                         ฝ่ายงาน
                       </th>
-                      <th style={{ padding: '6px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '70px' }}>
-                        ประเภท
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '85px' }}>
+                        ประเภทบุคลากร
                       </th>
-                      <th style={{ padding: '6px 8px', textAlign: 'center', border: '1px solid #CBD5E1', width: '120px' }}>
-                        ช่วงวันที่ลา
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '85px' }}>
+                        สถานะการประเมิน
                       </th>
-                      <th style={{ padding: '6px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '45px' }}>
-                        วัน
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '70px' }}>
+                        วันลา (ใช้/เพดาน)
                       </th>
-                      <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
-                        เหตุผลการลา
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '65px' }}>
+                        ครั้ง (ใช้/เพดาน)
+                      </th>
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '65px' }}>
+                        รายการ (ใช้/เพดาน)
+                      </th>
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '50px' }}>
+                        % สูงสุด
+                      </th>
+                      <th style={{ padding: '5px 6px', textAlign: 'left', border: '1px solid #CBD5E1' }}>
+                        เกณฑ์ที่แตะถึง / รายละเอียด
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLeaves.map((item, idx) => {
-                      const isSameDay = item.startDate === item.endDate;
-                      const dateRangeStr = isSameDay
-                        ? formatThaiDate(item.startDate)
-                        : `${formatThaiDate(item.startDate)} - ${formatThaiDate(item.endDate)}`;
+                    {filteredRiskPersonnel.map((person, idx) => {
+                      const isExceeded = person.status === 'EXCEEDED';
 
                       return (
                         <tr
-                          key={item.id || idx}
+                          key={person.id || idx}
                           style={{
-                            backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                            backgroundColor: isExceeded
+                              ? '#FEF2F2'
+                              : '#FFFBEB',
                             pageBreakInside: 'avoid',
                           }}
                         >
-                          <td style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                          <td style={{ padding: '4px 4px', textAlign: 'center', border: '1px solid #CBD5E1', color: '#64748B' }}>
                             {idx + 1}
                           </td>
-                          <td style={{ padding: '5px 8px', border: '1px solid #CBD5E1', fontWeight: 600 }}>
-                            {item.personnelName || '-'}
+                          <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', fontWeight: 700, color: '#0F172A' }}>
+                            {person.name || '-'}
                           </td>
-                          <td style={{ padding: '5px 8px', border: '1px solid #CBD5E1', color: '#475569' }}>
-                            {item.department || '-'}
+                          <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', color: '#475569' }}>
+                            {person.department || '-'}
                           </td>
-                          <td style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
-                            <span style={{ fontWeight: 600 }}>{item.leaveType}</span>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontSize: '10px' }}>
+                            {person.staffTypeLabel}
                           </td>
-                          <td style={{ padding: '5px 8px', textAlign: 'center', border: '1px solid #CBD5E1', whiteSpace: 'nowrap' }}>
-                            {dateRangeStr}
+                          <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '1px 5px',
+                                borderRadius: '3px',
+                                fontSize: '9.5px',
+                                fontWeight: 700,
+                                background: isExceeded ? '#DC2626' : '#D97706',
+                                color: '#FFFFFF',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isExceeded ? '🚨 เกินเกณฑ์' : '⚠️ ใกล้เกินเกณฑ์'}
+                            </span>
                           </td>
-                          <td style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontWeight: 700 }}>
-                            {item.totalDays || 1}
+                          <td
+                            style={{
+                              padding: '4px 6px',
+                              textAlign: 'center',
+                              border: '1px solid #CBD5E1',
+                              fontWeight: 700,
+                              color: person.totalDays >= person.maxDays ? '#DC2626' : '#0F172A',
+                            }}
+                          >
+                            {person.totalDays} / {person.maxDays}
                           </td>
-                          <td style={{ padding: '5px 8px', border: '1px solid #CBD5E1', color: '#334155' }}>
-                            {item.reason || '-'}
+                          <td
+                            style={{
+                              padding: '4px 6px',
+                              textAlign: 'center',
+                              border: '1px solid #CBD5E1',
+                              fontWeight: 700,
+                              color: person.totalTimes >= person.maxTimes ? '#DC2626' : '#0F172A',
+                            }}
+                          >
+                            {person.totalTimes} / {person.maxTimes}
+                          </td>
+                          <td
+                            style={{
+                              padding: '4px 6px',
+                              textAlign: 'center',
+                              border: '1px solid #CBD5E1',
+                              fontWeight: 700,
+                              color: person.totalTransactions >= person.maxTransactions ? '#DC2626' : '#0F172A',
+                            }}
+                          >
+                            {person.totalTransactions} / {person.maxTransactions}
+                          </td>
+                          <td
+                            style={{
+                              padding: '4px 6px',
+                              textAlign: 'center',
+                              border: '1px solid #CBD5E1',
+                              fontWeight: 800,
+                              color: isExceeded ? '#DC2626' : '#D97706',
+                            }}
+                          >
+                            {person.highestPercent}%
+                          </td>
+                          <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', fontSize: '10px', color: '#334155' }}>
+                            {person.alertTriggers && person.alertTriggers.length > 0
+                              ? person.alertTriggers.join(', ')
+                              : 'แตะถึงเกณฑ์เฝ้าระวัง'}
                           </td>
                         </tr>
                       );
@@ -1114,11 +1326,11 @@ export default function LeaveReportModal({
               )}
             </div>
 
-            {/* Official Footer Note (No signature block as requested) */}
+            {/* Official Footer Note */}
             <div
               style={{
-                marginTop: '30px',
-                paddingTop: '12px',
+                marginTop: '25px',
+                paddingTop: '10px',
                 borderTop: '1px solid #E2E8F0',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1128,7 +1340,7 @@ export default function LeaveReportModal({
               }}
             >
               <span>เอกสารสารสนเทศภายใน สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT KMUTNB)</span>
-              <span>หน้า 1 จาก 1 • ระบบบริหารงานบุคคล ICIT Workspace</span>
+              <span>ระบบบริหารงานบุคคลและเกณฑ์จำกัดการลา ICIT Workspace</span>
             </div>
           </div>
         </div>
