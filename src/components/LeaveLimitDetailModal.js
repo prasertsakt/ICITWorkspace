@@ -33,6 +33,8 @@ import { formatLocalDate } from '@/lib/dateUtils';
 import {
   sendLeaveLimitEmailNotification,
   sendBatchLeaveLimitEmailNotifications,
+  calculatePersonnelLeaveLimitStats,
+  DEFAULT_LEAVE_LIMIT_CONFIG,
 } from '@/lib/leaveLimitService';
 
 // Helper to format Thai date
@@ -60,12 +62,47 @@ export default function LeaveLimitDetailModal({
   limitStats = null,
   initialFilterStatus = 'AT_RISK', // 'AT_RISK' | 'EXCEEDED' | 'NEAR_LIMIT' | 'ALL' | 'NORMAL'
   currentUser = null,
+  leaves = [],
+  personnelList = [],
+  leaveLimitConfig = DEFAULT_LEAVE_LIMIT_CONFIG,
+  selectedYear = 2026,
+  selectedCycleKey = 'round_1',
+  onCycleChange = null,
 }) {
+  const [currentCycleKey, setCurrentCycleKey] = useState(selectedCycleKey || limitStats?.selectedCycleKey || 'round_1');
   const [activeStatusFilter, setActiveStatusFilter] = useState(initialFilterStatus);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStaffType, setSelectedStaffType] = useState('ALL'); // 'ALL' | 'พนักงานมหาวิทยาลัย' | 'พนักงานพิเศษ'
   const [expandedPersonIds, setExpandedPersonIds] = useState(new Set());
+
+  // Sync cycle key from props
+  useEffect(() => {
+    if (selectedCycleKey) {
+      setCurrentCycleKey(selectedCycleKey);
+    }
+  }, [selectedCycleKey]);
+
+  // Recalculate or use limit stats based on selected cycle in modal
+  const effectiveLimitStats = useMemo(() => {
+    if (leaves && leaves.length > 0 && personnelList && personnelList.length > 0) {
+      return calculatePersonnelLeaveLimitStats({
+        leaves,
+        personnelList,
+        config: leaveLimitConfig || DEFAULT_LEAVE_LIMIT_CONFIG,
+        fiscalYear: selectedYear,
+        selectedCycleKey: currentCycleKey,
+      });
+    }
+    return limitStats;
+  }, [leaves, personnelList, leaveLimitConfig, selectedYear, currentCycleKey, limitStats]);
+
+  const handleSelectCycle = (newKey) => {
+    setCurrentCycleKey(newKey);
+    if (onCycleChange) {
+      onCycleChange(newKey);
+    }
+  };
 
   // Email Notification States
   const [sendingEmailMap, setSendingEmailMap] = useState({});
@@ -85,9 +122,9 @@ export default function LeaveLimitDetailModal({
     }
   }, [isOpen, initialFilterStatus]);
 
-  if (!isOpen || !limitStats) return null;
+  if (!isOpen || !effectiveLimitStats) return null;
 
-  const { cycleInfo, summary, personnelStats = [] } = limitStats;
+  const { cycleInfo, summary, personnelStats = [] } = effectiveLimitStats;
 
   const toggleExpand = (personId) => {
     setExpandedPersonIds((prev) => {
@@ -401,6 +438,84 @@ export default function LeaveLimitDetailModal({
           >
             <X size={20} />
           </button>
+        </div>
+
+        {/* Cycle Switcher Bar inside Modal */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FFF7ED',
+            borderBottom: '1px solid #FED7AA',
+            padding: '0.65rem 1.25rem',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={16} color="#EA580C" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#9A3412' }}>
+              เลือกรอบการประเมิน:
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#C2410C', fontWeight: 600 }}>
+              {cycleInfo.label}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => handleSelectCycle('round_1')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: currentCycleKey === 'round_1' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: currentCycleKey === 'round_1' ? '#D97706' : '#FFFFFF',
+                color: currentCycleKey === 'round_1' ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 1 (กำหนดเอง)' : 'รอบที่ 1 (1 ส.ค. - 31 ม.ค.)'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectCycle('round_2')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: currentCycleKey === 'round_2' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: currentCycleKey === 'round_2' ? '#D97706' : '#FFFFFF',
+                color: currentCycleKey === 'round_2' ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectCycle('both_rounds')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: (currentCycleKey === 'both_rounds' || currentCycleKey === 'full_year') ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: (currentCycleKey === 'both_rounds' || currentCycleKey === 'full_year') ? '#D97706' : '#FFFFFF',
+                color: (currentCycleKey === 'both_rounds' || currentCycleKey === 'full_year') ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              รอบที่ 1 + รอบที่ 2
+            </button>
+          </div>
         </div>
 
         {/* Quick KPI Summary Bar */}

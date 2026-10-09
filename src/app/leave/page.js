@@ -794,6 +794,23 @@ function LeaveContent() {
             >
               {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
             </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLimitCycleKey('both_rounds')}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: (selectedLimitCycleKey === 'both_rounds' || selectedLimitCycleKey === 'full_year') ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
+                background: (selectedLimitCycleKey === 'both_rounds' || selectedLimitCycleKey === 'full_year') ? '#D97706' : '#FFFFFF',
+                color: (selectedLimitCycleKey === 'both_rounds' || selectedLimitCycleKey === 'full_year') ? '#FFFFFF' : '#92400E',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              รอบที่ 1 + รอบที่ 2
+            </button>
           </div>
         </div>
 
@@ -1188,6 +1205,12 @@ function LeaveContent() {
           limitStats={leaveLimitStats}
           initialFilterStatus={limitDetailFilterStatus}
           currentUser={currentPersonnel}
+          leaves={leaves}
+          personnelList={personnelList}
+          leaveLimitConfig={leaveLimitConfig}
+          selectedYear={selectedYear}
+          selectedCycleKey={selectedLimitCycleKey}
+          onCycleChange={(newCycleKey) => setSelectedLimitCycleKey(newCycleKey)}
         />
       )}
 

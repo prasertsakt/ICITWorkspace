@@ -256,6 +256,22 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
     const round2Custom = config.customCycles?.round2 || {};
     const singleCustom = config.customCycle || {};
 
+    if (cycleKey === 'both_rounds' || cycleKey === 'round_both' || cycleKey === 'round_1_plus_2' || cycleKey === 'full_year') {
+      const r1Start = round1Custom.startDate || singleCustom.startDate || `${fy - 1}-08-01`;
+      const r2End = round2Custom.endDate || singleCustom.endDate || `${fy}-07-31`;
+      return {
+        key: 'both_rounds',
+        name: `รอบที่ 1 + รอบที่ 2 (กำหนดเอง)`,
+        startDate: r1Start,
+        endDate: r2End,
+        isRound: false,
+        isBothRounds: true,
+        fiscalYear: fy,
+        buddhistYear: beYear,
+        label: `รอบที่ 1 + รอบที่ 2 (${r1Start} ถึง ${r2End})`,
+      };
+    }
+
     if (cycleKey === 'round_2') {
       const r2Start = round2Custom.startDate || `${fy}-02-01`;
       const r2End = round2Custom.endDate || `${fy}-07-31`;
@@ -266,24 +282,10 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
         startDate: r2Start,
         endDate: r2End,
         isRound: true,
+        isBothRounds: false,
         fiscalYear: fy,
         buddhistYear: beYear,
         label: `${r2Name} (${r2Start} ถึง ${r2End})`,
-      };
-    }
-
-    if (cycleKey === 'full_year') {
-      const fyStart = round1Custom.startDate || singleCustom.startDate || `${fy - 1}-08-01`;
-      const fyEnd = round2Custom.endDate || singleCustom.endDate || `${fy}-07-31`;
-      return {
-        key: 'full_year',
-        name: `ทั้งปีงบประมาณ (กำหนดเอง)`,
-        startDate: fyStart,
-        endDate: fyEnd,
-        isRound: false,
-        fiscalYear: fy,
-        buddhistYear: beYear,
-        label: `ทั้งปีงบประมาณกำหนดเอง (${fyStart} ถึง ${fyEnd})`,
       };
     }
 
@@ -297,23 +299,25 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
       startDate: r1Start,
       endDate: r1End,
       isRound: true,
+      isBothRounds: false,
       fiscalYear: fy,
       buddhistYear: beYear,
       label: `${r1Name} (${r1Start} ถึง ${r1End})`,
     };
   }
 
-  // 2. Full Year Mode (1 ส.ค. - 31 ก.ค.)
-  if (cycleKey === 'full_year' || config.cycleMode === 'FULL_YEAR') {
+  // 2. Both Rounds (รอบที่ 1 + รอบที่ 2: 1 ส.ค. - 31 ก.ค.)
+  if (cycleKey === 'both_rounds' || cycleKey === 'round_both' || cycleKey === 'round_1_plus_2' || cycleKey === 'full_year' || config.cycleMode === 'FULL_YEAR') {
     return {
-      key: 'full_year',
-      name: `ตลอดปีงบประมาณ ${beYear}`,
+      key: 'both_rounds',
+      name: `รอบที่ 1 + รอบที่ 2 (${beYear})`,
       startDate: `${fy - 1}-08-01`,
       endDate: `${fy}-07-31`,
       isRound: false,
+      isBothRounds: true,
       fiscalYear: fy,
       buddhistYear: beYear,
-      label: `ตลอดปีงบประมาณ ${beYear} (1 ส.ค. ${prevBeYear} - 31 ก.ค. ${beYear})`,
+      label: `รอบที่ 1 + รอบที่ 2 (1 ส.ค. ${prevBeYear} - 31 ก.ค. ${beYear})`,
     };
   }
 
@@ -325,6 +329,7 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
       startDate: `${fy}-02-01`,
       endDate: `${fy}-07-31`,
       isRound: true,
+      isBothRounds: false,
       fiscalYear: fy,
       buddhistYear: beYear,
       label: `รอบที่ 2/ปี ${beYear} (1 ก.พ. ${beYear} - 31 ก.ค. ${beYear})`,
@@ -338,6 +343,7 @@ export function getEvaluationCycleInfo(config = DEFAULT_LEAVE_LIMIT_CONFIG, fisc
     startDate: `${fy - 1}-08-01`,
     endDate: `${fy}-01-31`,
     isRound: true,
+    isBothRounds: false,
     fiscalYear: fy,
     buddhistYear: beYear,
     label: `รอบที่ 1/ปี ${beYear} (1 ส.ค. ${prevBeYear} - 31 ม.ค. ${beYear})`,
@@ -426,14 +432,15 @@ export function calculatePersonnelLeaveLimitStats({
     const staffTypeShort = isSpecialStaff ? 'พศ.' : 'พม.';
     const typeKey = isSpecialStaff ? 'special' : 'university';
 
-    // Get configured limits (evaluated per 6-month round)
+    // Get configured limits (evaluated per 6-month round or 2 rounds combined)
     const limitsConfig = isSpecialStaff
       ? config.specialStaffLimits || DEFAULT_LEAVE_LIMIT_CONFIG.specialStaffLimits
       : config.universityStaffLimits || DEFAULT_LEAVE_LIMIT_CONFIG.universityStaffLimits;
 
-    const maxDays = Number(limitsConfig.roundMaxDays) || (isSpecialStaff ? 15 : 23);
-    const maxTimes = isSpecialStaff ? 0 : (Number(limitsConfig.roundMaxTimes) || 10);
-    const maxLate = Number(limitsConfig.roundMaxLate) || 18;
+    const roundMultiplier = cycleInfo.isBothRounds ? 2 : 1;
+    const maxDays = (Number(limitsConfig.roundMaxDays) || (isSpecialStaff ? 15 : 23)) * roundMultiplier;
+    const maxTimes = isSpecialStaff ? 0 : ((Number(limitsConfig.roundMaxTimes) || 10) * roundMultiplier);
+    const maxLate = (Number(limitsConfig.roundMaxLate) || 18) * roundMultiplier;
     const maxTransactions = 0; // Removed transaction limit
 
     // Find person's leaves (by ID or Name match)

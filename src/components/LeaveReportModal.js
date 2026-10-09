@@ -616,6 +616,9 @@ export default function LeaveReportModal({
                 <option value="round_2">
                   {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
                 </option>
+                <option value="both_rounds">
+                  {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 1 + รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 1 + รอบที่ 2 (1 ส.ค. - 31 ก.ค.)'}
+                </option>
               </select>
             </div>
 
