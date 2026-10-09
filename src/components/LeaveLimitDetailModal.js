@@ -582,7 +582,7 @@ export default function LeaveLimitDetailModal({
         {/* Filter Toolbar */}
         <div
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.85rem 1.25rem',
             background: 'var(--bg-card)',
             borderBottom: '1px solid var(--border-color)',
             display: 'flex',
@@ -592,46 +592,87 @@ export default function LeaveLimitDetailModal({
             gap: '0.75rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '240px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: '240px', flexWrap: 'wrap' }}>
             {/* Search */}
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search
-                size={16}
-                style={{
-                  position: 'absolute',
-                  left: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              />
+            <div
+              style={{
+                position: 'relative',
+                flex: '1 1 220px',
+                display: 'flex',
+                alignItems: 'center',
+                background: '#FFFFFF',
+                border: '1.5px solid #E2E8F0',
+                borderRadius: '10px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                padding: '0 0.75rem',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Search size={16} color="#94A3B8" />
               <input
                 type="text"
                 placeholder="ค้นหาชื่อบุคลากร, ตำแหน่ง, อีเมล..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="form-control"
+                onFocus={(e) => {
+                  e.currentTarget.parentElement.style.borderColor = '#F97316';
+                  e.currentTarget.parentElement.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.parentElement.style.borderColor = '#E2E8F0';
+                  e.currentTarget.parentElement.style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)';
+                }}
                 style={{
-                  paddingLeft: '32px',
-                  fontSize: '0.825rem',
-                  paddingTop: '0.45rem',
-                  paddingBottom: '0.45rem',
+                  flex: 1,
+                  padding: '0.55rem 0.5rem',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
                 }}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             {/* Department Filter */}
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="form-control"
               style={{
                 fontSize: '0.825rem',
-                width: 'auto',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 minWidth: '160px',
-                paddingTop: '0.45rem',
-                paddingBottom: '0.45rem',
+                padding: '0.55rem 0.85rem',
+                background: '#FFFFFF',
+                border: '1.5px solid #E2E8F0',
+                borderRadius: '10px',
+                outline: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'border 0.2s',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#F97316')}
+              onBlur={(e) => (e.target.style.borderColor = '#E2E8F0')}
             >
               <option value="ALL">🏢 ทุกฝ่ายงาน</option>
               {PREDEFINED_DEPARTMENTS.filter((d) => d !== 'คณะผู้บริหาร').map((dept) => (
@@ -645,14 +686,22 @@ export default function LeaveLimitDetailModal({
             <select
               value={selectedStaffType}
               onChange={(e) => setSelectedStaffType(e.target.value)}
-              className="form-control"
               style={{
                 fontSize: '0.825rem',
-                width: 'auto',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 minWidth: '150px',
-                paddingTop: '0.45rem',
-                paddingBottom: '0.45rem',
+                padding: '0.55rem 0.85rem',
+                background: '#FFFFFF',
+                border: '1.5px solid #E2E8F0',
+                borderRadius: '10px',
+                outline: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'border 0.2s',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#F97316')}
+              onBlur={(e) => (e.target.style.borderColor = '#E2E8F0')}
             >
               <option value="ALL">👥 ทุกประเภทบุคลากร</option>
               <option value="พนักงานมหาวิทยาลัย">🏢 พนักงานมหาวิทยาลัย</option>
@@ -1189,17 +1238,39 @@ export default function LeaveLimitDetailModal({
                 ระบบจะสร้างเนื้อหาอีเมลทางการ สรุปสถิติวันลา ({emailModalPerson.totalDays}/{emailModalPerson.limits.maxDays} วัน) พร้อมรายการประวัติการลาในรอบนี้ส่งตรงไปยังอีเมลของบุคลากร
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.825rem', color: 'var(--text-primary)' }}>
                   ข้อความเพิ่มเติม / บันทึกแนบจาก HR หรือผู้ดูแลระบบ (ไม่บังคับ):
                 </label>
                 <textarea
-                  className="form-control"
                   rows={3}
                   placeholder="เช่น โปรดติดต่อฝ่ายบุคคลเพื่อวางแผนการใช้วันลา หรือส่งเอกสารใบรับรองแพทย์เพิ่มเติม..."
                   value={customEmailNote}
                   onChange={(e) => setCustomEmailNote(e.target.value)}
-                  style={{ fontSize: '0.85rem' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                    borderRadius: '10px',
+                    border: '1.5px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    transition: 'all 0.2s ease',
+                    resize: 'vertical',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#F97316';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#CBD5E1';
+                    e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)';
+                  }}
                 />
               </div>
             </div>
@@ -1264,17 +1335,39 @@ export default function LeaveLimitDetailModal({
                 ระบบจะส่งอีเมลแจ้งเตือนรายบุคคลไปยังบุคลากรที่อยู่ในกลุ่ม <strong>เกินเกณฑ์กำหนด</strong> และ <strong>ใกล้เกินเกณฑ์</strong> จำนวนทั้งหมด <strong>{atRiskWithEmails.length} ท่าน</strong>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.825rem', color: 'var(--text-primary)' }}>
                   ข้อความเพิ่มเติมถึงผู้รับทุกคน (ไม่บังคับ):
                 </label>
                 <textarea
-                  className="form-control"
                   rows={3}
                   placeholder="เช่น ขอความร่วมมือบุคลากรตรวจสอบสถิติวันลาคงเหลือประจำปีงบประมาณ..."
                   value={customEmailNote}
                   onChange={(e) => setCustomEmailNote(e.target.value)}
-                  style={{ fontSize: '0.85rem' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                    borderRadius: '10px',
+                    border: '1.5px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    transition: 'all 0.2s ease',
+                    resize: 'vertical',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#F97316';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#CBD5E1';
+                    e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)';
+                  }}
                 />
               </div>
             </div>
