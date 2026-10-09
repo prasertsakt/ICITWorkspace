@@ -794,28 +794,11 @@ function LeaveContent() {
             >
               {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedLimitCycleKey('full_year')}
-              style={{
-                padding: '4px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                borderRadius: '6px',
-                border: selectedLimitCycleKey === 'full_year' ? '1px solid #D97706' : '1px solid rgba(217, 119, 6, 0.25)',
-                background: selectedLimitCycleKey === 'full_year' ? '#D97706' : '#FFFFFF',
-                color: selectedLimitCycleKey === 'full_year' ? '#FFFFFF' : '#92400E',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              ตลอดทั้งปี (12 เดือน)
-            </button>
           </div>
         </div>
 
-        {/* 3 Clickable Monitoring Cards */}
-        <div className="grid-3" style={{ gap: '1rem' }}>
+        {/* 2 Clickable Monitoring Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
           {/* Card A: เกินเกณฑ์กำหนด (Exceeded) */}
           <div
             onClick={() => handleOpenLimitDetails('EXCEEDED')}
@@ -871,7 +854,7 @@ function LeaveContent() {
 
             <div>
               <div style={{ fontSize: '0.725rem', color: '#B91C1C', marginBottom: '0.4rem', fontWeight: 600 }}>
-                • พนง.มหาวิทยาลัย: {leaveLimitStats.summary.exceededByStaffType?.university || 0} ท่าน | • พนง.พิเศษ: {leaveLimitStats.summary.exceededByStaffType?.special || 0} ท่าน
+                • พม.: {leaveLimitStats.summary.exceededByStaffType?.university || 0} ท่าน | • พศ.: {leaveLimitStats.summary.exceededByStaffType?.special || 0} ท่าน
               </div>
               <div
                 style={{
@@ -944,7 +927,7 @@ function LeaveContent() {
 
             <div>
               <div style={{ fontSize: '0.725rem', color: '#B45309', marginBottom: '0.4rem', fontWeight: 600 }}>
-                • พนง.มหาวิทยาลัย: {leaveLimitStats.summary.nearLimitByStaffType?.university || 0} ท่าน | • พนง.พิเศษ: {leaveLimitStats.summary.nearLimitByStaffType?.special || 0} ท่าน
+                • พม.: {leaveLimitStats.summary.nearLimitByStaffType?.university || 0} ท่าน | • พศ.: {leaveLimitStats.summary.nearLimitByStaffType?.special || 0} ท่าน
               </div>
               <div
                 style={{
@@ -957,81 +940,6 @@ function LeaveContent() {
                 }}
               >
                 <span>คลิกเพื่อดูรายชื่อและประวัติการลา</span>
-                <ChevronRight size={14} />
-              </div>
-            </div>
-          </div>
-
-          {/* Card C: ภาพรวมการเฝ้าระวัง & เข้าดูทั้งหมด */}
-          <div
-            onClick={() => handleOpenLimitDetails('AT_RISK')}
-            className="card-glass"
-            style={{
-              padding: '1.1rem 1.25rem',
-              borderRadius: 'var(--radius-lg)',
-              background: '#FFFFFF',
-              border: '1.5px solid #FED7AA',
-              borderLeft: '5px solid #F97316',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.08)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.16)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(249, 115, 22, 0.08)';
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#EA580C' }}>
-                  📊 รวมบุคลากรที่ต้องเฝ้าระวัง
-                </span>
-                <div
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    background: '#FFF7ED',
-                    color: '#EA580C',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendingUp size={16} />
-                </div>
-              </div>
-
-              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#C2410C', lineHeight: 1.1, marginBottom: '0.35rem' }}>
-                {leaveLimitStats.summary.atRiskCount}{' '}
-                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#EA580C' }}>
-                  / {leaveLimitStats.summary.totalPersonnel} ท่าน
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: '0.725rem', color: '#9A3412', marginBottom: '0.4rem', fontWeight: 600 }}>
-                สถานะปกติ: <strong>{leaveLimitStats.summary.normalCount}</strong> ท่าน ({leaveLimitStats.summary.totalPersonnel > 0 ? ((leaveLimitStats.summary.normalCount / leaveLimitStats.summary.totalPersonnel) * 100).toFixed(0) : 100}%)
-              </div>
-              <div
-                style={{
-                  fontSize: '0.725rem',
-                  fontWeight: 700,
-                  color: '#EA580C',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>เปิดดูรายงานและรายละเอียดทั้งหมด</span>
                 <ChevronRight size={14} />
               </div>
             </div>

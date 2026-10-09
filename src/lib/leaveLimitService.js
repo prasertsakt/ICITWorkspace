@@ -11,7 +11,7 @@ export const LOCAL_KEY_LEAVE_LIMIT_CONFIG = 'icit_leave_limit_config';
 
 export const DEFAULT_LEAVE_LIMIT_CONFIG = {
   id: 'leave_limit_config',
-  cycleMode: 'ROUND_2_PERIODS', // 'ROUND_2_PERIODS' | 'FULL_YEAR' | 'CUSTOM'
+  cycleMode: 'ROUND_2_PERIODS', // 'ROUND_2_PERIODS' | 'CUSTOM'
   warningThresholdPercent: 80, // % threshold to trigger warning (e.g. 80%)
   includedLeaveTypes: [
     'ขาด',
@@ -24,36 +24,24 @@ export const DEFAULT_LEAVE_LIMIT_CONFIG = {
     'ลาป่วยจำเป็น',
     'อื่น ๆ',
   ],
-  // 1. พนักงานมหาวิทยาลัย (University Employee)
-  // เกณฑ์ มจพ.: ลาป่วยและลากิจ ไม่เกิน 10 ครั้ง 23 วัน, สาย ไม่เกิน 18 ครั้ง ต่อรอบ 6 เดือน
+  // 1. พนักงานมหาวิทยาลัย (University Employee - พม.)
+  // เกณฑ์: ลาป่วยและลากิจ ไม่เกิน 10 ครั้ง 23 วัน, สาย ไม่เกิน 18 ครั้ง ต่อรอบ 6 เดือน
   universityStaffLimits: {
     roundMaxDays: 23,
     roundMaxTimes: 10,
     roundMaxLate: 18,
-    roundMaxTransactions: 10,
-    fullYearMaxDays: 46,
-    fullYearMaxTimes: 20,
-    fullYearMaxLate: 36,
-    fullYearMaxTransactions: 20,
   },
-  // 2. พนักงานพิเศษ (Special Employee)
-  // เกณฑ์ มจพ.: ทำงาน < 6 เดือน ลาป่วยไม่เกิน 5 วัน | ทำงาน > 6 เดือน ลาป่วย+กิจ ไม่เกิน 15 วันทำการ | สายไม่เกิน 18 ครั้งต่อรอบ
+  // 2. พนักงานพิเศษ (Special Employee - พศ.)
+  // เกณฑ์: ทำงาน < 6 เดือน ลาป่วยไม่เกิน 5 วัน | ทำงาน > 6 เดือน ลาป่วย+กิจ ไม่เกิน 15 วันทำการ | สายไม่เกิน 18 ครั้งต่อรอบ
   specialStaffLimits: {
     roundMaxDays: 15, // กรณีทำงาน > 6 เดือน
     probationMaxDays: 5, // กรณีทำงาน < 6 เดือน (ลาป่วยได้ไม่เกิน 5 วันทำการ)
-    roundMaxTimes: 8,
     roundMaxLate: 18,
-    roundMaxTransactions: 8,
-    fullYearMaxDays: 30,
-    fullYearMaxTimes: 16,
-    fullYearMaxLate: 36,
-    fullYearMaxTransactions: 16,
   },
   // 3. เกณฑ์การขอลงเวลา (Time Attendance Requests Limit)
-  // เกณฑ์ มจพ.: การขอลงเวลา ไม่เกินจำนวน 12 ครั้ง ใน 1 ปีงบประมาณ
+  // เกณฑ์: การขอลงเวลา ไม่เกินจำนวน 12 ครั้ง ใน 1 ปีงบประมาณจริง (1 ต.ค. - 30 ก.ย.)
   timeAttendanceLimits: {
     fullYearMaxTimes: 12,
-    roundMaxTimes: 6,
   },
   // Custom Date Ranges (when cycleMode === 'CUSTOM')
   customCycles: {
@@ -435,18 +423,18 @@ export function calculatePersonnelLeaveLimitStats({
       (person.type || '').includes('พิเศษ');
     
     const staffTypeLabel = isSpecialStaff ? 'พนักงานพิเศษ' : 'พนักงานมหาวิทยาลัย';
+    const staffTypeShort = isSpecialStaff ? 'พศ.' : 'พม.';
     const typeKey = isSpecialStaff ? 'special' : 'university';
 
-    // Get configured limits
+    // Get configured limits (evaluated per 6-month round)
     const limitsConfig = isSpecialStaff
       ? config.specialStaffLimits || DEFAULT_LEAVE_LIMIT_CONFIG.specialStaffLimits
       : config.universityStaffLimits || DEFAULT_LEAVE_LIMIT_CONFIG.universityStaffLimits;
 
-    const isFullYear = cycleInfo.key === 'full_year';
-    const maxDays = isFullYear ? Number(limitsConfig.fullYearMaxDays) || (isSpecialStaff ? 30 : 46) : Number(limitsConfig.roundMaxDays) || (isSpecialStaff ? 15 : 23);
-    const maxTimes = isFullYear ? Number(limitsConfig.fullYearMaxTimes) || (isSpecialStaff ? 16 : 20) : Number(limitsConfig.roundMaxTimes) || (isSpecialStaff ? 8 : 10);
-    const maxLate = isFullYear ? Number(limitsConfig.fullYearMaxLate) || 36 : Number(limitsConfig.roundMaxLate) || 18;
-    const maxTransactions = isFullYear ? Number(limitsConfig.fullYearMaxTransactions) || (isSpecialStaff ? 16 : 20) : Number(limitsConfig.roundMaxTransactions) || (isSpecialStaff ? 8 : 10);
+    const maxDays = Number(limitsConfig.roundMaxDays) || (isSpecialStaff ? 15 : 23);
+    const maxTimes = isSpecialStaff ? 0 : (Number(limitsConfig.roundMaxTimes) || 10);
+    const maxLate = Number(limitsConfig.roundMaxLate) || 18;
+    const maxTransactions = 0; // Removed transaction limit
 
     // Find person's leaves (by ID or Name match)
     const personLeaves = leavesByPerson[person.id] || leavesByPerson[person.name] || [];
@@ -496,22 +484,19 @@ export function calculatePersonnelLeaveLimitStats({
     const daysPercent = maxDays > 0 ? Number(((totalDays / maxDays) * 100).toFixed(1)) : 0;
     const timesPercent = maxTimes > 0 ? Number(((totalTimes / maxTimes) * 100).toFixed(1)) : 0;
     const latePercent = maxLate > 0 ? Number(((totalLateTimes / maxLate) * 100).toFixed(1)) : 0;
-    const transPercent = maxTransactions > 0 ? Number(((totalTransactions / maxTransactions) * 100).toFixed(1)) : 0;
-    const highestPercent = Math.max(daysPercent, timesPercent, latePercent, transPercent);
+    const highestPercent = Math.max(daysPercent, timesPercent, latePercent);
 
     // Evaluate exceeded conditions (>= max limit)
     const isExceededDays = totalDays >= maxDays && maxDays > 0;
-    const isExceededTimes = totalTimes >= maxTimes && maxTimes > 0;
+    const isExceededTimes = !isSpecialStaff && totalTimes >= maxTimes && maxTimes > 0;
     const isExceededLate = totalLateTimes >= maxLate && maxLate > 0;
-    const isExceededTrans = totalTransactions >= maxTransactions && maxTransactions > 0;
-    const isExceeded = isExceededDays || isExceededTimes || isExceededLate || isExceededTrans;
+    const isExceeded = isExceededDays || isExceededTimes || isExceededLate;
 
     // Evaluate near-limit condition (>= warningThreshold % but not exceeded)
     const isNearDays = !isExceededDays && daysPercent >= warningThreshold;
-    const isNearTimes = !isExceededTimes && timesPercent >= warningThreshold;
+    const isNearTimes = !isSpecialStaff && !isExceededTimes && timesPercent >= warningThreshold;
     const isNearLate = !isExceededLate && latePercent >= warningThreshold;
-    const isNearTrans = !isExceededTrans && transPercent >= warningThreshold;
-    const isNearLimit = !isExceeded && (isNearDays || isNearTimes || isNearLate || isNearTrans);
+    const isNearLimit = !isExceeded && (isNearDays || isNearTimes || isNearLate);
 
     let status = 'NORMAL';
     if (isExceeded) {
@@ -531,19 +516,19 @@ export function calculatePersonnelLeaveLimitStats({
     if (isExceededDays) alertTriggers.push({ metric: 'จำนวนวันลา', type: 'EXCEEDED', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
     else if (isNearDays) alertTriggers.push({ metric: 'จำนวนวันลา', type: 'NEAR_LIMIT', current: totalDays, limit: maxDays, unit: 'วัน', percent: daysPercent });
 
-    if (isExceededTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'EXCEEDED', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
-    else if (isNearTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'NEAR_LIMIT', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+    if (!isSpecialStaff) {
+      if (isExceededTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'EXCEEDED', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+      else if (isNearTimes) alertTriggers.push({ metric: 'จำนวนครั้งการลา', type: 'NEAR_LIMIT', current: totalTimes, limit: maxTimes, unit: 'ครั้ง', percent: timesPercent });
+    }
 
     if (isExceededLate) alertTriggers.push({ metric: 'จำนวนครั้งมาสาย', type: 'EXCEEDED', current: totalLateTimes, limit: maxLate, unit: 'ครั้ง', percent: latePercent });
     else if (isNearLate) alertTriggers.push({ metric: 'จำนวนครั้งมาสาย', type: 'NEAR_LIMIT', current: totalLateTimes, limit: maxLate, unit: 'ครั้ง', percent: latePercent });
-
-    if (isExceededTrans) alertTriggers.push({ metric: 'จำนวนรายการ', type: 'EXCEEDED', current: totalTransactions, limit: maxTransactions, unit: 'รายการ', percent: transPercent });
-    else if (isNearTrans) alertTriggers.push({ metric: 'จำนวนรายการ', type: 'NEAR_LIMIT', current: totalTransactions, limit: maxTransactions, unit: 'รายการ', percent: transPercent });
 
     personnelStats.push({
       personnelId: person.id,
       personnelName: person.name,
       personnelType: staffTypeLabel,
+      staffTypeShort,
       isSpecialStaff,
       department: person.department || '-',
       position: person.position || '-',
@@ -557,24 +542,21 @@ export function calculatePersonnelLeaveLimitStats({
         maxDays,
         maxTimes,
         maxLate,
-        maxTransactions,
+        maxTransactions: 0,
       },
       percentages: {
         daysPercent,
         timesPercent,
         latePercent,
-        transPercent,
         highestPercent,
       },
       flags: {
         isExceededDays,
         isExceededTimes,
         isExceededLate,
-        isExceededTrans,
         isNearDays,
         isNearTimes,
         isNearLate,
-        isNearTrans,
       },
       status, // 'EXCEEDED' | 'NEAR_LIMIT' | 'NORMAL'
       alertTriggers,

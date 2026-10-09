@@ -616,7 +616,6 @@ export default function LeaveReportModal({
                 <option value="round_2">
                   {leaveLimitConfig.cycleMode === 'CUSTOM' ? 'รอบที่ 2 (กำหนดเอง)' : 'รอบที่ 2 (1 ก.พ. - 31 ก.ค.)'}
                 </option>
-                <option value="full_year">ตลอดทั้งปี (12 เดือน)</option>
               </select>
             </div>
 
@@ -1122,7 +1121,7 @@ export default function LeaveReportModal({
                       gap: '6px',
                     }}
                   >
-                    <span>๓. สรุปรายชื่อบุคลากรที่เกินเกณฑ์ ใกล้เกินเกณฑ์ และต้องเฝ้าระวัง (Leave Limit & Risk Watchlist)</span>
+                    <span>๓. สรุปรายชื่อบุคลากรที่เกินเกณฑ์และใกล้เกินเกณฑ์ (Leave Limit Watchlist)</span>
                   </h3>
                   <div style={{ fontSize: '11px', color: '#64748B' }}>
                     อิงตามรอบการประเมิน: <strong>{leaveLimitStats.cycleInfo.label}</strong> • เกณฑ์แจ้งเตือนเมื่อแตะถึง <strong>{leaveLimitStats.summary.warningThreshold}%</strong> ของเพดาน
@@ -1134,7 +1133,7 @@ export default function LeaveReportModal({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '8px',
                   marginBottom: '10px',
                 }}
@@ -1172,24 +1171,6 @@ export default function LeaveReportModal({
                   <span style={{ fontWeight: 700, color: '#D97706' }}>⚠️ ใกล้เกินเกณฑ์ (Near Limit):</span>
                   <strong style={{ fontSize: '13px', color: '#92400E' }}>
                     {table3Stats.nearLimitCount} ท่าน
-                  </strong>
-                </div>
-
-                <div
-                  style={{
-                    padding: '6px 10px',
-                    background: '#F8FAFC',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span style={{ fontWeight: 600, color: '#475569' }}>👁️ รวมกลุ่มที่ต้องเฝ้าระวัง:</span>
-                  <strong style={{ fontSize: '13px', color: '#0F172A' }}>
-                    {table3Stats.atRiskCount} ท่าน
                   </strong>
                 </div>
               </div>
@@ -1233,8 +1214,8 @@ export default function LeaveReportModal({
                       <th style={{ padding: '5px 6px', textAlign: 'left', border: '1px solid #CBD5E1', width: '110px' }}>
                         ฝ่ายงาน
                       </th>
-                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '85px' }}>
-                        ประเภทบุคลากร
+                      <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '70px' }}>
+                        ประเภท
                       </th>
                       <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '85px' }}>
                         สถานะการประเมิน
@@ -1246,7 +1227,7 @@ export default function LeaveReportModal({
                         ครั้ง (ใช้/เพดาน)
                       </th>
                       <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '65px' }}>
-                        รายการ (ใช้/เพดาน)
+                        มาสาย (ใช้/เพดาน)
                       </th>
                       <th style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #CBD5E1', width: '50px' }}>
                         % สูงสุด
@@ -1261,7 +1242,7 @@ export default function LeaveReportModal({
                       const isExceeded = person.status === 'EXCEEDED';
                       const maxDays = person.limits?.maxDays ?? '-';
                       const maxTimes = person.limits?.maxTimes ?? '-';
-                      const maxTransactions = person.limits?.maxTransactions ?? '-';
+                      const maxLate = person.limits?.maxLate ?? 18;
                       const highestPct = person.percentages?.highestPercent ?? 0;
 
                       const triggerDetails = person.alertTriggers && person.alertTriggers.length > 0
@@ -1287,8 +1268,8 @@ export default function LeaveReportModal({
                           <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', color: '#475569' }}>
                             {person.department || '-'}
                           </td>
-                          <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontSize: '10px' }}>
-                            {person.personnelType || (person.isSpecialStaff ? 'พนักงานพิเศษ' : 'พนักงานมหาวิทยาลัย')}
+                          <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontSize: '10.5px', fontWeight: 600 }}>
+                            {person.staffTypeShort || (person.isSpecialStaff ? 'พศ.' : 'พม.')}
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                             <span
@@ -1323,10 +1304,10 @@ export default function LeaveReportModal({
                               textAlign: 'center',
                               border: '1px solid #CBD5E1',
                               fontWeight: 700,
-                              color: Number(person.totalTimes) >= Number(maxTimes) ? '#DC2626' : '#0F172A',
+                              color: person.isSpecialStaff ? '#94A3B8' : (Number(person.totalTimes) >= Number(maxTimes) ? '#DC2626' : '#0F172A'),
                             }}
                           >
-                            {person.totalTimes} / {maxTimes}
+                            {person.isSpecialStaff ? '-' : `${person.totalTimes} / ${maxTimes}`}
                           </td>
                           <td
                             style={{
@@ -1334,10 +1315,10 @@ export default function LeaveReportModal({
                               textAlign: 'center',
                               border: '1px solid #CBD5E1',
                               fontWeight: 700,
-                              color: Number(person.totalTransactions) >= Number(maxTransactions) ? '#DC2626' : '#0F172A',
+                              color: Number(person.totalLateTimes || 0) >= Number(maxLate) ? '#DC2626' : '#0F172A',
                             }}
                           >
-                            {person.totalTransactions} / {maxTransactions}
+                            {person.totalLateTimes || 0} / {maxLate}
                           </td>
                           <td
                             style={{

@@ -569,7 +569,7 @@ export default function LeaveLimitConfigModal({
                 >
                   <Building2 size={20} color="#EA580C" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div style={{ fontSize: '0.825rem', color: '#9A3412', lineHeight: 1.5 }}>
-                    <strong>เกณฑ์จำกัดการลา: พนักงานมหาวิทยาลัย (University Employee)</strong>
+                    <strong>เกณฑ์จำกัดการลา: พนักงานมหาวิทยาลัย (พม.)</strong>
                     <br />
                     การลาป่วยและการลากิจ แบ่งเป็น 2 ช่วง: รอบที่ 1 (ส.ค. - ม.ค.) และรอบที่ 2 (ก.พ. - ก.ค.) ลาป่วยและลากิจได้ไม่เกิน <strong>10 ครั้ง 23 วัน</strong>, สาย ไม่เกิน <strong>18 ครั้ง</strong>
                   </div>
@@ -610,7 +610,7 @@ export default function LeaveLimitConfigModal({
                     </div>
                   </div>
 
-                  <div className="grid-2" style={{ gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
                     <MetricInputField
                       label="จำนวนวันลาสูงสุด (ป่วย + กิจ)"
                       value={formData.universityStaffLimits.roundMaxDays}
@@ -619,7 +619,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 23 วัน / รอบ"
+                      benchmark="เกณฑ์ พม.: ไม่เกิน 23 วัน / รอบ"
                       accentColor="#F97316"
                     />
 
@@ -630,7 +630,7 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 10 ครั้ง / รอบ"
+                      benchmark="เกณฑ์ พม.: ไม่เกิน 10 ครั้ง / รอบ"
                       accentColor="#F97316"
                     />
 
@@ -641,102 +641,8 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="เกณฑ์ มจพ.: สายไม่เกิน 18 ครั้ง / รอบ"
+                      benchmark="เกณฑ์ พม.: สายไม่เกิน 18 ครั้ง / รอบ"
                       accentColor="#EA580C"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนการทำรายการสูงสุด"
-                      value={formData.universityStaffLimits.roundMaxTransactions}
-                      onChange={(val) => handleUniversityChange('roundMaxTransactions', val)}
-                      unit="รายการ / รอบ"
-                      min={1}
-                      max={100}
-                      benchmark="ค่ามาตรฐาน: 10 รายการ / รอบ"
-                      accentColor="#F97316"
-                    />
-                  </div>
-                </div>
-
-                {/* Section B: เพดานสะสมทั้งปีงบประมาณ (12 เดือน) */}
-                <div
-                  className="card-glass"
-                  style={{
-                    padding: '1.25rem 1.5rem',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-card)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
-                    <div
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
-                        background: '#EFF6FF',
-                        color: '#2563EB',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Calendar size={16} />
-                    </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
-                      </h4>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณสะสมยอดรวมตลอด 12 เดือนของรอบการประเมิน
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid-2" style={{ gap: '1.25rem' }}>
-                    <MetricInputField
-                      label="จำนวนวันลาสูงสุดทั้งปี"
-                      value={formData.universityStaffLimits.fullYearMaxDays}
-                      onChange={(val) => handleUniversityChange('fullYearMaxDays', val)}
-                      unit="วัน / ปี"
-                      min={1}
-                      max={365}
-                      step={0.5}
-                      benchmark="ค่ามาตรฐาน: 46 วัน / ปี"
-                      accentColor="#2563EB"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งการลาสูงสุดทั้งปี"
-                      value={formData.universityStaffLimits.fullYearMaxTimes}
-                      onChange={(val) => handleUniversityChange('fullYearMaxTimes', val)}
-                      unit="ครั้ง / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 20 ครั้ง / ปี"
-                      accentColor="#2563EB"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งมาสายสูงสุดทั้งปี"
-                      value={formData.universityStaffLimits.fullYearMaxLate ?? 36}
-                      onChange={(val) => handleUniversityChange('fullYearMaxLate', val)}
-                      unit="ครั้ง / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 36 ครั้ง / ปี"
-                      accentColor="#2563EB"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนการทำรายการสูงสุดทั้งปี"
-                      value={formData.universityStaffLimits.fullYearMaxTransactions}
-                      onChange={(val) => handleUniversityChange('fullYearMaxTransactions', val)}
-                      unit="รายการ / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 20 รายการ / ปี"
-                      accentColor="#2563EB"
                     />
                   </div>
                 </div>
@@ -762,7 +668,7 @@ export default function LeaveLimitConfigModal({
                 >
                   <Briefcase size={20} color="#7C3AED" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div style={{ fontSize: '0.825rem', color: '#5B21B6', lineHeight: 1.5 }}>
-                    <strong>เกณฑ์จำกัดการลา: พนักงานพิเศษ (Special Employee)</strong>
+                    <strong>เกณฑ์จำกัดการลา: พนักงานพิเศษ (พศ.)</strong>
                     <br />
                     • ปฏิบัติงานยังไม่ครบ 6 เดือน: ลาป่วยได้ไม่เกิน <strong>5 วันทำการ</strong>
                     <br />
@@ -802,12 +708,12 @@ export default function LeaveLimitConfigModal({
                         เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน
+                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน (ส.ค. - ม.ค. / ก.พ. - ก.ค.)
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid-2" style={{ gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
                     <MetricInputField
                       label="วันลาสูงสุด (ปฏิบัติงาน > 6 เดือน)"
                       value={formData.specialStaffLimits.roundMaxDays}
@@ -816,7 +722,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="เกณฑ์ มจพ.: รวมไม่เกิน 15 วันทำการ / รอบ"
+                      benchmark="เกณฑ์ พศ.: รวมไม่เกิน 15 วันทำการ / รอบ"
                       accentColor="#8B5CF6"
                     />
 
@@ -828,19 +734,8 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="เกณฑ์ มจพ.: ลาป่วยไม่เกิน 5 วันทำการ"
+                      benchmark="เกณฑ์ พศ.: ลาป่วยไม่เกิน 5 วันทำการ"
                       accentColor="#A855F7"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งการลาสูงสุด"
-                      value={formData.specialStaffLimits.roundMaxTimes}
-                      onChange={(val) => handleSpecialChange('roundMaxTimes', val)}
-                      unit="ครั้ง / รอบ"
-                      min={1}
-                      max={100}
-                      benchmark="ค่ามาตรฐาน: 8 ครั้ง / รอบ"
-                      accentColor="#8B5CF6"
                     />
 
                     <MetricInputField
@@ -850,101 +745,7 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="เกณฑ์ มจพ.: สายไม่เกิน 18 ครั้ง ต่อรอบ"
-                      accentColor="#7C3AED"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนการทำรายการสูงสุด"
-                      value={formData.specialStaffLimits.roundMaxTransactions}
-                      onChange={(val) => handleSpecialChange('roundMaxTransactions', val)}
-                      unit="รายการ / รอบ"
-                      min={1}
-                      max={100}
-                      benchmark="ค่ามาตรฐาน: 8 รายการ / รอบ"
-                      accentColor="#8B5CF6"
-                    />
-                  </div>
-                </div>
-
-                {/* Section B: เพดานสะสมทั้งปีงบประมาณ (12 เดือน) */}
-                <div
-                  className="card-glass"
-                  style={{
-                    padding: '1.25rem 1.5rem',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-card)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
-                    <div
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
-                        background: '#F5F3FF',
-                        color: '#7C3AED',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Calendar size={16} />
-                    </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
-                      </h4>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid-2" style={{ gap: '1.25rem' }}>
-                    <MetricInputField
-                      label="จำนวนวันลาสูงสุดทั้งปี"
-                      value={formData.specialStaffLimits.fullYearMaxDays}
-                      onChange={(val) => handleSpecialChange('fullYearMaxDays', val)}
-                      unit="วัน / ปี"
-                      min={1}
-                      max={365}
-                      step={0.5}
-                      benchmark="ค่ามาตรฐาน: 30 วัน / ปี"
-                      accentColor="#7C3AED"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งการลาสูงสุดทั้งปี"
-                      value={formData.specialStaffLimits.fullYearMaxTimes}
-                      onChange={(val) => handleSpecialChange('fullYearMaxTimes', val)}
-                      unit="ครั้ง / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 16 ครั้ง / ปี"
-                      accentColor="#7C3AED"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งมาสายสูงสุดทั้งปี"
-                      value={formData.specialStaffLimits.fullYearMaxLate ?? 36}
-                      onChange={(val) => handleSpecialChange('fullYearMaxLate', val)}
-                      unit="ครั้ง / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 36 ครั้ง / ปี"
-                      accentColor="#7C3AED"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนการทำรายการสูงสุดทั้งปี"
-                      value={formData.specialStaffLimits.fullYearMaxTransactions}
-                      onChange={(val) => handleSpecialChange('fullYearMaxTransactions', val)}
-                      unit="รายการ / ปี"
-                      min={1}
-                      max={200}
-                      benchmark="ค่ามาตรฐาน: 16 รายการ / ปี"
+                      benchmark="เกณฑ์ พศ.: สายไม่เกิน 18 ครั้ง ต่อรอบ"
                       accentColor="#7C3AED"
                     />
                   </div>
@@ -993,41 +794,10 @@ export default function LeaveLimitConfigModal({
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          รอบการประเมิน 2 รอบ (6 เดือน/รอบ) - มาตรฐานมหาวิทยาลัย (สิงหาคม - กรกฎาคม)
+                          รอบการประเมิน 2 รอบ (6 เดือน/รอบ)
                         </strong>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                           • <strong>รอบที่ 1</strong>: เดือนสิงหาคมถึงเดือนมกราคม (1 ส.ค. - 31 ม.ค.) &nbsp;|&nbsp; • <strong>รอบที่ 2</strong>: เดือนกุมภาพันธ์ถึงเดือนกรกฎาคม (1 ก.พ. - 31 ก.ค.)
-                        </div>
-                      </div>
-                    </label>
-
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '0.85rem 1.15rem',
-                        borderRadius: '10px',
-                        background: formData.cycleMode === 'FULL_YEAR' ? '#EFF6FF' : 'var(--bg-secondary)',
-                        border: formData.cycleMode === 'FULL_YEAR' ? '2px solid #2563EB' : '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="cycleMode"
-                        value="FULL_YEAR"
-                        checked={formData.cycleMode === 'FULL_YEAR'}
-                        onChange={(e) => setFormData({ ...formData, cycleMode: e.target.value })}
-                        style={{ accentColor: '#2563EB', width: '17px', height: '17px' }}
-                      />
-                      <div>
-                        <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          ตลอดทั้งปีงบประมาณ (Full Year: 1 ส.ค. - 31 ก.ค.)
-                        </strong>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                          คำนวณสะสมยอดการลาต่อเนื่องทั้ง 12 เดือนของรอบการประเมิน
                         </div>
                       </div>
                     </label>
@@ -1335,7 +1105,7 @@ export default function LeaveLimitConfigModal({
                   </div>
 
                   <p style={{ fontSize: '0.785rem', color: 'var(--text-secondary)', marginBottom: '1.15rem', lineHeight: 1.5 }}>
-                    เมื่อการใช้วันลา จำนวนครั้ง หรือจำนวนรายการ ของบุคลากรรายใดแตะถึงเกณฑ์นี้ (เช่น ถึง 80% ของเพดาน) ระบบจะแสดงสถานะ <strong>⚠️ ใกล้เกินเกณฑ์</strong> และขึ้นเตือนบน Dashboard ทันที
+                    เมื่อการใช้วันลา หรือจำนวนครั้ง ของบุคลากรรายใดแตะถึงเกณฑ์นี้ (เช่น ถึง 80% ของเพดาน) ระบบจะแสดงสถานะ <strong>⚠️ ใกล้เกินเกณฑ์</strong> และขึ้นเตือนบน Dashboard ทันที
                   </p>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -1404,31 +1174,20 @@ export default function LeaveLimitConfigModal({
                         เกณฑ์การขอลงเวลาปฏิบัติราชการ (Time Attendance Request Quota)
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        กำหนดเพดานจำนวนครั้งการยื่นขอลงเวลามา/กลับปฏิบัติราชการ
+                        กำหนดเพดานจำนวนครั้งการยื่นขอลงเวลามา/กลับปฏิบัติราชการ (คำนวณตามรอบปีงบประมาณจริง 1 ต.ค. - 30 ก.ย.)
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid-2" style={{ gap: '1.25rem', marginTop: '0.75rem' }}>
+                  <div style={{ maxWidth: '420px', marginTop: '0.75rem' }}>
                     <MetricInputField
                       label="จำนวนครั้งการขอลงเวลาสูงสุดต่อปีงบประมาณ"
                       value={formData.timeAttendanceLimits?.fullYearMaxTimes ?? 12}
                       onChange={(val) => handleTimeAttendanceChange('fullYearMaxTimes', val)}
-                      unit="ครั้ง / ปีงบประมาณ"
+                      unit="ครั้ง / 1 ปีงบประมาณ"
                       min={1}
                       max={100}
-                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ"
-                      accentColor="#4F46E5"
-                    />
-
-                    <MetricInputField
-                      label="จำนวนครั้งการขอลงเวลาต่อรอบประเมิน (6 เดือน)"
-                      value={formData.timeAttendanceLimits?.roundMaxTimes ?? 6}
-                      onChange={(val) => handleTimeAttendanceChange('roundMaxTimes', val)}
-                      unit="ครั้ง / รอบ"
-                      min={1}
-                      max={50}
-                      benchmark="ค่ามาตรฐาน: 6 ครั้ง / รอบ"
+                      benchmark="เกณฑ์มาตรฐาน: ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ (ต.ค. - ก.ย.)"
                       accentColor="#4F46E5"
                     />
                   </div>

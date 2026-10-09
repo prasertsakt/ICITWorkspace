@@ -407,7 +407,7 @@ export default function LeaveLimitDetailModal({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             background: 'var(--bg-secondary)',
             borderBottom: '1px solid var(--border-color)',
             padding: '0.75rem 1.25rem',
@@ -435,7 +435,7 @@ export default function LeaveLimitDetailModal({
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#B91C1C', marginTop: '2px' }}>
-              มจพ.: {summary.exceededByStaffType?.university || 0} | พิเศษ: {summary.exceededByStaffType?.special || 0}
+              พม.: {summary.exceededByStaffType?.university || 0} | พศ.: {summary.exceededByStaffType?.special || 0}
             </div>
           </div>
 
@@ -460,57 +460,7 @@ export default function LeaveLimitDetailModal({
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#B45309', marginTop: '2px' }}>
-              มจพ.: {summary.nearLimitByStaffType?.university || 0} | พิเศษ: {summary.nearLimitByStaffType?.special || 0}
-            </div>
-          </div>
-
-          {/* Card C: ทั้งหมดที่ต้องเฝ้าระวัง */}
-          <div
-            onClick={() => setActiveStatusFilter('AT_RISK')}
-            style={{
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: activeStatusFilter === 'AT_RISK' ? '#FFF7ED' : '#FFFFFF',
-              border: activeStatusFilter === 'AT_RISK' ? '2px solid #F97316' : '1px solid #FED7AA',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#EA580C' }}>
-                📊 รวมต้องเฝ้าระวัง (All At-Risk)
-              </span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#C2410C' }}>
-                {summary.atRiskCount}
-              </span>
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#EA580C', marginTop: '2px' }}>
-              {summary.totalPersonnel > 0 ? ((summary.atRiskCount / summary.totalPersonnel) * 100).toFixed(1) : 0}% ของบุคลากรทั้งหมด
-            </div>
-          </div>
-
-          {/* Card D: สถิติปกติ */}
-          <div
-            onClick={() => setActiveStatusFilter('NORMAL')}
-            style={{
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: activeStatusFilter === 'NORMAL' ? '#ECFDF5' : '#FFFFFF',
-              border: activeStatusFilter === 'NORMAL' ? '2px solid #10B981' : '1px solid #A7F3D0',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669' }}>
-                ✅ สถานะปกติ (Normal)
-              </span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#065F46' }}>
-                {summary.normalCount}
-              </span>
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#047857', marginTop: '2px' }}>
-              จากบุคลากรทั้งหมด {summary.totalPersonnel} ท่าน
+              พม.: {summary.nearLimitByStaffType?.university || 0} | พศ.: {summary.nearLimitByStaffType?.special || 0}
             </div>
           </div>
         </div>
