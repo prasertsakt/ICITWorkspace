@@ -1272,7 +1272,7 @@ export default function LeaveReportModal({
                             {person.department || '-'}
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontSize: '10.5px', fontWeight: 600 }}>
-                            {person.staffTypeShort || (person.isSpecialStaff ? 'พศ.' : 'พม.')}
+                            {person.staffTypeShort || (person.isSpecialStaff ? 'พษ.' : 'พม.')}
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                             <span

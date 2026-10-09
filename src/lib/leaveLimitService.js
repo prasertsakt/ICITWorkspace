@@ -31,7 +31,7 @@ export const DEFAULT_LEAVE_LIMIT_CONFIG = {
     roundMaxTimes: 10,
     roundMaxLate: 18,
   },
-  // 2. พนักงานพิเศษ (Special Employee - พศ.)
+  // 2. พนักงานพิเศษ (Special Employee - พษ.)
   // เกณฑ์: ทำงาน < 6 เดือน ลาป่วยไม่เกิน 5 วัน | ทำงาน > 6 เดือน ลาป่วย+กิจ ไม่เกิน 15 วันทำการ | สายไม่เกิน 18 ครั้งต่อรอบ
   specialStaffLimits: {
     roundMaxDays: 15, // กรณีทำงาน > 6 เดือน
@@ -429,7 +429,7 @@ export function calculatePersonnelLeaveLimitStats({
       (person.type || '').includes('พิเศษ');
     
     const staffTypeLabel = isSpecialStaff ? 'พนักงานพิเศษ' : 'พนักงานมหาวิทยาลัย';
-    const staffTypeShort = isSpecialStaff ? 'พศ.' : 'พม.';
+    const staffTypeShort = isSpecialStaff ? 'พษ.' : 'พม.';
     const typeKey = isSpecialStaff ? 'special' : 'university';
 
     // Get configured limits (evaluated per 6-month round or 2 rounds combined)

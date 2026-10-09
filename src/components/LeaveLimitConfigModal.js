@@ -668,7 +668,7 @@ export default function LeaveLimitConfigModal({
                 >
                   <Briefcase size={20} color="#7C3AED" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div style={{ fontSize: '0.825rem', color: '#5B21B6', lineHeight: 1.5 }}>
-                    <strong>เกณฑ์จำกัดการลา: พนักงานพิเศษ (พศ.)</strong>
+                    <strong>เกณฑ์จำกัดการลา: พนักงานพิเศษ (พษ.)</strong>
                     <br />
                     • ปฏิบัติงานยังไม่ครบ 6 เดือน: ลาป่วยได้ไม่เกิน <strong>5 วันทำการ</strong>
                     <br />
@@ -722,7 +722,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="เกณฑ์ พศ.: รวมไม่เกิน 15 วันทำการ / รอบ"
+                      benchmark="เกณฑ์ พษ.: รวมไม่เกิน 15 วันทำการ / รอบ"
                       accentColor="#8B5CF6"
                     />
 
@@ -734,7 +734,7 @@ export default function LeaveLimitConfigModal({
                       min={1}
                       max={180}
                       step={0.5}
-                      benchmark="เกณฑ์ พศ.: ลาป่วยไม่เกิน 5 วันทำการ"
+                      benchmark="เกณฑ์ พษ.: ลาป่วยไม่เกิน 5 วันทำการ"
                       accentColor="#A855F7"
                     />
 
@@ -745,7 +745,7 @@ export default function LeaveLimitConfigModal({
                       unit="ครั้ง / รอบ"
                       min={1}
                       max={100}
-                      benchmark="เกณฑ์ พศ.: สายไม่เกิน 18 ครั้ง ต่อรอบ"
+                      benchmark="เกณฑ์ พษ.: สายไม่เกิน 18 ครั้ง ต่อรอบ"
                       accentColor="#7C3AED"
                     />
                   </div>

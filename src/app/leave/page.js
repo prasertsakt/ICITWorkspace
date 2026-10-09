@@ -871,7 +871,7 @@ function LeaveContent() {
 
             <div>
               <div style={{ fontSize: '0.725rem', color: '#B91C1C', marginBottom: '0.4rem', fontWeight: 600 }}>
-                • พม.: {leaveLimitStats.summary.exceededByStaffType?.university || 0} ท่าน | • พศ.: {leaveLimitStats.summary.exceededByStaffType?.special || 0} ท่าน
+                • พม.: {leaveLimitStats.summary.exceededByStaffType?.university || 0} ท่าน | • พษ.: {leaveLimitStats.summary.exceededByStaffType?.special || 0} ท่าน
               </div>
               <div
                 style={{
@@ -944,7 +944,7 @@ function LeaveContent() {
 
             <div>
               <div style={{ fontSize: '0.725rem', color: '#B45309', marginBottom: '0.4rem', fontWeight: 600 }}>
-                • พม.: {leaveLimitStats.summary.nearLimitByStaffType?.university || 0} ท่าน | • พศ.: {leaveLimitStats.summary.nearLimitByStaffType?.special || 0} ท่าน
+                • พม.: {leaveLimitStats.summary.nearLimitByStaffType?.university || 0} ท่าน | • พษ.: {leaveLimitStats.summary.nearLimitByStaffType?.special || 0} ท่าน
               </div>
               <div
                 style={{

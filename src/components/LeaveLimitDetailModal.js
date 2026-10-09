@@ -550,7 +550,7 @@ export default function LeaveLimitDetailModal({
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#B91C1C', marginTop: '2px' }}>
-              พม.: {summary.exceededByStaffType?.university || 0} | พศ.: {summary.exceededByStaffType?.special || 0}
+              พม.: {summary.exceededByStaffType?.university || 0} | พษ.: {summary.exceededByStaffType?.special || 0}
             </div>
           </div>
 
@@ -575,7 +575,7 @@ export default function LeaveLimitDetailModal({
               </span>
             </div>
             <div style={{ fontSize: '0.7rem', color: '#B45309', marginTop: '2px' }}>
-              พม.: {summary.nearLimitByStaffType?.university || 0} | พศ.: {summary.nearLimitByStaffType?.special || 0}
+              พม.: {summary.nearLimitByStaffType?.university || 0} | พษ.: {summary.nearLimitByStaffType?.special || 0}
             </div>
           </div>
         </div>
