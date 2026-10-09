@@ -11,18 +11,129 @@ import {
   Building2,
   Briefcase,
   Layers,
-  Sparkles,
-  Info,
   Clock,
-  ShieldCheck,
   CheckCircle2,
+  CalendarDays,
 } from 'lucide-react';
 import {
   DEFAULT_LEAVE_LIMIT_CONFIG,
   saveLeaveLimitConfig,
 } from '@/lib/leaveLimitService';
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from '@/lib/constants';
-import { formatLocalDate } from '@/lib/dateUtils';
+
+function MetricInputField({
+  label,
+  value,
+  onChange,
+  unit,
+  min = 1,
+  max = 365,
+  step = 1,
+  benchmark,
+  accentColor = '#F97316',
+  placeholder = '0',
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.825rem',
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+        }}
+      >
+        <span>{label}</span>
+      </label>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          background: 'var(--bg-card, #FFFFFF)',
+          border: isFocused ? `1.5px solid ${accentColor}` : '1.5px solid var(--border-color, #E2E8F0)',
+          borderRadius: '10px',
+          boxShadow: isFocused ? `0 0 0 3px ${accentColor}25` : '0 1px 2px rgba(0,0,0,0.03)',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+        }}
+      >
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={placeholder}
+          required
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '0.65rem 0.85rem',
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            color: 'var(--text-primary)',
+            fontFamily: 'inherit',
+          }}
+        />
+        {unit && (
+          <div
+            style={{
+              padding: '0.45rem 0.85rem',
+              background: isFocused ? `${accentColor}15` : 'var(--bg-secondary, #F8FAFC)',
+              borderLeft: '1px solid var(--border-color, #E2E8F0)',
+              color: isFocused ? accentColor : 'var(--text-secondary)',
+              fontSize: '0.785rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              userSelect: 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            {unit}
+          </div>
+        )}
+      </div>
+
+      {benchmark && (
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '0.725rem',
+            color: 'var(--text-secondary)',
+            marginTop: '2px',
+          }}
+        >
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: accentColor,
+              display: 'inline-block',
+              opacity: 0.8,
+            }}
+          />
+          <span>{benchmark}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LeaveLimitConfigModal({
   isOpen,
@@ -143,7 +254,7 @@ export default function LeaveLimitConfigModal({
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '760px',
+          maxWidth: '780px',
           width: '95%',
           maxHeight: '90vh',
           display: 'flex',
@@ -268,9 +379,9 @@ export default function LeaveLimitConfigModal({
               fontSize: '0.85rem',
               fontWeight: 700,
               border: 'none',
-              borderBottom: activeTab === 'special' ? '3px solid #F97316' : '3px solid transparent',
+              borderBottom: activeTab === 'special' ? '3px solid #8B5CF6' : '3px solid transparent',
               background: activeTab === 'special' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'special' ? '#EA580C' : 'var(--text-secondary)',
+              color: activeTab === 'special' ? '#7C3AED' : 'var(--text-secondary)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               transition: 'all 0.2s',
@@ -291,9 +402,9 @@ export default function LeaveLimitConfigModal({
               fontSize: '0.85rem',
               fontWeight: 700,
               border: 'none',
-              borderBottom: activeTab === 'cycles' ? '3px solid #F97316' : '3px solid transparent',
+              borderBottom: activeTab === 'cycles' ? '3px solid #2563EB' : '3px solid transparent',
               background: activeTab === 'cycles' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'cycles' ? '#EA580C' : 'var(--text-secondary)',
+              color: activeTab === 'cycles' ? '#2563EB' : 'var(--text-secondary)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               transition: 'all 0.2s',
@@ -314,9 +425,9 @@ export default function LeaveLimitConfigModal({
               fontSize: '0.85rem',
               fontWeight: 700,
               border: 'none',
-              borderBottom: activeTab === 'types' ? '3px solid #F97316' : '3px solid transparent',
+              borderBottom: activeTab === 'types' ? '3px solid #10B981' : '3px solid transparent',
               background: activeTab === 'types' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'types' ? '#EA580C' : 'var(--text-secondary)',
+              color: activeTab === 'types' ? '#059669' : 'var(--text-secondary)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               transition: 'all 0.2s',
@@ -383,10 +494,13 @@ export default function LeaveLimitConfigModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div
                   style={{
-                    padding: '0.85rem 1rem',
+                    padding: '0.85rem 1.1rem',
                     background: '#FFF7ED',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-lg)',
                     borderLeft: '4px solid #F97316',
+                    borderRight: '1px solid #FFEDD5',
+                    borderTop: '1px solid #FFEDD5',
+                    borderBottom: '1px solid #FFEDD5',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '0.75rem',
@@ -404,70 +518,71 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
-                    <Clock size={16} color="#EA580C" />
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
-                    </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#FFF7ED',
+                        color: '#EA580C',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Clock size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนวันลาสูงสุด (วัน)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="180"
-                        step="0.5"
-                        className="form-control"
-                        value={formData.universityStaffLimits.roundMaxDays}
-                        onChange={(e) => handleUniversityChange('roundMaxDays', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 15 วัน/รอบ</span>
-                    </div>
+                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                    <MetricInputField
+                      label="จำนวนวันลาสูงสุด"
+                      value={formData.universityStaffLimits.roundMaxDays}
+                      onChange={(val) => handleUniversityChange('roundMaxDays', val)}
+                      unit="วัน / รอบ"
+                      min={1}
+                      max={180}
+                      step={0.5}
+                      benchmark="ค่ามาตรฐาน: 15 วัน / รอบ"
+                      accentColor="#F97316"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนครั้งการลาสูงสุด (ครั้ง)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="form-control"
-                        value={formData.universityStaffLimits.roundMaxTimes}
-                        onChange={(e) => handleUniversityChange('roundMaxTimes', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 6 ครั้ง/รอบ</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนครั้งการลาสูงสุด"
+                      value={formData.universityStaffLimits.roundMaxTimes}
+                      onChange={(val) => handleUniversityChange('roundMaxTimes', val)}
+                      unit="ครั้ง / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="ค่ามาตรฐาน: 6 ครั้ง / รอบ"
+                      accentColor="#F97316"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนการทำรายการสูงสุด (รายการ)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="form-control"
-                        value={formData.universityStaffLimits.roundMaxTransactions}
-                        onChange={(e) => handleUniversityChange('roundMaxTransactions', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 6 รายการ/รอบ</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนการทำรายการสูงสุด"
+                      value={formData.universityStaffLimits.roundMaxTransactions}
+                      onChange={(val) => handleUniversityChange('roundMaxTransactions', val)}
+                      unit="รายการ / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="ค่ามาตรฐาน: 6 รายการ / รอบ"
+                      accentColor="#F97316"
+                    />
                   </div>
                 </div>
 
@@ -475,70 +590,71 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
-                    <Calendar size={16} color="#2563EB" />
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
-                    </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#EFF6FF',
+                        color: '#2563EB',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ 1 ต.ค. - 30 ก.ย.
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนวันลาสูงสุดทั้งปี (วัน)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        step="0.5"
-                        className="form-control"
-                        value={formData.universityStaffLimits.fullYearMaxDays}
-                        onChange={(e) => handleUniversityChange('fullYearMaxDays', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 23 วัน/ปี</span>
-                    </div>
+                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                    <MetricInputField
+                      label="จำนวนวันลาสูงสุดทั้งปี"
+                      value={formData.universityStaffLimits.fullYearMaxDays}
+                      onChange={(val) => handleUniversityChange('fullYearMaxDays', val)}
+                      unit="วัน / ปี"
+                      min={1}
+                      max={365}
+                      step={0.5}
+                      benchmark="ค่ามาตรฐาน: 23 วัน / ปี"
+                      accentColor="#2563EB"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนครั้งการลาสูงสุดทั้งปี (ครั้ง)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="200"
-                        className="form-control"
-                        value={formData.universityStaffLimits.fullYearMaxTimes}
-                        onChange={(e) => handleUniversityChange('fullYearMaxTimes', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 10 ครั้ง/ปี</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนครั้งการลาสูงสุดทั้งปี"
+                      value={formData.universityStaffLimits.fullYearMaxTimes}
+                      onChange={(val) => handleUniversityChange('fullYearMaxTimes', val)}
+                      unit="ครั้ง / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 10 ครั้ง / ปี"
+                      accentColor="#2563EB"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนการทำรายการสูงสุดทั้งปี (รายการ)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="200"
-                        className="form-control"
-                        value={formData.universityStaffLimits.fullYearMaxTransactions}
-                        onChange={(e) => handleUniversityChange('fullYearMaxTransactions', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 10 รายการ/ปี</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนการทำรายการสูงสุดทั้งปี"
+                      value={formData.universityStaffLimits.fullYearMaxTransactions}
+                      onChange={(val) => handleUniversityChange('fullYearMaxTransactions', val)}
+                      unit="รายการ / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 10 รายการ / ปี"
+                      accentColor="#2563EB"
+                    />
                   </div>
                 </div>
               </div>
@@ -549,10 +665,13 @@ export default function LeaveLimitConfigModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div
                   style={{
-                    padding: '0.85rem 1rem',
+                    padding: '0.85rem 1.1rem',
                     background: '#F5F3FF',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-lg)',
                     borderLeft: '4px solid #8B5CF6',
+                    borderRight: '1px solid #EDE9FE',
+                    borderTop: '1px solid #EDE9FE',
+                    borderBottom: '1px solid #EDE9FE',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '0.75rem',
@@ -570,70 +689,71 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
-                    <Clock size={16} color="#7C3AED" />
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
-                    </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#F5F3FF',
+                        color: '#7C3AED',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Clock size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        เพดานต่อรอบการประเมิน (6 เดือน / รอบที่ 1 หรือ รอบที่ 2)
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        คำนวณและประเมินผลแยกรายรอบ 6 เดือน
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนวันลาสูงสุด (วัน)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="180"
-                        step="0.5"
-                        className="form-control"
-                        value={formData.specialStaffLimits.roundMaxDays}
-                        onChange={(e) => handleSpecialChange('roundMaxDays', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 8 วัน/รอบ</span>
-                    </div>
+                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                    <MetricInputField
+                      label="จำนวนวันลาสูงสุด"
+                      value={formData.specialStaffLimits.roundMaxDays}
+                      onChange={(val) => handleSpecialChange('roundMaxDays', val)}
+                      unit="วัน / รอบ"
+                      min={1}
+                      max={180}
+                      step={0.5}
+                      benchmark="ค่ามาตรฐาน: 8 วัน / รอบ"
+                      accentColor="#8B5CF6"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนครั้งการลาสูงสุด (ครั้ง)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="form-control"
-                        value={formData.specialStaffLimits.roundMaxTimes}
-                        onChange={(e) => handleSpecialChange('roundMaxTimes', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 4 ครั้ง/รอบ</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนครั้งการลาสูงสุด"
+                      value={formData.specialStaffLimits.roundMaxTimes}
+                      onChange={(val) => handleSpecialChange('roundMaxTimes', val)}
+                      unit="ครั้ง / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="ค่ามาตรฐาน: 4 ครั้ง / รอบ"
+                      accentColor="#8B5CF6"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนการทำรายการสูงสุด (รายการ)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="form-control"
-                        value={formData.specialStaffLimits.roundMaxTransactions}
-                        onChange={(e) => handleSpecialChange('roundMaxTransactions', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 4 รายการ/รอบ</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนการทำรายการสูงสุด"
+                      value={formData.specialStaffLimits.roundMaxTransactions}
+                      onChange={(val) => handleSpecialChange('roundMaxTransactions', val)}
+                      unit="รายการ / รอบ"
+                      min={1}
+                      max={100}
+                      benchmark="ค่ามาตรฐาน: 4 รายการ / รอบ"
+                      accentColor="#8B5CF6"
+                    />
                   </div>
                 </div>
 
@@ -641,70 +761,71 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
-                    <Calendar size={16} color="#7C3AED" />
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
-                    </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.15rem' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#F5F3FF',
+                        color: '#7C3AED',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        เพดานสะสมตลอดปีงบประมาณ (12 เดือน)
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        คำนวณสะสมยอดรวมตลอดปีงบประมาณ 1 ต.ค. - 30 ก.ย.
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid-3" style={{ gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนวันลาสูงสุดทั้งปี (วัน)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        step="0.5"
-                        className="form-control"
-                        value={formData.specialStaffLimits.fullYearMaxDays}
-                        onChange={(e) => handleSpecialChange('fullYearMaxDays', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 15 วัน/ปี</span>
-                    </div>
+                  <div className="grid-3" style={{ gap: '1.25rem' }}>
+                    <MetricInputField
+                      label="จำนวนวันลาสูงสุดทั้งปี"
+                      value={formData.specialStaffLimits.fullYearMaxDays}
+                      onChange={(val) => handleSpecialChange('fullYearMaxDays', val)}
+                      unit="วัน / ปี"
+                      min={1}
+                      max={365}
+                      step={0.5}
+                      benchmark="ค่ามาตรฐาน: 15 วัน / ปี"
+                      accentColor="#7C3AED"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนครั้งการลาสูงสุดทั้งปี (ครั้ง)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="200"
-                        className="form-control"
-                        value={formData.specialStaffLimits.fullYearMaxTimes}
-                        onChange={(e) => handleSpecialChange('fullYearMaxTimes', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 8 ครั้ง/ปี</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนครั้งการลาสูงสุดทั้งปี"
+                      value={formData.specialStaffLimits.fullYearMaxTimes}
+                      onChange={(val) => handleSpecialChange('fullYearMaxTimes', val)}
+                      unit="ครั้ง / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 8 ครั้ง / ปี"
+                      accentColor="#7C3AED"
+                    />
 
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.825rem' }}>
-                        จำนวนการทำรายการสูงสุดทั้งปี (รายการ)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="200"
-                        className="form-control"
-                        value={formData.specialStaffLimits.fullYearMaxTransactions}
-                        onChange={(e) => handleSpecialChange('fullYearMaxTransactions', e.target.value)}
-                        required
-                        style={{ fontWeight: 700, fontSize: '1rem' }}
-                      />
-                      <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>มาตรฐาน: 8 รายการ/ปี</span>
-                    </div>
+                    <MetricInputField
+                      label="จำนวนการทำรายการสูงสุดทั้งปี"
+                      value={formData.specialStaffLimits.fullYearMaxTransactions}
+                      onChange={(val) => handleSpecialChange('fullYearMaxTransactions', val)}
+                      unit="รายการ / ปี"
+                      min={1}
+                      max={200}
+                      benchmark="ค่ามาตรฐาน: 8 รายการ / ปี"
+                      accentColor="#7C3AED"
+                    />
                   </div>
                 </div>
               </div>
@@ -717,26 +838,28 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
                   <label className="form-label" style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
                     รูปแบบรอบของช่วงการคิดคำนวณ (Calculation Cycle Mode)
                   </label>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <label
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
+                        gap: '12px',
+                        padding: '0.85rem 1.15rem',
+                        borderRadius: '10px',
                         background: formData.cycleMode === 'ROUND_2_PERIODS' ? '#FFF7ED' : 'var(--bg-secondary)',
                         border: formData.cycleMode === 'ROUND_2_PERIODS' ? '2px solid #F97316' : '1px solid var(--border-color)',
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       <input
@@ -745,12 +868,13 @@ export default function LeaveLimitConfigModal({
                         value="ROUND_2_PERIODS"
                         checked={formData.cycleMode === 'ROUND_2_PERIODS'}
                         onChange={(e) => setFormData({ ...formData, cycleMode: e.target.value })}
+                        style={{ accentColor: '#F97316', width: '17px', height: '17px' }}
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                           รอบการประเมิน 2 รอบ (6 เดือน/รอบ) - มาตรฐานมหาวิทยาลัย
                         </strong>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                           • รอบที่ 1: 1 ต.ค. - 31 มี.ค. &nbsp;|&nbsp; • รอบที่ 2: 1 เม.ย. - 30 ก.ย. (ระบบจะสลับรอบและคำนวณอัตโนมัติตามช่วงเวลา)
                         </div>
                       </div>
@@ -760,12 +884,13 @@ export default function LeaveLimitConfigModal({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: formData.cycleMode === 'FULL_YEAR' ? '#FFF7ED' : 'var(--bg-secondary)',
-                        border: formData.cycleMode === 'FULL_YEAR' ? '2px solid #F97316' : '1px solid var(--border-color)',
+                        gap: '12px',
+                        padding: '0.85rem 1.15rem',
+                        borderRadius: '10px',
+                        background: formData.cycleMode === 'FULL_YEAR' ? '#EFF6FF' : 'var(--bg-secondary)',
+                        border: formData.cycleMode === 'FULL_YEAR' ? '2px solid #2563EB' : '1px solid var(--border-color)',
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       <input
@@ -774,12 +899,13 @@ export default function LeaveLimitConfigModal({
                         value="FULL_YEAR"
                         checked={formData.cycleMode === 'FULL_YEAR'}
                         onChange={(e) => setFormData({ ...formData, cycleMode: e.target.value })}
+                        style={{ accentColor: '#2563EB', width: '17px', height: '17px' }}
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                           ตลอดทั้งปีงบประมาณ (Full Fiscal Year: 1 ต.ค. - 30 ก.ย.)
                         </strong>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                           คำนวณสะสมยอดการลาต่อเนื่องทั้ง 12 เดือนของปีงบประมาณ
                         </div>
                       </div>
@@ -789,12 +915,13 @@ export default function LeaveLimitConfigModal({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: formData.cycleMode === 'CUSTOM' ? '#FFF7ED' : 'var(--bg-secondary)',
-                        border: formData.cycleMode === 'CUSTOM' ? '2px solid #F97316' : '1px solid var(--border-color)',
+                        gap: '12px',
+                        padding: '0.85rem 1.15rem',
+                        borderRadius: '10px',
+                        background: formData.cycleMode === 'CUSTOM' ? '#F5F3FF' : 'var(--bg-secondary)',
+                        border: formData.cycleMode === 'CUSTOM' ? '2px solid #8B5CF6' : '1px solid var(--border-color)',
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       <input
@@ -803,12 +930,13 @@ export default function LeaveLimitConfigModal({
                         value="CUSTOM"
                         checked={formData.cycleMode === 'CUSTOM'}
                         onChange={(e) => setFormData({ ...formData, cycleMode: e.target.value })}
+                        style={{ accentColor: '#8B5CF6', width: '17px', height: '17px' }}
                       />
                       <div>
                         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                           กำหนดช่วงวันที่เอง (Custom Date Range)
                         </strong>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                           ระบุช่วงวันที่เริ่มต้นและสิ้นสุดเฉพาะกิจ
                         </div>
                       </div>
@@ -816,47 +944,102 @@ export default function LeaveLimitConfigModal({
                   </div>
 
                   {formData.cycleMode === 'CUSTOM' && (
-                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#F8FAFC', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div
+                      style={{
+                        marginTop: '1.25rem',
+                        padding: '1.15rem',
+                        background: '#F8FAFC',
+                        borderRadius: '10px',
+                        border: '1.5px dashed #CBD5E1',
+                      }}
+                    >
                       <div className="grid-2" style={{ gap: '1rem' }}>
-                        <div className="form-group">
-                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             วันที่เริ่มต้นรอบ
                           </label>
-                          <input
-                            type="date"
-                            className="form-control"
-                            value={formData.customCycle?.startDate || ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                customCycle: {
-                                  ...formData.customCycle,
-                                  startDate: e.target.value,
-                                },
-                              })
-                            }
-                            required={formData.cycleMode === 'CUSTOM'}
-                          />
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              background: 'var(--bg-card, #FFFFFF)',
+                              border: '1.5px solid var(--border-color, #E2E8F0)',
+                              borderRadius: '10px',
+                              padding: '0 0.85rem',
+                              gap: '8px',
+                            }}
+                          >
+                            <CalendarDays size={16} color="#8B5CF6" />
+                            <input
+                              type="date"
+                              value={formData.customCycle?.startDate || ''}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  customCycle: {
+                                    ...formData.customCycle,
+                                    startDate: e.target.value,
+                                  },
+                                })
+                              }
+                              required={formData.cycleMode === 'CUSTOM'}
+                              style={{
+                                flex: 1,
+                                padding: '0.65rem 0.25rem',
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                fontFamily: 'inherit',
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="form-group">
-                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             วันที่สิ้นสุดรอบ
                           </label>
-                          <input
-                            type="date"
-                            className="form-control"
-                            value={formData.customCycle?.endDate || ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                customCycle: {
-                                  ...formData.customCycle,
-                                  endDate: e.target.value,
-                                },
-                              })
-                            }
-                            required={formData.cycleMode === 'CUSTOM'}
-                          />
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              background: 'var(--bg-card, #FFFFFF)',
+                              border: '1.5px solid var(--border-color, #E2E8F0)',
+                              borderRadius: '10px',
+                              padding: '0 0.85rem',
+                              gap: '8px',
+                            }}
+                          >
+                            <CalendarDays size={16} color="#8B5CF6" />
+                            <input
+                              type="date"
+                              value={formData.customCycle?.endDate || ''}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  customCycle: {
+                                    ...formData.customCycle,
+                                    endDate: e.target.value,
+                                  },
+                                })
+                              }
+                              required={formData.cycleMode === 'CUSTOM'}
+                              style={{
+                                flex: 1,
+                                padding: '0.65rem 0.25rem',
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                fontFamily: 'inherit',
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -867,14 +1050,28 @@ export default function LeaveLimitConfigModal({
                 <div
                   className="card-glass"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1.25rem 1.5rem',
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <AlertTriangle size={18} color="#EA580C" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          background: '#FFF7ED',
+                          color: '#EA580C',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <AlertTriangle size={16} />
+                      </div>
                       <label className="form-label" style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem' }}>
                         เกณฑ์เปอร์เซ็นต์การแจ้งเตือน &quot;ใกล้เกินเกณฑ์&quot;
                       </label>
@@ -885,20 +1082,21 @@ export default function LeaveLimitConfigModal({
                         color: '#EA580C',
                         fontWeight: 800,
                         fontSize: '1.1rem',
-                        padding: '2px 10px',
+                        padding: '4px 14px',
                         borderRadius: '999px',
-                        border: '1px solid #FFEDD5',
+                        border: '1.5px solid #FDBA74',
+                        boxShadow: '0 2px 6px rgba(249, 115, 22, 0.15)',
                       }}
                     >
                       {formData.warningThresholdPercent}%
                     </span>
                   </div>
 
-                  <p style={{ fontSize: '0.785rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '0.785rem', color: 'var(--text-secondary)', marginBottom: '1.15rem', lineHeight: 1.5 }}>
                     เมื่อการใช้วันลา จำนวนครั้ง หรือจำนวนรายการ ของบุคลากรรายใดแตะถึงเกณฑ์นี้ (เช่น ถึง 80% ของเพดาน) ระบบจะแสดงสถานะ <strong>⚠️ ใกล้เกินเกณฑ์</strong> และขึ้นเตือนบน Dashboard ทันที
                   </p>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                     <input
                       type="range"
                       min="50"
@@ -906,23 +1104,25 @@ export default function LeaveLimitConfigModal({
                       step="5"
                       value={formData.warningThresholdPercent}
                       onChange={(e) => setFormData({ ...formData, warningThresholdPercent: Number(e.target.value) })}
-                      style={{ flex: 1, accentColor: '#F97316' }}
+                      style={{ flex: 1, accentColor: '#F97316', height: '6px', cursor: 'pointer' }}
                     />
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.45rem' }}>
                       {[70, 75, 80, 85, 90].map((val) => (
                         <button
                           key={val}
                           type="button"
                           onClick={() => setFormData({ ...formData, warningThresholdPercent: val })}
                           style={{
-                            padding: '3px 8px',
-                            fontSize: '0.75rem',
+                            padding: '4px 10px',
+                            fontSize: '0.785rem',
                             fontWeight: 700,
-                            borderRadius: '6px',
-                            border: formData.warningThresholdPercent === val ? '1px solid #F97316' : '1px solid var(--border-color)',
-                            background: formData.warningThresholdPercent === val ? '#F97316' : 'var(--bg-secondary)',
+                            borderRadius: '8px',
+                            border: formData.warningThresholdPercent === val ? '1.5px solid #EA580C' : '1px solid var(--border-color)',
+                            background: formData.warningThresholdPercent === val ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'var(--bg-secondary)',
                             color: formData.warningThresholdPercent === val ? '#FFFFFF' : 'var(--text-secondary)',
                             cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            boxShadow: formData.warningThresholdPercent === val ? '0 2px 8px rgba(249, 115, 22, 0.3)' : 'none',
                           }}
                         >
                           {val}%
@@ -939,12 +1139,15 @@ export default function LeaveLimitConfigModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div
                   style={{
-                    padding: '0.85rem 1rem',
+                    padding: '0.85rem 1.1rem',
                     background: '#F0FDF4',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-lg)',
                     borderLeft: '4px solid #10B981',
+                    borderRight: '1px solid #DCFCE7',
+                    borderTop: '1px solid #DCFCE7',
+                    borderBottom: '1px solid #DCFCE7',
                     display: 'flex',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '0.75rem',
                   }}
@@ -959,15 +1162,16 @@ export default function LeaveLimitConfigModal({
                     onClick={handleSelectAllLeaveTypes}
                     className="btn"
                     style={{
-                      padding: '4px 10px',
-                      fontSize: '0.75rem',
+                      padding: '5px 12px',
+                      fontSize: '0.785rem',
                       fontWeight: 700,
-                      background: '#10B981',
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                       color: '#FFFFFF',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       cursor: 'pointer',
                       flexShrink: 0,
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
                     }}
                   >
                     เลือกทั้งหมด
@@ -990,8 +1194,8 @@ export default function LeaveLimitConfigModal({
                         key={type}
                         onClick={() => handleToggleLeaveType(type)}
                         style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: 'var(--radius-md)',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '10px',
                           background: isChecked ? (conf.bg || '#F3F4F6') : 'var(--bg-secondary)',
                           border: isChecked ? `2px solid ${conf.border || '#D1D5DB'}` : '1px dashed var(--border-color)',
                           display: 'flex',
@@ -999,7 +1203,8 @@ export default function LeaveLimitConfigModal({
                           justifyContent: 'space-between',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
-                          opacity: isChecked ? 1 : 0.6,
+                          opacity: isChecked ? 1 : 0.65,
+                          boxShadow: isChecked ? '0 2px 6px rgba(0,0,0,0.04)' : 'none',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1011,14 +1216,14 @@ export default function LeaveLimitConfigModal({
                               background: conf.color || '#6B7280',
                             }}
                           />
-                          <span style={{ fontSize: '0.85rem', fontWeight: isChecked ? 700 : 500, color: isChecked ? (conf.color || 'var(--text-primary)') : 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.875rem', fontWeight: isChecked ? 700 : 500, color: isChecked ? (conf.color || 'var(--text-primary)') : 'var(--text-muted)' }}>
                             {type}
                           </span>
                         </div>
                         <div
                           style={{
-                            width: '20px',
-                            height: '20px',
+                            width: '22px',
+                            height: '22px',
                             borderRadius: '6px',
                             background: isChecked ? (conf.color || '#3B82F6') : 'transparent',
                             border: isChecked ? 'none' : '1.5px solid var(--text-muted)',
@@ -1026,9 +1231,10 @@ export default function LeaveLimitConfigModal({
                             alignItems: 'center',
                             justifyContent: 'center',
                             color: '#FFFFFF',
+                            transition: 'all 0.15s ease',
                           }}
                         >
-                          {isChecked && <Check size={14} />}
+                          {isChecked && <Check size={14} strokeWidth={3} />}
                         </div>
                       </div>
                     );

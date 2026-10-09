@@ -147,18 +147,17 @@ export default function LeaveCalendar({
     });
   };
 
-  // Leave types visible to the current user (admin sees all, non-admin sees everything except 'สาย')
+  // Leave types visible in the calendar display (completely exclude 'สาย' from calendar)
   const visibleLeaveTypes = useMemo(() => {
-    if (isAdmin) return LEAVE_TYPES;
     return LEAVE_TYPES.filter((t) => t !== 'สาย');
-  }, [isAdmin]);
+  }, []);
 
   // Filter leaves based on user selections
   const filteredLeaves = useMemo(() => {
     return leaves.filter((item) => {
       if (isDummyLeaveRecord(item)) return false;
-      // Non-admin cannot see 'สาย'
-      if (!isAdmin && item.leaveType === 'สาย') return false;
+      // Do not show 'สาย' in the calendar display
+      if (item.leaveType === 'สาย') return false;
 
       const matchDept = filterDept === 'ALL' || item.department === filterDept;
       const matchType =
@@ -172,7 +171,7 @@ export default function LeaveCalendar({
         item.reason?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchDept && matchType && matchSearch;
     });
-  }, [leaves, isAdmin, filterDept, selectedTypes, visibleLeaveTypes, searchQuery]);
+  }, [leaves, filterDept, selectedTypes, visibleLeaveTypes, searchQuery]);
 
   // Calendar Grid Calculation
   const calendarDays = useMemo(() => {
