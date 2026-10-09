@@ -49,6 +49,12 @@ export const DEFAULT_LEAVE_LIMIT_CONFIG = {
     fullYearMaxLate: 36,
     fullYearMaxTransactions: 16,
   },
+  // 3. เกณฑ์การขอลงเวลา (Time Attendance Requests Limit)
+  // เกณฑ์ มจพ.: การขอลงเวลา ไม่เกินจำนวน 12 ครั้ง ใน 1 ปีงบประมาณ
+  timeAttendanceLimits: {
+    fullYearMaxTimes: 12,
+    roundMaxTimes: 6,
+  },
   // Custom Date Ranges (when cycleMode === 'CUSTOM')
   customCycles: {
     round1: {
@@ -1017,6 +1023,153 @@ export async function sendBatchLeaveLimitEmailNotifications({
     deliveredCount,
     failedCount,
     results,
+  };
+}
+
+/**
+ * Helper to normalize any date input (DD/MM/YYYY BE, ISO, etc.) to YYYY-MM-DD (CE)
+ */
+function normalizeRecordDateToIso(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+    return formatLocalDate(dateInput);
+  }
+  const str = String(dateInput).trim();
+  // If ISO: YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    let y = parseInt(isoMatch[1], 10);
+    if (y > 2400) y -= 543;
+    const m = String(parseInt(isoMatch[2], 10)).padStart(2, '0');
+    const d = String(parseInt(isoMatch[3], 10)).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  // If DD/MM/YYYY or DD-MM-YYYY
+  const slashMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (slashMatch) {
+    let d = String(parseInt(slashMatch[1], 10)).padStart(2, '0');
+    let m = String(parseInt(slashMatch[2], 10)).padStart(2, '0');
+    let y = parseInt(slashMatch[3], 10);
+    if (y > 2400) y -= 543;
+    return `${y}-${m}-${d}`;
+  }
+  return str.split('T')[0];
+}
+
+/**
+ * Calculate Time Attendance statistics and limits for personnel
+ * เกณฑ์ มจพ.: การขอลงเวลา ไม่เกินจำนวน 12 ครั้ง ใน 1 ปีงบประมาณ
+ */
+export function calculatePersonnelTimeAttendanceStats({
+  attendances = [],
+  personnelList = [],
+  config = DEFAULT_LEAVE_LIMIT_CONFIG,
+  fiscalYear = 2026,
+}) {
+  const fy = Number(fiscalYear) || getFiscalYear(new Date());
+  const beYear = fy + 543;
+  const prevBeYear = beYear - 1;
+
+  // Fiscal Year date range: 1 ต.ค. (fy - 1) ถึง 30 ก.ย. (fy)
+  const startDate = `${fy - 1}-10-01`;
+  const endDate = `${fy}-09-30`;
+
+  const maxLimit = Number(config?.timeAttendanceLimits?.fullYearMaxTimes) || 12;
+  const warningThresholdPercent = Number(config?.warningThresholdPercent) || 80;
+
+  // Group attendances by personnel
+  const attendancesByPerson = {};
+  attendances.forEach((rec) => {
+    // Exclude cancelled and rejected records
+    const isCancelled = rec.status === 'CANCELLED' || rec.currentStep === 'CANCELLED';
+    const isRejected = rec.status === 'REJECTED' || rec.currentStep === 'REJECTED' || rec.finalStatus === 'ไม่อนุมัติ';
+    if (isCancelled || isRejected) return;
+    
+    // Check date within fiscal year
+    const reqDate = rec.attendanceDate || rec.actionDate || rec.createdAt;
+    if (!reqDate) return;
+    const dateStr = normalizeRecordDateToIso(reqDate);
+    if (!dateStr || dateStr < startDate || dateStr > endDate) return;
+
+    const personId = rec.requesterId || rec.personnelId || rec.requesterName || 'unknown';
+    if (!attendancesByPerson[personId]) {
+      attendancesByPerson[personId] = [];
+    }
+    attendancesByPerson[personId].push(rec);
+  });
+
+  const activePersonnel = (personnelList || []).filter(
+    (p) => p.status !== 'RESIGNED' && p.status !== 'ลาออก'
+  );
+
+  let exceededCount = 0;
+  let nearLimitCount = 0;
+  let normalCount = 0;
+
+  const personnelStats = activePersonnel.map((person) => {
+    const records = attendancesByPerson[person.id] || attendancesByPerson[person.name] || [];
+    const usedCount = records.length;
+    const percent = maxLimit > 0 ? Number(((usedCount / maxLimit) * 100).toFixed(1)) : 0;
+    const isExceeded = usedCount >= maxLimit && maxLimit > 0;
+    const isNearLimit = !isExceeded && percent >= warningThresholdPercent;
+    const remainingCount = Math.max(0, maxLimit - usedCount);
+
+    let status = 'NORMAL';
+    if (isExceeded) {
+      status = 'EXCEEDED';
+      exceededCount++;
+    } else if (isNearLimit) {
+      status = 'NEAR_LIMIT';
+      nearLimitCount++;
+    } else {
+      normalCount++;
+    }
+
+    return {
+      personnelId: person.id,
+      personnelName: person.name,
+      department: person.department || '-',
+      position: person.position || '-',
+      email: person.email || '',
+      usedCount,
+      maxLimit,
+      remainingCount,
+      percent,
+      isExceeded,
+      isNearLimit,
+      status, // 'EXCEEDED' | 'NEAR_LIMIT' | 'NORMAL'
+      records,
+    };
+  });
+
+  personnelStats.sort((a, b) => {
+    const statusWeight = { EXCEEDED: 3, NEAR_LIMIT: 2, NORMAL: 1 };
+    if (statusWeight[b.status] !== statusWeight[a.status]) {
+      return statusWeight[b.status] - statusWeight[a.status];
+    }
+    return b.usedCount - a.usedCount;
+  });
+
+  return {
+    fiscalYear: fy,
+    buddhistYear: beYear,
+    startDate,
+    endDate,
+    maxLimit,
+    warningThresholdPercent,
+    summary: {
+      totalPersonnel: activePersonnel.length,
+      evaluatedPersonnel: personnelStats.length,
+      exceededCount,
+      nearLimitCount,
+      normalCount,
+      atRiskCount: exceededCount + nearLimitCount,
+    },
+    personnelStats,
+    riskPersonnel: personnelStats.filter((p) => p.status === 'EXCEEDED' || p.status === 'NEAR_LIMIT'),
+    exceededList: personnelStats.filter((p) => p.status === 'EXCEEDED'),
+    nearLimitList: personnelStats.filter((p) => p.status === 'NEAR_LIMIT'),
+    normalList: personnelStats.filter((p) => p.status === 'NORMAL'),
   };
 }
 

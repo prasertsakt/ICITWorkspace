@@ -31,6 +31,8 @@ export default function TimeAttendanceModal({
   departmentList = [],
   executiveList = [],
   isAdmin = false,
+  userQuotaStat = null,
+  quotaConfig = null,
 }) {
   const [requestType, setRequestType] = useState('ลงเวลากลับปฏิบัติราชการ');
   const [hrOfficerId, setHrOfficerId] = useState('');
@@ -278,6 +280,66 @@ export default function TimeAttendanceModal({
             >
               <AlertCircle size={18} />
               <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Quota Status Alert Card */}
+          {userQuotaStat && (
+            <div
+              style={{
+                padding: '0.85rem 1.1rem',
+                borderRadius: 'var(--radius-md)',
+                background: userQuotaStat.isExceeded
+                  ? '#FEF2F2'
+                  : userQuotaStat.isNearLimit
+                  ? '#FFFBEB'
+                  : '#F0FDF4',
+                border: `1px solid ${
+                  userQuotaStat.isExceeded
+                    ? '#FECACA'
+                    : userQuotaStat.isNearLimit
+                    ? '#FDE68A'
+                    : '#BBF7D0'
+                }`,
+                marginBottom: '1.25rem',
+                fontSize: '0.82rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: userQuotaStat.isExceeded ? '#B91C1C' : userQuotaStat.isNearLimit ? '#B45309' : '#15803D' }}>
+                  <Clock size={15} />
+                  <span>โควตาการขอลงเวลาประจำปีงบประมาณ:</span>
+                </div>
+                <div style={{ fontWeight: 800, color: userQuotaStat.isExceeded ? '#DC2626' : userQuotaStat.isNearLimit ? '#D97706' : '#16A34A' }}>
+                  ใช้ไปแล้ว {userQuotaStat.usedCount} / {userQuotaStat.maxLimit} ครั้ง (คงเหลือ {userQuotaStat.remainingCount} ครั้ง)
+                </div>
+              </div>
+
+              {/* Mini progress bar */}
+              <div style={{ height: '6px', width: '100%', background: 'rgba(0,0,0,0.06)', borderRadius: '999px', overflow: 'hidden', margin: '6px 0' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.min(100, userQuotaStat.percent)}%`,
+                    background: userQuotaStat.isExceeded ? '#EF4444' : userQuotaStat.isNearLimit ? '#F59E0B' : '#10B981',
+                    borderRadius: '999px',
+                  }}
+                />
+              </div>
+
+              {userQuotaStat.isExceeded ? (
+                <div style={{ color: '#DC2626', fontWeight: 600, fontSize: '0.78rem' }}>
+                  ⚠️ ท่านได้ใช้สิทธิ์ขอลงเวลาครบเพดาน 12 ครั้งใน 1 ปีงบประมาณแล้ว การยื่นคำขอนี้อาจต้องผ่านการพิจารณาเป็นกรณีพิเศษ
+                </div>
+              ) : userQuotaStat.isNearLimit ? (
+                <div style={{ color: '#B45309', fontWeight: 600, fontSize: '0.78rem' }}>
+                  ⚡ ท่านใช้สิทธิ์ขอลงเวลาใกล้ครบเพดานกำหนด (เหลืออีก {userQuotaStat.remainingCount} ครั้ง)
+                </div>
+              ) : (
+                <div style={{ color: '#15803D', fontSize: '0.78rem' }}>
+                  ✓ เกณฑ์กำหนด: ขอลงเวลาได้ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ (1 ต.ค. - 30 ก.ย.)
+                </div>
+              )}
             </div>
           )}
 

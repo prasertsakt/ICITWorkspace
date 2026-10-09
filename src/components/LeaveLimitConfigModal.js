@@ -146,6 +146,10 @@ export default function LeaveLimitConfigModal({
     const base = { ...DEFAULT_LEAVE_LIMIT_CONFIG, ...(currentConfig || {}) };
     return {
       ...base,
+      timeAttendanceLimits: {
+        ...DEFAULT_LEAVE_LIMIT_CONFIG.timeAttendanceLimits,
+        ...(currentConfig?.timeAttendanceLimits || {}),
+      },
       customCycles: {
         round1: {
           ...DEFAULT_LEAVE_LIMIT_CONFIG.customCycles.round1,
@@ -180,6 +184,10 @@ export default function LeaveLimitConfigModal({
         specialStaffLimits: {
           ...DEFAULT_LEAVE_LIMIT_CONFIG.specialStaffLimits,
           ...(currentConfig.specialStaffLimits || {}),
+        },
+        timeAttendanceLimits: {
+          ...DEFAULT_LEAVE_LIMIT_CONFIG.timeAttendanceLimits,
+          ...(currentConfig.timeAttendanceLimits || {}),
         },
         customCycles: {
           round1: {
@@ -222,6 +230,16 @@ export default function LeaveLimitConfigModal({
       ...prev,
       specialStaffLimits: {
         ...prev.specialStaffLimits,
+        [field]: Number(value) >= 0 ? Number(value) : 0,
+      },
+    }));
+  };
+
+  const handleTimeAttendanceChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      timeAttendanceLimits: {
+        ...prev.timeAttendanceLimits,
         [field]: Number(value) >= 0 ? Number(value) : 0,
       },
     }));
@@ -1353,6 +1371,66 @@ export default function LeaveLimitConfigModal({
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+
+                {/* Time Attendance Requests Limit Card */}
+                <div
+                  className="card-glass"
+                  style={{
+                    padding: '1.25rem 1.5rem',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#EEF2FF',
+                        color: '#4F46E5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Clock size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        เกณฑ์การขอลงเวลาปฏิบัติราชการ (Time Attendance Request Quota)
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        กำหนดเพดานจำนวนครั้งการยื่นขอลงเวลามา/กลับปฏิบัติราชการ
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid-2" style={{ gap: '1.25rem', marginTop: '0.75rem' }}>
+                    <MetricInputField
+                      label="จำนวนครั้งการขอลงเวลาสูงสุดต่อปีงบประมาณ"
+                      value={formData.timeAttendanceLimits?.fullYearMaxTimes ?? 12}
+                      onChange={(val) => handleTimeAttendanceChange('fullYearMaxTimes', val)}
+                      unit="ครั้ง / ปีงบประมาณ"
+                      min={1}
+                      max={100}
+                      benchmark="เกณฑ์ มจพ.: ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ"
+                      accentColor="#4F46E5"
+                    />
+
+                    <MetricInputField
+                      label="จำนวนครั้งการขอลงเวลาต่อรอบประเมิน (6 เดือน)"
+                      value={formData.timeAttendanceLimits?.roundMaxTimes ?? 6}
+                      onChange={(val) => handleTimeAttendanceChange('roundMaxTimes', val)}
+                      unit="ครั้ง / รอบ"
+                      min={1}
+                      max={50}
+                      benchmark="ค่ามาตรฐาน: 6 ครั้ง / รอบ"
+                      accentColor="#4F46E5"
+                    />
                   </div>
                 </div>
               </div>

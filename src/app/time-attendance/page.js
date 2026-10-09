@@ -23,7 +23,12 @@ import {
   TIME_ATTENDANCE_STEP_CONFIG,
   PREDEFINED_DEPARTMENTS,
 } from '@/lib/constants';
-import { formatDateDDMMYYYYBE, formatTo24HrTime } from '@/lib/dateUtils';
+import { formatDateDDMMYYYYBE, formatTo24HrTime, getFiscalYear, getCurrentThaiFiscalYear } from '@/lib/dateUtils';
+import {
+  subscribeLeaveLimitConfig,
+  getLeaveLimitConfig,
+  calculatePersonnelTimeAttendanceStats,
+} from '@/lib/leaveLimitService';
 import TimeAttendanceModal from '@/components/TimeAttendanceModal';
 import TimeAttendanceDetailModal from '@/components/TimeAttendanceDetailModal';
 import TimeAttendanceEmailModal from '@/components/TimeAttendanceEmailModal';
@@ -59,6 +64,9 @@ import {
   Trash2,
   Settings,
   ArrowLeft,
+  Activity,
+  AlertTriangle,
+  Award,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getNotificationRecipientForStep } from '@/lib/emailNotificationService';
@@ -73,12 +81,53 @@ function TimeAttendanceContent() {
   const [personnelList, setPersonnelList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [executiveList, setExecutiveList] = useState([]);
+  const [leaveLimitConfig, setLeaveLimitConfig] = useState(getLeaveLimitConfig());
 
   // Modals state
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [emailModalRecord, setEmailModalRecord] = useState(null);
   const [cancelModalRecord, setCancelModalRecord] = useState(null);
+  const [showQuotaOverviewModal, setShowQuotaOverviewModal] = useState(false);
+
+  // Current Fiscal Year & Time Attendance Quota Stats (ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ)
+  const currentFiscalYear = useMemo(() => getFiscalYear(new Date()), []);
+  const currentThaiYear = useMemo(() => getCurrentThaiFiscalYear(new Date()), []);
+
+  const timeAttendanceStats = useMemo(() => {
+    return calculatePersonnelTimeAttendanceStats({
+      attendances,
+      personnelList,
+      config: leaveLimitConfig,
+      fiscalYear: currentFiscalYear,
+    });
+  }, [attendances, personnelList, leaveLimitConfig, currentFiscalYear]);
+
+  // Current user's individual quota stat
+  const myQuotaStat = useMemo(() => {
+    if (!currentPersonnel || !timeAttendanceStats?.personnelStats) return null;
+    const myId = currentPersonnel.id;
+    const myEmail = currentPersonnel.email?.toLowerCase().trim();
+    return (
+      timeAttendanceStats.personnelStats.find(
+        (p) =>
+          p.personnelId === myId ||
+          (myEmail && p.email?.toLowerCase().trim() === myEmail) ||
+          p.personnelName === currentPersonnel.name
+      ) || {
+        personnelId: myId,
+        personnelName: currentPersonnel.name,
+        usedCount: 0,
+        maxLimit: Number(leaveLimitConfig?.timeAttendanceLimits?.fullYearMaxTimes) || 12,
+        remainingCount: Number(leaveLimitConfig?.timeAttendanceLimits?.fullYearMaxTimes) || 12,
+        percent: 0,
+        isExceeded: false,
+        isNearLimit: false,
+        status: 'NORMAL',
+        records: [],
+      }
+    );
+  }, [currentPersonnel, timeAttendanceStats, leaveLimitConfig]);
 
   // Filters & Search
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'mine' | 'pending_me'
@@ -117,12 +166,16 @@ function TimeAttendanceContent() {
     const unsubExecs = subscribeExecutiveList((list) => {
       setExecutiveList(list || []);
     });
+    const unsubConfig = subscribeLeaveLimitConfig((cfg) => {
+      setLeaveLimitConfig(cfg);
+    });
 
     return () => {
       unsubAttendances();
       unsubPersonnel();
       unsubDepts();
       unsubExecs();
+      unsubConfig();
     };
   }, []);
 
@@ -851,6 +904,217 @@ function TimeAttendanceContent() {
         </div>
       </section>
 
+      {/* Time Attendance Quota Tracker Banner (เกณฑ์ไม่เกิน 12 ครั้ง ใน 1 ปีงบประมาณ) */}
+      <section style={{ marginBottom: '2rem' }}>
+        <div
+          className="card"
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: 'var(--radius-lg)',
+            background: myQuotaStat?.isExceeded
+              ? 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)'
+              : myQuotaStat?.isNearLimit
+              ? 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)'
+              : 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)',
+            border: `1.5px solid ${
+              myQuotaStat?.isExceeded ? '#FECDD3' : myQuotaStat?.isNearLimit ? '#FDE68A' : '#A7F3D0'
+            }`,
+            boxShadow: 'var(--shadow-sm)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.25rem',
+            }}
+          >
+            {/* Left: User Quota Details */}
+            <div style={{ flex: '1 1 340px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 9px',
+                    borderRadius: '999px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    background: myQuotaStat?.isExceeded
+                      ? '#DC2626'
+                      : myQuotaStat?.isNearLimit
+                      ? '#D97706'
+                      : '#059669',
+                    color: 'white',
+                  }}
+                >
+                  <Clock size={12} />
+                  <span>เกณฑ์การขอลงเวลา ปีงบประมาณ {currentThaiYear}</span>
+                </span>
+
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  (1 ต.ค. {currentThaiYear - 1} - 30 ก.ย. {currentThaiYear})
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                  {currentPersonnel?.name || 'บุคลากร'}:
+                </h3>
+                <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                  ใช้สิทธิ์ขอลงเวลาไปแล้ว{' '}
+                  <strong
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: myQuotaStat?.isExceeded
+                        ? '#DC2626'
+                        : myQuotaStat?.isNearLimit
+                        ? '#D97706'
+                        : '#059669',
+                    }}
+                  >
+                    {myQuotaStat?.usedCount || 0}
+                  </strong>{' '}
+                  / {myQuotaStat?.maxLimit || 12} ครั้ง
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    color: myQuotaStat?.isExceeded
+                      ? '#DC2626'
+                      : myQuotaStat?.isNearLimit
+                      ? '#B45309'
+                      : '#047857',
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                  }}
+                >
+                  คงเหลือ {myQuotaStat?.remainingCount || 0} ครั้ง
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div style={{ marginTop: '0.75rem', maxWidth: '480px' }}>
+                <div
+                  style={{
+                    height: '8px',
+                    width: '100%',
+                    background: 'rgba(0, 0, 0, 0.08)',
+                    borderRadius: '999px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, myQuotaStat?.percent || 0)}%`,
+                      background: myQuotaStat?.isExceeded
+                        ? 'linear-gradient(90deg, #EF4444, #DC2626)'
+                        : myQuotaStat?.isNearLimit
+                        ? 'linear-gradient(90deg, #F59E0B, #D97706)'
+                        : 'linear-gradient(90deg, #10B981, #059669)',
+                      borderRadius: '999px',
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-muted)',
+                    marginTop: '4px',
+                  }}
+                >
+                  <span>เกณฑ์กำหนด: ไม่เกิน {myQuotaStat?.maxLimit || 12} ครั้ง / 1 ปีงบประมาณ</span>
+                  <span>{myQuotaStat?.percent || 0}% ของโควตา</span>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              {myQuotaStat?.isExceeded && (
+                <div
+                  style={{
+                    marginTop: '0.6rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#B91C1C',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <AlertTriangle size={15} />
+                  <span>ท่านได้ใช้สิทธิ์ขอลงเวลาครบเพดาน {myQuotaStat?.maxLimit || 12} ครั้งในปีงบประมาณนี้แล้ว</span>
+                </div>
+              )}
+              {myQuotaStat?.isNearLimit && !myQuotaStat?.isExceeded && (
+                <div
+                  style={{
+                    marginTop: '0.6rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#B45309',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <AlertCircle size={15} />
+                  <span>ท่านใช้สิทธิ์ขอลงเวลาใกล้ครบเกณฑ์กำหนดแล้ว (คงเหลืออีก {myQuotaStat?.remainingCount} ครั้ง)</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Overview for Admin / HR */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {(isAdmin || isHrStaff || isExecutive) && (
+                <button
+                  type="button"
+                  onClick={() => setShowQuotaOverviewModal(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: 'var(--shadow-xs)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Activity size={15} color="#EA580C" />
+                  <span>ตรวจสอบสถิติโควตาบุคลากร</span>
+                  {timeAttendanceStats?.summary?.atRiskCount > 0 && (
+                    <span
+                      style={{
+                        background: '#EF4444',
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        padding: '1px 7px',
+                        borderRadius: '999px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {timeAttendanceStats.summary.atRiskCount}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Minimal Dashboard (Summary Cards) */}
       <section style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
@@ -1525,6 +1789,8 @@ function TimeAttendanceContent() {
         departmentList={departmentList}
         executiveList={executiveList}
         isAdmin={isAdmin}
+        userQuotaStat={myQuotaStat}
+        quotaConfig={leaveLimitConfig?.timeAttendanceLimits}
       />
 
       {/* Detail, Form & Activity Modal */}
@@ -1557,6 +1823,179 @@ function TimeAttendanceContent() {
         record={cancelModalRecord}
         onConfirmCancel={handleCancelRequest}
       />
+
+      {/* Admin/HR Time Attendance Quota Overview Modal */}
+      {showQuotaOverviewModal && (
+        <div className="modal-overlay" style={{ zIndex: 999 }}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '850px',
+              width: '95%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              borderRadius: 'var(--radius-xl)',
+              padding: 0,
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #E2E8F0',
+                background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'rgba(249, 115, 22, 0.25)',
+                    border: '1px solid rgba(249, 115, 22, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FB923C',
+                  }}
+                >
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+                    สถิติการใช้โควตาขอลงเวลาปฏิบัติราชการ
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: '#CBD5E1', margin: 0 }}>
+                    ประจำปีงบประมาณ {currentThaiYear} (เกณฑ์ไม่เกิน 12 ครั้ง / 1 ปีงบประมาณ)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuotaOverviewModal(false)}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#94A3B8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem' }}>
+              {/* Summary Stats Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>บุคลากรทั้งหมด</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A' }}>
+                    {timeAttendanceStats?.summary?.totalPersonnel || 0}
+                  </div>
+                </div>
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#B91C1C', fontWeight: 600 }}>เกินเกณฑ์ (≥12 ครั้ง)</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#DC2626' }}>
+                    {timeAttendanceStats?.summary?.exceededCount || 0}
+                  </div>
+                </div>
+                <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#B45309', fontWeight: 600 }}>ใกล้ครบเกณฑ์ (≥10 ครั้ง)</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#D97706' }}>
+                    {timeAttendanceStats?.summary?.nearLimitCount || 0}
+                  </div>
+                </div>
+                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#15803D', fontWeight: 600 }}>ปกติ (&lt;10 ครั้ง)</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#16A34A' }}>
+                    {timeAttendanceStats?.summary?.normalCount || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Personnel Table */}
+              <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
+                      <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>ชื่อ-นามสกุล / ฝ่าย</th>
+                      <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>ขอลงเวลาไปแล้ว</th>
+                      <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>คงเหลือ</th>
+                      <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>% การใช้</th>
+                      <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(timeAttendanceStats?.personnelStats || []).map((p) => {
+                      return (
+                        <tr key={p.personnelId} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ fontWeight: 700, color: '#0F172A' }}>{p.personnelName}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              {p.department} &bull; {p.position}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 800 }}>
+                            <span style={{ color: p.isExceeded ? '#DC2626' : p.isNearLimit ? '#D97706' : '#0F172A' }}>
+                              {p.usedCount}
+                            </span>{' '}
+                            <span style={{ color: '#94A3B8', fontWeight: 400 }}>/ {p.maxLimit} ครั้ง</span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 600, color: '#475569' }}>
+                            {p.remainingCount} ครั้ง
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 700 }}>
+                            <span style={{ color: p.percent >= 100 ? '#DC2626' : p.percent >= 80 ? '#D97706' : '#16A34A' }}>
+                              {p.percent}%
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                            {p.isExceeded ? (
+                              <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '3px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                🚨 เกินเกณฑ์ (≥12)
+                              </span>
+                            ) : p.isNearLimit ? (
+                              <span style={{ background: '#FEF3C7', color: '#D97706', padding: '3px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                ⚠️ ใกล้ครบ (≥10)
+                              </span>
+                            ) : (
+                              <span style={{ background: '#DCFCE7', color: '#16A34A', padding: '3px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                ✓ ปกติ
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowQuotaOverviewModal(false)}
+                className="btn btn-secondary"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
