@@ -69,6 +69,9 @@ export default function LeaveReportModal({
   leaves = [],
   personnelList = [],
   currentPersonnel = null,
+  initialFiscalYear = null,
+  initialLimitCycleKey = null,
+  leaveLimitConfig: propLeaveLimitConfig = null,
 }) {
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -90,13 +93,25 @@ export default function LeaveReportModal({
   const typeDropdownRef = useRef(null);
   const [activePreset, setActivePreset] = useState('this_month');
   const [quarterMode, setQuarterMode] = useState('fiscal'); // 'fiscal' = ปีงบประมาณ, 'calendar' = ปีปฏิทิน
-  const [leaveLimitConfig, setLeaveLimitConfig] = useState(DEFAULT_LEAVE_LIMIT_CONFIG);
-  const [reportLimitCycleKey, setReportLimitCycleKey] = useState(() => getCurrentActiveCycleKey());
+  const [leaveLimitConfig, setLeaveLimitConfig] = useState(() => propLeaveLimitConfig || DEFAULT_LEAVE_LIMIT_CONFIG);
+  const [reportLimitCycleKey, setReportLimitCycleKey] = useState(() => initialLimitCycleKey || getCurrentActiveCycleKey());
+
+  // Keep synced with props when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialLimitCycleKey) {
+        setReportLimitCycleKey(initialLimitCycleKey);
+      }
+      if (propLeaveLimitConfig) {
+        setLeaveLimitConfig(propLeaveLimitConfig);
+      }
+    }
+  }, [isOpen, initialLimitCycleKey, propLeaveLimitConfig]);
 
   // Subscribe to Leave Limit Config
   useEffect(() => {
     const unsub = subscribeLeaveLimitConfig((conf) => {
-      setLeaveLimitConfig(conf || DEFAULT_LEAVE_LIMIT_CONFIG);
+      if (conf) setLeaveLimitConfig(conf);
     });
     return () => unsub();
   }, []);
@@ -163,7 +178,7 @@ export default function LeaveReportModal({
     }
   };
 
-  // Filter leaves based on date range, department, and leave type
+  // Filter leaves based on date range, department, and leave type for Section 1 and 2
   const filteredLeaves = useMemo(() => {
     return leaves.filter((item) => {
       if (!item.startDate) return false;
@@ -240,7 +255,7 @@ export default function LeaveReportModal({
 
   // Leave Limit & Risk Personnel Calculation for Table 3
   const leaveLimitStats = useMemo(() => {
-    const targetFiscalYear = getFiscalYear(new Date(startDate || today));
+    const targetFiscalYear = Number(initialFiscalYear) || getFiscalYear(new Date(startDate || today));
     return calculatePersonnelLeaveLimitStats({
       leaves,
       personnelList,
@@ -248,14 +263,27 @@ export default function LeaveReportModal({
       fiscalYear: targetFiscalYear,
       selectedCycleKey: reportLimitCycleKey,
     });
-  }, [leaves, personnelList, leaveLimitConfig, startDate, reportLimitCycleKey, today]);
+  }, [leaves, personnelList, leaveLimitConfig, initialFiscalYear, startDate, reportLimitCycleKey, today]);
 
   // Filter Table 3 risk personnel by department if filterDept is selected
   const filteredRiskPersonnel = useMemo(() => {
-    const list = leaveLimitStats.riskPersonnel || [];
+    const list = (leaveLimitStats.personnelStats || []).filter(
+      (p) => p.status === 'EXCEEDED' || p.status === 'NEAR_LIMIT'
+    );
     if (filterDept === 'ALL') return list;
     return list.filter((p) => p.department === filterDept);
-  }, [leaveLimitStats.riskPersonnel, filterDept]);
+  }, [leaveLimitStats.personnelStats, filterDept]);
+
+  // Table 3 Summary counts dynamically matching the displayed filtered personnel
+  const table3Stats = useMemo(() => {
+    const exceededCount = filteredRiskPersonnel.filter((p) => p.status === 'EXCEEDED').length;
+    const nearLimitCount = filteredRiskPersonnel.filter((p) => p.status === 'NEAR_LIMIT').length;
+    return {
+      exceededCount,
+      nearLimitCount,
+      atRiskCount: filteredRiskPersonnel.length,
+    };
+  }, [filteredRiskPersonnel]);
 
   // Print Handler
   const handlePrint = () => {
@@ -1078,7 +1106,7 @@ export default function LeaveReportModal({
               </div>
             )}
 
-            {/* SECTION 3: NEW REPLACED TABLE 3 - บุคลากรที่เกินเกณฑ์ ใกล้เกินเกณฑ์ และต้องเฝ้าระวัง */}
+            {/* SECTION 3: REPLACED TABLE 3 - บุคลากรที่เกินเกณฑ์ ใกล้เกินเกณฑ์ และต้องเฝ้าระวัง */}
             <div style={{ marginBottom: '22px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap' }}>
                 <div>
@@ -1124,7 +1152,7 @@ export default function LeaveReportModal({
                 >
                   <span style={{ fontWeight: 700, color: '#DC2626' }}>🚨 เกินเกณฑ์ (Exceeded):</span>
                   <strong style={{ fontSize: '13px', color: '#991B1B' }}>
-                    {leaveLimitStats.summary.exceededCount} ท่าน
+                    {table3Stats.exceededCount} ท่าน
                   </strong>
                 </div>
 
@@ -1142,7 +1170,7 @@ export default function LeaveReportModal({
                 >
                   <span style={{ fontWeight: 700, color: '#D97706' }}>⚠️ ใกล้เกินเกณฑ์ (Near Limit):</span>
                   <strong style={{ fontSize: '13px', color: '#92400E' }}>
-                    {leaveLimitStats.summary.nearLimitCount} ท่าน
+                    {table3Stats.nearLimitCount} ท่าน
                   </strong>
                 </div>
 
@@ -1160,7 +1188,7 @@ export default function LeaveReportModal({
                 >
                   <span style={{ fontWeight: 600, color: '#475569' }}>👁️ รวมกลุ่มที่ต้องเฝ้าระวัง:</span>
                   <strong style={{ fontSize: '13px', color: '#0F172A' }}>
-                    {leaveLimitStats.summary.atRiskCount} ท่าน
+                    {table3Stats.atRiskCount} ท่าน
                   </strong>
                 </div>
               </div>
@@ -1230,10 +1258,18 @@ export default function LeaveReportModal({
                   <tbody>
                     {filteredRiskPersonnel.map((person, idx) => {
                       const isExceeded = person.status === 'EXCEEDED';
+                      const maxDays = person.limits?.maxDays ?? '-';
+                      const maxTimes = person.limits?.maxTimes ?? '-';
+                      const maxTransactions = person.limits?.maxTransactions ?? '-';
+                      const highestPct = person.percentages?.highestPercent ?? 0;
+
+                      const triggerDetails = person.alertTriggers && person.alertTriggers.length > 0
+                        ? person.alertTriggers.map((t) => typeof t === 'string' ? t : `${t.metric} (${t.current}/${t.limit} ${t.unit})`).join(', ')
+                        : (isExceeded ? 'เกินเกณฑ์ที่กำหนด' : 'แตะถึงเกณฑ์เฝ้าระวัง');
 
                       return (
                         <tr
-                          key={person.id || idx}
+                          key={person.personnelId || person.id || idx}
                           style={{
                             backgroundColor: isExceeded
                               ? '#FEF2F2'
@@ -1245,13 +1281,13 @@ export default function LeaveReportModal({
                             {idx + 1}
                           </td>
                           <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', fontWeight: 700, color: '#0F172A' }}>
-                            {person.name || '-'}
+                            {person.personnelName || person.name || '-'}
                           </td>
                           <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', color: '#475569' }}>
                             {person.department || '-'}
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1', fontSize: '10px' }}>
-                            {person.staffTypeLabel}
+                            {person.personnelType || (person.isSpecialStaff ? 'พนักงานพิเศษ' : 'พนักงานมหาวิทยาลัย')}
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #CBD5E1' }}>
                             <span
@@ -1275,10 +1311,10 @@ export default function LeaveReportModal({
                               textAlign: 'center',
                               border: '1px solid #CBD5E1',
                               fontWeight: 700,
-                              color: person.totalDays >= person.maxDays ? '#DC2626' : '#0F172A',
+                              color: Number(person.totalDays) >= Number(maxDays) ? '#DC2626' : '#0F172A',
                             }}
                           >
-                            {person.totalDays} / {person.maxDays}
+                            {person.totalDays} / {maxDays}
                           </td>
                           <td
                             style={{
@@ -1286,10 +1322,10 @@ export default function LeaveReportModal({
                               textAlign: 'center',
                               border: '1px solid #CBD5E1',
                               fontWeight: 700,
-                              color: person.totalTimes >= person.maxTimes ? '#DC2626' : '#0F172A',
+                              color: Number(person.totalTimes) >= Number(maxTimes) ? '#DC2626' : '#0F172A',
                             }}
                           >
-                            {person.totalTimes} / {person.maxTimes}
+                            {person.totalTimes} / {maxTimes}
                           </td>
                           <td
                             style={{
@@ -1297,10 +1333,10 @@ export default function LeaveReportModal({
                               textAlign: 'center',
                               border: '1px solid #CBD5E1',
                               fontWeight: 700,
-                              color: person.totalTransactions >= person.maxTransactions ? '#DC2626' : '#0F172A',
+                              color: Number(person.totalTransactions) >= Number(maxTransactions) ? '#DC2626' : '#0F172A',
                             }}
                           >
-                            {person.totalTransactions} / {person.maxTransactions}
+                            {person.totalTransactions} / {maxTransactions}
                           </td>
                           <td
                             style={{
@@ -1311,12 +1347,10 @@ export default function LeaveReportModal({
                               color: isExceeded ? '#DC2626' : '#D97706',
                             }}
                           >
-                            {person.highestPercent}%
+                            {highestPct}%
                           </td>
                           <td style={{ padding: '4px 6px', border: '1px solid #CBD5E1', fontSize: '10px', color: '#334155' }}>
-                            {person.alertTriggers && person.alertTriggers.length > 0
-                              ? person.alertTriggers.join(', ')
-                              : 'แตะถึงเกณฑ์เฝ้าระวัง'}
+                            {triggerDetails}
                           </td>
                         </tr>
                       );

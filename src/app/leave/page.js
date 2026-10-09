@@ -1255,6 +1255,9 @@ function LeaveContent() {
           leaves={leaves}
           personnelList={personnelList}
           currentPersonnel={currentPersonnel}
+          initialFiscalYear={selectedYear}
+          initialLimitCycleKey={selectedLimitCycleKey}
+          leaveLimitConfig={leaveLimitConfig}
         />
       )}
 

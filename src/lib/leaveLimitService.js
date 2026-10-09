@@ -517,6 +517,7 @@ export function calculatePersonnelLeaveLimitStats({
       nearLimitByStaffType,
     },
     personnelStats,
+    riskPersonnel: personnelStats.filter((p) => p.status === 'EXCEEDED' || p.status === 'NEAR_LIMIT'),
     exceededList: personnelStats.filter((p) => p.status === 'EXCEEDED'),
     nearLimitList: personnelStats.filter((p) => p.status === 'NEAR_LIMIT'),
     normalList: personnelStats.filter((p) => p.status === 'NORMAL'),
