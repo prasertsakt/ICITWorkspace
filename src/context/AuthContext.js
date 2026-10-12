@@ -16,6 +16,7 @@ import {
 import { PERSONNEL_STATUS, USER_ROLES, SESSION_TIMEOUT_MS, SESSION_TIMEOUT_HOURS } from '@/lib/constants';
 import { logActivity, ACTIVITY_CATEGORIES } from '@/lib/activityLogService';
 import { showAppAlert } from './ModalContext';
+import { isInAppBrowser, navigateToExternalBrowser } from '@/lib/inAppBrowser';
 
 const AuthContext = createContext(null);
 
@@ -48,8 +49,10 @@ export function AuthProvider({ children }) {
       } catch {}
     }
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(SESSION_LAST_ACTIVE_KEY);
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_LAST_ACTIVE_KEY);
+      } catch {}
     }
     setCurrentUser(null);
     setCurrentPersonnel(null);
@@ -162,8 +165,10 @@ export function AuthProvider({ children }) {
     });
 
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem(SESSION_KEY, cleanEmail);
-      localStorage.setItem(SESSION_LAST_ACTIVE_KEY, Date.now().toString());
+      try {
+        sessionStorage.setItem(SESSION_KEY, cleanEmail);
+        localStorage.setItem(SESSION_LAST_ACTIVE_KEY, Date.now().toString());
+      } catch {}
     }
     return true;
   };
@@ -285,6 +290,16 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
     setAuthError(null);
     try {
+      // Proactive check: if user is inside an in-app browser (LINE, Facebook, Messenger, etc.)
+      // DO NOT call signInWithPopup which would crash with "missing initial state" or "disallowed_useragent".
+      // Instead, seamlessly break out to native Chrome / Safari browser!
+      if (isInAppBrowser()) {
+        navigateToExternalBrowser();
+        setAuthError('IN_APP_BROWSER');
+        setIsLoading(false);
+        return;
+      }
+
       if (!isFirebaseConfigured) {
         setAuthError('FIREBASE_CONFIG_MISSING');
         setIsLoading(false);
@@ -301,7 +316,16 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error('Google Sign In Error:', err);
-      if (err.code !== 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed popup deliberately
+      } else if (
+        err.code === 'auth/missing-initial-state' ||
+        err.code === 'auth/web-storage-unsupported' ||
+        (err.message && (err.message.includes('missing initial state') || err.message.includes('sessionStorage') || err.message.includes('disallowed_useragent')))
+      ) {
+        setAuthError('STORAGE_INACCESSIBLE');
+        navigateToExternalBrowser();
+      } else {
         setAuthError(err.message || 'LOGIN_FAILED');
       }
     } finally {

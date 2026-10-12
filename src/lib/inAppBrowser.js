@@ -95,17 +95,17 @@ export function appendOpenExternalBrowser(urlStr) {
  * Navigate to external browser automatically
  * 1. LINE: appending ?openExternalBrowser=1 causes LINE to invoke external Safari/Chrome
  * 2. Android (FB / IG / generic): launch Google Chrome directly via intent://
- * 3. iOS / others: window.location with parameter
+ * 3. iOS: trigger navigation or fallback to openExternalBrowser=1
  */
 export function navigateToExternalBrowser(targetUrl) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return false;
   const currentUrl = targetUrl || window.location.href;
 
-  // 1. In LINE app
+  // 1. In LINE app (both iOS and Android)
   if (isLineBrowser()) {
     const urlWithParam = appendOpenExternalBrowser(currentUrl);
     window.location.href = urlWithParam;
-    return;
+    return true;
   }
 
   // 2. On Android devices in other in-app browsers (Facebook, Instagram, etc.)
@@ -115,13 +115,14 @@ export function navigateToExternalBrowser(targetUrl) {
       const hostPath = parsed.host + parsed.pathname + parsed.search + parsed.hash;
       const intentUrl = `intent://${hostPath}#Intent;scheme=https;package=com.android.chrome;end;`;
       window.location.href = intentUrl;
-      return;
+      return true;
     } catch {
       // Fallback below
     }
   }
 
-  // 3. Fallback
+  // 3. Fallback / iOS in Facebook or Instagram
   const urlWithParam = appendOpenExternalBrowser(currentUrl);
   window.location.href = urlWithParam;
+  return true;
 }

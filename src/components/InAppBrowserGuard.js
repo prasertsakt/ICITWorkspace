@@ -52,13 +52,20 @@ export default function InAppBrowserGuard() {
     else if (/Twitter/i.test(ua)) setAppName('X (Twitter)');
     else setAppName('In-App Browser');
 
-    // For LINE: if URL doesn't have openExternalBrowser=1 yet, automatically navigate
+    // Auto-navigate to external browser:
+    // 1. For LINE: if URL doesn't have openExternalBrowser=1 yet, automatically navigate
     if (isLineBrowser()) {
       const urlParams = new URLSearchParams(window.location.search);
       if (!urlParams.has('openExternalBrowser')) {
         navigateToExternalBrowser();
         return;
       }
+    }
+
+    // 2. For Android: automatically invoke Chrome Intent to launch external Chrome
+    if (isAndroid()) {
+      navigateToExternalBrowser();
+      return;
     }
   }, []);
 
