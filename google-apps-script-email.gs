@@ -65,6 +65,22 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Auto-inject openExternalBrowser=1 to application URLs in htmlBody
+    // This guarantees that when users tap links on LINE or mobile email clients, it seamlessly navigates to native system browsers (Safari / Chrome)
+    if (htmlBody) {
+      htmlBody = htmlBody.replace(/href=["'](https?:\/\/[^"']+)["']/gi, function(match, url) {
+        if (!url.includes('openExternalBrowser=1') && (url.includes('time-attendance') || url.includes('icitworkspace') || url.includes('/leave') || url.includes('/ims') || url.includes('cit.kmutnb.ac.th') || url.includes('web.app') || url.includes('localhost'))) {
+          var sep = url.indexOf('?') !== -1 ? '&' : '?';
+          return 'href="' + url + sep + 'openExternalBrowser=1"';
+        }
+        return match;
+      });
+
+      if (htmlBody.indexOf('<form') !== -1 && htmlBody.indexOf('name="openExternalBrowser"') === -1) {
+        htmlBody = htmlBody.replace(/(<form[^>]*>)/gi, '$1\n          <input type="hidden" name="openExternalBrowser" value="1" />');
+      }
+    }
+
     // Create plain text fallback to optimize email deliverability and avoid spam filters
     var plainText = data.plainText || htmlBody.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                                               .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')

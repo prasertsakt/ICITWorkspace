@@ -176,9 +176,9 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
 
   const subject = `[ระบบขอลงเวลา ICIT] ${stepTitle}: ${record.requesterName} (${record.requestType})`;
 
-  const approveUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=approve&token=${token}`;
-  const rejectUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=reject&token=${token}`;
-  const viewUrl = `${baseUrl}/time-attendance?viewId=${record.id}`;
+  const approveUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=approve&token=${token}&openExternalBrowser=1`;
+  const rejectUrl = `${baseUrl}/time-attendance?actionId=${record.id}&step=${targetStep}&decision=reject&token=${token}&openExternalBrowser=1`;
+  const viewUrl = `${baseUrl}/time-attendance?viewId=${record.id}&openExternalBrowser=1`;
 
   const previewImageUrl = formatImageDisplayUrl(record.imageProofUrl);
 
@@ -332,6 +332,7 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
           <input type="hidden" name="actionId" value="${record.id}" />
           <input type="hidden" name="step" value="${targetStep}" />
           <input type="hidden" name="token" value="${token}" />
+          <input type="hidden" name="openExternalBrowser" value="1" />
 
           ${targetStep === 'HR_REVIEW' ? `
           <div style="margin-bottom: 14px; text-align: left;">

@@ -784,7 +784,7 @@ export function generateLeaveLimitEmailContent({
 
       <!-- Action Button -->
       <div style="text-align: center; margin: 28px 0 16px 0;">
-        <a href="${baseUrl}/leave" style="display: inline-block; background: linear-gradient(135deg, #F97316 0%, #EA580C 100%); color: #FFFFFF; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);">
+        <a href="${baseUrl}/leave?openExternalBrowser=1" style="display: inline-block; background: linear-gradient(135deg, #F97316 0%, #EA580C 100%); color: #FFFFFF; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);">
           เข้าสู่ระบบ ICIT Workspace เพื่อตรวจสอบวันลา
         </a>
       </div>

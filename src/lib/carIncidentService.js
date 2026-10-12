@@ -1201,7 +1201,7 @@ export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO'
       ` : ''}
 
       <div style="text-align: center; margin: 28px 0;">
-        <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/ims/car-incident" style="background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+        <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/ims/car-incident?openExternalBrowser=1" style="background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
           เข้าสู่ระบบ CAR & Incident Hub
         </a>
       </div>
@@ -1351,7 +1351,7 @@ async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus
         <div style="margin-top: 6px;"><strong>มาตรฐาน:</strong> ${record.standard}</div>
       </div>
       <div style="text-align: center; margin: 24px 0;">
-        <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/ims/car-incident" style="background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block;">
+        <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/ims/car-incident?openExternalBrowser=1" style="background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block;">
           เปิดดูเอกสารในระบบ
         </a>
       </div>

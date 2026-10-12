@@ -288,7 +288,7 @@ export async function sendImsAuditEmail({
  */
 export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead Internal Auditor', appBaseUrl = '' }) {
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
-  const auditUrl = `${baseUrl}/ims/audit`;
+  const auditUrl = `${baseUrl}/ims/audit?openExternalBrowser=1`;
 
   const auditeesText =
     Array.isArray(audit.auditees) && audit.auditees.length > 0
@@ -433,7 +433,7 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
  */
 export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Lead Internal Auditor', appBaseUrl = '' }) {
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
-  const auditUrl = `${baseUrl}/ims/audit`;
+  const auditUrl = `${baseUrl}/ims/audit?openExternalBrowser=1`;
 
   const auditeesText =
     Array.isArray(audit.auditees) && audit.auditees.length > 0
@@ -567,7 +567,7 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
  */
 export function generateImsRevisionNotificationHtml({ audit, comment, leadActorName = 'Lead Internal Auditor', appBaseUrl = '' }) {
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
-  const auditUrl = `${baseUrl}/ims/audit`;
+  const auditUrl = `${baseUrl}/ims/audit?openExternalBrowser=1`;
 
   const auditeesText =
     Array.isArray(audit.auditees) && audit.auditees.length > 0
@@ -711,7 +711,7 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
  */
 export function generateImsEvaluationNotificationHtml({ audit, appBaseUrl = '' }) {
   const baseUrl = appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://icitworkspace.web.app');
-  const auditUrl = `${baseUrl}/ims/audit`;
+  const auditUrl = `${baseUrl}/ims/audit?openExternalBrowser=1`;
 
   const auditeesText =
     Array.isArray(audit.auditees) && audit.auditees.length > 0

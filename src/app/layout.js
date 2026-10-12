@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import MobileNav from '@/components/MobileNav';
 import UnauthorizedModal from '@/components/UnauthorizedModal';
 import PageViewTracker from '@/components/PageViewTracker';
+import InAppBrowserGuard from '@/components/InAppBrowserGuard';
 
 export const metadata = {
   title: 'ระบบบริหารจัดการองค์กร | ICIT Workspace',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icit-logo.png" />
       </head>
       <body>
+        <InAppBrowserGuard />
         <AuthProvider>
           <PageViewTracker />
           <ModalProvider>
