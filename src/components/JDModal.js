@@ -461,7 +461,7 @@ export default function JDModal({
     }
 
     const supervisorForSelected = getSupervisorInfo(selected.department, selected);
-    const selectedLevel = selected.positionLevel || selected.level || 'ปฏิบัติการ';
+    const selectedLevel = selected.positionLevel !== undefined ? selected.positionLevel : (selected.level || '');
     setFormData((prev) => ({
       ...prev,
       personnelId: selected.id,
@@ -475,7 +475,7 @@ export default function JDModal({
       positionType: selected.personnelType || prev.positionType,
       supervisorName: supervisorForSelected?.name || prev.supervisorName,
       supervisorPosition: supervisorForSelected?.position || prev.supervisorPosition,
-      coreCompetencies: jdToEdit ? prev.coreCompetencies : getCoreCompetenciesForLevel(selectedLevel, currentFiscalYear, idpConfig),
+      coreCompetencies: jdToEdit ? prev.coreCompetencies : getCoreCompetenciesForLevel(selectedLevel || 'ปฏิบัติการ', currentFiscalYear, idpConfig),
       functionalCompetencies: jdToEdit ? prev.functionalCompetencies : getFunctionalCompetenciesForPosition(selected.position || prev.position || '', currentFiscalYear, idpConfig),
       signatures: jdToEdit
         ? {
@@ -508,12 +508,19 @@ export default function JDModal({
     );
     const deptToUse = matchedPerson?.department || formData.department;
     const supervisorForDept = getSupervisorInfo(deptToUse, matchedPerson || { name: nameVal, department: deptToUse });
+    const matchedLevel = matchedPerson
+      ? (matchedPerson.positionLevel !== undefined ? matchedPerson.positionLevel : (matchedPerson.level || ''))
+      : undefined;
 
     setFormData((prev) => ({
       ...prev,
       personnelName: nameVal,
       personnelId: matchedPerson ? matchedPerson.id : prev.personnelId,
       personnelEmail: matchedPerson ? (matchedPerson.email || prev.personnelEmail) : prev.personnelEmail,
+      position: matchedPerson ? (matchedPerson.position || prev.position) : prev.position,
+      positionNumber: matchedPerson ? (matchedPerson.positionNumber || prev.positionNumber) : prev.positionNumber,
+      positionLevel: matchedLevel !== undefined ? matchedLevel : prev.positionLevel,
+      positionType: matchedPerson ? (matchedPerson.personnelType || prev.positionType) : prev.positionType,
       department: deptToUse || prev.department,
       supervisorName: supervisorForDept?.name || prev.supervisorName,
       supervisorPosition: supervisorForDept?.position || prev.supervisorPosition,
@@ -1147,9 +1154,10 @@ export default function JDModal({
                   <label className="form-label">ระดับตำแหน่ง</label>
                   <select
                     className="form-input"
-                    value={formData.positionLevel}
+                    value={formData.positionLevel || ''}
                     onChange={(e) => handlePositionLevelChange(e.target.value)}
                   >
+                    <option value="">-- ไม่ระบุระดับตำแหน่ง --</option>
                     {POSITION_LEVELS.map((lvl) => (
                       <option key={lvl} value={lvl}>{lvl}</option>
                     ))}

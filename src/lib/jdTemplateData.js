@@ -431,7 +431,9 @@ export const DEFAULT_JD_TEMPLATE = {
  */
 export function createBlankJD(personnel = null, fiscalYear = null, customConfig = null) {
   const now = new Date().toISOString();
-  const positionLevel = personnel?.positionLevel || personnel?.level || 'ปฏิบัติการ';
+  const positionLevel = personnel
+    ? (personnel.positionLevel !== undefined ? personnel.positionLevel : (personnel.level || ''))
+    : '';
   const position = personnel?.position || '';
   return {
     id: `jd-${Date.now()}`,
