@@ -550,18 +550,24 @@ export function subscribeTqaReportConfig(fiscalYear = String(getCurrentThaiFisca
     fiscalYear: fy,
     reportUrl: '',
     reportTitle: `รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ประจำปีการศึกษา ${fy} (Feedback Report)`,
+    additionalLinks: [],
     updatedAt: null,
   };
 
   // 1. Instant Cache load (0ms)
   if (cachedTqaReportsMap[fy]) {
-    callback(cachedTqaReportsMap[fy]);
+    const cached = {
+      ...cachedTqaReportsMap[fy],
+      additionalLinks: Array.isArray(cachedTqaReportsMap[fy].additionalLinks) ? cachedTqaReportsMap[fy].additionalLinks : [],
+    };
+    callback(cached);
   } else {
     try {
       const raw = localStorage.getItem(localKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed) {
+          parsed.additionalLinks = Array.isArray(parsed.additionalLinks) ? parsed.additionalLinks : [];
           cachedTqaReportsMap[fy] = parsed;
           callback(parsed);
         }
@@ -581,10 +587,16 @@ export function subscribeTqaReportConfig(fiscalYear = String(getCurrentThaiFisca
         docRef,
         (docSnap) => {
           if (docSnap.exists()) {
-            const data = { id: docSnap.id, ...docSnap.data() };
+            const rawData = docSnap.data() || {};
+            const data = {
+              id: docSnap.id,
+              ...rawData,
+              additionalLinks: Array.isArray(rawData.additionalLinks) ? rawData.additionalLinks : [],
+            };
             try {
               localStorage.setItem(localKey, JSON.stringify(data));
             } catch (e) {}
+            cachedTqaReportsMap[fy] = data;
             notifyTqaReportsSubscribers(fy, data);
           } else {
             notifyTqaReportsSubscribers(fy, defaultResult);
@@ -611,20 +623,49 @@ export function subscribeTqaReportConfig(fiscalYear = String(getCurrentThaiFisca
 }
 
 /**
- * Save TQA Report URL for a Fiscal Year
+ * Save TQA Report URL and Additional Links for a Fiscal Year
  */
-export async function saveTqaReportConfig(fiscalYear, reportUrl, reportTitle = '', updatedByName = 'Admin') {
+export async function saveTqaReportConfig(
+  fiscalYear,
+  reportUrl,
+  reportTitle = '',
+  updatedByName = 'Admin',
+  additionalLinks = []
+) {
+  let url = reportUrl;
+  let title = reportTitle;
+  let user = updatedByName;
+  let links = additionalLinks;
+
+  // Support object argument format
+  if (typeof reportUrl === 'object' && reportUrl !== null) {
+    url = reportUrl.reportUrl;
+    title = reportUrl.reportTitle;
+    links = reportUrl.additionalLinks || [];
+    user = reportTitle || updatedByName || 'Admin';
+  }
+
   const fy = String(fiscalYear || getCurrentThaiFiscalYear());
   const docId = `report-${fy}`;
   const now = new Date().toISOString();
 
+  const cleanLinks = Array.isArray(links)
+    ? links
+        .filter((l) => l && (l.url || '').trim())
+        .map((l) => ({
+          title: String(l.title || '').trim() || 'เอกสารแนบ',
+          url: String(l.url || '').trim(),
+        }))
+    : [];
+
   const payload = {
     id: docId,
     fiscalYear: fy,
-    reportUrl: String(reportUrl || '').trim(),
-    reportTitle: reportTitle || `รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ประจำปีการศึกษา ${fy} (Feedback Report)`,
+    reportUrl: String(url || '').trim(),
+    reportTitle: title || `รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ประจำปีการศึกษา ${fy} (Feedback Report)`,
+    additionalLinks: cleanLinks,
     updatedAt: now,
-    updatedBy: updatedByName,
+    updatedBy: user,
   };
 
   const localKey = `${LOCAL_KEY_TQA_REPORTS}_${fy}`;
@@ -632,14 +673,17 @@ export async function saveTqaReportConfig(fiscalYear, reportUrl, reportTitle = '
     localStorage.setItem(localKey, JSON.stringify(payload));
   } catch (e) {}
 
+  cachedTqaReportsMap[fy] = payload;
+  notifyTqaReportsSubscribers(fy, payload);
+
   logActivity({
     action: 'UPDATE_TQA_REPORT_CONFIG',
     category: ACTIVITY_CATEGORIES.TQA_OFI,
     status: 'SUCCESS',
     title: `อัปเดตเอกสารรายงาน TQA: ${payload.reportTitle}`,
-    details: `${updatedByName || 'ผู้ดูแลระบบ'} บันทึกลิงก์รายงานการตรวจประเมินคุณภาพการศึกษาภายใน ปีการศึกษา ${fy}`,
-    actor: { name: updatedByName || 'Admin', role: 'ADMIN' },
-    metadata: { fiscalYear: fy, reportUrl: payload.reportUrl },
+    details: `${user || 'ผู้ดูแลระบบ'} บันทึกลิงก์รายงานและลิงก์เพิ่มเติม (${cleanLinks.length} รายการ) ประจำปีการศึกษา ${fy}`,
+    actor: { name: user || 'Admin', role: 'ADMIN' },
+    metadata: { fiscalYear: fy, reportUrl: payload.reportUrl, additionalLinksCount: cleanLinks.length },
   });
 
   if (!isFirebaseConfigured || !db) {

@@ -491,6 +491,9 @@ export default function TqaOfiTrackingPage() {
                     fontWeight: 700,
                     backdropFilter: 'blur(6px)',
                     maxWidth: '480px',
+                    padding: '0.45rem 0.95rem',
+                    borderRadius: '10px',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
                   }}
                   title={reportConfig.reportTitle || `Feedback Report (${fiscalYear})`}
                 >
@@ -508,6 +511,44 @@ export default function TqaOfiTrackingPage() {
                 </a>
               )}
 
+              {/* Additional Attached Links */}
+              {Array.isArray(reportConfig?.additionalLinks) &&
+                reportConfig.additionalLinks.map((linkItem, idx) => (
+                  <a
+                    key={idx}
+                    href={linkItem.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#FED7AA',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      gap: '6px',
+                      fontSize: '0.825rem',
+                      fontWeight: 600,
+                      backdropFilter: 'blur(6px)',
+                      maxWidth: '300px',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '10px',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title={linkItem.title || 'เอกสารแนบ'}
+                  >
+                    <FileText size={15} color="#FB923C" style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {linkItem.title || 'เอกสารแนบ'}
+                    </span>
+                    <ExternalLink size={13} style={{ flexShrink: 0 }} />
+                  </a>
+                ))}
+
               {isAdmin && (
                 <button
                   type="button"
@@ -520,10 +561,28 @@ export default function TqaOfiTrackingPage() {
                     gap: '6px',
                     fontSize: '0.85rem',
                     fontWeight: 700,
+                    padding: '0.45rem 0.95rem',
+                    borderRadius: '10px',
                   }}
+                  title="ตั้งค่าลิงก์รายงานและเอกสารแนบเพิ่มเติม"
                 >
                   <Link2 size={16} />
-                  <span>ตั้งค่าลิงก์รายงาน ({fiscalYear})</span>
+                  <span>ตั้งค่าลิงก์ ({fiscalYear})</span>
+                  {Array.isArray(reportConfig?.additionalLinks) && reportConfig.additionalLinks.length > 0 && (
+                    <span
+                      style={{
+                        background: '#EA580C',
+                        color: '#FFFFFF',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                        padding: '1px 6px',
+                        borderRadius: '999px',
+                        marginLeft: '2px',
+                      }}
+                    >
+                      +{reportConfig.additionalLinks.length}
+                    </span>
+                  )}
                 </button>
               )}
             </div>
@@ -1671,6 +1730,7 @@ export default function TqaOfiTrackingPage() {
         fiscalYear={fiscalYear}
         initialConfig={reportConfig}
         currentUser={currentUser}
+        currentPersonnel={currentPersonnel}
         onSaved={(cfg) => setReportConfig(cfg)}
       />
 
