@@ -254,7 +254,7 @@ export default function LeaveCalendar({
       });
 
       // 3. Assign slots (tracks: 0, 1, 2...) for each day of the week
-      const daySlots = Array.from({ length: 7 }, () => Array(4).fill(null));
+      const daySlots = Array.from({ length: 7 }, () => []);
 
       weekLeaves.forEach((leave) => {
         // Find column indices (0-6) in this week that this leave spans
@@ -1089,27 +1089,19 @@ export default function LeaveCalendar({
                     {week.days.map((dayObj, colIdx) => {
                       const dayLeaves = leavesByDate[dayObj.dateString] || [];
                       const hasLeaves = dayLeaves.length > 0;
-                      const maxSlots = 4; // Show up to 4 tracks per cell
                       const slots = week.daySlots[colIdx] || [];
 
-                      // Find highest occupied slot within 0..maxSlots-1
+                      // Find highest occupied slot in this day so all items are displayed
                       let lastOccupiedSlot = -1;
-                      for (let s = 0; s < maxSlots; s++) {
+                      for (let s = 0; s < slots.length; s++) {
                         if (slots[s]) lastOccupiedSlot = s;
                       }
 
-                      // Build dense visibleSlots
-                      // If there are more leaves than maxSlots, reserve all maxSlots so "+N more" sits consistently below track 4.
-                      // Otherwise, reserve up to the highest occupied slot so empty days have no spacers.
-                      const slotLimit = dayLeaves.length > maxSlots ? maxSlots : (lastOccupiedSlot + 1);
+                      // Build dense visibleSlots showing all items up to the highest occupied slot
                       const visibleSlots = [];
-                      for (let s = 0; s < slotLimit; s++) {
+                      for (let s = 0; s <= lastOccupiedSlot; s++) {
                         visibleSlots.push(slots[s] || null);
                       }
-
-                      // Count additional leaves beyond the maxSlots
-                      const renderedLeaves = visibleSlots.filter(Boolean);
-                      const extraCount = dayLeaves.length - renderedLeaves.length;
 
                       return (
                         <div
@@ -1284,23 +1276,6 @@ export default function LeaveCalendar({
                                 </div>
                               );
                             })}
-
-                            {extraCount > 0 && (
-                              <div
-                                style={{
-                                  fontSize: '0.65rem',
-                                  fontWeight: 700,
-                                  color: 'var(--primary-600)',
-                                  background: 'var(--primary-50)',
-                                  borderRadius: '3px',
-                                  padding: '1px 4px',
-                                  textAlign: 'center',
-                                  marginTop: 'auto',
-                                }}
-                              >
-                                +{extraCount} อื่นๆ
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
