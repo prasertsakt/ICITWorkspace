@@ -24,11 +24,14 @@ export default function ExecutiveModal({
 
   useEffect(() => {
     if (executiveToEdit) {
+      const linkedPerson = personnelList.find(
+        (p) => (executiveToEdit.personnelId && p.id === executiveToEdit.personnelId) || (executiveToEdit.name && p.name && p.name.trim() === executiveToEdit.name.trim())
+      );
       setFormData({
         personnelId: executiveToEdit.personnelId || '',
         name: executiveToEdit.name || '',
         position: executiveToEdit.position || '',
-        avatarUrl: executiveToEdit.avatarUrl || '',
+        avatarUrl: executiveToEdit.avatarUrl || linkedPerson?.avatarUrl || '',
       });
     } else {
       setFormData({
@@ -54,7 +57,7 @@ export default function ExecutiveModal({
         ...prev,
         personnelId: person.id,
         name: person.name,
-        avatarUrl: person.avatarUrl || '',
+        avatarUrl: person.avatarUrl || prev.avatarUrl || '',
       }));
       setErrors((prev) => ({ ...prev, personnelId: null, name: null }));
     } else {
@@ -77,12 +80,15 @@ export default function ExecutiveModal({
     e.preventDefault();
     if (!validate()) return;
 
+    const matchedPerson = personnelList.find((p) => p.id === formData.personnelId);
+    const resolvedAvatar = formData.avatarUrl || matchedPerson?.avatarUrl || '';
+
     const payload = {
       ...formData,
       id: isEditing ? executiveToEdit.id : `exec-${Date.now()}`,
       name: sanitizeText(formData.name),
       position: sanitizeText(formData.position),
-      avatarUrl: sanitizeUrl(formData.avatarUrl),
+      avatarUrl: sanitizeUrl(resolvedAvatar),
     };
 
     onSave(payload);

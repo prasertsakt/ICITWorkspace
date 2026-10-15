@@ -1013,6 +1013,28 @@ export async function savePersonnelRecord(personnel, actor = null) {
     }
   }
 
+  // 2.1 Automatically sync avatarUrl to matching executive record if this personnel is on the Executive Board
+  try {
+    const execList = JSON.parse(localStorage.getItem(LOCAL_KEY_EXECS) || '[]');
+    const matchingExec = execList.find(
+      (ex) => (ex.personnelId && ex.personnelId === personnel.id) || (ex.name && ex.name.trim() === personnel.name?.trim())
+    );
+    if (matchingExec && personnel.avatarUrl && matchingExec.avatarUrl !== personnel.avatarUrl) {
+      matchingExec.avatarUrl = personnel.avatarUrl;
+      matchingExec.personnelId = personnel.id;
+      localStorage.setItem(LOCAL_KEY_EXECS, JSON.stringify(execList));
+      notifyExecutiveSubscribers(execList);
+      if (isFirebaseConfigured && db) {
+        setDoc(doc(db, 'executives', matchingExec.id), {
+          avatarUrl: personnel.avatarUrl,
+          personnelId: personnel.id,
+        }, { merge: true }).catch(() => {});
+      }
+    }
+  } catch (syncErr) {
+    console.warn('Auto-sync executive avatar error:', syncErr);
+  }
+
   // 3. System Audit Log
   logActivity({
     action: isNew ? 'CREATE_PERSONNEL' : 'UPDATE_PERSONNEL',

@@ -412,6 +412,10 @@ export default function OrganizationPage() {
           {executiveList.map((exec, index) => {
             const isDragging = draggedExecIndex === index;
             const isDragTarget = dragOverExecIndex === index && draggedExecIndex !== index;
+            const linkedPerson = personnelList.find(
+              (p) => (exec.personnelId && p.id === exec.personnelId) || (exec.name && p.name && p.name.trim() === exec.name.trim())
+            );
+            const avatarUrl = exec.avatarUrl || linkedPerson?.avatarUrl;
 
             return (
               <div
@@ -522,9 +526,9 @@ export default function OrganizationPage() {
 
                 {/* Main Card Content */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {exec.avatarUrl ? (
+                  {avatarUrl ? (
                     <img
-                      src={exec.avatarUrl}
+                      src={avatarUrl}
                       alt={exec.name}
                       style={{
                         width: '64px',
