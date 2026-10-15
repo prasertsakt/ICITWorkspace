@@ -31,7 +31,19 @@ import {
   ArrowLeft,
   ArrowUpDown,
   GripVertical,
+  X,
+  RotateCcw,
 } from 'lucide-react';
+
+const DEPT_ICONS = {
+  'คณะผู้บริหาร': '🏛️',
+  'สำนักงานผู้อำนวยการ': '🏢',
+  'ฝ่ายวิศวกรรมระบบเครือข่าย': '🌐',
+  'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย': '🔬',
+  'ฝ่ายพัฒนาระบบสารสนเทศ': '💻',
+  'ฝ่ายเทคโนโลยีสารสนเทศ วิทยาเขตปราจีนบุรี': '🌲',
+  'ฝ่ายเทคโนโลยีสารสนเทศ วิทยาเขตระยอง': '🌊',
+};
 
 export default function OrganizationPage() {
   const { currentUser, currentPersonnel, isAdmin } = useAuth();
@@ -742,7 +754,7 @@ export default function OrganizationPage() {
           </div>
 
           {/* Search & Filter Controls */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
                 <Search
@@ -761,75 +773,251 @@ export default function OrganizationPage() {
                   placeholder="ค้นหาชื่อ, อีเมล หรือตำแหน่งงาน..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ paddingLeft: '2.4rem' }}
+                  style={{
+                    paddingLeft: '2.4rem',
+                    paddingRight: searchTerm ? '2.4rem' : '0.85rem',
+                  }}
                 />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: '#F1F5F9',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '22px',
+                      height: '22px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: '#64748B',
+                      padding: 0,
+                    }}
+                    title="ล้างข้อความค้นหา"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
 
               <select
                 className="form-select"
                 value={selectedDept}
                 onChange={(e) => setSelectedDept(e.target.value)}
-                style={{ width: 'auto', minWidth: '180px' }}
+                style={{
+                  width: 'auto',
+                  minWidth: '200px',
+                  fontWeight: 600,
+                  color: selectedDept !== 'ALL' ? '#EA580C' : 'var(--text-primary)',
+                  borderColor: selectedDept !== 'ALL' ? '#F97316' : undefined,
+                  background: selectedDept !== 'ALL' ? '#FFF7ED' : undefined,
+                }}
               >
-                <option value="ALL">🏢 ทุกฝ่ายในองค์กร</option>
-                {PREDEFINED_DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
+                <option value="ALL">🏢 ทุกฝ่ายในองค์กร ({personnelList.length})</option>
+                {PREDEFINED_DEPARTMENTS.map((dept) => {
+                  const count = personnelList.filter((p) => p.department === dept).length;
+                  return (
+                    <option key={dept} value={dept}>
+                      {DEPT_ICONS[dept] || '🏢'} {dept} ({count})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
-            {/* Quick Department Pill Filters (Horizontal scroll on mobile) */}
+            {/* Department Quick Filter Buttons Panel (Visually prominent, high contrast & accessible wrap) */}
             <div
               style={{
+                background: '#FFFFFF',
+                borderRadius: '1rem',
+                border: '1.5px solid #E2E8F0',
+                padding: '0.9rem 1.15rem',
+                boxShadow: '0 4px 12px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02)',
                 display: 'flex',
-                gap: '0.5rem',
-                overflowX: 'auto',
-                paddingBottom: '0.4rem',
+                flexDirection: 'column',
+                gap: '0.75rem',
               }}
             >
-              <button
-                onClick={() => setSelectedDept('ALL')}
-                className="btn btn-sm"
+              <div
                 style={{
-                  padding: '0.35rem 0.85rem',
-                  fontSize: '0.75rem',
-                  whiteSpace: 'nowrap',
-                  borderRadius: '20px',
-                  background: selectedDept === 'ALL' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'var(--bg-card)',
-                  color: selectedDept === 'ALL' ? '#FFFFFF' : 'var(--text-secondary)',
-                  border: selectedDept === 'ALL' ? 'none' : '1px solid var(--border-subtle)',
-                  fontWeight: selectedDept === 'ALL' ? 700 : 500,
-                  boxShadow: selectedDept === 'ALL' ? '0 2px 8px rgba(249, 115, 22, 0.25)' : undefined,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
                 }}
               >
-                ทั้งหมด ({personnelList.length})
-              </button>
-              {PREDEFINED_DEPARTMENTS.map((dept) => {
-                const count = personnelList.filter((p) => p.department === dept).length;
-                const isSelected = selectedDept === dept;
-                return (
-                  <button
-                    key={dept}
-                    onClick={() => setSelectedDept(dept)}
-                    className="btn btn-sm"
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
                     style={{
-                      padding: '0.35rem 0.85rem',
-                      fontSize: '0.75rem',
-                      whiteSpace: 'nowrap',
-                      borderRadius: '20px',
-                      background: isSelected ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'var(--bg-card)',
-                      color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
-                      border: isSelected ? 'none' : '1px solid var(--border-subtle)',
-                      fontWeight: isSelected ? 700 : 500,
-                      boxShadow: isSelected ? '0 2px 8px rgba(249, 115, 22, 0.25)' : undefined,
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '8px',
+                      background: '#FFF7ED',
+                      border: '1px solid #FFEDD5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {dept} ({count})
+                    <Filter size={14} style={{ color: '#EA580C' }} />
+                  </div>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B' }}>
+                    เลือกกรองตามฝ่ายงาน
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    (คลิกปุ่มเพื่อดูบุคลากรเฉพาะฝ่าย)
+                  </span>
+                </div>
+
+                {selectedDept !== 'ALL' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDept('ALL')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#FFF7ED',
+                      border: '1px solid #FFEDD5',
+                      color: '#EA580C',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="แสดงบุคลากรทั้งหมดทุกฝ่าย"
+                  >
+                    <RotateCcw size={12} />
+                    <span>แสดงทั้งหมด</span>
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              {/* Department Pills - Flex Wrap, No cut-offs, high-contrast borders and count badges */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  alignItems: 'center',
+                }}
+              >
+                {/* All Button */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedDept('ALL')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.8rem',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    background:
+                      selectedDept === 'ALL'
+                        ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                        : '#F8FAFC',
+                    color: selectedDept === 'ALL' ? '#FFFFFF' : '#334155',
+                    border:
+                      selectedDept === 'ALL'
+                        ? '1.5px solid #EA580C'
+                        : '1.5px solid #CBD5E1',
+                    fontWeight: selectedDept === 'ALL' ? 700 : 600,
+                    boxShadow:
+                      selectedDept === 'ALL'
+                        ? '0 4px 12px rgba(249, 115, 22, 0.3)'
+                        : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                  }}
+                >
+                  <span>👥 ทั้งหมด</span>
+                  <span
+                    style={{
+                      padding: '1px 7px',
+                      borderRadius: '999px',
+                      fontSize: '0.725rem',
+                      fontWeight: 700,
+                      background:
+                        selectedDept === 'ALL'
+                          ? 'rgba(255, 255, 255, 0.28)'
+                          : '#E2E8F0',
+                      color: selectedDept === 'ALL' ? '#FFFFFF' : '#475569',
+                      border:
+                        selectedDept === 'ALL'
+                          ? '1px solid rgba(255, 255, 255, 0.35)'
+                          : '1px solid #CBD5E1',
+                    }}
+                  >
+                    {personnelList.length}
+                  </span>
+                </button>
+
+                {/* Individual Department Buttons */}
+                {PREDEFINED_DEPARTMENTS.map((dept) => {
+                  const count = personnelList.filter((p) => p.department === dept).length;
+                  const isSelected = selectedDept === dept;
+                  const icon = DEPT_ICONS[dept] || '🏢';
+                  return (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => setSelectedDept(dept)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.8rem',
+                        borderRadius: '999px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        background: isSelected
+                          ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
+                          : '#FFFFFF',
+                        color: isSelected ? '#FFFFFF' : '#334155',
+                        border: isSelected
+                          ? '1.5px solid #EA580C'
+                          : '1.5px solid #CBD5E1',
+                        fontWeight: isSelected ? 700 : 600,
+                        boxShadow: isSelected
+                          ? '0 4px 12px rgba(249, 115, 22, 0.3)'
+                          : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                      }}
+                    >
+                      <span>
+                        {icon} {dept}
+                      </span>
+                      <span
+                        style={{
+                          padding: '1px 7px',
+                          borderRadius: '999px',
+                          fontSize: '0.725rem',
+                          fontWeight: 700,
+                          background: isSelected
+                            ? 'rgba(255, 255, 255, 0.28)'
+                            : '#F1F5F9',
+                          color: isSelected ? '#FFFFFF' : '#475569',
+                          border: isSelected
+                            ? '1px solid rgba(255, 255, 255, 0.35)'
+                            : '1px solid #E2E8F0',
+                        }}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
