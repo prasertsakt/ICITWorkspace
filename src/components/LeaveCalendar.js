@@ -254,7 +254,7 @@ export default function LeaveCalendar({
       });
 
       // 3. Assign slots (tracks: 0, 1, 2...) for each day of the week
-      const daySlots = Array.from({ length: 7 }, () => []);
+      const daySlots = Array.from({ length: 7 }, () => Array(4).fill(null));
 
       weekLeaves.forEach((leave) => {
         // Find column indices (0-6) in this week that this leave spans
@@ -279,7 +279,7 @@ export default function LeaveCalendar({
         while (true) {
           let isFree = true;
           for (let col = startCol; col <= endCol; col++) {
-            if (daySlots[col][slot]) {
+            if (daySlots[col][slot] !== null && daySlots[col][slot] !== undefined) {
               isFree = false;
               break;
             }
@@ -291,10 +291,8 @@ export default function LeaveCalendar({
         // Fill this slot across startCol..endCol
         // Ensure all slots up to `slot` are explicitly defined (not sparse array holes)
         for (let col = startCol; col <= endCol; col++) {
-          for (let s = 0; s < slot; s++) {
-            if (!daySlots[col][s]) {
-              daySlots[col][s] = null;
-            }
+          while (daySlots[col].length <= slot) {
+            daySlots[col].push(null);
           }
           daySlots[col][slot] = leave;
         }
@@ -1140,6 +1138,7 @@ export default function LeaveCalendar({
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
+                              height: '24px',
                               marginBottom: '0.25rem',
                               padding: '0 0.2rem',
                             }}
@@ -1149,8 +1148,8 @@ export default function LeaveCalendar({
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: dayObj.isToday ? '24px' : 'auto',
-                                height: dayObj.isToday ? '24px' : 'auto',
+                                width: '24px',
+                                height: '24px',
                                 borderRadius: dayObj.isToday ? '50%' : 'none',
                                 background: dayObj.isToday ? 'var(--primary-600)' : 'transparent',
                                 color: dayObj.isToday
@@ -1174,6 +1173,7 @@ export default function LeaveCalendar({
                                   background: 'var(--primary-50)',
                                   padding: '1px 5px',
                                   borderRadius: '8px',
+                                  lineHeight: '1.2',
                                 }}
                               >
                                 {dayLeaves.length}
@@ -1186,7 +1186,17 @@ export default function LeaveCalendar({
                             {visibleSlots.map((leave, slotIdx) => {
                               if (!leave) {
                                 // Spacer keeps subsequent slots horizontally aligned across all days
-                                return <div key={`spacer-${slotIdx}`} style={{ height: '21px', flexShrink: 0 }} />;
+                                return (
+                                  <div
+                                    key={`spacer-${dayObj.dateString}-${slotIdx}`}
+                                    style={{
+                                      height: '21px',
+                                      flexShrink: 0,
+                                      visibility: 'hidden',
+                                      pointerEvents: 'none',
+                                    }}
+                                  />
+                                );
                               }
 
                               const isRange = leave.startDate !== leave.endDate;
