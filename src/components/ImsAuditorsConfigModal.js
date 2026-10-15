@@ -460,6 +460,8 @@ export default function ImsAuditorsConfigModal({
               background: '#FAF5FF',
               border: '1.5px solid #DDD6FE',
               marginBottom: '1.25rem',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             <div
@@ -501,7 +503,16 @@ export default function ImsAuditorsConfigModal({
             </p>
 
             {/* MR List Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+                marginBottom: '0.75rem',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
               {mrList.length === 0 ? (
                 <div
                   style={{
@@ -531,6 +542,8 @@ export default function ImsAuditorsConfigModal({
                         borderRadius: '8px',
                         border: '1px solid #C4B5FD',
                         boxShadow: '0 1px 2px rgba(124, 58, 237, 0.05)',
+                        width: '100%',
+                        boxSizing: 'border-box',
                       }}
                     >
                       <div
@@ -556,6 +569,8 @@ export default function ImsAuditorsConfigModal({
                         onChange={(e) => handleSelectMr(idx, e.target.value)}
                         style={{
                           flex: 1,
+                          minWidth: 0,
+                          width: '100%',
                           padding: '0.55rem 0.65rem',
                           borderRadius: '6px',
                           border: '1px solid #DDD6FE',
@@ -563,6 +578,10 @@ export default function ImsAuditorsConfigModal({
                           fontWeight: 600,
                           background: '#FFFFFF',
                           color: '#5B21B6',
+                          boxSizing: 'border-box',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
                         }}
                       >
                         <option value="">-- เลือกตัวแทนฝ่ายบริหาร (MR) จากคณะผู้บริหาร --</option>
