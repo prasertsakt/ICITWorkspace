@@ -241,14 +241,16 @@ export default function LeaveCalendar({
         return l.startDate <= weekEndStr && l.endDate >= weekStartStr;
       });
 
-      // 2. Sort leaves: longer duration first (so spanning ribbons occupy top slots), then by startDate
+      // 2. Sort leaves: multi-day leaves first (so spanning ribbons occupy top slots),
+      // then by longer duration, then by startDate
       weekLeaves.sort((a, b) => {
-        const aStart = a.startDate;
-        const bStart = b.startDate;
-        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        const aRange = a.startDate !== a.endDate;
+        const bRange = b.startDate !== b.endDate;
+        if (aRange !== bRange) return bRange ? 1 : -1;
         const aDur = (parseLocalDate(a.endDate) - parseLocalDate(a.startDate)) || 0;
         const bDur = (parseLocalDate(b.endDate) - parseLocalDate(b.startDate)) || 0;
-        return bDur - aDur;
+        if (aDur !== bDur) return bDur - aDur;
+        return a.startDate.localeCompare(b.startDate);
       });
 
       // 3. Assign slots (tracks: 0, 1, 2...) for each day of the week
@@ -277,7 +279,7 @@ export default function LeaveCalendar({
         while (true) {
           let isFree = true;
           for (let col = startCol; col <= endCol; col++) {
-            if (daySlots[col][slot] !== undefined) {
+            if (daySlots[col][slot]) {
               isFree = false;
               break;
             }
@@ -287,7 +289,13 @@ export default function LeaveCalendar({
         }
 
         // Fill this slot across startCol..endCol
+        // Ensure all slots up to `slot` are explicitly defined (not sparse array holes)
         for (let col = startCol; col <= endCol; col++) {
+          for (let s = 0; s < slot; s++) {
+            if (!daySlots[col][s]) {
+              daySlots[col][s] = null;
+            }
+          }
           daySlots[col][slot] = leave;
         }
       });
@@ -1083,9 +1091,23 @@ export default function LeaveCalendar({
                     {week.days.map((dayObj, colIdx) => {
                       const dayLeaves = leavesByDate[dayObj.dateString] || [];
                       const hasLeaves = dayLeaves.length > 0;
-                      const maxSlots = 2; // Show up to 2 tracks per cell
+                      const maxSlots = 4; // Show up to 4 tracks per cell
                       const slots = week.daySlots[colIdx] || [];
-                      const visibleSlots = slots.slice(0, maxSlots);
+
+                      // Find highest occupied slot within 0..maxSlots-1
+                      let lastOccupiedSlot = -1;
+                      for (let s = 0; s < maxSlots; s++) {
+                        if (slots[s]) lastOccupiedSlot = s;
+                      }
+
+                      // Build dense visibleSlots
+                      // If there are more leaves than maxSlots, reserve all maxSlots so "+N more" sits consistently below track 4.
+                      // Otherwise, reserve up to the highest occupied slot so empty days have no spacers.
+                      const slotLimit = dayLeaves.length > maxSlots ? maxSlots : (lastOccupiedSlot + 1);
+                      const visibleSlots = [];
+                      for (let s = 0; s < slotLimit; s++) {
+                        visibleSlots.push(slots[s] || null);
+                      }
 
                       // Count additional leaves beyond the maxSlots
                       const renderedLeaves = visibleSlots.filter(Boolean);
@@ -1101,7 +1123,7 @@ export default function LeaveCalendar({
                               : dayObj.isCurrentMonth
                               ? 'var(--bg-card)'
                               : 'rgba(248, 250, 252, 0.6)',
-                            minHeight: '94px',
+                            minHeight: '136px',
                             padding: '0.35rem 0.25rem',
                             display: 'flex',
                             flexDirection: 'column',
@@ -1164,7 +1186,7 @@ export default function LeaveCalendar({
                             {visibleSlots.map((leave, slotIdx) => {
                               if (!leave) {
                                 // Spacer keeps subsequent slots horizontally aligned across all days
-                                return <div key={`spacer-${slotIdx}`} style={{ height: '21px' }} />;
+                                return <div key={`spacer-${slotIdx}`} style={{ height: '21px', flexShrink: 0 }} />;
                               }
 
                               const isRange = leave.startDate !== leave.endDate;
@@ -1185,6 +1207,7 @@ export default function LeaveCalendar({
                                   }}
                                   style={{
                                     height: '21px',
+                                    flexShrink: 0,
                                     display: 'flex',
                                     alignItems: 'center',
                                     fontSize: '0.675rem',
