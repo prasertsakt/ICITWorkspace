@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Save,
@@ -17,6 +17,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { getAvailableFiscalYears } from '@/lib/dateUtils';
+import { subscribeExecutiveList } from '@/lib/storageService';
 
 export default function ImsAuditorsConfigModal({
   isOpen,
@@ -25,11 +26,11 @@ export default function ImsAuditorsConfigModal({
   currentYear = '2569',
   yearlyConfig = null,
   personnelList = [],
+  executiveList: propExecutiveList = [],
 }) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [mrId, setMrId] = useState('');
-  const [mrName, setMrName] = useState('');
-  const [mrEmail, setMrEmail] = useState('');
+  const [internalExecutives, setInternalExecutives] = useState([]);
+  const [mrList, setMrList] = useState([]);
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [leadAuditorName, setLeadAuditorName] = useState('');
   const [leadAuditorEmail, setLeadAuditorEmail] = useState('');
@@ -42,12 +43,107 @@ export default function ImsAuditorsConfigModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Subscribe to executives list
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeExecutiveList((list) => {
+      setInternalExecutives(list || []);
+    });
+    return () => {
+      unsub();
+    };
+  }, [isOpen]);
+
+  // Compute list of executives only (from executiveList and personnel with executive position/department)
+  const executiveOnlyList = useMemo(() => {
+    const list = [];
+    const seenNames = new Set();
+    const seenIds = new Set();
+
+    const rawExecs =
+      propExecutiveList && propExecutiveList.length > 0
+        ? propExecutiveList
+        : internalExecutives;
+
+    // 1. Items from executive collection
+    (rawExecs || []).forEach((exec) => {
+      const matchedPerson = personnelList.find(
+        (p) =>
+          (exec.personnelId && p.id === exec.personnelId) ||
+          (exec.email && p.email && p.email.toLowerCase() === exec.email.toLowerCase()) ||
+          (exec.name && p.name && p.name.trim() === exec.name.trim())
+      );
+      const id = matchedPerson?.id || exec.personnelId || exec.id;
+      const name = (exec.name || matchedPerson?.name || '').trim();
+      const email = matchedPerson?.email || exec.email || '';
+      const position = exec.position || matchedPerson?.position || 'ผู้บริหาร';
+
+      if (name && !seenNames.has(name)) {
+        seenNames.add(name);
+        if (id) seenIds.add(id);
+        list.push({
+          id,
+          name,
+          email,
+          position,
+          avatarUrl: exec.avatarUrl || matchedPerson?.avatarUrl || '',
+        });
+      }
+    });
+
+    // 2. Items from personnelList where position or department is executive
+    (personnelList || []).forEach((p) => {
+      const isExec =
+        p.department === 'คณะผู้บริหาร' ||
+        p.department === 'ผู้บริหาร' ||
+        p.position === 'ผู้บริหาร' ||
+        p.isExecutive === true ||
+        p.role === 'EXECUTIVE';
+
+      const name = (p.name || '').trim();
+      if (isExec && name && !seenNames.has(name) && !seenIds.has(p.id)) {
+        seenNames.add(name);
+        seenIds.add(p.id);
+        list.push({
+          id: p.id,
+          name,
+          email: p.email || '',
+          position: p.position || 'ผู้บริหาร',
+          avatarUrl: p.avatarUrl || '',
+        });
+      }
+    });
+
+    return list;
+  }, [propExecutiveList, internalExecutives, personnelList]);
+
   useEffect(() => {
     if (yearlyConfig) {
       setSelectedYear(yearlyConfig.year || currentYear);
-      setMrId(yearlyConfig.mrId || '');
-      setMrName(yearlyConfig.mrName || '');
-      setMrEmail(yearlyConfig.mrEmail || '');
+
+      // Support array of MRs or legacy single MR
+      if (Array.isArray(yearlyConfig.mrList) && yearlyConfig.mrList.length > 0) {
+        setMrList(
+          yearlyConfig.mrList.map((m) => ({
+            id: m.id || '',
+            name: m.name || '',
+            email: m.email || '',
+            position: m.position || '',
+          }))
+        );
+      } else if (yearlyConfig.mrId || yearlyConfig.mrName) {
+        setMrList([
+          {
+            id: yearlyConfig.mrId || '',
+            name: yearlyConfig.mrName || '',
+            email: yearlyConfig.mrEmail || '',
+            position: '',
+          },
+        ]);
+      } else {
+        setMrList([]);
+      }
+
       setLeadAuditorId(yearlyConfig.leadAuditorId || '');
       setLeadAuditorName(yearlyConfig.leadAuditorName || '');
       setLeadAuditorEmail(yearlyConfig.leadAuditorEmail || '');
@@ -62,9 +158,7 @@ export default function ImsAuditorsConfigModal({
       setSelectedAuditorIds(ids);
     } else {
       setSelectedYear(currentYear);
-      setMrId('');
-      setMrName('');
-      setMrEmail('');
+      setMrList([]);
       setLeadAuditorId('');
       setLeadAuditorName('');
       setLeadAuditorEmail('');
@@ -79,12 +173,45 @@ export default function ImsAuditorsConfigModal({
 
   if (!isOpen) return null;
 
-  const handleMrChange = (e) => {
-    const personId = e.target.value;
-    const person = personnelList.find((p) => p.id === personId);
-    setMrId(personId);
-    setMrName(person ? person.name : '');
-    setMrEmail(person ? person.email : '');
+  const handleAddMr = () => {
+    setMrList((prev) => [...prev, { id: '', name: '', email: '', position: '' }]);
+  };
+
+  const handleRemoveMr = (index) => {
+    setMrList((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSelectMr = (index, selectedValue) => {
+    const exec = executiveOnlyList.find(
+      (e) => (e.id && e.id === selectedValue) || e.name === selectedValue
+    );
+
+    setMrList((prev) => {
+      const next = [...prev];
+      if (exec) {
+        next[index] = {
+          id: exec.id || '',
+          name: exec.name || '',
+          email: exec.email || '',
+          position: exec.position || '',
+        };
+      } else {
+        const fallbackPerson = personnelList.find(
+          (p) => p.id === selectedValue || p.name === selectedValue
+        );
+        if (fallbackPerson) {
+          next[index] = {
+            id: fallbackPerson.id,
+            name: fallbackPerson.name,
+            email: fallbackPerson.email || '',
+            position: fallbackPerson.position || '',
+          };
+        } else {
+          next[index] = { id: '', name: '', email: '', position: '' };
+        }
+      }
+      return next;
+    });
   };
 
   const handleLeadChange = (e) => {
@@ -131,11 +258,33 @@ export default function ImsAuditorsConfigModal({
           position: p.position || '',
         }));
 
+      // Filter and clean MR list
+      const cleanedMrList = mrList
+        .filter((m) => m && (m.id || m.name))
+        .map((m) => {
+          const matched =
+            executiveOnlyList.find((e) => (e.id && e.id === m.id) || e.name === m.name) ||
+            personnelList.find((p) => p.id === m.id || p.name === m.name);
+          return {
+            id: m.id || matched?.id || '',
+            name: m.name || matched?.name || '',
+            email: m.email || matched?.email || '',
+            position: m.position || matched?.position || '',
+          };
+        });
+
+      const mrIds = cleanedMrList.map((m) => m.id).filter(Boolean);
+      const mrNames = cleanedMrList.map((m) => m.name).filter(Boolean);
+      const mrEmails = cleanedMrList.map((m) => m.email).filter(Boolean);
+
       await onSave(selectedYear, {
         year: selectedYear,
-        mrId,
-        mrName,
-        mrEmail,
+        mrList: cleanedMrList,
+        mrIds,
+        // Backward compatibility
+        mrId: cleanedMrList[0]?.id || '',
+        mrName: mrNames.join(', '),
+        mrEmail: cleanedMrList[0]?.email || '',
         leadAuditorId,
         leadAuditorName,
         leadAuditorEmail,
@@ -303,59 +452,202 @@ export default function ImsAuditorsConfigModal({
             </select>
           </div>
 
-          {/* Row: MR (Management Representative) */}
+          {/* Row: MR (Management Representative) - Multiple allowed, list only executives */}
           <div
             style={{
-              padding: '1rem',
-              borderRadius: '10px',
-              background: '#F5F3FF',
+              padding: '1.15rem',
+              borderRadius: '12px',
+              background: '#FAF5FF',
               border: '1.5px solid #DDD6FE',
               marginBottom: '1.25rem',
             }}
           >
-            <label
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: '#5B21B6',
+                justifyContent: 'space-between',
                 marginBottom: '0.4rem',
               }}
             >
-              <ShieldCheck size={18} color="#7C3AED" />
-              <span>ตัวแทนฝ่ายบริหาร (MR - Management Representative)</span>
-            </label>
-            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#5B21B6' }}>
-              ผู้มีอำนาจกำกับดูแลระบบบริหารงานคุณภาพ (IMS) สามารถ Sync ข้อมูล OFI และดูแลการดำเนินงาน
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.925rem',
+                  fontWeight: 700,
+                  color: '#5B21B6',
+                }}
+              >
+                <ShieldCheck size={18} color="#7C3AED" />
+                <span>ตัวแทนฝ่ายบริหาร (MR - Management Representative)</span>
+              </label>
+              <span
+                style={{
+                  padding: '2px 10px',
+                  borderRadius: '999px',
+                  background: '#EDE9FE',
+                  color: '#6D28D9',
+                  fontSize: '0.775rem',
+                  fontWeight: 700,
+                }}
+              >
+                {mrList.filter((m) => m.id || m.name).length} ท่าน
+              </span>
+            </div>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.8rem', color: '#6B21A8', lineHeight: 1.5 }}>
+              ผู้มีอำนาจกำกับดูแลระบบบริหารงานคุณภาพ (IMS) สามารถเพิ่มได้มากกว่า 1 ท่าน (คัดกรองเฉพาะรายชื่อคณะผู้บริหาร)
             </p>
-            <select
-              value={mrId}
-              onChange={handleMrChange}
-              style={{
-                width: '100%',
-                padding: '0.65rem 0.75rem',
-                borderRadius: '8px',
-                border: '1px solid #7C3AED',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                background: '#FFFFFF',
-                color: '#5B21B6',
-              }}
-            >
-              <option value="">-- เลือกตัวแทนฝ่ายบริหาร (MR) --</option>
-              {personnelList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.department ? `(${p.department})` : ''}
-                </option>
-              ))}
-            </select>
-            {!mrId && mrName && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                กำหนดไว้ปัจจุบัน: {mrName}
-              </p>
-            )}
+
+            {/* MR List Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+              {mrList.length === 0 ? (
+                <div
+                  style={{
+                    padding: '1rem',
+                    textAlign: 'center',
+                    borderRadius: '8px',
+                    background: '#FFFFFF',
+                    border: '1px dashed #DDD6FE',
+                    color: '#7C3AED',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  ยังไม่ได้กำหนดตัวแทนฝ่ายบริหาร (MR) — กดปุ่ม <strong>"+ เพิ่มตัวแทนฝ่ายบริหาร"</strong> ด้านล่างเพื่อเลือก
+                </div>
+              ) : (
+                mrList.map((mrItem, idx) => {
+                  const currentValue = mrItem.id || mrItem.name || '';
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        background: '#FFFFFF',
+                        padding: '0.5rem 0.65rem',
+                        borderRadius: '8px',
+                        border: '1px solid #C4B5FD',
+                        boxShadow: '0 1px 2px rgba(124, 58, 237, 0.05)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '6px',
+                          background: '#EDE9FE',
+                          color: '#6D28D9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {idx + 1}
+                      </div>
+
+                      <select
+                        value={currentValue}
+                        onChange={(e) => handleSelectMr(idx, e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '0.55rem 0.65rem',
+                          borderRadius: '6px',
+                          border: '1px solid #DDD6FE',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          background: '#FFFFFF',
+                          color: '#5B21B6',
+                        }}
+                      >
+                        <option value="">-- เลือกตัวแทนฝ่ายบริหาร (MR) จากคณะผู้บริหาร --</option>
+                        {/* Fallback option if current assigned value is not in executiveOnlyList */}
+                        {mrItem.name &&
+                          !executiveOnlyList.some(
+                            (e) => (e.id && e.id === mrItem.id) || e.name === mrItem.name
+                          ) && (
+                            <option value={currentValue}>
+                              {mrItem.name} {mrItem.position ? `(${mrItem.position})` : ''} (กำหนดไว้ปัจจุบัน)
+                            </option>
+                          )}
+                        {executiveOnlyList.map((exec) => {
+                          const val = exec.id || exec.name;
+                          // Disable if already chosen in another row
+                          const isChosenElsewhere = mrList.some(
+                            (m, otherIdx) =>
+                              otherIdx !== idx &&
+                              ((m.id && m.id === exec.id) || (m.name && m.name === exec.name))
+                          );
+                          return (
+                            <option key={val} value={val} disabled={isChosenElsewhere}>
+                              {exec.name} {exec.position ? `(${exec.position})` : ''}{' '}
+                              {isChosenElsewhere ? '— [เลือกแล้ว]' : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMr(idx)}
+                        style={{
+                          background: '#FEE2E2',
+                          border: '1px solid #FECACA',
+                          color: '#DC2626',
+                          borderRadius: '6px',
+                          padding: '6px 8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          transition: 'background 0.15s ease',
+                        }}
+                        title="ลบผู้บริหารท่านนี้ออกจาก MR"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Button: + เพิ่มตัวแทนฝ่ายบริหาร */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button
+                type="button"
+                onClick={handleAddMr}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0.5rem 0.9rem',
+                  borderRadius: '8px',
+                  border: '1px dashed #7C3AED',
+                  background: '#EDE9FE',
+                  color: '#6D28D9',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Plus size={16} />
+                <span>+ เพิ่มตัวแทนฝ่ายบริหาร</span>
+              </button>
+
+              {executiveOnlyList.length === 0 && (
+                <span style={{ fontSize: '0.75rem', color: '#9333EA', fontStyle: 'italic' }}>
+                  * ยังไม่พบคณะผู้บริหารในระบบ กรุณาเพิ่มข้อมูลผู้บริหารในหน้าองค์กร/Admin
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Row: Lead Internal Auditor */}

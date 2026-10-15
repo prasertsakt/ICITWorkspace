@@ -105,7 +105,7 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // 12. Rules for 'ims_config' collection (Yearly Lead & Internal Auditor Assignments)
+    // 12. Rules for 'ims_config' collection (Yearly Management Representatives [MRs], Lead Auditor, DCC & Internal Auditor Assignments)
     match /ims_config/{configId} {
       allow read: if true;
       allow write: if isAuthenticated();

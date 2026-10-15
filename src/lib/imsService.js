@@ -1387,6 +1387,11 @@ export async function completeAuditEvaluation(auditId, evaluationData, auditorAc
 export const DEFAULT_YEARLY_CONFIG = {
   year: '2569',
   _isConfigured: false, // false = default placeholder, true = explicitly saved by admin
+  mrId: '',
+  mrName: '',
+  mrEmail: '',
+  mrList: [],
+  mrIds: [],
   leadAuditorId: '',
   leadAuditorName: '',
   leadAuditorEmail: '',
@@ -1463,7 +1468,10 @@ export function subscribeYearlyAuditors(year, callback) {
                 data.leadAuditorName ||
                 (data.auditors && data.auditors.length > 0) ||
                 data.dccId ||
-                data.dccName
+                data.dccName ||
+                (data.mrList && data.mrList.length > 0) ||
+                data.mrId ||
+                data.mrName
               );
             const fullData = { ...data, _isConfigured: isConfigured };
             cachedConfigMap[currentYear] = fullData;
@@ -1622,17 +1630,37 @@ export function isDccUser(user, personnel, yearConfig, checkOtherYearsIfUnset = 
 
 /**
  * Check if the user is assigned as MR (Management Representative) for the given year
+ * Supports multiple MRs in mrList / mrIds and legacy single mrEmail / mrId
  */
 export function isMrUser(user, personnel, yearConfig) {
   if (!user && !personnel) return false;
   const userEmail = (user?.email || personnel?.email || '').toLowerCase().trim();
   const personId = personnel?.id;
+
+  // 1. Check legacy single MR fields
   if (yearConfig?.mrEmail && yearConfig.mrEmail.toLowerCase().trim() === userEmail) {
     return true;
   }
   if (yearConfig?.mrId && personId && yearConfig.mrId === personId) {
     return true;
   }
+
+  // 2. Check mrList (array of MR objects: [{ id, name, email, position }])
+  if (Array.isArray(yearConfig?.mrList)) {
+    const isMatched = yearConfig.mrList.some(
+      (m) =>
+        (m.email && m.email.toLowerCase().trim() === userEmail) ||
+        (m.id && personId && m.id === personId) ||
+        (m.name && personnel?.name && m.name.trim() === personnel.name.trim())
+    );
+    if (isMatched) return true;
+  }
+
+  // 3. Check mrIds array
+  if (Array.isArray(yearConfig?.mrIds) && personId) {
+    if (yearConfig.mrIds.includes(personId)) return true;
+  }
+
   return false;
 }
 
@@ -1641,6 +1669,7 @@ export function isMrUser(user, personnel, yearConfig) {
  * - The yearly config must be explicitly configured by admin (_isConfigured === true)
  * - Must be assigned as Lead Auditor, OR
  * - Assigned as DCC (ผู้ควบคุมเอกสาร), OR
+ * - Assigned as MR (ตัวแทนฝ่ายบริหาร), OR
  * - Assigned as Internal Auditor for that year
  */
 export function isUserAuthorizedAuditor(user, personnel, yearConfig) {
@@ -1670,11 +1699,8 @@ export function isUserAuthorizedAuditor(user, personnel, yearConfig) {
     return true;
   }
 
-  // Check if MR (Management Representative)
-  if (yearConfig?.mrEmail && yearConfig.mrEmail.toLowerCase().trim() === userEmail) {
-    return true;
-  }
-  if (yearConfig?.mrId && personId && yearConfig.mrId === personId) {
+  // Check if MR (Management Representative - single or multiple)
+  if (isMrUser(user, personnel, yearConfig)) {
     return true;
   }
 

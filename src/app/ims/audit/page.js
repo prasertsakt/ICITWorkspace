@@ -20,7 +20,7 @@ import {
   canUserDeleteAudit,
   subscribeImsAuditTopics,
 } from '@/lib/imsService';
-import { subscribePersonnelList } from '@/lib/storageService';
+import { subscribePersonnelList, subscribeExecutiveList } from '@/lib/storageService';
 import {
   IMS_AUDIT_TOPICS,
   IMS_RESULT_TYPES,
@@ -67,6 +67,7 @@ export default function ImsAuditPage() {
   // Data states
   const [audits, setAudits] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
+  const [executiveList, setExecutiveList] = useState([]);
   const [topicsList, setTopicsList] = useState(IMS_AUDIT_TOPICS || []);
   const [selectedYear, setSelectedYear] = useState(() => String(getCurrentThaiFiscalYear()));
   const [yearlyConfig, setYearlyConfig] = useState(null);
@@ -109,6 +110,14 @@ export default function ImsAuditPage() {
   useEffect(() => {
     const unsub = subscribePersonnelList((list) => {
       setPersonnelList(list || []);
+    });
+    return () => unsub();
+  }, []);
+
+  // 1.2 Subscribe to Executives List
+  useEffect(() => {
+    const unsub = subscribeExecutiveList((list) => {
+      setExecutiveList(list || []);
     });
     return () => unsub();
   }, []);
@@ -767,9 +776,15 @@ export default function ImsAuditPage() {
             {isYearConfigured ? (
               <span>
                 <strong>คณะผู้ตรวจติดตามประจำปีงบประมาณ {selectedYear}:</strong>{' '}
-                {yearlyConfig?.mrName && (
+                {(yearlyConfig?.mrList?.length > 0 || yearlyConfig?.mrName) && (
                   <>
-                    MR (ตัวแทนฝ่ายบริหาร): <strong>{yearlyConfig.mrName}</strong> &bull;{' '}
+                    MR (ตัวแทนฝ่ายบริหาร):{' '}
+                    <strong>
+                      {yearlyConfig?.mrList?.length > 0
+                        ? yearlyConfig.mrList.map((m) => m.name).join(', ')
+                        : yearlyConfig.mrName}
+                    </strong>{' '}
+                    &bull;{' '}
                   </>
                 )}
                 Lead IA คือ{' '}
@@ -1615,6 +1630,7 @@ export default function ImsAuditPage() {
         currentYear={selectedYear === 'ALL' ? '2569' : selectedYear}
         yearlyConfig={yearlyConfig}
         personnelList={personnelList}
+        executiveList={executiveList}
       />
 
       {/* IMS Activity Log Modal */}
