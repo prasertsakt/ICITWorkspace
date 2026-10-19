@@ -11,14 +11,7 @@ import {
   Edit2,
   CheckCircle2,
   Clock,
-  Shield,
-  Building2,
   FileText,
-  User,
-  ExternalLink,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
 } from 'lucide-react';
 
 export default function JDPreviewModal({
@@ -64,6 +57,9 @@ export default function JDPreviewModal({
   const handlePrint = () => {
     window.print();
   };
+
+  // Dynamic font size calculator: scales ONLY text while preserving exact paper width and formatting
+  const fs = (baseRem) => `${(baseRem * fontSizeScale).toFixed(3)}rem`;
 
   const orgChartDisplayUrl = jd.orgChartUrl ? formatImageDisplayUrl(jd.orgChartUrl) : null;
 
@@ -299,7 +295,7 @@ export default function JDPreviewModal({
             fontFamily: "'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             lineHeight: 1.6,
             color: '#111827',
-            zoom: fontSizeScale,
+            fontSize: fs(0.9),
           }}
         >
           {/* Official Document Header */}
@@ -307,7 +303,7 @@ export default function JDPreviewModal({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '0.5rem' }}>
               <span
                 style={{
-                  fontSize: '1.4rem',
+                  fontSize: fs(1.4),
                   fontWeight: 900,
                   color: '#E05A1B',
                   letterSpacing: '0.05em',
@@ -316,18 +312,18 @@ export default function JDPreviewModal({
               >
                 KMUTNB
               </span>
-              <span style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+              <span style={{ fontSize: fs(0.75), color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
                 INVENTION TO INNOVATION
               </span>
             </div>
 
-            <h1 style={{ fontSize: '1.35rem', fontWeight: 800, margin: '0 0 4px 0', color: '#0F172A' }}>
+            <h1 style={{ fontSize: fs(1.35), fontWeight: 800, margin: '0 0 4px 0', color: '#0F172A' }}>
               แบบบรรยายลักษณะงาน (Job Description)
             </h1>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#334155' }}>
+            <div style={{ fontSize: fs(1.05), fontWeight: 700, color: '#334155' }}>
               สังกัด สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#334155' }}>
+            <div style={{ fontSize: fs(1.05), fontWeight: 700, color: '#334155' }}>
               มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
             </div>
           </div>
@@ -336,15 +332,15 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 1 ข้อมูลเกี่ยวกับตำแหน่งงาน (Job Information) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 1 ข้อมูลเกี่ยวกับตำแหน่งงาน (Job Information)
             </h2>
 
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>
+            <div style={{ fontWeight: 700, fontSize: fs(0.95), marginBottom: '0.5rem' }}>
               1) รายละเอียดเกี่ยวกับตำแหน่งงาน
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '6px', fontSize: '0.925rem', paddingLeft: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '6px', fontSize: fs(0.925), paddingLeft: '1rem', marginBottom: '1rem' }}>
               <div style={{ fontWeight: 600, color: '#475569' }}>ชื่อตำแหน่งในการบริหารงาน</div>
               <div>{jd.adminPosition || '-'}</div>
 
@@ -370,11 +366,11 @@ export default function JDPreviewModal({
               <div>{jd.department || '-'}</div>
             </div>
 
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>
+            <div style={{ fontWeight: 700, fontSize: fs(0.95), marginBottom: '0.5rem' }}>
               2) สายการบังคับบัญชา
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '6px', fontSize: '0.925rem', paddingLeft: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', rowGap: '6px', fontSize: fs(0.925), paddingLeft: '1rem', marginBottom: '1rem' }}>
               <div style={{ fontWeight: 600, color: '#475569' }}>ชื่อผู้บังคับบัญชา</div>
               <div>{jd.supervisorName || '-'}</div>
 
@@ -385,7 +381,7 @@ export default function JDPreviewModal({
               <div>จำนวน {jd.subordinatesCount || '-'} คน</div>
             </div>
 
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>
+            <div style={{ fontWeight: 700, fontSize: fs(0.95), marginBottom: '0.5rem' }}>
               3) ผังโครงสร้างสายการบังคับบัญชา (Organization Chart)
             </div>
 
@@ -399,7 +395,7 @@ export default function JDPreviewModal({
                   />
                 </div>
               ) : (
-                <div style={{ padding: '2rem', border: '1.5px dashed #CBD5E1', borderRadius: '8px', color: '#94A3B8', fontSize: '0.875rem' }}>
+                <div style={{ padding: '2rem', border: '1.5px dashed #CBD5E1', borderRadius: '8px', color: '#94A3B8', fontSize: fs(0.875) }}>
                   ไม่ได้ระบุลิงก์รูปภาพผังโครงสร้างสายการบังคับบัญชา (Organization Chart)
                 </div>
               )}
@@ -410,11 +406,11 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 2 หน้าที่และความรับผิดชอบ (Job Summary) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 2 หน้าที่และความรับผิดชอบ (Job Summary)
             </h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.9), marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '8px 12px', width: '50%', textAlign: 'center', fontWeight: 700 }}>
@@ -442,14 +438,14 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 3 หน้าที่ความรับผิดชอบหลัก (Main Job Responsibilities) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 3 หน้าที่ความรับผิดชอบหลัก (Main Job Responsibilities)
             </h2>
-            <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: fs(0.85), color: '#64748B', fontStyle: 'italic', marginBottom: '0.5rem' }}>
               (คำชี้แจง บางตำแหน่งซึ่งเป็นระดับปฏิบัติการถ้าไม่ได้ดำเนินการในด้านใดด้านหนึ่งก็สามารถเว้นได้ เช่น ด้านการวางแผน)
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.875), marginBottom: '0.5rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '8px', width: '18%', textAlign: 'center', fontWeight: 700 }}>
@@ -501,14 +497,14 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 4 การทำงานร่วมกับหน่วยงานอื่น (Working Relationship) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 4 การทำงานร่วมกับหน่วยงานอื่น (Working Relationship)
             </h2>
 
-            <div style={{ fontWeight: 700, fontSize: '0.925rem', marginBottom: '0.4rem' }}>
+            <div style={{ fontWeight: 700, fontSize: fs(0.925), marginBottom: '0.4rem' }}>
               หน่วยงานภายใน
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.85), marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '6px 8px', width: '25%', textAlign: 'center', fontWeight: 700 }}>ชื่อของหน่วยงาน</th>
@@ -537,10 +533,10 @@ export default function JDPreviewModal({
               </tbody>
             </table>
 
-            <div style={{ fontWeight: 700, fontSize: '0.925rem', marginBottom: '0.4rem' }}>
+            <div style={{ fontWeight: 700, fontSize: fs(0.925), marginBottom: '0.4rem' }}>
               หน่วยงานภายนอก
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.85), marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '6px 8px', width: '25%', textAlign: 'center', fontWeight: 700 }}>ชื่อของหน่วยงาน</th>
@@ -574,34 +570,34 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 5 คุณสมบัติมาตรฐานของตำแหน่ง (Job Specification) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 5 คุณสมบัติมาตรฐานของตำแหน่ง (Job Specification)
             </h2>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <strong style={{ fontSize: '0.925rem' }}>5.1 การศึกษา (ระดับการศึกษา และสาขาวิชา) (Education and Major)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
+              <strong style={{ fontSize: fs(0.925) }}>5.1 การศึกษา (ระดับการศึกษา และสาขาวิชา) (Education and Major)</strong>
+              <div style={{ paddingLeft: '1rem', fontSize: fs(0.9), color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.educationAndMajor || '-'}
               </div>
             </div>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <strong style={{ fontSize: '0.925rem' }}>5.2 ประสบการณ์ที่จำเป็นในการทำงาน (Experience)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
+              <strong style={{ fontSize: fs(0.925) }}>5.2 ประสบการณ์ที่จำเป็นในการทำงาน (Experience)</strong>
+              <div style={{ paddingLeft: '1rem', fontSize: fs(0.9), color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.experience || '-'}
               </div>
             </div>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <strong style={{ fontSize: '0.925rem' }}>5.3 คุณสมบัติพิเศษที่เกี่ยวกับงาน (Special Qualifications)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
+              <strong style={{ fontSize: fs(0.925) }}>5.3 คุณสมบัติพิเศษที่เกี่ยวกับงาน (Special Qualifications)</strong>
+              <div style={{ paddingLeft: '1rem', fontSize: fs(0.9), color: '#1E293B', marginTop: '2px', whiteSpace: 'pre-line', wordBreak: 'break-word', lineHeight: 1.6 }}>
                 {jd.specialQualifications || '-'}
               </div>
             </div>
 
             <div style={{ marginBottom: '0.75rem' }}>
-              <strong style={{ fontSize: '0.925rem' }}>5.4 ทักษะที่จำเป็นสำหรับงาน (Skills)</strong>
-              <div style={{ paddingLeft: '1rem', fontSize: '0.875rem', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <strong style={{ fontSize: fs(0.925) }}>5.4 ทักษะที่จำเป็นสำหรับงาน (Skills)</strong>
+              <div style={{ paddingLeft: '1rem', fontSize: fs(0.875), marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ lineHeight: 1.5, wordBreak: 'break-word' }}>
                   <strong>• ภาษาอังกฤษ (English):</strong>{' '}
                   <span style={{ whiteSpace: 'pre-line' }}>{jd.skills?.english || '-'}</span>
@@ -626,14 +622,14 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 6 ความสามารถหรือสมรรถนะในงาน (Core Competencies)
             </h2>
-            <div style={{ fontSize: '0.825rem', color: '#64748B', marginBottom: '0.4rem' }}>
+            <div style={{ fontSize: fs(0.825), color: '#64748B', marginBottom: '0.4rem' }}>
               (ตามประกาศสมรรถนะหลัก KMUTNB ของ มจพ. ประกาศมหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ - เรื่องการกำหนดสมรรถนะหลัก)
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.875), marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '8px 12px', width: '75%', textAlign: 'left', fontWeight: 700 }}>
@@ -661,11 +657,11 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 7 คุณสมบัติประจำตำแหน่ง (Functional Competencies) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 7 คุณสมบัติประจำตำแหน่ง (Functional Competencies)
             </h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs(0.875), marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9' }}>
                   <th style={{ border: '1px solid #94A3B8', padding: '8px 12px', width: '75%', textAlign: 'left', fontWeight: 700 }}>
@@ -693,11 +689,11 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ (Training) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ให้มีประสิทธิภาพ (Training)
             </h2>
 
-            <div style={{ paddingLeft: '1rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div style={{ paddingLeft: '1rem', fontSize: fs(0.9), display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {(jd.trainings || []).map((tr, idx) => (
                 <div key={idx}>
                   {idx + 1}. {tr}
@@ -713,12 +709,12 @@ export default function JDPreviewModal({
           {/* ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment) */}
           {/* ============================================================ */}
           <div style={{ marginBottom: '2.5rem', pageBreakInside: 'avoid' }}>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+            <h2 style={{ fontSize: fs(1.05), fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
             </h2>
 
             {/* 1. สิทธิการเข้าถึงระบบที่สำคัญ */}
-            <div style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+            <div style={{ marginBottom: '1rem', fontSize: fs(0.875) }}>
               <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#0F172A' }}>
                 • สิทธิการเข้าถึงระบบที่สำคัญ:
               </div>
@@ -738,7 +734,7 @@ export default function JDPreviewModal({
             </div>
 
             {/* 2. ระดับความเสี่ยงของตำแหน่งงาน */}
-            <div style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+            <div style={{ marginBottom: '0.75rem', fontSize: fs(0.875) }}>
               <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0F172A' }}>
                 • ระดับความเสี่ยงของตำแหน่งงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
               </div>
@@ -766,7 +762,7 @@ export default function JDPreviewModal({
                           border: '1.5px solid #0F172A',
                           borderRadius: '3px',
                           fontWeight: 800,
-                          fontSize: '0.85rem',
+                          fontSize: fs(0.85),
                           background: isChecked ? '#F1F5F9' : '#FFFFFF',
                           color: '#0F172A',
                           flexShrink: 0,
@@ -795,7 +791,7 @@ export default function JDPreviewModal({
               gridTemplateColumns: 'repeat(3, 1fr)',
               border: '1px solid #94A3B8',
               textAlign: 'center',
-              fontSize: '0.85rem',
+              fontSize: fs(0.85),
               marginBottom: '2rem',
               pageBreakInside: 'avoid',
             }}
@@ -803,11 +799,11 @@ export default function JDPreviewModal({
             <div style={{ borderRight: '1px solid #94A3B8', padding: '12px' }}>
               <div style={{ fontWeight: 700, marginBottom: '2.5rem' }}>
                 ผู้จัดทำ<br />
-                <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>(Position By)</span>
+                <span style={{ fontSize: fs(0.75), fontWeight: 500 }}>(Position By)</span>
               </div>
               <div style={{ borderBottom: '1px dotted #64748B', margin: '0 1rem 8px' }}></div>
               <div style={{ fontWeight: 600 }}>({jd.signatures?.preparedBy?.name || jd.personnelName || '...........................................'})</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: fs(0.75), color: '#64748B', marginTop: '4px' }}>
                 {jd.confirmedAt ? `ยืนยันเมื่อ ${new Date(jd.confirmedAt).toLocaleDateString('th-TH')}` : '......../......../........'}
               </div>
             </div>
@@ -815,21 +811,21 @@ export default function JDPreviewModal({
             <div style={{ borderRight: '1px solid #94A3B8', padding: '12px' }}>
               <div style={{ fontWeight: 700, marginBottom: '2.5rem' }}>
                 ผู้บังคับบัญชา<br />
-                <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>(Reviewed By)</span>
+                <span style={{ fontSize: fs(0.75), fontWeight: 500 }}>(Reviewed By)</span>
               </div>
               <div style={{ borderBottom: '1px dotted #64748B', margin: '0 1rem 8px' }}></div>
               <div style={{ fontWeight: 600 }}>({jd.signatures?.reviewedBy?.name || jd.supervisorName || '...........................................'})</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>......../......../........</div>
+              <div style={{ fontSize: fs(0.75), color: '#64748B', marginTop: '4px' }}>......../......../........</div>
             </div>
 
             <div style={{ padding: '12px' }}>
               <div style={{ fontWeight: 700, marginBottom: '2.5rem' }}>
                 ผู้อนุมัติ<br />
-                <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>(Approved By)</span>
+                <span style={{ fontSize: fs(0.75), fontWeight: 500 }}>(Approved By)</span>
               </div>
               <div style={{ borderBottom: '1px dotted #64748B', margin: '0 1rem 8px' }}></div>
               <div style={{ fontWeight: 600 }}>({jd.signatures?.approvedBy?.name || 'อาจารย์ณัฐวุฒิ สร้อยดอกสน'})</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>......../......../........</div>
+              <div style={{ fontSize: fs(0.75), color: '#64748B', marginTop: '4px' }}>......../......../........</div>
             </div>
           </div>
 
@@ -839,7 +835,7 @@ export default function JDPreviewModal({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '0.75rem',
+              fontSize: fs(0.75),
               color: '#64748B',
               borderTop: '1px solid #E2E8F0',
               paddingTop: '8px',
@@ -896,7 +892,6 @@ export default function JDPreviewModal({
             box-shadow: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            zoom: ${fontSizeScale} !important;
           }
           @page {
             size: A4 portrait;
