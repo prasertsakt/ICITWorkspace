@@ -7,7 +7,6 @@ import {
   getCoreCompetenciesForLevel,
   getFunctionalCompetenciesForPosition,
   JD_SECURITY_RISK_LEVELS,
-  JD_SECURITY_CONDITION_NOTE,
   JD_ACCESS_RIGHTS_PLACEHOLDER,
 } from '@/lib/jdTemplateData';
 import { MAIN_6_DEPTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
@@ -436,13 +435,11 @@ export default function JDModal({
           initialData.securityRiskAssessment = {
             accessRights: '',
             riskLevel: 'LOW',
-            conditionNotes: JD_SECURITY_CONDITION_NOTE,
           };
         } else {
           initialData.securityRiskAssessment = {
             accessRights: initialData.securityRiskAssessment.accessRights || '',
             riskLevel: initialData.securityRiskAssessment.riskLevel || 'LOW',
-            conditionNotes: initialData.securityRiskAssessment.conditionNotes || JD_SECURITY_CONDITION_NOTE,
           };
         }
       } else {
@@ -2070,28 +2067,12 @@ export default function JDModal({
                 {/* Section 9 Header */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '6px',
-                          background: '#EFF6FF',
-                          color: '#2563EB',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '0.85rem',
-                        }}
-                      >
-                        9
-                      </span>
+                    <div style={{ marginBottom: '0.25rem' }}>
                       <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary, #0F172A)' }}>
                         ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
                       </h4>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary, #64748B)', paddingLeft: '2.25rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary, #64748B)' }}>
                       ประเมินสิทธิการเข้าถึงระบบที่สำคัญ และระดับความเสี่ยงของตำแหน่งงานตามเกณฑ์มาตรฐานความมั่นคงปลอดภัยสารสนเทศ
                     </p>
                   </div>
@@ -2163,16 +2144,13 @@ export default function JDModal({
                       }));
                     }}
                   />
-                  <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px' }}>
-                    💡 ตัวอย่าง placeholder: {JD_ACCESS_RIGHTS_PLACEHOLDER}
-                  </div>
                 </div>
 
-                {/* 2. ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน */}
+                {/* 2. ระดับความเสี่ยงของตำแหน่งงาน */}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <label className="form-label" style={{ fontWeight: 700, fontSize: '0.875rem', margin: 0, color: '#1E293B' }}>
-                      • ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
+                      • ระดับความเสี่ยงของตำแหน่งงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
                     </label>
                     <button
                       type="button"
@@ -2198,7 +2176,7 @@ export default function JDModal({
                   </div>
 
                   {/* 3 Selectable Radio Option Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
                     {JD_SECURITY_RISK_LEVELS.map((level) => {
                       const isSelected = (formData.securityRiskAssessment?.riskLevel || 'LOW') === level.key;
                       return (
@@ -2266,24 +2244,6 @@ export default function JDModal({
                         </div>
                       );
                     })}
-                  </div>
-
-                  {/* Condition Box */}
-                  <div
-                    style={{
-                      background: '#FEF3C7',
-                      border: '1px solid #FDE68A',
-                      borderRadius: '8px',
-                      padding: '0.75rem 1rem',
-                      fontSize: '0.8rem',
-                      color: '#92400E',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    <strong style={{ display: 'block', marginBottom: '2px', color: '#B45309' }}>
-                      * เงื่อนไข:
-                    </strong>
-                    {formData.securityRiskAssessment?.conditionNotes || JD_SECURITY_CONDITION_NOTE}
                   </div>
                 </div>
               </div>
@@ -2776,7 +2736,7 @@ export default function JDModal({
                     ความหมายระดับความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ
                   </h3>
                   <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    เกณฑ์การประเมินความเสี่ยงและเงื่อนไขก่อนเริ่มปฏิบัติงานสำหรับตำแหน่งงาน
+                    เกณฑ์การประเมินระดับความเสี่ยงของตำแหน่งงาน
                   </div>
                 </div>
               </div>
@@ -2824,24 +2784,6 @@ export default function JDModal({
                   </p>
                 </div>
               ))}
-
-              <div
-                style={{
-                  marginTop: '0.5rem',
-                  padding: '0.85rem 1rem',
-                  background: '#FEF3C7',
-                  border: '1px solid #FDE68A',
-                  borderRadius: '8px',
-                  fontSize: '0.8rem',
-                  color: '#92400E',
-                  lineHeight: 1.6,
-                }}
-              >
-                <strong style={{ display: 'block', marginBottom: '2px', color: '#B45309' }}>
-                  * เงื่อนไข:
-                </strong>
-                {JD_SECURITY_CONDITION_NOTE}
-              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid #E2E8F0' }}>

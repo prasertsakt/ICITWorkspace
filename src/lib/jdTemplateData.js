@@ -441,8 +441,7 @@ export const JD_SECURITY_RISK_LEVELS = [
     color: '#059669',
     bgColor: '#ECFDF5',
     borderColor: '#A7F3D0',
-    description:
-      'ตำแหน่งงานธุรการ หรือผู้ที่ไม่มีสิทธิเข้าถึงระบบโครงสร้างพื้นฐานหลัก ให้อ้างอิงผลการตรวจสอบประวัติตามกระบวนการมาตรฐานของส่วนกลาง',
+    description: 'ตำแหน่งงานธุรการ หรือผู้ที่ไม่มีสิทธิเข้าถึงระบบโครงสร้างพื้นฐานหลัก',
   },
   {
     key: 'MEDIUM',
@@ -451,8 +450,7 @@ export const JD_SECURITY_RISK_LEVELS = [
     color: '#D97706',
     bgColor: '#FEF3C7',
     borderColor: '#FDE68A',
-    description:
-      'ตำแหน่งงานสนับสนุนไอที หรือนักพัฒนาระบบทั่วไป ให้อ้างอิงผลการตรวจสอบประวัติจากส่วนกลาง และให้ดำเนินการจัดทำข้อตกลงการรักษาความลับ',
+    description: 'ตำแหน่งงานสนับสนุนไอที หรือนักพัฒนาระบบทั่วไป',
   },
   {
     key: 'HIGH',
@@ -461,8 +459,7 @@ export const JD_SECURITY_RISK_LEVELS = [
     color: '#DC2626',
     bgColor: '#FEF2F2',
     borderColor: '#FECACA',
-    description:
-      'ตำแหน่งผู้ดูแลระบบ (Administrator) หรือผู้ที่ดูแลระบบโครงสร้างพื้นฐานสำคัญทางสารสนเทศ ให้อ้างอิงผลการตรวจสอบประวัติจากส่วนกลาง แต่หัวหน้าฝ่ายหรือผู้บริหารที่รับผิดชอบ ต้องทำการตรวจสอบและยืนยันผลประวัติว่าไม่มีความเสี่ยงที่เกี่ยวข้อง (เช่น ความผิดเกี่ยวกับทรัพย์ หรือ พ.ร.บ. คอมพิวเตอร์) ก่อนที่จะอนุมัติสิทธิการเข้าถึงระบบในระดับผู้ดูแลระบบ (Privileged Access) พร้อมทั้งลงนามในข้อตกลงการรักษาความลับอย่างเคร่งครัด',
+    description: 'ตำแหน่งผู้ดูแลระบบ (Administrator) หรือผู้ที่ดูแลระบบโครงสร้างพื้นฐานสำคัญทางสารสนเทศ',
   },
 ];
 
@@ -529,7 +526,6 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     securityRiskAssessment: {
       accessRights: '',
       riskLevel: 'LOW',
-      conditionNotes: JD_SECURITY_CONDITION_NOTE,
     },
 
     // การลงนามรับทราบและอนุมัติ (Signatures) -> Empty
@@ -694,9 +690,8 @@ export const SAMPLE_SEED_JD = {
 
   // ส่วนที่ 9: การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
   securityRiskAssessment: {
-    accessRights: 'ไม่มีสิทธิระดับผู้ดูแลระบบ (เข้าถึงระบบงานสารบรรณอิเล็กทรอนิกส์และระบบสารสนเทศตามสิทธิผู้ใช้งานทั่วไป)',
+    accessRights: '',
     riskLevel: 'LOW',
-    conditionNotes: JD_SECURITY_CONDITION_NOTE,
   },
 
   // Signatures

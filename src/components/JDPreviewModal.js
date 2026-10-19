@@ -4,7 +4,6 @@ import React from 'react';
 import { formatImageDisplayUrl } from '@/lib/driveUtils';
 import {
   JD_SECURITY_RISK_LEVELS,
-  JD_SECURITY_CONDITION_NOTE,
 } from '@/lib/jdTemplateData';
 import {
   X,
@@ -614,14 +613,14 @@ export default function JDPreviewModal({
                   whiteSpace: 'pre-wrap',
                 }}
               >
-                {jd.securityRiskAssessment?.accessRights || 'ไม่มีสิทธิระดับผู้ดูแลระบบ (สิทธิการเข้าถึงระบบตามระดับผู้ใช้งานทั่วไป)'}
+                {jd.securityRiskAssessment?.accessRights || '-'}
               </div>
             </div>
 
-            {/* 2. ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน */}
+            {/* 2. ระดับความเสี่ยงของตำแหน่งงาน */}
             <div style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
               <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0F172A' }}>
-                • ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
+                • ระดับความเสี่ยงของตำแหน่งงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '0.25rem' }}>
@@ -664,22 +663,6 @@ export default function JDPreviewModal({
                   );
                 })}
               </div>
-            </div>
-
-            {/* Condition note */}
-            <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '8px 12px',
-                border: '1px dashed #94A3B8',
-                borderRadius: '4px',
-                background: '#FEF3C7',
-                fontSize: '0.8rem',
-                color: '#92400E',
-                lineHeight: 1.5,
-              }}
-            >
-              <strong>* เงื่อนไข:</strong> {jd.securityRiskAssessment?.conditionNotes || JD_SECURITY_CONDITION_NOTE}
             </div>
           </div>
 
