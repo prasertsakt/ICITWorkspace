@@ -427,8 +427,11 @@ export const DEFAULT_JD_TEMPLATE = {
 };
 
 // Security Risk Assessment Constants (ส่วนที่ 9)
-export const JD_ACCESS_RIGHTS_PLACEHOLDER =
+export const JD_ACCESS_RIGHTS_SAMPLE_ADMIN =
   'มีสิทธิระดับผู้ดูแลระบบ (Administrator) ในการบริหารจัดการระบบโครงสร้างพื้นฐาน (VMware, Blade Server, Storage) ระบบเครือข่ายและโดเมน (DNS) ระบบป้องกันความปลอดภัย (WAF) และระบบสำรองข้อมูลทางไกล (DR Site)';
+
+export const JD_ACCESS_RIGHTS_PLACEHOLDER =
+  `เช่น ${JD_ACCESS_RIGHTS_SAMPLE_ADMIN}`;
 
 export const JD_SECURITY_CONDITION_NOTE =
   'อ้างอิงผลการตรวจสอบประวัติอาชญากรรมจากมหาวิทยาลัย โดยต้องได้รับการยืนยันผลจากผู้บริหารก่อนอนุมัติสิทธิการเข้าถึงระดับผู้ดูแล (Privileged Access) และต้องลงนามในข้อตกลงการรักษาความลับ (NDA)';

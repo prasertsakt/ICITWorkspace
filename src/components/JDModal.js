@@ -8,6 +8,7 @@ import {
   getFunctionalCompetenciesForPosition,
   JD_SECURITY_RISK_LEVELS,
   JD_ACCESS_RIGHTS_PLACEHOLDER,
+  JD_ACCESS_RIGHTS_SAMPLE_ADMIN,
 } from '@/lib/jdTemplateData';
 import { MAIN_6_DEPTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
 import { getCurrentThaiFiscalYear } from '@/lib/dateUtils';
@@ -2094,7 +2095,7 @@ export default function JDModal({
                             ...prev,
                             securityRiskAssessment: {
                               ...(prev.securityRiskAssessment || {}),
-                              accessRights: JD_ACCESS_RIGHTS_PLACEHOLDER,
+                              accessRights: JD_ACCESS_RIGHTS_SAMPLE_ADMIN,
                             },
                           }));
                         }}
