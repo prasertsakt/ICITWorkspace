@@ -961,7 +961,7 @@ export default function JDModal({
                   letterSpacing: '0.3px',
                 }}
               >
-                แท็บ {currentTabIndex + 1}/8
+                แท็บ {currentTabIndex + 1}/{TABS.length}
               </span>
               <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '0.82rem' }}>
                 {TABS[currentTabIndex]?.shortLabel || TABS[currentTabIndex]?.label}
