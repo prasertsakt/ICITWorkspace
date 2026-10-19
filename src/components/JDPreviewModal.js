@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatImageDisplayUrl } from '@/lib/driveUtils';
 import {
   JD_SECURITY_RISK_LEVELS,
@@ -16,6 +16,9 @@ import {
   FileText,
   User,
   ExternalLink,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function JDPreviewModal({
@@ -25,6 +28,37 @@ export default function JDPreviewModal({
   canEdit = false,
   onEdit = null,
 }) {
+  const [fontSizeScale, setFontSizeScale] = useState(1);
+
+  // Load saved zoom preference from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('icit_jd_preview_scale');
+        if (saved) {
+          const val = parseFloat(saved);
+          if (!isNaN(val) && val >= 0.85 && val <= 1.4) {
+            setFontSizeScale(val);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
+
+  const updateScale = (newScale) => {
+    const clamped = Math.max(0.85, Math.min(1.35, Math.round(newScale * 100) / 100));
+    setFontSizeScale(clamped);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('icit_jd_preview_scale', clamped.toString());
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
   if (!isOpen || !jd) return null;
 
   const handlePrint = () => {
@@ -131,6 +165,91 @@ export default function JDPreviewModal({
               </span>
             )}
 
+            {/* Font Size & Zoom Adjuster */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '2px 4px',
+                gap: '2px',
+              }}
+              title="ปรับขนาดตัวอักษรของเอกสาร (จะมีผลทั้งบนหน้าจอและตอนสั่งพิมพ์ PDF)"
+            >
+              <button
+                type="button"
+                onClick={() => updateScale(fontSizeScale - 0.05)}
+                disabled={fontSizeScale <= 0.85}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '4px',
+                  width: '26px',
+                  height: '26px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: fontSizeScale <= 0.85 ? 'not-allowed' : 'pointer',
+                  color: '#334155',
+                  opacity: fontSizeScale <= 0.85 ? 0.35 : 1,
+                  padding: 0,
+                }}
+                title="ลดขนาดตัวอักษร (A-)"
+              >
+                A-
+              </button>
+              <button
+                type="button"
+                onClick={() => updateScale(1)}
+                style={{
+                  background: fontSizeScale === 1 ? '#0D9488' : '#FFFFFF',
+                  color: fontSizeScale === 1 ? '#FFFFFF' : '#0F172A',
+                  border: '1px solid ' + (fontSizeScale === 1 ? '#0D9488' : '#CBD5E1'),
+                  borderRadius: '4px',
+                  padding: '0 6px',
+                  height: '26px',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  minWidth: '46px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="คลิกเพื่อรีเซ็ตเป็นขนาดมาตรฐาน (100%)"
+              >
+                {Math.round(fontSizeScale * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => updateScale(fontSizeScale + 0.05)}
+                disabled={fontSizeScale >= 1.35}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '4px',
+                  width: '26px',
+                  height: '26px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: fontSizeScale >= 1.35 ? 'not-allowed' : 'pointer',
+                  color: '#334155',
+                  opacity: fontSizeScale >= 1.35 ? 0.35 : 1,
+                  padding: 0,
+                }}
+                title="เพิ่มขนาดตัวอักษร (A+)"
+              >
+                A+
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handlePrint}
@@ -180,6 +299,7 @@ export default function JDPreviewModal({
             fontFamily: "'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             lineHeight: 1.6,
             color: '#111827',
+            zoom: fontSizeScale,
           }}
         >
           {/* Official Document Header */}
@@ -776,6 +896,7 @@ export default function JDPreviewModal({
             box-shadow: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            zoom: ${fontSizeScale} !important;
           }
           @page {
             size: A4 portrait;

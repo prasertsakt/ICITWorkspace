@@ -16,6 +16,7 @@ import { subscribeIdpConfig } from '@/lib/idpService';
 import {
   X,
   Check,
+  Copy,
   Plus,
   Trash2,
   AlertCircle,
@@ -101,6 +102,8 @@ export default function JDModal({
 }) {
   const [activeTab, setActiveTab] = useState('job_info');
   const [showRiskModal, setShowRiskModal] = useState(false);
+  const [showAccessRightsModal, setShowAccessRightsModal] = useState(false);
+  const [copiedSentence, setCopiedSentence] = useState(null);
   const currentFiscalYear = useMemo(() => String(getCurrentThaiFiscalYear()), []);
   const [idpConfig, setIdpConfig] = useState(null);
   const [formData, setFormData] = useState(() => createBlankJD(null, currentFiscalYear, null));
@@ -2085,42 +2088,27 @@ export default function JDModal({
                     <label className="form-label" style={{ fontWeight: 700, fontSize: '0.875rem', margin: 0, color: '#1E293B' }}>
                       • สิทธิการเข้าถึงระบบที่สำคัญ:
                     </label>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE' }}
-                        onClick={() => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            securityRiskAssessment: {
-                              ...(prev.securityRiskAssessment || {}),
-                              accessRights: JD_ACCESS_RIGHTS_SAMPLE_ADMIN,
-                            },
-                          }));
-                        }}
-                        title="ใช้ข้อความตัวอย่างสิทธิระดับ Administrator"
-                      >
-                        + ตัวอย่างสิทธิ Admin
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0' }}
-                        onClick={() => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            securityRiskAssessment: {
-                              ...(prev.securityRiskAssessment || {}),
-                              accessRights: 'ไม่มีสิทธิระดับผู้ดูแลระบบ เข้าถึงเฉพาะระบบสารสนเทศตามสิทธิผู้ใช้งานทั่วไป (End-User Access)',
-                            },
-                          }));
-                        }}
-                        title="ใช้ข้อความตัวอย่างผู้ใช้งานทั่วไป"
-                      >
-                        + ตัวอย่างผู้ใช้งานทั่วไป
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAccessRightsModal(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563EB',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '2px 4px',
+                      }}
+                      title="คลิกเพื่อดูความหมายและตัวอย่างประโยคสิทธิการเข้าถึงระบบที่สำคัญ"
+                    >
+                      <HelpCircle size={14} />
+                      (ความหมายสิทธิการเข้าถึงระบบที่สำคัญ)
+                    </button>
                   </div>
                   <textarea
                     className="form-input"
@@ -2791,6 +2779,325 @@ export default function JDModal({
               <button
                 type="button"
                 onClick={() => setShowRiskModal(false)}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '0.45rem 1.25rem' }}
+              >
+                เข้าใจแล้ว / ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Access Rights Meaning & Example Sentences Modal */}
+      {showAccessRightsModal && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.65)' }}
+          onClick={() => setShowAccessRightsModal(false)}
+        >
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '720px',
+              width: '94vw',
+              maxHeight: '90vh',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              background: '#FFFFFF',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: '#EFF6FF',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Lock size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
+                    ความหมายสิทธิการเข้าถึงระบบที่สำคัญ
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    คำอธิบายและตัวอย่างประโยคสิทธิการเข้าถึงระบบสารสนเทศตามมาตรฐานความมั่นคงปลอดภัย
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAccessRightsModal(false)}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#64748B' }}
+                title="ปิดหน้าต่าง"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Overview / Context Box */}
+            <div
+              style={{
+                padding: '0.85rem 1rem',
+                borderRadius: '8px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.825rem',
+                color: '#334155',
+                lineHeight: 1.6,
+                marginBottom: '1rem',
+              }}
+            >
+              <strong style={{ color: '#0F172A', display: 'block', marginBottom: '2px' }}>
+                📌 นิยามและวัตถุประสงค์:
+              </strong>
+              ใช้ระบุระดับสิทธิและขอบเขตในการเข้าถึงระบบสารสนเทศ โครงสร้างพื้นฐานแม่ข่าย เครือข่าย หรือฐานข้อมูลขององค์กร เพื่อนำไปประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment) ให้สอดคล้องกับหน้าที่ความรับผิดชอบจริงของตำแหน่งงาน
+            </div>
+
+            {/* Cases Container */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* CASE 1: ผู้ใช้งานทั่วไป (End-User Access) */}
+              <div
+                style={{
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  background: '#ECFDF5',
+                  border: '1.5px solid #A7F3D0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        background: '#059669',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      ผู้ใช้งานทั่วไป
+                    </span>
+                    <strong style={{ fontSize: '0.925rem', color: '#065F46' }}>
+                      กรณีตำแหน่งผู้ใช้งานทั่วไป (End-User Access)
+                    </strong>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#047857' }}>
+                    (ตำแหน่งงานธุรการ, บริหารทั่วไป, หรือผู้ปฏิบัติงานทั่วไป)
+                  </span>
+                </div>
+
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: '#064E3B', lineHeight: 1.5 }}>
+                  สำหรับบุคลากรที่ใช้งานระบบสารสนเทศเพื่อการปฏิบัติงานตามหน้าที่ปกติ โดย<strong>ไม่มีสิทธิในการตั้งค่า จัดการเครื่องแม่ข่าย เครือข่าย หรือฐานข้อมูลหลัก</strong>
+                </p>
+
+                {/* Example Sentences for End-User */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    {
+                      id: 'user-1',
+                      title: 'ตัวอย่างที่ 1 (มาตรฐานทั่วไป):',
+                      text: 'ไม่มีสิทธิระดับผู้ดูแลระบบ เข้าถึงเฉพาะระบบสารสนเทศตามสิทธิผู้ใช้งานทั่วไป (End-User Access)',
+                    },
+                    {
+                      id: 'user-2',
+                      title: 'ตัวอย่างที่ 2 (ระบุระบบงานที่ได้รับมอบหมาย):',
+                      text: 'ไม่มีสิทธิระดับผู้ดูแลระบบ เข้าถึงเฉพาะระบบงานสารบรรณอิเล็กทรอนิกส์และระบบสารสนเทศตามสิทธิผู้ใช้งานที่ได้รับมอบหมาย',
+                    },
+                    {
+                      id: 'user-3',
+                      title: 'ตัวอย่างที่ 3 (กรณีไม่มีการเข้าถึงระบบสำคัญ):',
+                      text: 'ไม่มีสิทธิเข้าถึงระบบโครงสร้างพื้นฐานหลัก เข้าถึงเฉพาะระบบสารสนเทศทั่วไปเพื่อการปฏิบัติงาน',
+                    },
+                  ].map((ex) => (
+                    <div
+                      key={ex.id}
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #A7F3D0',
+                        borderRadius: '6px',
+                        padding: '0.65rem 0.85rem',
+                        fontSize: '0.825rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', gap: '6px' }}>
+                        <span style={{ fontWeight: 700, color: '#065F46', fontSize: '0.78rem' }}>{ex.title}</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(ex.text);
+                              setCopiedSentence(ex.id);
+                              setTimeout(() => setCopiedSentence(null), 2000);
+                            }}
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.7rem', padding: '2px 6px', height: '22px', gap: '3px', color: '#059669' }}
+                            title="คัดลอกข้อความ"
+                          >
+                            {copiedSentence === ex.id ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedSentence === ex.id ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                securityRiskAssessment: {
+                                  ...(prev.securityRiskAssessment || {}),
+                                  accessRights: ex.text,
+                                },
+                              }));
+                              setShowAccessRightsModal(false);
+                            }}
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', height: '22px', background: '#059669', borderColor: '#059669' }}
+                            title="นำข้อความนี้ไปใส่ในแบบฟอร์ม"
+                          >
+                            นำไปใช้ในฟอร์ม
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ color: '#1E293B', lineHeight: 1.5, fontStyle: 'italic', background: '#F8FAFC', padding: '4px 8px', borderRadius: '4px' }}>
+                        "{ex.text}"
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CASE 2: ผู้ดูแลระบบ / ฝ่ายเทคนิค (Administrator / Privileged Access) */}
+              <div
+                style={{
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  background: '#EFF6FF',
+                  border: '1.5px solid #BFDBFE',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        background: '#2563EB',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      ผู้ดูแลระบบ (Admin)
+                    </span>
+                    <strong style={{ fontSize: '0.925rem', color: '#1E40AF' }}>
+                      กรณีตำแหน่งผู้ดูแลระบบ / ฝ่ายเทคนิค (Privileged Access)
+                    </strong>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#1D4ED8' }}>
+                    (System Admin, Network Engineer, DBA, Developer, IT Support)
+                  </span>
+                </div>
+
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: '#1E3A8A', lineHeight: 1.5 }}>
+                  สำหรับบุคลากรที่มีสิทธิระดับสูง (Administrator, Root, หรือ Privileged Access) ในการติดตั้ง กำหนดค่า จัดการเครื่องแม่ข่าย เครือข่าย หรือฐานข้อมูลสำคัญ
+                </p>
+
+                {/* Example Sentences for Admin */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    {
+                      id: 'admin-1',
+                      title: 'ตัวอย่างที่ 1 (ผู้ดูแลระบบโครงสร้างพื้นฐาน & เครือข่าย):',
+                      text: 'มีสิทธิระดับผู้ดูแลระบบ (Administrator) ในการบริหารจัดการระบบโครงสร้างพื้นฐาน (VMware, Blade Server, Storage) ระบบเครือข่ายและโดเมน (DNS) ระบบป้องกันความปลอดภัย (WAF) และระบบสำรองข้อมูลทางไกล (DR Site)',
+                    },
+                    {
+                      id: 'admin-2',
+                      title: 'ตัวอย่างที่ 2 (ผู้ดูแลฐานข้อมูล - DBA):',
+                      text: 'มีสิทธิระดับผู้ดูแลระบบฐานข้อมูล (Database Administrator) ในการเข้าถึง จัดการสำรองข้อมูล และบริหารสิทธิ์การใช้งานฐานข้อมูลระบบสารสนเทศส่วนกลาง',
+                    },
+                    {
+                      id: 'admin-3',
+                      title: 'ตัวอย่างที่ 3 (นักพัฒนาระบบ - Developer):',
+                      text: 'มีสิทธิระดับนักพัฒนาระบบ (Developer Access) ในการเข้าถึง Source Code Repository, เครื่องแม่ข่ายทดสอบ (Dev/Staging Server) และระบบ CI/CD เพื่อการพัฒนาและปรับปรุงระบบงาน',
+                    },
+                    {
+                      id: 'admin-4',
+                      title: 'ตัวอย่างที่ 4 (เจ้าหน้าที่สนับสนุนเทคนิค - IT Support):',
+                      text: 'มีสิทธิระดับเจ้าหน้าที่สนับสนุนเทคนิค (IT Support Access) ในการแก้ไขปัญหาเครื่องคอมพิวเตอร์ลูกข่ายและระบบเครือข่ายเบื้องต้น โดยไม่มีสิทธิเข้าถึงระบบแม่ข่ายหลัก',
+                    },
+                  ].map((ex) => (
+                    <div
+                      key={ex.id}
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #BFDBFE',
+                        borderRadius: '6px',
+                        padding: '0.65rem 0.85rem',
+                        fontSize: '0.825rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', gap: '6px' }}>
+                        <span style={{ fontWeight: 700, color: '#1E40AF', fontSize: '0.78rem' }}>{ex.title}</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(ex.text);
+                              setCopiedSentence(ex.id);
+                              setTimeout(() => setCopiedSentence(null), 2000);
+                            }}
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.7rem', padding: '2px 6px', height: '22px', gap: '3px', color: '#2563EB' }}
+                            title="คัดลอกข้อความ"
+                          >
+                            {copiedSentence === ex.id ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedSentence === ex.id ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                securityRiskAssessment: {
+                                  ...(prev.securityRiskAssessment || {}),
+                                  accessRights: ex.text,
+                                },
+                              }));
+                              setShowAccessRightsModal(false);
+                            }}
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', height: '22px', background: '#2563EB', borderColor: '#2563EB' }}
+                            title="นำข้อความนี้ไปใส่ในแบบฟอร์ม"
+                          >
+                            นำไปใช้ในฟอร์ม
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ color: '#1E293B', lineHeight: 1.5, fontStyle: 'italic', background: '#F8FAFC', padding: '4px 8px', borderRadius: '4px' }}>
+                        "{ex.text}"
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid #E2E8F0' }}>
+              <button
+                type="button"
+                onClick={() => setShowAccessRightsModal(false)}
                 className="btn btn-primary btn-sm"
                 style={{ padding: '0.45rem 1.25rem' }}
               >
