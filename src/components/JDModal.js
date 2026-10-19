@@ -6,6 +6,9 @@ import {
   createBlankJD,
   getCoreCompetenciesForLevel,
   getFunctionalCompetenciesForPosition,
+  JD_SECURITY_RISK_LEVELS,
+  JD_SECURITY_CONDITION_NOTE,
+  JD_ACCESS_RIGHTS_PLACEHOLDER,
 } from '@/lib/jdTemplateData';
 import { MAIN_6_DEPTS, POSITIONS, POSITION_LEVELS, PERSONNEL_TYPES } from '@/lib/constants';
 import { getCurrentThaiFiscalYear } from '@/lib/dateUtils';
@@ -29,6 +32,9 @@ import {
   FileText,
   Sparkles,
   ShieldCheck,
+  ShieldAlert,
+  HelpCircle,
+  Info,
   Lock,
   ChevronLeft,
   ChevronRight,
@@ -46,7 +52,8 @@ const TABS = [
   { id: 'qualifications', num: 5, label: '5. คุณสมบัติ & ทักษะ', shortLabel: '5. คุณสมบัติ & ทักษะ', icon: BookOpen },
   { id: 'core_competencies', num: 6, label: '6. สมรรถนะหลัก (Core)', shortLabel: '6. สมรรถนะหลัก (Core)', icon: Sparkles },
   { id: 'functional_competencies', num: 7, label: '7. สมรรถนะประจำตำแหน่ง', shortLabel: '7. สมรรถนะตำแหน่ง', icon: Award },
-  { id: 'training_signatures', num: 8, label: '8. การฝึกอบรม & ลงนาม', shortLabel: '8. การฝึกอบรม & ลงนาม', icon: Send },
+  { id: 'training', num: 8, label: '8. การฝึกอบรมที่จำเป็น (Training)', shortLabel: '8. การฝึกอบรม (Training)', icon: BookOpen },
+  { id: 'security_signatures', num: 9, label: '9. ประเมินความเสี่ยงสารสนเทศ & ลงนาม', shortLabel: '9. ประเมินความเสี่ยง & ลงนาม', icon: ShieldCheck },
 ];
 
 // Verified department head directory for ICIT
@@ -93,6 +100,7 @@ export default function JDModal({
   isRevisionOpen = true,
 }) {
   const [activeTab, setActiveTab] = useState('job_info');
+  const [showRiskModal, setShowRiskModal] = useState(false);
   const currentFiscalYear = useMemo(() => String(getCurrentThaiFiscalYear()), []);
   const [idpConfig, setIdpConfig] = useState(null);
   const [formData, setFormData] = useState(() => createBlankJD(null, currentFiscalYear, null));
@@ -421,6 +429,20 @@ export default function JDModal({
           initialData.signatures.approvedBy = {
             name: director,
             date: initialData.signatures.approvedBy?.date || '',
+          };
+        }
+
+        if (!initialData.securityRiskAssessment) {
+          initialData.securityRiskAssessment = {
+            accessRights: '',
+            riskLevel: 'LOW',
+            conditionNotes: JD_SECURITY_CONDITION_NOTE,
+          };
+        } else {
+          initialData.securityRiskAssessment = {
+            accessRights: initialData.securityRiskAssessment.accessRights || '',
+            riskLevel: initialData.securityRiskAssessment.riskLevel || 'LOW',
+            conditionNotes: initialData.securityRiskAssessment.conditionNotes || JD_SECURITY_CONDITION_NOTE,
           };
         }
       } else {
@@ -1963,16 +1985,20 @@ export default function JDModal({
           )}
 
           {/* ============================================================ */}
-          {/* TAB 7: การฝึกอบรม & ลงนาม */}
+          {/* TAB 8: การฝึกอบรม (Training) */}
           {/* ============================================================ */}
-          {activeTab === 'training_signatures' && (
+          {activeTab === 'training' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Part 8: Training */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
-                    ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ (Training)
-                  </h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ (Training)
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      ระบุหลักสูตรการฝึกอบรมหรือการพัฒนาความรู้ที่จำเป็นต่อการปฏิบัติหน้าที่ให้มีประสิทธิภาพ
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddTraining}
@@ -2010,11 +2036,255 @@ export default function JDModal({
                         onClick={() => handleRemoveTraining(idx)}
                         className="btn btn-ghost btn-icon"
                         style={{ color: 'var(--rose-500)' }}
+                        title="ลบหลักสูตร"
                       >
                         <Trash2 size={15} />
                       </button>
                     </div>
                   ))}
+                  {(!formData.trainings || formData.trainings.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', border: '1px dashed var(--border-subtle)', borderRadius: '8px' }}>
+                      ยังไม่มีรายการหลักสูตรอบรม คลิก &quot;เพิ่มหลักสูตรอบรม&quot; เพื่อระบุ
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* TAB 9: ประเมินความเสี่ยงสารสนเทศ & ลงนาม */}
+          {/* ============================================================ */}
+          {activeTab === 'security_signatures' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              {/* Part 9: การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1.5px solid var(--border-subtle, #E2E8F0)',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                {/* Section 9 Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '6px',
+                          background: '#EFF6FF',
+                          color: '#2563EB',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        9
+                      </span>
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary, #0F172A)' }}>
+                        ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
+                      </h4>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary, #64748B)', paddingLeft: '2.25rem' }}>
+                      ประเมินสิทธิการเข้าถึงระบบที่สำคัญ และระดับความเสี่ยงของตำแหน่งงานตามเกณฑ์มาตรฐานความมั่นคงปลอดภัยสารสนเทศ
+                    </p>
+                  </div>
+                </div>
+
+                {/* 1. สิทธิการเข้าถึงระบบที่สำคัญ */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.875rem', margin: 0, color: '#1E293B' }}>
+                      • สิทธิการเข้าถึงระบบที่สำคัญ:
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE' }}
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            securityRiskAssessment: {
+                              ...(prev.securityRiskAssessment || {}),
+                              accessRights: JD_ACCESS_RIGHTS_PLACEHOLDER,
+                            },
+                          }));
+                        }}
+                        title="ใช้ข้อความตัวอย่างสิทธิระดับ Administrator"
+                      >
+                        + ตัวอย่างสิทธิ Admin
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0' }}
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            securityRiskAssessment: {
+                              ...(prev.securityRiskAssessment || {}),
+                              accessRights: 'ไม่มีสิทธิระดับผู้ดูแลระบบ เข้าถึงเฉพาะระบบสารสนเทศตามสิทธิผู้ใช้งานทั่วไป (End-User Access)',
+                            },
+                          }));
+                        }}
+                        title="ใช้ข้อความตัวอย่างผู้ใช้งานทั่วไป"
+                      >
+                        + ตัวอย่างผู้ใช้งานทั่วไป
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      fontSize: '0.85rem',
+                      lineHeight: 1.6,
+                      background: '#F8FAFC',
+                      resize: 'vertical',
+                    }}
+                    placeholder={JD_ACCESS_RIGHTS_PLACEHOLDER}
+                    value={formData.securityRiskAssessment?.accessRights || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        securityRiskAssessment: {
+                          ...(prev.securityRiskAssessment || {}),
+                          accessRights: val,
+                        },
+                      }));
+                    }}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px' }}>
+                    💡 ตัวอย่าง placeholder: {JD_ACCESS_RIGHTS_PLACEHOLDER}
+                  </div>
+                </div>
+
+                {/* 2. ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.875rem', margin: 0, color: '#1E293B' }}>
+                      • ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowRiskModal(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563EB',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '2px 4px',
+                      }}
+                      title="คลิกเพื่อดูรายละเอียดในแต่ละระดับความเสี่ยง"
+                    >
+                      <HelpCircle size={14} />
+                      (ความหมายระดับความเสี่ยง)
+                    </button>
+                  </div>
+
+                  {/* 3 Selectable Radio Option Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                    {JD_SECURITY_RISK_LEVELS.map((level) => {
+                      const isSelected = (formData.securityRiskAssessment?.riskLevel || 'LOW') === level.key;
+                      return (
+                        <div
+                          key={level.key}
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              securityRiskAssessment: {
+                                ...(prev.securityRiskAssessment || {}),
+                                riskLevel: level.key,
+                              },
+                            }));
+                          }}
+                          style={{
+                            border: isSelected ? `2px solid ${level.color}` : '1.5px solid #E2E8F0',
+                            borderRadius: '10px',
+                            padding: '0.85rem 1rem',
+                            background: isSelected ? level.bgColor : '#FFFFFF',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem',
+                            boxShadow: isSelected ? `0 3px 10px ${level.color}20` : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  border: isSelected ? `6px solid ${level.color}` : '2px solid #CBD5E1',
+                                  background: '#FFFFFF',
+                                  flexShrink: 0,
+                                  transition: 'all 0.15s ease',
+                                }}
+                              />
+                              <span style={{ fontWeight: 800, fontSize: '0.9rem', color: isSelected ? level.color : '#1E293B' }}>
+                                {level.label}
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  color: level.color,
+                                  background: '#FFFFFF',
+                                  padding: '1px 8px',
+                                  borderRadius: '12px',
+                                  border: `1px solid ${level.borderColor}`,
+                                }}
+                              >
+                                ✓ เลือกระดับนี้
+                              </span>
+                            )}
+                          </div>
+
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: isSelected ? '#334155' : '#64748B', lineHeight: 1.5 }}>
+                            {level.description}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Condition Box */}
+                  <div
+                    style={{
+                      background: '#FEF3C7',
+                      border: '1px solid #FDE68A',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.8rem',
+                      color: '#92400E',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <strong style={{ display: 'block', marginBottom: '2px', color: '#B45309' }}>
+                      * เงื่อนไข:
+                    </strong>
+                    {formData.securityRiskAssessment?.conditionNotes || JD_SECURITY_CONDITION_NOTE}
+                  </div>
                 </div>
               </div>
 
@@ -2257,7 +2527,7 @@ export default function JDModal({
           )}
 
           {/* ============================================================ */}
-          {/* In-Content Bottom Stepper Navigation between 8 tabs */}
+          {/* In-Content Bottom Stepper Navigation between 9 tabs */}
           {/* ============================================================ */}
           <div
             style={{
@@ -2294,7 +2564,7 @@ export default function JDModal({
                 </button>
               ) : (
                 <span style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: 600 }}>
-                  📍 เริ่มต้น: ส่วนที่ 1 จาก 8
+                  📍 เริ่มต้น: ส่วนที่ 1 จาก {TABS.length}
                 </span>
               )}
             </div>
@@ -2302,7 +2572,7 @@ export default function JDModal({
             {/* Center: Progress indicator */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 700 }}>
-                ความคืบหน้าแบบฟอร์ม: ส่วนที่ {currentTabIndex + 1} จาก 8 ({Math.round(((currentTabIndex + 1) / 8) * 100)}%)
+                ความคืบหน้าแบบฟอร์ม: ส่วนที่ {currentTabIndex + 1} จาก {TABS.length} ({Math.round(((currentTabIndex + 1) / TABS.length) * 100)}%)
               </div>
               <div
                 style={{
@@ -2315,7 +2585,7 @@ export default function JDModal({
               >
                 <div
                   style={{
-                    width: `${((currentTabIndex + 1) / 8) * 100}%`,
+                    width: `${((currentTabIndex + 1) / TABS.length) * 100}%`,
                     height: '100%',
                     background: '#0D9488',
                     borderRadius: '3px',
@@ -2366,7 +2636,7 @@ export default function JDModal({
                   }}
                 >
                   <CheckCircle2 size={16} color="#0D9488" />
-                  <span>ตรวจสอบครบทั้ง 8 ส่วนแล้ว พร้อมบันทึก</span>
+                  <span>ตรวจสอบครบทั้ง {TABS.length} ส่วนแล้ว พร้อมบันทึก</span>
                 </div>
               )}
             </div>
@@ -2463,6 +2733,130 @@ export default function JDModal({
           </div>
         </div>
       </div>
+
+      {/* Security Risk Definitions Modal */}
+      {showRiskModal && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.65)' }}
+          onClick={() => setShowRiskModal(false)}
+        >
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '680px',
+              width: '92vw',
+              maxHeight: '90vh',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              background: '#FFFFFF',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: '#EFF6FF',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ShieldAlert size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
+                    ความหมายระดับความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    เกณฑ์การประเมินความเสี่ยงและเงื่อนไขก่อนเริ่มปฏิบัติงานสำหรับตำแหน่งงาน
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRiskModal(false)}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#64748B' }}
+                title="ปิดหน้าต่าง"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {JD_SECURITY_RISK_LEVELS.map((lvl) => (
+                <div
+                  key={lvl.key}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: '10px',
+                    background: lvl.bgColor,
+                    border: `1.5px solid ${lvl.borderColor}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        background: lvl.color,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      {lvl.key}
+                    </span>
+                    <strong style={{ fontSize: '0.925rem', color: '#0F172A' }}>
+                      • {lvl.fullTitle}
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.825rem', color: '#334155', lineHeight: 1.6, paddingLeft: '0.5rem' }}>
+                    {lvl.description}
+                  </p>
+                </div>
+              ))}
+
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.85rem 1rem',
+                  background: '#FEF3C7',
+                  border: '1px solid #FDE68A',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  color: '#92400E',
+                  lineHeight: 1.6,
+                }}
+              >
+                <strong style={{ display: 'block', marginBottom: '2px', color: '#B45309' }}>
+                  * เงื่อนไข:
+                </strong>
+                {JD_SECURITY_CONDITION_NOTE}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid #E2E8F0' }}>
+              <button
+                type="button"
+                onClick={() => setShowRiskModal(false)}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '0.45rem 1.25rem' }}
+              >
+                เข้าใจแล้ว / ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -69,7 +69,7 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // 7. Rules for 'job_descriptions' collection (JD Hub)
+    // 7. Rules for 'job_descriptions' collection (JD Hub - Sections 1-9 including Information Security Risk Assessment)
     match /job_descriptions/{jdId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();

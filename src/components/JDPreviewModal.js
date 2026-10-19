@@ -3,6 +3,10 @@
 import React from 'react';
 import { formatImageDisplayUrl } from '@/lib/driveUtils';
 import {
+  JD_SECURITY_RISK_LEVELS,
+  JD_SECURITY_CONDITION_NOTE,
+} from '@/lib/jdTemplateData';
+import {
   X,
   Printer,
   Edit2,
@@ -569,7 +573,7 @@ export default function JDPreviewModal({
           {/* ============================================================ */}
           {/* ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ (Training) */}
           {/* ============================================================ */}
-          <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
               ส่วนที่ 8 การฝึกอบรมที่จำเป็นต่อการปฏิบัติหน้าที่ให้มีประสิทธิภาพ (Training)
             </h2>
@@ -580,6 +584,102 @@ export default function JDPreviewModal({
                   {idx + 1}. {tr}
                 </div>
               ))}
+              {(!jd.trainings || jd.trainings.length === 0) && (
+                <div style={{ color: '#64748B', fontStyle: 'italic' }}>- ไม่ได้ระบุ -</div>
+              )}
+            </div>
+          </div>
+
+          {/* ============================================================ */}
+          {/* ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment) */}
+          {/* ============================================================ */}
+          <div style={{ marginBottom: '2.5rem', pageBreakInside: 'avoid' }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, borderBottom: '2px solid #0F172A', paddingBottom: '4px', margin: '0 0 0.85rem 0' }}>
+              ส่วนที่ 9 การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
+            </h2>
+
+            {/* 1. สิทธิการเข้าถึงระบบที่สำคัญ */}
+            <div style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#0F172A' }}>
+                • สิทธิการเข้าถึงระบบที่สำคัญ:
+              </div>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #94A3B8',
+                  borderRadius: '4px',
+                  background: '#F8FAFC',
+                  color: '#1E293B',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {jd.securityRiskAssessment?.accessRights || 'ไม่มีสิทธิระดับผู้ดูแลระบบ (สิทธิการเข้าถึงระบบตามระดับผู้ใช้งานทั่วไป)'}
+              </div>
+            </div>
+
+            {/* 2. ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน */}
+            <div style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0F172A' }}>
+                • ระดับความเสี่ยงของตำแหน่งงาน และเงื่อนไขก่อนเริ่มปฏิบัติงาน (ให้ระบุเครื่องหมาย ✓ เพียง 1 ข้อ):
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '0.25rem' }}>
+                {JD_SECURITY_RISK_LEVELS.map((level) => {
+                  const isChecked = (jd.securityRiskAssessment?.riskLevel || 'LOW') === level.key;
+                  return (
+                    <div
+                      key={level.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '18px',
+                          height: '18px',
+                          border: '1.5px solid #0F172A',
+                          borderRadius: '3px',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          background: isChecked ? '#F1F5F9' : '#FFFFFF',
+                          color: '#0F172A',
+                          flexShrink: 0,
+                          marginTop: '2px',
+                        }}
+                      >
+                        {isChecked ? '✓' : ''}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: '#0F172A' }}>{level.fullTitle}:</strong>{' '}
+                        <span style={{ color: '#334155' }}>{level.description}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Condition note */}
+            <div
+              style={{
+                marginTop: '0.75rem',
+                padding: '8px 12px',
+                border: '1px dashed #94A3B8',
+                borderRadius: '4px',
+                background: '#FEF3C7',
+                fontSize: '0.8rem',
+                color: '#92400E',
+                lineHeight: 1.5,
+              }}
+            >
+              <strong>* เงื่อนไข:</strong> {jd.securityRiskAssessment?.conditionNotes || JD_SECURITY_CONDITION_NOTE}
             </div>
           </div>
 

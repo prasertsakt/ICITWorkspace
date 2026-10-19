@@ -426,6 +426,46 @@ export const DEFAULT_JD_TEMPLATE = {
   updatedBy: 'ระบบเริ่มต้น',
 };
 
+// Security Risk Assessment Constants (ส่วนที่ 9)
+export const JD_ACCESS_RIGHTS_PLACEHOLDER =
+  'มีสิทธิระดับผู้ดูแลระบบ (Administrator) ในการบริหารจัดการระบบโครงสร้างพื้นฐาน (VMware, Blade Server, Storage) ระบบเครือข่ายและโดเมน (DNS) ระบบป้องกันความปลอดภัย (WAF) และระบบสำรองข้อมูลทางไกล (DR Site)';
+
+export const JD_SECURITY_CONDITION_NOTE =
+  'อ้างอิงผลการตรวจสอบประวัติอาชญากรรมจากมหาวิทยาลัย โดยต้องได้รับการยืนยันผลจากผู้บริหารก่อนอนุมัติสิทธิการเข้าถึงระดับผู้ดูแล (Privileged Access) และต้องลงนามในข้อตกลงการรักษาความลับ (NDA)';
+
+export const JD_SECURITY_RISK_LEVELS = [
+  {
+    key: 'LOW',
+    label: 'ต่ำ (Low)',
+    fullTitle: 'ระดับความเสี่ยงต่ำ (Low Risk)',
+    color: '#059669',
+    bgColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    description:
+      'ตำแหน่งงานธุรการ หรือผู้ที่ไม่มีสิทธิเข้าถึงระบบโครงสร้างพื้นฐานหลัก ให้อ้างอิงผลการตรวจสอบประวัติตามกระบวนการมาตรฐานของส่วนกลาง',
+  },
+  {
+    key: 'MEDIUM',
+    label: 'ปานกลาง (Medium)',
+    fullTitle: 'ระดับความเสี่ยงปานกลาง (Medium Risk)',
+    color: '#D97706',
+    bgColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+    description:
+      'ตำแหน่งงานสนับสนุนไอที หรือนักพัฒนาระบบทั่วไป ให้อ้างอิงผลการตรวจสอบประวัติจากส่วนกลาง และให้ดำเนินการจัดทำข้อตกลงการรักษาความลับ',
+  },
+  {
+    key: 'HIGH',
+    label: 'สูง (High)',
+    fullTitle: 'ระดับความเสี่ยงสูง (High Risk)',
+    color: '#DC2626',
+    bgColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    description:
+      'ตำแหน่งผู้ดูแลระบบ (Administrator) หรือผู้ที่ดูแลระบบโครงสร้างพื้นฐานสำคัญทางสารสนเทศ ให้อ้างอิงผลการตรวจสอบประวัติจากส่วนกลาง แต่หัวหน้าฝ่ายหรือผู้บริหารที่รับผิดชอบ ต้องทำการตรวจสอบและยืนยันผลประวัติว่าไม่มีความเสี่ยงที่เกี่ยวข้อง (เช่น ความผิดเกี่ยวกับทรัพย์ หรือ พ.ร.บ. คอมพิวเตอร์) ก่อนที่จะอนุมัติสิทธิการเข้าถึงระบบในระดับผู้ดูแลระบบ (Privileged Access) พร้อมทั้งลงนามในข้อตกลงการรักษาความลับอย่างเคร่งครัด',
+  },
+];
+
 /**
  * Creates an empty/initial JD record structure
  */
@@ -482,10 +522,17 @@ export function createBlankJD(personnel = null, fiscalYear = null, customConfig 
     // ส่วนที่ 7: สมรรถนะประจำตำแหน่ง (Functional Competencies) จาก IDP Config
     functionalCompetencies: getFunctionalCompetenciesForPosition(position, fiscalYear, customConfig),
 
-    // ส่วนที่ 7: การฝึกอบรม (Trainings) -> Empty
+    // ส่วนที่ 8: การฝึกอบรม (Trainings) -> Empty
     trainings: [],
 
-    // ส่วนที่ 8: การลงนามรับทราบและอนุมัติ (Signatures) -> Empty
+    // ส่วนที่ 9: การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
+    securityRiskAssessment: {
+      accessRights: '',
+      riskLevel: 'LOW',
+      conditionNotes: JD_SECURITY_CONDITION_NOTE,
+    },
+
+    // การลงนามรับทราบและอนุมัติ (Signatures) -> Empty
     signatures: {
       preparedBy: {
         name: '',
@@ -644,6 +691,13 @@ export const SAMPLE_SEED_JD = {
     'การบริหารจัดการทรัพยากรบุคคล',
     'พระราชบัญญัติ คุ้มครองข้อมูลส่วนบุคคล (PDPA)',
   ],
+
+  // ส่วนที่ 9: การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ (Information Security Risk Assessment)
+  securityRiskAssessment: {
+    accessRights: 'ไม่มีสิทธิระดับผู้ดูแลระบบ (เข้าถึงระบบงานสารบรรณอิเล็กทรอนิกส์และระบบสารสนเทศตามสิทธิผู้ใช้งานทั่วไป)',
+    riskLevel: 'LOW',
+    conditionNotes: JD_SECURITY_CONDITION_NOTE,
+  },
 
   // Signatures
   signatures: {

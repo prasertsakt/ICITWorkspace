@@ -966,6 +966,22 @@ export default function JDHubPage() {
                       <span>สมรรถนะประจำตำแหน่ง:</span>
                       <strong style={{ color: 'var(--text-primary)' }}>{fcCount} สมรรถนะ</strong>
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>ความเสี่ยงสารสนเทศ:</span>
+                      {jd.securityRiskAssessment?.riskLevel === 'HIGH' ? (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#DC2626', background: '#FEF2F2', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                          สูง (High)
+                        </span>
+                      ) : jd.securityRiskAssessment?.riskLevel === 'MEDIUM' ? (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D97706', background: '#FEF3C7', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FDE68A' }}>
+                          ปานกลาง (Medium)
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '1px 6px', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
+                          ต่ำ (Low)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
