@@ -131,11 +131,15 @@ export default function KMSharingSummaryModal({
     dateFilteredSessions.forEach((s) => {
       (s.tags || []).forEach((t) => {
         if (!t) return;
-        tagsMap[t] = (tagsMap[t] || 0) + 1;
+        if (!tagsMap[t]) {
+          tagsMap[t] = { count: 0, sessions: [] };
+        }
+        tagsMap[t].count += 1;
+        tagsMap[t].sessions.push(s);
       });
     });
     return Object.entries(tagsMap)
-      .map(([tagName, count]) => ({ tagName, count }))
+      .map(([tagName, data]) => ({ tagName, count: data.count, sessions: data.sessions }))
       .sort((a, b) => b.count - a.count);
   }, [dateFilteredSessions]);
 
@@ -402,60 +406,222 @@ export default function KMSharingSummaryModal({
                   ไม่พบข้อมูลผู้บรรยายตามเงื่อนไขช่วงวันที่ที่เลือก
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {speakersList.map((spk, idx) => (
                     <div
                       key={spk.email || spk.name || idx}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 14px',
-                        borderRadius: '12px',
-                        background: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
+                        borderRadius: '16px',
+                        background: '#FFFFFF',
+                        border: '1.5px solid #E2E8F0',
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                        transition: 'all 0.2s ease',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '34px',
-                            height: '34px',
-                            borderRadius: '50%',
-                            background: '#ECFDF5',
-                            color: '#059669',
-                            fontWeight: 800,
-                            fontSize: '0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>{spk.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                            {spk.position ? `${spk.position} • ` : ''}{spk.department || '-'}
+                      {/* Speaker Profile Header Bar */}
+                      <div
+                        style={{
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '10px',
+                          background: '#F8FAFC',
+                          borderBottom: spk.sessions.length > 0 ? '1px solid #E2E8F0' : 'none',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                              color: '#059669',
+                              fontWeight: 800,
+                              fontSize: '0.875rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid #A7F3D0',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>{spk.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              {spk.position ? `${spk.position} • ` : ''}{spk.department || '-'}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div style={{ textAlign: 'right' }}>
-                        <span
+                        {/* Interactive "การบรรยาย" Badge Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (spk.sessions && spk.sessions.length > 0 && onSelectSession) {
+                              onSelectSession(spk.sessions[0]);
+                              onClose();
+                            }
+                          }}
+                          title="คลิกเพื่อเปิดดูรายละเอียดการบรรยาย"
                           style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
                             background: '#ECFDF5',
                             color: '#059669',
-                            padding: '3px 10px',
+                            padding: '5px 12px',
                             borderRadius: '999px',
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            border: '1px solid #A7F3D0',
+                            border: '1.5px solid #A7F3D0',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 2px rgba(5, 150, 105, 0.08)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#059669';
+                            e.currentTarget.style.color = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#059669';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ECFDF5';
+                            e.currentTarget.style.color = '#059669';
+                            e.currentTarget.style.borderColor = '#A7F3D0';
                           }}
                         >
-                          {spk.sessions.length} การบรรยาย
-                        </span>
+                          <BookOpen size={13} />
+                          <span>{spk.sessions.length} การบรรยาย</span>
+                          <ChevronRight size={13} />
+                        </button>
                       </div>
+
+                      {/* Display หัวข้อบรรยาย (Lecture Topics list) */}
+                      {spk.sessions && spk.sessions.length > 0 && (
+                        <div style={{ padding: '10px 14px', background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>หัวข้อการบรรยาย ({spk.sessions.length} รายการ):</span>
+                            <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>คลิกหัวข้อเพื่อเปิดหน้าต่างรายละเอียด</span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {spk.sessions.map((sess) => {
+                              const isOnline = sess.locationType === 'ONLINE' || Boolean(sess.meetUrl);
+
+                              return (
+                                <div
+                                  key={sess.id}
+                                  onClick={() => {
+                                    if (onSelectSession) onSelectSession(sess);
+                                    onClose();
+                                  }}
+                                  style={{
+                                    padding: '9px 12px',
+                                    borderRadius: '10px',
+                                    background: '#F8FAFC',
+                                    border: '1px solid #E2E8F0',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '10px',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#ECFDF5';
+                                    e.currentTarget.style.borderColor = '#A7F3D0';
+                                    e.currentTarget.style.transform = 'translateX(4px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = '#F8FAFC';
+                                    e.currentTarget.style.borderColor = '#E2E8F0';
+                                    e.currentTarget.style.transform = 'none';
+                                  }}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                                      <span
+                                        style={{
+                                          background: isOnline ? '#E0F2FE' : '#ECFDF5',
+                                          color: isOnline ? '#0369A1' : '#047857',
+                                          border: `1px solid ${isOnline ? '#BAE6FD' : '#A7F3D0'}`,
+                                          padding: '1px 7px',
+                                          borderRadius: '999px',
+                                          fontSize: '0.68rem',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                        }}
+                                      >
+                                        {isOnline ? <Video size={10} /> : <Building2 size={10} />}
+                                        <span>{isOnline ? 'Online' : 'Onsite'}</span>
+                                      </span>
+
+                                      <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                        <Calendar size={11} />
+                                        <span>{sess.date} ({sess.startTime} - {sess.endTime} น.)</span>
+                                      </span>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        fontSize: '0.84rem',
+                                        fontWeight: 700,
+                                        color: '#0F172A',
+                                        lineHeight: 1.35,
+                                      }}
+                                    >
+                                      {sess.topic}
+                                    </div>
+
+                                    {(sess.tags || []).length > 0 && (
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                        {(sess.tags || []).map((t) => (
+                                          <span
+                                            key={t}
+                                            style={{
+                                              fontSize: '0.68rem',
+                                              color: '#059669',
+                                              background: '#FFFFFF',
+                                              border: '1px solid #DCFCE7',
+                                              padding: '1px 6px',
+                                              borderRadius: '4px',
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            #{t}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      color: '#059669',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 700,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <span>เปิดดู</span>
+                                    <ChevronRight size={14} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
