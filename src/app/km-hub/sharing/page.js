@@ -27,6 +27,7 @@ import {
   subscribeKmSharingRecords,
   saveKmSharingRecord,
   deleteKmSharingRecord,
+  deleteKmCalendarEvent,
   subscribeKmSharingTags,
   saveKmSharingTags,
   subscribeKmSharingNotificationConfig,
@@ -191,10 +192,28 @@ export default function KMSharingPage() {
   };
 
   const handleDeleteSession = async (sess) => {
+    // Permission check: only owner and admin can delete
+    const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
+    const userId = String(currentPersonnel?.id || currentUser?.uid || '').trim();
+    const isOwner = Boolean(
+      (sess.creator?.email && sess.creator.email.toLowerCase().trim() === userEmail) ||
+      (sess.creator?.id && String(sess.creator.id) === userId) ||
+      (sess.createdBy && String(sess.createdBy).toLowerCase().trim() === userEmail)
+    );
+
+    if (!isAdmin && !isOwner) {
+      await showAlert({
+        type: 'danger',
+        title: 'ไม่มีสิทธิ์ทำรายการ',
+        message: 'เฉพาะผู้สร้างรายการ (Owner) หรือผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบการบรรยายนี้ได้',
+      });
+      return;
+    }
+
     const confirmed = await showConfirm({
       type: 'danger',
       title: 'ยืนยันการลบการบรรยาย',
-      message: `คุณต้องการลบรายการบรรยาย "${sess.topic}" ออกจากระบบใช่หรือไม่?`,
+      message: `คุณต้องการลบรายการบรรยาย "${sess.topic}" ออกจากระบบและนำออกจาก Google Calendar ใช่หรือไม่?`,
       confirmText: 'ยืนยันการลบ',
       cancelText: 'ยกเลิก',
     });
@@ -204,16 +223,32 @@ export default function KMSharingPage() {
         name: currentPersonnel?.name || currentUser?.displayName || 'ผู้ใช้งาน',
         email: currentUser?.email || currentPersonnel?.email || '',
         department: currentPersonnel?.department || '',
+        role: isAdmin ? 'Admin' : 'User',
+        isAdmin,
       };
-      await deleteKmSharingRecord(sess.id, actor);
-      setIsDetailModalOpen(false);
-      setSelectedSessionDetail(null);
 
-      await showAlert({
-        type: 'success',
-        title: 'ลบข้อมูลสำเร็จ',
-        message: 'ลบรายการบรรยายกลุ่มย่อยเรียบร้อยแล้ว',
-      });
+      try {
+        await deleteKmSharingRecord(sess.id, actor);
+        // Ensure Google Calendar event deletion is dispatched
+        deleteKmCalendarEvent(sess, actor).catch((err) => {
+          console.warn('Google Calendar removal notification:', err);
+        });
+
+        setIsDetailModalOpen(false);
+        setSelectedSessionDetail(null);
+
+        await showAlert({
+          type: 'success',
+          title: 'ลบข้อมูลสำเร็จ',
+          message: 'ลบรายการบรรยายกลุ่มย่อยและนำออกจาก Google Calendar เรียบร้อยแล้ว',
+        });
+      } catch (err) {
+        await showAlert({
+          type: 'danger',
+          title: 'เกิดข้อผิดพลาดในการลบรายการ',
+          message: err.message || 'ไม่สามารถลบรายการได้ กรุณาลองใหม่อีกครั้ง',
+        });
+      }
     }
   };
 

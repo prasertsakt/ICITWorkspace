@@ -401,6 +401,7 @@ export async function saveKmSharingRecord(recordData, actor) {
     tags: Array.isArray(recordData.tags) ? recordData.tags : [],
     speakers: Array.isArray(recordData.speakers) ? recordData.speakers.slice(0, 3) : [],
     status: recordData.status || 'SCHEDULED',
+    googleCalendarEventId: recordData.googleCalendarEventId || '',
     creator: recordData.creator || {
       name: actor?.name || 'บุคลากรสำนักฯ',
       email: actor?.email || '',
@@ -524,29 +525,97 @@ export async function updateSessionTags(sessionId, newTags, actor) {
 }
 
 /**
- * Delete Knowledge Sharing Record
+ * Delete Google Calendar Event for a KM Sharing Session
+ */
+export async function deleteKmCalendarEvent(record, actor) {
+  if (!record) return { success: false, message: 'No record provided' };
+
+  try {
+    const startParts = (record.startTime || '10:00').split(':').map(Number);
+    const endParts = (record.endTime || '12:00').split(':').map(Number);
+    const [year, month, day] = (record.date || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+    const startDateTimeIso = new Date(Date.UTC(year, month - 1, day, startParts[0] - 7, startParts[1])).toISOString();
+    const endDateTimeIso = new Date(Date.UTC(year, month - 1, day, endParts[0] - 7, endParts[1])).toISOString();
+
+    const response = await fetch('/api/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'DELETE_CALENDAR_EVENT',
+        deleteCalendarEvent: true,
+        eventId: record.googleCalendarEventId || '',
+        calendarEvent: {
+          eventId: record.googleCalendarEventId || '',
+          title: `[KM Sharing] ${record.topic}`,
+          topic: record.topic,
+          startTime: startDateTimeIso,
+          endTime: endDateTimeIso,
+        },
+        senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace',
+      }),
+    });
+
+    const resData = await response.json();
+    return { success: response.ok, data: resData };
+  } catch (err) {
+    console.error('Error deleting Google Calendar event:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Delete Knowledge Sharing Record (Only Owner or Admin can delete)
  */
 export async function deleteKmSharingRecord(recordId, actor) {
   let deletedItem = null;
 
   if (cachedSharingRecords) {
     deletedItem = cachedSharingRecords.find((item) => item.id === recordId);
+  }
+  if (!deletedItem && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING);
+      if (raw) {
+        const list = JSON.parse(raw);
+        deletedItem = list.find((item) => item.id === recordId);
+      }
+    } catch (e) {}
+  }
+
+  // Permission verification: Only owner and admin can delete
+  if (actor && deletedItem) {
+    const actorEmail = (actor.email || '').toLowerCase().trim();
+    const actorId = String(actor.id || '');
+    const isAdmin = actor.role === 'Admin' || actor.isAdmin === true;
+    const isOwner = Boolean(
+      (deletedItem.creator?.email && deletedItem.creator.email.toLowerCase().trim() === actorEmail) ||
+      (deletedItem.creator?.id && String(deletedItem.creator.id) === actorId) ||
+      (deletedItem.createdBy && String(deletedItem.createdBy).toLowerCase().trim() === actorEmail)
+    );
+    if (!isAdmin && !isOwner) {
+      throw new Error('เฉพาะเจ้าของรายการ (Owner) หรือผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบรายการได้');
+    }
+  }
+
+  // 1. Remove from in-memory cache and notify
+  if (cachedSharingRecords) {
     const updated = cachedSharingRecords.filter((item) => item.id !== recordId);
     notifySharingSubscribers(updated);
   }
 
+  // 2. Remove from local storage
   if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING);
       if (raw) {
         const list = JSON.parse(raw);
-        if (!deletedItem) deletedItem = list.find((item) => item.id === recordId);
         const filtered = list.filter((item) => item.id !== recordId);
         localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(filtered));
       }
     } catch (e) {}
   }
 
+  // 3. Delete from Firestore
   if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'km_sharing_records', recordId);
@@ -556,12 +625,20 @@ export async function deleteKmSharingRecord(recordId, actor) {
     }
   }
 
+  // 4. Also remove the event from Google Calendar via Google Apps Script
+  if (deletedItem) {
+    deleteKmCalendarEvent(deletedItem, actor).catch((err) => {
+      console.warn('Google Calendar deletion background error:', err);
+    });
+  }
+
+  // 5. Activity log
   logActivity({
     action: 'DELETE_KM_SHARING',
     category: ACTIVITY_CATEGORIES.KM_HUB,
     status: 'SUCCESS',
     title: `ลบรายการบรรยายกลุ่มย่อย: ${deletedItem?.topic || recordId}`,
-    details: `ลบรายการการบรรยาย "${deletedItem?.topic || recordId}" ออกจากระบบ`,
+    details: `${actor?.name || 'ผู้ใช้งาน'} ลบรายการการบรรยาย "${deletedItem?.topic || recordId}" ออกจากระบบและปฏิทิน Google Calendar`,
     actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
     target: { id: recordId, name: deletedItem?.topic || recordId, type: 'KM_SHARING_RECORD' },
   });
@@ -990,7 +1067,39 @@ export async function sendKmSharingBookingNotification({
     });
 
     const resData = await response.json();
-    return { success: response.ok, data: resData };
+    const createdEventId = resData?.data?.calendarEvent?.eventId || resData?.calendarEvent?.eventId;
+
+    // Persist returned googleCalendarEventId to record
+    if (createdEventId && record.id) {
+      if (cachedSharingRecords) {
+        const idx = cachedSharingRecords.findIndex((r) => r.id === record.id);
+        if (idx >= 0) {
+          cachedSharingRecords[idx] = { ...cachedSharingRecords[idx], googleCalendarEventId: createdEventId };
+          notifySharingSubscribers(cachedSharingRecords);
+        }
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING);
+          if (raw) {
+            const list = JSON.parse(raw);
+            const idx = list.findIndex((r) => r.id === record.id);
+            if (idx >= 0) {
+              list[idx].googleCalendarEventId = createdEventId;
+              localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(list));
+            }
+          }
+        } catch (e) {}
+      }
+      if (isFirebaseConfigured && db) {
+        try {
+          const docRef = doc(db, 'km_sharing_records', record.id);
+          await setDoc(docRef, { googleCalendarEventId: createdEventId }, { merge: true });
+        } catch (e) {}
+      }
+    }
+
+    return { success: response.ok, data: resData, eventId: createdEventId };
   } catch (err) {
     console.error('Error dispatching KM Sharing notification email:', err);
     return { success: false, error: err.message };

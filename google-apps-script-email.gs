@@ -58,6 +58,102 @@ function doPost(e) {
     var step = data.step || '';
     var senderName = data.senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)';
 
+    // =========================================================================
+    // 1. CALENDAR EVENT DELETION ACTION (DELETE_CALENDAR_EVENT)
+    // =========================================================================
+    if (data.action === 'DELETE_CALENDAR_EVENT' || data.deleteCalendarEvent) {
+      var cal = CalendarApp.getDefaultCalendar();
+      var deletedCount = 0;
+      var deleteErrors = [];
+      var targetEventId = data.eventId || (data.calendarEvent && data.calendarEvent.eventId) || '';
+
+      // Strategy 1: Delete by exact Event ID
+      if (targetEventId) {
+        try {
+          var evt = cal.getEventById(targetEventId);
+          if (evt) {
+            evt.deleteEvent();
+            deletedCount++;
+          } else if (targetEventId.indexOf('@') !== -1) {
+            var strippedId = targetEventId.split('@')[0];
+            var evtStripped = cal.getEventById(strippedId);
+            if (evtStripped) {
+              evtStripped.deleteEvent();
+              deletedCount++;
+            }
+          }
+        } catch (errById) {
+          deleteErrors.push('ById: ' + errById.toString());
+        }
+      }
+
+      // Strategy 2: Fallback search by title/topic and date range
+      if (deletedCount === 0 && data.calendarEvent) {
+        try {
+          var cData = data.calendarEvent;
+          var searchTitle = cData.title ? String(cData.title).trim() : (subject || '');
+          var cleanTopic = cData.topic ? String(cData.topic).trim() : '';
+          var sTime = cData.startTime ? new Date(cData.startTime) : null;
+          var eTime = cData.endTime ? new Date(cData.endTime) : null;
+
+          if (sTime && eTime && !isNaN(sTime.getTime()) && !isNaN(eTime.getTime())) {
+            // +- 24 hour buffer window
+            var sWindow = new Date(sTime.getTime() - 24 * 60 * 60 * 1000);
+            var eWindow = new Date(eTime.getTime() + 24 * 60 * 60 * 1000);
+            var foundEvents = cal.getEvents(sWindow, eWindow);
+            for (var k = 0; k < foundEvents.length; k++) {
+              var fEvt = foundEvents[k];
+              var evTitle = fEvt.getTitle();
+              var matchTitle = searchTitle && evTitle.indexOf(searchTitle) !== -1;
+              var matchTopic = cleanTopic && evTitle.indexOf(cleanTopic) !== -1;
+              if (matchTitle || matchTopic) {
+                fEvt.deleteEvent();
+                deletedCount++;
+              }
+            }
+          }
+        } catch (errSearch) {
+          deleteErrors.push('BySearch: ' + errSearch.toString());
+        }
+      }
+
+      // Strategy 3: Optional cancellation email notification to recipients
+      var cancelEmailSent = false;
+      if (recipient && subject && htmlBody) {
+        try {
+          var cancelPlainText = data.plainText || htmlBody.replace(/<[^>]+>/g, ' ').trim();
+          var cancelOptions = {
+            htmlBody: htmlBody,
+            name: senderName,
+            noReply: false
+          };
+          if (cc) cancelOptions.cc = cc;
+          if (bcc) cancelOptions.bcc = bcc;
+          if (replyTo) cancelOptions.replyTo = replyTo;
+          GmailApp.sendEmail(recipient, subject, cancelPlainText, cancelOptions);
+          cancelEmailSent = true;
+        } catch (mailErr) {
+          deleteErrors.push('EmailNotice: ' + mailErr.toString());
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: deletedCount > 0 ? 'success' : (deleteErrors.length === 0 ? 'not_found' : 'warning'),
+        deleted: deletedCount > 0,
+        deletedCount: deletedCount,
+        emailSent: cancelEmailSent,
+        targetEventId: targetEventId,
+        errors: deleteErrors,
+        message: deletedCount > 0
+          ? 'ลบกิจกรรมใน Google Calendar เรียบร้อยแล้ว (' + deletedCount + ' รายการ)'
+          : 'ไม่พบกิจกรรมที่ตรงกันใน Google Calendar หรือถูกลบไปแล้ว',
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // =========================================================================
+    // 2. STANDARD EMAIL DISPATCH
+    // =========================================================================
     if (!recipient || !subject || !htmlBody) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'error',

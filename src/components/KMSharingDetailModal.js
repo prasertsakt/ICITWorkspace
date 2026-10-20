@@ -59,10 +59,28 @@ export default function KMSharingDetailModal({
   if (!isOpen || !session) return null;
 
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
-  const isCreator =
-    (session.creator?.email || '').toLowerCase().trim() === userEmail ||
-    (session.speakers || []).some((s) => (s.email || '').toLowerCase().trim() === userEmail);
-  const canManageSession = isAdmin || isCreator;
+  const userId = String(currentPersonnel?.id || currentUser?.uid || '').trim();
+
+  // Owner is the person who created/booked the sharing session
+  const isOwner = Boolean(
+    (session.creator?.email && session.creator.email.toLowerCase().trim() === userEmail) ||
+    (session.creator?.id && String(session.creator.id) === userId) ||
+    (session.createdBy && String(session.createdBy).toLowerCase().trim() === userEmail)
+  );
+
+  // Speakers listed in this session
+  const isSpeaker = (session.speakers || []).some(
+    (s) =>
+      (s.email && s.email.toLowerCase().trim() === userEmail) ||
+      (s.id && String(s.id) === userId)
+  );
+
+  // Edit permission: Admin, Owner, or Speakers
+  const canEdit = isAdmin || isOwner || isSpeaker;
+
+  // Delete permission: ONLY Owner or Admin
+  const canDelete = isAdmin || isOwner;
+
   const canManageTags = canUserManageKmTags(currentUser, currentPersonnel, isAdmin, tagManagers);
 
   const stConfig = SHARING_STATUSES[session.status] || SHARING_STATUSES.SCHEDULED;
@@ -665,7 +683,7 @@ export default function KMSharingDetailModal({
 
           {/* Audit trail footer */}
           <div style={{ fontSize: '0.75rem', color: '#94A3B8', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-            ผู้บันทึกการจอง: {session.creator?.name || 'บุคลากรสำนักฯ'} ({session.creator?.department || '-'}) &bull; บันทึกเมื่อ {new Date(session.createdAt || Date.now()).toLocaleDateString('th-TH')}
+            ผู้บันทึกการจอง (Owner): {session.creator?.name || 'บุคลากรสำนักฯ'} ({session.creator?.department || '-'}) &bull; บันทึกเมื่อ {new Date(session.createdAt || Date.now()).toLocaleDateString('th-TH')}
           </div>
         </div>
 
@@ -683,41 +701,42 @@ export default function KMSharingDetailModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {canManageSession && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onEdit(session);
-                    onClose();
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
-                >
-                  <Edit2 size={14} />
-                  <span>แก้ไขข้อมูล</span>
-                </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  onEdit(session);
+                  onClose();
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+              >
+                <Edit2 size={14} />
+                <span>แก้ไขข้อมูล</span>
+              </button>
+            )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDelete(session);
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: 700,
-                    color: '#DC2626',
-                    borderColor: '#FECACA',
-                    background: '#FEF2F2',
-                  }}
-                >
-                  <Trash2 size={14} />
-                  <span>ลบรายการ</span>
-                </button>
-              </>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(session);
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  color: '#DC2626',
+                  borderColor: '#FECACA',
+                  background: '#FEF2F2',
+                }}
+                title={isAdmin ? 'ลบรายการ (สิทธิ์ Admin)' : 'ลบรายการ (สิทธิ์ Owner)'}
+              >
+                <Trash2 size={14} />
+                <span>ลบรายการ</span>
+              </button>
             )}
           </div>
 
