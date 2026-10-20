@@ -42,34 +42,41 @@ export default function KMSharingSummaryModal({
 
   const nowIso = new Date().toISOString().slice(0, 10);
 
-  // Compute breakdown data depending on dimension
+  // Compute breakdown title depending on dimension
   let title = 'สรุปภาพรวมการแบ่งปันความรู้ (KM Sharing Summary)';
-  let baseList = [...sessions];
 
   if (dimension === 'TOTAL') {
     title = 'การบรรยายทั้งหมด (All Knowledge Sharing Sessions)';
-    baseList = [...sessions];
   } else if (dimension === 'UPCOMING') {
     title = 'สรุปการบรรยายที่กำลังจะมาถึง (Upcoming Sessions)';
-    baseList = sessions.filter(
-      (s) => s.status === 'SCHEDULED' || s.date >= nowIso
-    );
   } else if (dimension === 'COMPLETED') {
     title = 'สรุปการบรรยายที่เสร็จสิ้นแล้ว (Completed Sessions)';
-    baseList = sessions.filter((s) => s.status === 'COMPLETED');
   } else if (dimension === 'SPEAKERS') {
     title = 'สรุปทำเนียบผู้บรรยายและผู้แชร์ความรู้ (Speakers Directory)';
   } else if (dimension === 'TAGS') {
     title = 'สรุปการกระจายตัวตามหมวดหมู่แท็ก (Knowledge Tags Breakdown)';
   }
 
-  // Filter list by date range if specified
-  const filteredList = baseList.filter((s) => {
-    if (!s.date) return false;
-    if (startDate && s.date < startDate) return false;
-    if (endDate && s.date > endDate) return false;
-    return true;
-  });
+  // Filter sessions by date range if specified
+  const dateFilteredSessions = useMemo(() => {
+    return sessions.filter((s) => {
+      if (!s.date) return false;
+      if (startDate && s.date < startDate) return false;
+      if (endDate && s.date > endDate) return false;
+      return true;
+    });
+  }, [sessions, startDate, endDate]);
+
+  // Session list for TOTAL, UPCOMING, COMPLETED based on date-filtered sessions
+  const filteredList = useMemo(() => {
+    if (dimension === 'UPCOMING') {
+      return dateFilteredSessions.filter((s) => s.status === 'SCHEDULED' || s.date >= nowIso);
+    }
+    if (dimension === 'COMPLETED') {
+      return dateFilteredSessions.filter((s) => s.status === 'COMPLETED');
+    }
+    return dateFilteredSessions;
+  }, [dimension, dateFilteredSessions, nowIso]);
 
   // Preset handlers
   const handlePreset = (presetKey) => {
@@ -96,37 +103,41 @@ export default function KMSharingSummaryModal({
     }
   };
 
-  // Speakers aggregation
-  const speakersMap = {};
-  sessions.forEach((s) => {
-    (s.speakers || []).forEach((spk) => {
-      const key = spk.email || spk.name;
-      if (!speakersMap[key]) {
-        speakersMap[key] = {
-          name: spk.name,
-          email: spk.email,
-          department: spk.department,
-          position: spk.position,
-          sessions: [],
-        };
-      }
-      speakersMap[key].sessions.push(s);
+  // Speakers aggregation based on date-filtered sessions
+  const speakersList = useMemo(() => {
+    const speakersMap = {};
+    dateFilteredSessions.forEach((s) => {
+      (s.speakers || []).forEach((spk) => {
+        const key = spk.email || spk.name;
+        if (!key) return;
+        if (!speakersMap[key]) {
+          speakersMap[key] = {
+            name: spk.name,
+            email: spk.email,
+            department: spk.department,
+            position: spk.position,
+            sessions: [],
+          };
+        }
+        speakersMap[key].sessions.push(s);
+      });
     });
-  });
-  const speakersList = Object.values(speakersMap).sort(
-    (a, b) => b.sessions.length - a.sessions.length
-  );
+    return Object.values(speakersMap).sort((a, b) => b.sessions.length - a.sessions.length);
+  }, [dateFilteredSessions]);
 
-  // Tags aggregation
-  const tagsMap = {};
-  sessions.forEach((s) => {
-    (s.tags || []).forEach((t) => {
-      tagsMap[t] = (tagsMap[t] || 0) + 1;
+  // Tags aggregation based on date-filtered sessions
+  const tagsList = useMemo(() => {
+    const tagsMap = {};
+    dateFilteredSessions.forEach((s) => {
+      (s.tags || []).forEach((t) => {
+        if (!t) return;
+        tagsMap[t] = (tagsMap[t] || 0) + 1;
+      });
     });
-  });
-  const tagsList = Object.entries(tagsMap)
-    .map(([tagName, count]) => ({ tagName, count }))
-    .sort((a, b) => b.count - a.count);
+    return Object.entries(tagsMap)
+      .map(([tagName, count]) => ({ tagName, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [dateFilteredSessions]);
 
   return (
     <div
@@ -215,268 +226,298 @@ export default function KMSharingSummaryModal({
 
         {/* Content Body */}
         <div style={{ overflowY: 'auto', padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Shared Date Range Filter for all dimensions (Total, Upcoming, Completed, Speakers, Tags) */}
+          <div
+            style={{
+              background: '#F8FAFC',
+              border: '1.5px solid #E2E8F0',
+              borderRadius: '14px',
+              padding: '12px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
+                <Calendar size={15} color="#059669" />
+                <span>กรองตามช่วงวันที่ (Date Range)</span>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => handlePreset('ALL')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.725rem',
+                    fontWeight: 600,
+                    border: '1px solid #CBD5E1',
+                    background: !startDate && !endDate ? '#059669' : '#FFFFFF',
+                    color: !startDate && !endDate ? '#FFFFFF' : '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePreset('THIS_MONTH')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.725rem',
+                    fontWeight: 600,
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  เดือนนี้
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePreset('NEXT_3_MONTHS')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.725rem',
+                    fontWeight: 600,
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  3 เดือนข้างหน้า
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePreset('THIS_YEAR')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.725rem',
+                    fontWeight: 600,
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ปีนี้
+                </button>
+                {(startDate || endDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.725rem',
+                      fontWeight: 700,
+                      border: '1px solid #FECACA',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <RotateCcw size={11} />
+                    <span>ล้างตัวกรอง</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Date Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', alignItems: 'center' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                  ตั้งแต่วันที่
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8rem',
+                    background: '#FFFFFF',
+                    color: '#1E293B',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                  ถึงวันที่
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8rem',
+                    background: '#FFFFFF',
+                    color: '#1E293B',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Dimension 1: Speakers Directory View */}
           {dimension === 'SPEAKERS' ? (
             <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.75rem' }}>
-                รายชื่อบุคลากรผู้ร่วมแบ่งปันความรู้ ({speakersList.length} ท่าน)
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '4px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
+                  รายชื่อบุคลากรผู้ร่วมแบ่งปันความรู้ ({speakersList.length} ท่าน
+                  {(startDate || endDate) && (
+                    <span style={{ color: '#059669', marginLeft: '4px', fontWeight: 600, fontSize: '0.775rem' }}>
+                      • จากช่วง {startDate || 'เริ่มต้น'} ถึง {endDate || 'ปัจจุบัน/อนาคต'}
+                    </span>
+                  )}
+                  )
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {speakersList.map((spk, idx) => (
-                  <div
-                    key={spk.email || spk.name || idx}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div
-                        style={{
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '50%',
-                          background: '#ECFDF5',
-                          color: '#059669',
-                          fontWeight: 800,
-                          fontSize: '0.85rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>{spk.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                          {spk.position ? `${spk.position} • ` : ''}{spk.department || '-'}
+
+              {speakersList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94A3B8', fontSize: '0.875rem', background: '#F8FAFC', borderRadius: '12px' }}>
+                  ไม่พบข้อมูลผู้บรรยายตามเงื่อนไขช่วงวันที่ที่เลือก
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {speakersList.map((spk, idx) => (
+                    <div
+                      key={spk.email || spk.name || idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '50%',
+                            background: '#ECFDF5',
+                            color: '#059669',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>{spk.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            {spk.position ? `${spk.position} • ` : ''}{spk.department || '-'}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <span
-                        style={{
-                          background: '#ECFDF5',
-                          color: '#059669',
-                          padding: '3px 10px',
-                          borderRadius: '999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          border: '1px solid #A7F3D0',
-                        }}
-                      >
-                        {spk.sessions.length} การบรรยาย
-                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span
+                          style={{
+                            background: '#ECFDF5',
+                            color: '#059669',
+                            padding: '3px 10px',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 800,
+                            border: '1px solid #A7F3D0',
+                          }}
+                        >
+                          {spk.sessions.length} การบรรยาย
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : dimension === 'TAGS' ? (
             /* Dimension 2: Tags Distribution */
             <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.75rem' }}>
-                การกระจายตัวตามหมวดหมู่แท็กองค์ความรู้ ({tagsList.length} หมวดหมู่)
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                {tagsList.map((item) => (
-                  <div
-                    key={item.tagName}
-                    style={{
-                      padding: '12px',
-                      borderRadius: '12px',
-                      background: '#FFFBEB',
-                      border: '1px solid #FDE68A',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#B45309' }}>
-                      #{item.tagName}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '4px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
+                  การกระจายตัวตามหมวดหมู่แท็กองค์ความรู้ ({tagsList.length} หมวดหมู่
+                  {(startDate || endDate) && (
+                    <span style={{ color: '#059669', marginLeft: '4px', fontWeight: 600, fontSize: '0.775rem' }}>
+                      • จากช่วง {startDate || 'เริ่มต้น'} ถึง {endDate || 'ปัจจุบัน/อนาคต'}
                     </span>
-                    <span
+                  )}
+                  )
+                </div>
+              </div>
+
+              {tagsList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94A3B8', fontSize: '0.875rem', background: '#F8FAFC', borderRadius: '12px' }}>
+                  ไม่พบข้อมูลแท็กตามเงื่อนไขช่วงวันที่ที่เลือก
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                  {tagsList.map((item) => (
+                    <div
+                      key={item.tagName}
                       style={{
-                        background: '#F59E0B',
-                        color: '#FFFFFF',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
+                        padding: '12px',
+                        borderRadius: '12px',
+                        background: '#FFFBEB',
+                        border: '1px solid #FDE68A',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      {item.count} ครั้ง
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#B45309' }}>
+                        #{item.tagName}
+                      </span>
+                      <span
+                        style={{
+                          background: '#F59E0B',
+                          color: '#FFFFFF',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {item.count} ครั้ง
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             /* Dimension 3: Session list for TOTAL, UPCOMING, COMPLETED */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Date Range Filter Box */}
-              <div
-                style={{
-                  background: '#F8FAFC',
-                  border: '1.5px solid #E2E8F0',
-                  borderRadius: '14px',
-                  padding: '12px 14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
-                    <Calendar size={15} color="#059669" />
-                    <span>กรองตามช่วงวันที่ (Date Range)</span>
-                  </div>
-
-                  {/* Quick Preset Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => handlePreset('ALL')}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.725rem',
-                        fontWeight: 600,
-                        border: '1px solid #CBD5E1',
-                        background: !startDate && !endDate ? '#059669' : '#FFFFFF',
-                        color: !startDate && !endDate ? '#FFFFFF' : '#475569',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ทั้งหมด
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePreset('THIS_MONTH')}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.725rem',
-                        fontWeight: 600,
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#475569',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      เดือนนี้
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePreset('NEXT_3_MONTHS')}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.725rem',
-                        fontWeight: 600,
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#475569',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      3 เดือนข้างหน้า
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePreset('THIS_YEAR')}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.725rem',
-                        fontWeight: 600,
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#475569',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ปีนี้
-                    </button>
-                    {(startDate || endDate) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStartDate('');
-                          setEndDate('');
-                        }}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.725rem',
-                          fontWeight: 700,
-                          border: '1px solid #FECACA',
-                          background: '#FEF2F2',
-                          color: '#DC2626',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                        }}
-                      >
-                        <RotateCcw size={11} />
-                        <span>ล้างตัวกรอง</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Date Inputs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', alignItems: 'center' }}>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
-                      ตั้งแต่วันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '0.8rem',
-                        background: '#FFFFFF',
-                        color: '#1E293B',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
-                      ถึงวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '0.8rem',
-                        background: '#FFFFFF',
-                        color: '#1E293B',
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Session List Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
