@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { to, cc, bcc, subject, htmlBody, attachments, webhookUrl, senderName } = body;
+    const { to, cc, bcc, subject, htmlBody, attachments, webhookUrl, senderName, createCalendarEvent, calendarEvent } = body;
 
     if (!to || !subject || !htmlBody) {
       return NextResponse.json(
@@ -28,6 +28,8 @@ export async function POST(request) {
           subject,
           htmlBody,
           senderName: senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)',
+          createCalendarEvent: Boolean(createCalendarEvent),
+          calendarEvent: calendarEvent || null,
         }),
       });
 

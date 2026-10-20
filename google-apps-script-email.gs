@@ -111,6 +111,35 @@ function doPost(e) {
     // Send email using GmailApp with institutional Google Workspace account
     GmailApp.sendEmail(recipient, subject, plainText, emailOptions);
 
+    // Optional: Auto-create Google Calendar event with guests if requested
+    var calendarEventResult = null;
+    if (data.createCalendarEvent && data.calendarEvent) {
+      try {
+        var calData = data.calendarEvent;
+        var startDt = new Date(calData.startTime);
+        var endDt = new Date(calData.endTime);
+        var calTitle = calData.title || subject;
+        var calOptions = {
+          description: calData.description || plainText,
+          location: calData.location || '',
+          sendInvites: true
+        };
+        if (calData.guests) {
+          calOptions.guests = Array.isArray(calData.guests) ? calData.guests.join(',') : String(calData.guests);
+        }
+        var createdEvent = CalendarApp.getDefaultCalendar().createEvent(calTitle, startDt, endDt, calOptions);
+        calendarEventResult = {
+          eventId: createdEvent.getId(),
+          status: 'created'
+        };
+      } catch (calErr) {
+        calendarEventResult = {
+          status: 'warning',
+          message: calErr.toString()
+        };
+      }
+    }
+
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
       message: 'Email successfully sent to ' + recipient + (cc ? ' (CC: ' + cc + ')' : '') + (bcc ? ' (BCC: ' + bcc + ')' : ''),
@@ -119,6 +148,7 @@ function doPost(e) {
       recipient: recipient,
       cc: cc,
       bcc: bcc,
+      calendarEvent: calendarEventResult,
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
 

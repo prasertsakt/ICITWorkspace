@@ -190,6 +190,18 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // 24.1 Rules for 'km_sharing_records' collection (Knowledge Sharing & Group Lectures)
+    match /km_sharing_records/{recordId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // 24.2 Rules for 'km_sharing_configs' collection (Sharing Tags & Notification Recipients)
+    match /km_sharing_configs/{configId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     // 25. Rules for 'activity_logs' collection (System Audit & User Activities)
     match /activity_logs/{logId} {
       allow read: if isAuthenticated();
