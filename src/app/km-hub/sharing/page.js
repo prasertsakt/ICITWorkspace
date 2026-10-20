@@ -32,6 +32,8 @@ import {
   subscribeKmSharingNotificationConfig,
   saveKmSharingNotificationConfig,
   sendKmSharingBookingNotification,
+  subscribeKmSharingTagManagers,
+  saveKmSharingTagManagers,
   DEFAULT_SHARING_TAGS,
 } from '@/lib/kmSharingService';
 import { subscribePersonnelList } from '@/lib/storageService';
@@ -49,6 +51,7 @@ export default function KMSharingPage() {
   // Data
   const [sessions, setSessions] = useState([]);
   const [tags, setTags] = useState(DEFAULT_SHARING_TAGS);
+  const [tagManagers, setTagManagers] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,10 @@ export default function KMSharingPage() {
       if (Array.isArray(data) && data.length > 0) setTags(data);
     });
 
+    const unsubTagManagers = subscribeKmSharingTagManagers((data) => {
+      setTagManagers(data || []);
+    });
+
     const unsubRecipients = subscribeKmSharingNotificationConfig((data) => {
       setRecipients(data || []);
     });
@@ -89,10 +96,21 @@ export default function KMSharingPage() {
     return () => {
       unsubSessions();
       unsubTags();
+      unsubTagManagers();
       unsubRecipients();
       unsubPersonnel();
     };
   }, []);
+
+  // Synchronize open detail modal when sessions data updates
+  useEffect(() => {
+    if (selectedSessionDetail) {
+      const fresh = sessions.find((s) => s.id === selectedSessionDetail.id);
+      if (fresh) {
+        setSelectedSessionDetail(fresh);
+      }
+    }
+  }, [sessions]);
 
   // Dashboard Metrics Computation
   const stats = useMemo(() => {
@@ -197,6 +215,20 @@ export default function KMSharingPage() {
         message: 'ลบรายการบรรยายกลุ่มย่อยเรียบร้อยแล้ว',
       });
     }
+  };
+
+  const handleSaveTagManagers = async (newManagers) => {
+    const actor = {
+      name: currentPersonnel?.name || currentUser?.displayName || 'Admin',
+      email: currentUser?.email || '',
+    };
+    await saveKmSharingTagManagers(newManagers, actor);
+    setTagManagers(newManagers);
+    await showAlert({
+      type: 'success',
+      title: 'บันทึกผู้มีสิทธิ์จัดการแท็กสำเร็จ',
+      message: `บันทึกรายชื่อผู้มีสิทธิ์จัดการแท็ก (${newManagers.length} ท่าน) เรียบร้อยแล้ว`,
+    });
   };
 
   // 1. Auth Loading
@@ -862,6 +894,13 @@ export default function KMSharingPage() {
           session={selectedSessionDetail}
           onEdit={handleOpenEditModal}
           onDelete={handleDeleteSession}
+          onTagsUpdated={(sessionId, newTags) => {
+            setSelectedSessionDetail((prev) =>
+              prev && prev.id === sessionId ? { ...prev, tags: newTags } : prev
+            );
+          }}
+          availableTags={tags}
+          tagManagers={tagManagers}
           currentUser={currentUser}
           currentPersonnel={currentPersonnel}
           isAdmin={isAdmin}
@@ -874,6 +913,8 @@ export default function KMSharingPage() {
           isOpen={isTagModalOpen}
           onClose={() => setIsTagModalOpen(false)}
           tags={tags}
+          tagManagers={tagManagers}
+          personnelList={personnelList}
           sessions={sessions}
           onSaveTags={async (newTags) => {
             const actor = {
@@ -888,6 +929,7 @@ export default function KMSharingPage() {
               message: `บันทึกรายการแท็กองค์ความรู้ ${newTags.length} รายการเรียบร้อยแล้ว`,
             });
           }}
+          onSaveTagManagers={handleSaveTagManagers}
         />
       )}
 

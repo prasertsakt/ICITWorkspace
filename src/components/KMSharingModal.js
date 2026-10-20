@@ -9,15 +9,15 @@ import {
   Users,
   BookOpen,
   Link2,
-  Tag,
   Search,
   Plus,
-  Check,
-  AlertCircle,
-  FileText,
+  Video,
+  Building2,
   Sparkles,
+  FileText,
+  AlertCircle,
 } from 'lucide-react';
-import { SHARING_FORMATS, SHARING_STATUSES } from '@/lib/kmSharingService';
+import { SHARING_STATUSES } from '@/lib/kmSharingService';
 
 export default function KMSharingModal({
   isOpen,
@@ -26,26 +26,21 @@ export default function KMSharingModal({
   sessionToEdit = null,
   initialDate = null,
   personnelList = [],
-  availableTags = [],
   currentUser = null,
   currentPersonnel = null,
   isAdmin = false,
 }) {
   // Form state
   const [topic, setTopic] = useState('');
-  const [format, setFormat] = useState('บรรยายกลุ่มย่อย/Focus group');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('12:00');
-  const [location, setLocation] = useState('ห้องประชุมสำนักคอมพิวเตอร์ฯ หรือ ออนไลน์');
+  const [locationType, setLocationType] = useState('ONSITE'); // 'ONSITE' | 'ONLINE'
+  const [roomNumber, setRoomNumber] = useState('');
   const [overview, setOverview] = useState('');
   const [materialUrl, setMaterialUrl] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
   const [speakers, setSpeakers] = useState([]);
   const [status, setStatus] = useState('SCHEDULED');
-
-  // Tag search in modal
-  const [tagSearch, setTagSearch] = useState('');
 
   // Personnel search for speaker selector
   const [speakerSearch, setSpeakerSearch] = useState('');
@@ -59,26 +54,24 @@ export default function KMSharingModal({
   useEffect(() => {
     if (sessionToEdit) {
       setTopic(sessionToEdit.topic || '');
-      setFormat(sessionToEdit.format || 'บรรยายกลุ่มย่อย/Focus group');
       setDate(sessionToEdit.date || '');
       setStartTime(sessionToEdit.startTime || '10:00');
       setEndTime(sessionToEdit.endTime || '12:00');
-      setLocation(sessionToEdit.location || '');
+      setLocationType(sessionToEdit.locationType || (sessionToEdit.meetUrl ? 'ONLINE' : 'ONSITE'));
+      setRoomNumber(sessionToEdit.roomNumber || (sessionToEdit.locationType === 'ONSITE' ? sessionToEdit.location : '') || '');
       setOverview(sessionToEdit.overview || '');
       setMaterialUrl(sessionToEdit.materialUrl || '');
-      setSelectedTags(sessionToEdit.tags || []);
       setSpeakers(sessionToEdit.speakers || []);
       setStatus(sessionToEdit.status || 'SCHEDULED');
     } else {
       setTopic('');
-      setFormat('บรรยายกลุ่มย่อย/Focus group');
       setDate(initialDate || new Date().toISOString().slice(0, 10));
       setStartTime('10:00');
       setEndTime('12:00');
-      setLocation('ห้องประชุมสำนักคอมพิวเตอร์ฯ หรือ ออนไลน์ (MS Teams/Google Meet)');
+      setLocationType('ONSITE');
+      setRoomNumber('ห้องประชุม 204 อาคารสำนักคอมพิวเตอร์ฯ');
       setOverview('');
       setMaterialUrl('');
-      setSelectedTags(['AI']);
       setStatus('SCHEDULED');
 
       // Default speaker: current logged in user if available
@@ -97,7 +90,6 @@ export default function KMSharingModal({
       }
     }
     setErrors({});
-    setTagSearch('');
     setSpeakerSearch('');
     setIsSpeakerDropdownOpen(false);
   }, [sessionToEdit, initialDate, currentPersonnel, isOpen]);
@@ -119,13 +111,6 @@ export default function KMSharingModal({
       })
       .slice(0, 10);
   }, [personnelList, speakerSearch, speakers]);
-
-  // Filtered tags for tag selector
-  const filteredTags = useMemo(() => {
-    const q = tagSearch.toLowerCase().trim();
-    if (!q) return availableTags;
-    return availableTags.filter((t) => t.toLowerCase().includes(q));
-  }, [availableTags, tagSearch]);
 
   const handleAddSpeaker = (person) => {
     if (speakers.length >= 3) return;
@@ -150,16 +135,6 @@ export default function KMSharingModal({
     setSpeakers((prev) => prev.filter((s) => (s.id || s.email) !== speakerId));
   };
 
-  const handleToggleTag = (tag) => {
-    setSelectedTags((prev) => {
-      if (prev.includes(tag)) {
-        return prev.filter((t) => t !== tag);
-      } else {
-        return [...prev, tag];
-      }
-    });
-  };
-
   const validate = () => {
     const errs = {};
     if (!topic.trim()) errs.topic = 'กรุณาระบุหัวข้อบรรยาย / ชื่อองค์ความรู้';
@@ -169,7 +144,9 @@ export default function KMSharingModal({
     if (startTime && endTime && startTime >= endTime) {
       errs.endTime = 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น';
     }
-    if (!location.trim()) errs.location = 'กรุณาระบุสถานที่หรือลิงก์การประชุม';
+    if (locationType === 'ONSITE' && !roomNumber.trim()) {
+      errs.roomNumber = 'กรุณาระบุหมายเลขห้องหรือสถานที่จัดบรรยาย';
+    }
     if (speakers.length === 0) errs.speakers = 'กรุณาระบุผู้บรรยายอย่างน้อย 1 ท่าน (สูงสุด 3 ท่าน)';
     if (!overview.trim()) errs.overview = 'กรุณาระบุรายละเอียดของเนื้อหาในภาพรวม';
     if (!materialUrl.trim()) errs.materialUrl = 'กรุณาแนบลิงก์เอกสารประกอบการบรรยาย';
@@ -187,14 +164,14 @@ export default function KMSharingModal({
       const payload = {
         ...(sessionToEdit || {}),
         topic: topic.trim(),
-        format,
+        format: 'บรรยายกลุ่มย่อย',
         date,
         startTime,
         endTime,
-        location: location.trim(),
+        locationType,
+        roomNumber: locationType === 'ONSITE' ? roomNumber.trim() : '',
         overview: overview.trim(),
         materialUrl: materialUrl.trim(),
-        tags: selectedTags,
         speakers,
         status,
       };
@@ -230,7 +207,7 @@ export default function KMSharingModal({
           background: '#FFFFFF',
           borderRadius: '20px',
           width: '100%',
-          maxWidth: '780px',
+          maxWidth: '750px',
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
@@ -468,7 +445,7 @@ export default function KMSharingModal({
                 setTopic(e.target.value);
                 if (errors.topic) setErrors((prev) => ({ ...prev, topic: null }));
               }}
-              placeholder="ระบุชื่อองค์ความรู้หรือหัวข้อการบรรยาย เช่น การประยุกต์ใช้ AI ในงานประจำ..."
+              placeholder="ระบุชื่อองค์ความรู้หรือหัวข้อการบรรยายกลุ่มย่อย..."
               style={{
                 width: '100%',
                 padding: '0.65rem 0.85rem',
@@ -486,41 +463,7 @@ export default function KMSharingModal({
             )}
           </div>
 
-          {/* Section 3: รูปแบบขององค์ความรู้ (Pills matching image 1) */}
-          <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: '0.35rem' }}>
-              รูปแบบขององค์ความรู้ <span style={{ color: '#EF4444' }}>*</span>
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
-              {SHARING_FORMATS.map((fmt) => {
-                const isSelected = format === fmt.key;
-                return (
-                  <button
-                    key={fmt.key}
-                    type="button"
-                    onClick={() => setFormat(fmt.key)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: `1.5px solid ${isSelected ? fmt.color : '#E2E8F0'}`,
-                      background: isSelected ? fmt.bg : '#F8FAFC',
-                      color: isSelected ? fmt.color : '#475569',
-                      fontSize: '0.825rem',
-                      fontWeight: isSelected ? 800 : 600,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                    }}
-                  >
-                    {fmt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 4: วันที่จัด เวลา และสถานที่ */}
+          {/* Section 3: วันที่จัด และ เวลา */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div>
               <label style={{ fontSize: '0.825rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '0.3rem' }}>
@@ -586,135 +529,142 @@ export default function KMSharingModal({
                 <p style={{ margin: '3px 0 0', fontSize: '0.72rem', color: '#EF4444' }}>{errors.endTime}</p>
               )}
             </div>
-
-            <div style={{ gridColumn: 'span 1' }}>
-              <label style={{ fontSize: '0.825rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '0.3rem' }}>
-                <MapPin size={14} color="#059669" />
-                <span>สถานที่ / ช่องทางออนไลน์ <span style={{ color: '#EF4444' }}>*</span></span>
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  if (errors.location) setErrors((prev) => ({ ...prev, location: null }));
-                }}
-                placeholder="ระบุห้องประชุม หรือ Microsoft Teams / Google Meet"
-                style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '10px',
-                  border: `1.5px solid ${errors.location ? '#EF4444' : '#CBD5E1'}`,
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                }}
-              />
-              {errors.location && (
-                <p style={{ margin: '3px 0 0', fontSize: '0.72rem', color: '#EF4444' }}>{errors.location}</p>
-              )}
-            </div>
           </div>
 
-          {/* Section 5: เนื้อหาองค์ความรู้เกี่ยวข้องกับอะไร? (Tags with search & checkboxes matching image 3) */}
+          {/* Section 4: Onsite / Online Selection */}
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.35rem' }}>
-              <Tag size={16} color="#059669" />
-              <span>เนื้อหาองค์ความรู้เกี่ยวข้องกับอะไร? (เลือกแท็กที่เกี่ยวข้อง)</span>
+            <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
+              <MapPin size={15} color="#059669" />
+              <span>สถานที่ / ช่องทางการบรรยาย <span style={{ color: '#EF4444' }}>*</span></span>
             </label>
 
-            <div
-              style={{
-                border: '1.5px solid #CBD5E1',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                background: '#FAFAFA',
-              }}
-            >
-              {/* Search box for tags */}
-              <div
+            {/* Toggle Onsite vs Online */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setLocationType('ONSITE')}
                 style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: `2px solid ${locationType === 'ONSITE' ? '#059669' : '#E2E8F0'}`,
+                  background: locationType === 'ONSITE' ? '#ECFDF5' : '#F8FAFC',
+                  color: locationType === 'ONSITE' ? '#065F46' : '#64748B',
                   display: 'flex',
                   alignItems: 'center',
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  padding: '4px 8px',
-                  marginBottom: '10px',
-                  gap: '6px',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'left',
                 }}
               >
-                <Search size={14} color="#94A3B8" />
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: locationType === 'ONSITE' ? '#10B981' : '#E2E8F0',
+                    color: locationType === 'ONSITE' ? '#FFFFFF' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Onsite (ในสถานที่)</div>
+                  <div style={{ fontSize: '0.725rem', opacity: 0.85 }}>ระบุห้องประชุมที่ใช้จัด</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLocationType('ONLINE')}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: `2px solid ${locationType === 'ONLINE' ? '#0284C7' : '#E2E8F0'}`,
+                  background: locationType === 'ONLINE' ? '#F0F9FF' : '#F8FAFC',
+                  color: locationType === 'ONLINE' ? '#0369A1' : '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'left',
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: locationType === 'ONLINE' ? '#0284C7' : '#E2E8F0',
+                    color: locationType === 'ONLINE' ? '#FFFFFF' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Video size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Online (Google Meet)</div>
+                  <div style={{ fontSize: '0.725rem', opacity: 0.85 }}>ระบบสร้างลิงก์ Meet ให้อัตโนมัติ</div>
+                </div>
+              </button>
+            </div>
+
+            {/* If Onsite: enter room number */}
+            {locationType === 'ONSITE' ? (
+              <div>
                 <input
                   type="text"
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  placeholder="ค้นหาแท็กหมวดหมู่..."
+                  value={roomNumber}
+                  onChange={(e) => {
+                    setRoomNumber(e.target.value);
+                    if (errors.roomNumber) setErrors((prev) => ({ ...prev, roomNumber: null }));
+                  }}
+                  placeholder="ระบุหมายเลขห้องประชุม เช่น ห้องประชุม 204 ชั้น 2 หรือ ห้องสัมมนา ชั้น 3..."
                   style={{
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '0.8rem',
                     width: '100%',
-                    background: 'transparent',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${errors.roomNumber ? '#EF4444' : '#CBD5E1'}`,
+                    fontSize: '0.875rem',
+                    outline: 'none',
                   }}
                 />
+                {errors.roomNumber && (
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#EF4444', fontWeight: 600 }}>
+                    {errors.roomNumber}
+                  </p>
+                )}
               </div>
-
-              {/* Checkboxes Grid matching image 3 styling */}
+            ) : (
+              /* If Online: info banner showing auto meet creation */
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                  gap: '8px',
-                  maxHeight: '160px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
                 }}
               >
-                {filteredTags.map((t) => {
-                  const isChecked = selectedTags.includes(t);
-                  return (
-                    <label
-                      key={t}
-                      onClick={() => handleToggleTag(t)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        padding: '4px 6px',
-                        borderRadius: '6px',
-                        background: isChecked ? '#FEF3C7' : 'transparent',
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // handled by label click
-                        style={{
-                          width: '16px',
-                          height: '16px',
-                          cursor: 'pointer',
-                          accentColor: '#D97706',
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: '0.825rem',
-                          fontWeight: isChecked ? 700 : 500,
-                          color: isChecked ? '#B45309' : '#334155',
-                        }}
-                      >
-                        {t}
-                      </span>
-                    </label>
-                  );
-                })}
+                <Sparkles size={18} color="#0284C7" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '0.8rem', color: '#0369A1', lineHeight: 1.5 }}>
+                  <strong>Google Meet อัตโนมัติ:</strong> ระบบจะผูกห้องประชุม Google Meet สำหรับการบรรยายนี้ให้โดยอัตโนมัติใน Event ปฏิทิน และอีเมลแจ้งเตือนผู้เข้าร่วมทุกคน
+                </span>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Section 6: รายละเอียดของเนื้อหาในภาพรวม (Textarea matching image 2) */}
+          {/* Section 5: รายละเอียดของเนื้อหาในภาพรวม (Textarea) */}
           <div>
             <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.35rem' }}>
               <FileText size={16} color="#059669" />
@@ -746,7 +696,7 @@ export default function KMSharingModal({
             )}
           </div>
 
-          {/* Section 7: แนบลิงก์เอกสารประกอบการบรรยาย */}
+          {/* Section 6: แนบลิงก์เอกสารประกอบการบรรยาย */}
           <div>
             <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.35rem' }}>
               <Link2 size={16} color="#059669" />

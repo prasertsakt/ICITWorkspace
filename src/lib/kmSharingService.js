@@ -19,6 +19,7 @@ export const LOCAL_KEY_KM_SHARING = 'icit_km_sharing_records';
 export const LOCAL_KEY_KM_SHARING_SEEDED = 'icit_km_sharing_seeded';
 export const LOCAL_KEY_KM_SHARING_TAGS = 'icit_km_sharing_tags';
 export const LOCAL_KEY_KM_SHARING_RECIPIENTS = 'icit_km_sharing_recipients';
+export const LOCAL_KEY_KM_SHARING_TAG_MANAGERS = 'icit_km_sharing_tag_managers';
 
 // Default Knowledge Tags (as specified from UI)
 export const DEFAULT_SHARING_TAGS = [
@@ -38,13 +39,22 @@ export const DEFAULT_SHARING_TAGS = [
   'อื่นๆ',
 ];
 
-// Knowledge Formats (from UI design)
-export const SHARING_FORMATS = [
-  { key: 'บรรยายกลุ่มย่อย/Focus group', label: 'บรรยายกลุ่มย่อย/Focus group', color: '#059669', bg: '#ECFDF5', border: '#A7F3D0' },
-  { key: 'OPL', label: 'OPL (One Point Lesson)', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-  { key: 'Infographic', label: 'Infographic', color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
-  { key: 'Video', label: 'Video', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
-  { key: 'เอกสารความรู้ทั่วไป', label: 'เอกสารความรู้ทั่วไป', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+// Default Tag Managers (Personnel who can manage/assign tags)
+export const DEFAULT_TAG_MANAGERS = [
+  {
+    email: 'jarucha.j@icit.kmutnb.ac.th',
+    name: 'นางสาวจารุชา จันทจร',
+    department: 'สำนักงานผู้อำนวยการ',
+    position: 'เจ้าหน้าที่บริหารงานทั่วไป',
+    note: 'ผู้รับผิดชอบงานจัดการความรู้ (KM)',
+  },
+  {
+    email: 'prasertsak.t@cit.kmutnb.ac.th',
+    name: 'นายประเสริฐศักดิ์ ถาวร',
+    department: 'ฝ่ายพัฒนาระบบสารสนเทศ',
+    position: 'นักวิชาการคอมพิวเตอร์',
+    note: 'ผู้ดูแลระบบสารสนเทศ',
+  },
 ];
 
 export const SHARING_STATUSES = {
@@ -79,11 +89,14 @@ export const SAMPLE_KM_SHARING_RECORDS = [
   {
     id: 'kms-sample-01',
     topic: 'การประยุกต์ใช้ Prompt Engineering และ Generative AI เพื่อเพิ่มประสิทธิภาพงานบริการสารสนเทศ',
-    format: 'บรรยายกลุ่มย่อย/Focus group',
+    format: 'บรรยายกลุ่มย่อย',
     date: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10), // 3 days from now
     startTime: '10:00',
     endTime: '12:00',
-    location: 'ห้องประชุม 204 ชั้น 2 อาคารสำนักคอมพิวเตอร์ฯ และ MS Teams',
+    locationType: 'ONLINE',
+    meetUrl: 'https://meet.google.com/lookup/icit-km-sample-01',
+    location: 'Google Meet (ออนไลน์)',
+    roomNumber: '',
     overview: 'แลกเปลี่ยนเทคนิคการเขียน prompt อย่างเป็นระบบ (Role-Task-Context-Constraint) สำหรับ Gemini และ ChatGPT ในการร่างหนังสือราชการ สรุปรายงาน และช่วยเขียนโค้ดเบื้องต้น',
     materialUrl: 'https://docs.google.com/presentation/d/1sample-ai-prompting',
     tags: ['AI', 'Google', 'งานบริการ'],
@@ -115,11 +128,14 @@ export const SAMPLE_KM_SHARING_RECORDS = [
   {
     id: 'kms-sample-02',
     topic: 'เทคนิคการรักษาความมั่นคงปลอดภัยสารสนเทศส่วนบุคคลและการรับมือภัยคุกคามทางไซเบอร์',
-    format: 'บรรยายกลุ่มย่อย/Focus group',
+    format: 'บรรยายกลุ่มย่อย',
     date: new Date(Date.now() - 86400000 * 7).toISOString().slice(0, 10), // 7 days ago
     startTime: '13:30',
     endTime: '15:30',
+    locationType: 'ONSITE',
+    roomNumber: 'ห้องสัมมนา ชั้น 3 สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
     location: 'ห้องสัมมนา ชั้น 3 สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
+    meetUrl: '',
     overview: 'สรุปประเด็นสำคัญจากกรณีศึกษา Phishing Mail ล่าสุด วิธีสังเกตลิงก์หลอกลวง และการเปิดใช้งาน 2-Factor Authentication สำหรับอีเมล @cit.kmutnb.ac.th',
     materialUrl: 'https://drive.google.com/file/d/sample-cyber-security-guide/view',
     tags: ['ความปลอดภัยทางไซเบอร์', 'เครือข่าย', 'Microsoft 365'],
@@ -144,11 +160,14 @@ export const SAMPLE_KM_SHARING_RECORDS = [
   {
     id: 'kms-sample-03',
     topic: 'แนวทางการจัดทำเอกสารและงานสารบรรณดิจิทัลอย่างถูกต้องตามระเบียบสารบรรณ',
-    format: 'เอกสารความรู้ทั่วไป',
+    format: 'บรรยายกลุ่มย่อย',
     date: new Date(Date.now() - 86400000 * 14).toISOString().slice(0, 10),
     startTime: '09:30',
     endTime: '11:30',
-    location: 'ห้องประชุมสำนักงานผู้อำนวยการ',
+    locationType: 'ONSITE',
+    roomNumber: 'ห้องประชุมสำนักงานผู้อำนวยการ ชั้น 2',
+    location: 'ห้องประชุมสำนักงานผู้อำนวยการ ชั้น 2',
+    meetUrl: '',
     overview: 'แนะนำรูปแบบหนังสือราชการภายนอก/ภายใน การเว้นวรรค การใช้ตราครุฑ และระบบสารบรรณอิเล็กทรอนิกส์ e-Saraban',
     materialUrl: 'https://icit.kmutnb.ac.th/km/e-saraban-guide.pdf',
     tags: ['งานสารบรรณ/จัดทำเอกสาร', 'งานบริหาร'],
@@ -188,6 +207,18 @@ function notifySharingSubscribers(data) {
 }
 
 /**
+ * Check if the user is authorized to manage/assign tags
+ */
+export function canUserManageKmTags(currentUser, currentPersonnel, isAdmin, tagManagers = []) {
+  if (isAdmin) return true;
+  const email = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
+  if (!email) return false;
+  return (tagManagers || []).some(
+    (m) => (m.email || '').toLowerCase().trim() === email
+  );
+}
+
+/**
  * Generate Google Calendar Web URL for 1-Click Calendar Add
  */
 export function getGoogleCalendarUrl(record) {
@@ -208,10 +239,16 @@ export function getGoogleCalendarUrl(record) {
       .map((s) => `${s.name} (${s.department || ''})`)
       .join(', ');
 
+    const isOnline = record.locationType === 'ONLINE' || Boolean(record.meetUrl);
+    const resolvedMeetUrl = record.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${record.id}` : '');
+    const resolvedLocation = isOnline
+      ? (resolvedMeetUrl || 'Google Meet (ออนไลน์)')
+      : (record.roomNumber || record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.');
+
     const details = [
       `หัวข้อบรรยาย: ${record.topic}`,
       `ผู้บรรยาย: ${speakersText || '-'}`,
-      `รูปแบบ: ${record.format || 'บรรยายกลุ่มย่อย'}`,
+      isOnline ? `📹 ลิงก์เข้าร่วม Google Meet: ${resolvedMeetUrl}` : `📍 สถานที่/ห้องประชุม: ${record.roomNumber || record.location}`,
       `รายละเอียดเนื้อหา: ${record.overview || '-'}`,
       record.materialUrl ? `เอกสารประกอบการบรรยาย: ${record.materialUrl}` : '',
       `แท็กเนื้อหา: ${(record.tags || []).join(', ') || '-'}`,
@@ -223,7 +260,7 @@ export function getGoogleCalendarUrl(record) {
       text: `[KM Sharing] ${record.topic}`,
       dates: datesParam,
       details: details,
-      location: record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.',
+      location: resolvedLocation,
     });
 
     const speakerEmails = (record.speakers || []).map((s) => s.email).filter(Boolean);
@@ -326,20 +363,32 @@ export function subscribeKmSharingRecords(callback) {
 /**
  * Save or Update Knowledge Sharing Record
  */
-export async function saveKmSharingRecord(recordData, actor, options = {}) {
+export async function saveKmSharingRecord(recordData, actor) {
   const isNew = !recordData.id;
   const now = new Date().toISOString();
   const id = recordData.id || `kms-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  const isOnline = recordData.locationType === 'ONLINE';
+  const meetUrl = isOnline
+    ? (recordData.meetUrl || `https://meet.google.com/lookup/icit-km-${id}`)
+    : '';
+  const roomNumber = isOnline ? '' : String(recordData.roomNumber || recordData.location || '').trim();
+  const location = isOnline
+    ? 'Google Meet (ออนไลน์)'
+    : roomNumber || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.';
 
   const payload = {
     ...recordData,
     id,
     topic: String(recordData.topic || '').trim(),
-    format: recordData.format || 'บรรยายกลุ่มย่อย/Focus group',
+    format: 'บรรยายกลุ่มย่อย',
     date: recordData.date || new Date().toISOString().slice(0, 10),
     startTime: recordData.startTime || '10:00',
     endTime: recordData.endTime || '12:00',
-    location: String(recordData.location || '').trim(),
+    locationType: isOnline ? 'ONLINE' : 'ONSITE',
+    roomNumber,
+    meetUrl,
+    location,
     overview: String(recordData.overview || '').trim(),
     materialUrl: String(recordData.materialUrl || '').trim(),
     tags: Array.isArray(recordData.tags) ? recordData.tags : [],
@@ -400,12 +449,71 @@ export async function saveKmSharingRecord(recordData, actor, options = {}) {
     category: ACTIVITY_CATEGORIES.KM_HUB,
     status: 'SUCCESS',
     title: `${isNew ? 'จองการบรรยายกลุ่มย่อยใหม่' : 'แก้ไขข้อมูลการบรรยาย'}: ${payload.topic}`,
-    details: `${actor?.name || 'ผู้ใช้งาน'} ${isNew ? 'บันทึกการจองวันเวลาบรรยายกลุ่มย่อย' : 'อัปเดตรายละเอียดการบรรยาย'} "${payload.topic}" (วันที่ ${payload.date} เวลา ${payload.startTime}-${payload.endTime} น.)`,
+    details: `${actor?.name || 'ผู้ใช้งาน'} ${isNew ? 'บันทึกการจองวันเวลาบรรยายกลุ่มย่อย' : 'อัปเดตรายละเอียดการบรรยาย'} "${payload.topic}" (${payload.locationType === 'ONLINE' ? 'ออนไลน์ผ่าน Google Meet' : `Onsite ${payload.roomNumber}`})`,
     actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
     target: { id, name: payload.topic, type: 'KM_SHARING_RECORD' },
   });
 
   return payload;
+}
+
+/**
+ * Assign or Update Tags for a Specific Knowledge Sharing Session
+ */
+export async function updateSessionTags(sessionId, newTags, actor) {
+  const cleanTags = Array.from(new Set((newTags || []).map((t) => String(t || '').trim()).filter(Boolean)));
+  const now = new Date().toISOString();
+
+  let targetSession = null;
+
+  // 1. Update in-memory cache and notify
+  if (cachedSharingRecords) {
+    const idx = cachedSharingRecords.findIndex((r) => r.id === sessionId);
+    if (idx >= 0) {
+      const updated = [...cachedSharingRecords];
+      targetSession = { ...updated[idx], tags: cleanTags, updatedAt: now, updatedBy: actor?.name || 'Tag Manager' };
+      updated[idx] = targetSession;
+      notifySharingSubscribers(updated);
+    }
+  }
+
+  // 2. Persist to local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING);
+      if (raw) {
+        const list = JSON.parse(raw);
+        const idx = list.findIndex((r) => r.id === sessionId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], tags: cleanTags, updatedAt: now, updatedBy: actor?.name || 'Tag Manager' };
+          if (!targetSession) targetSession = list[idx];
+          localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(list));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 3. Save to Firestore
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'km_sharing_records', sessionId);
+      await setDoc(docRef, { tags: cleanTags, updatedAt: now, updatedBy: actor?.name || 'Tag Manager' }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore updateSessionTags warning:', e);
+    }
+  }
+
+  logActivity({
+    action: 'UPDATE_SESSION_TAGS',
+    category: ACTIVITY_CATEGORIES.KM_HUB,
+    status: 'SUCCESS',
+    title: `กำหนดแท็กการบรรยาย: ${targetSession?.topic || sessionId}`,
+    details: `${actor?.name || 'ผู้จัดการแท็ก'} บันทึกการกำหนดแท็ก [${cleanTags.join(', ') || 'ไม่มีแท็ก'}] สำหรับหัวข้อ "${targetSession?.topic || sessionId}"`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+    target: { id: sessionId, name: targetSession?.topic || sessionId, type: 'KM_SHARING_RECORD' },
+  });
+
+  return cleanTags;
 }
 
 /**
@@ -535,6 +643,83 @@ export async function saveKmSharingTags(tagsArray, actor) {
 }
 
 /**
+ * Subscribe to Tag Managers (Authorized personnel who can manage tags on sessions)
+ */
+export function subscribeKmSharingTagManagers(callback) {
+  if (typeof window === 'undefined') {
+    callback(DEFAULT_TAG_MANAGERS);
+    return () => {};
+  }
+
+  const loadFromLocal = () => {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING_TAG_MANAGERS);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return DEFAULT_TAG_MANAGERS;
+  };
+
+  callback(loadFromLocal());
+
+  if (!isFirebaseConfigured || !db) return () => {};
+
+  try {
+    const docRef = doc(db, 'km_sharing_configs', 'tag_managers');
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists() && Array.isArray(snap.data().managers)) {
+          const list = snap.data().managers;
+          localStorage.setItem(LOCAL_KEY_KM_SHARING_TAG_MANAGERS, JSON.stringify(list));
+          callback(list);
+        } else {
+          callback(loadFromLocal());
+        }
+      },
+      (err) => {
+        console.warn('Firestore km_sharing_configs/tag_managers warning:', err);
+      }
+    );
+    return unsubscribe;
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * Save Tag Managers (Authorized personnel who can manage tags)
+ */
+export async function saveKmSharingTagManagers(managersArray, actor) {
+  const cleanList = (managersArray || []).filter((m) => m && m.email);
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(LOCAL_KEY_KM_SHARING_TAG_MANAGERS, JSON.stringify(cleanList));
+    } catch (e) {}
+  }
+
+  logActivity({
+    action: 'UPDATE_KM_TAG_MANAGERS',
+    category: ACTIVITY_CATEGORIES.KM_HUB,
+    status: 'SUCCESS',
+    title: `อัปเดตผู้มีสิทธิ์จัดการแท็ก (${cleanList.length} ท่าน)`,
+    details: `${actor?.name || 'ผู้ดูแลระบบ'} ปรับปรุงรายชื่อผู้มีสิทธิ์กำหนดและจัดการแท็กในแต่ละรายการบรรยาย`,
+    actor: actor ? { id: actor.id || actor.email, name: actor.name, email: actor.email, role: actor.role } : null,
+  });
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const docRef = doc(db, 'km_sharing_configs', 'tag_managers');
+      await setDoc(docRef, { managers: cleanList, updatedAt: new Date().toISOString(), updatedBy: actor?.name || 'Admin' }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore save km_sharing_configs/tag_managers warning:', e);
+    }
+  }
+
+  return cleanList;
+}
+
+/**
  * Subscribe to Notification Recipients for Sharing Bookings
  */
 export function subscribeKmSharingNotificationConfig(callback) {
@@ -614,7 +799,7 @@ export async function saveKmSharingNotificationConfig(recipientsArray, actor) {
 }
 
 /**
- * Send Email Notification and optional Google Calendar Event when a session is booked/updated
+ * Send Email Notification and Google Calendar Event when a session is booked/updated
  */
 export async function sendKmSharingBookingNotification({
   record,
@@ -624,18 +809,15 @@ export async function sendKmSharingBookingNotification({
   actionType = 'CREATED', // 'CREATED' | 'UPDATED'
 }) {
   try {
-    // 1. Gather all recipient emails
     const targetEmails = new Set();
     (recipients || []).forEach((r) => {
       if (r.email) targetEmails.add(r.email.trim().toLowerCase());
     });
 
-    // Also include speakers
     (record.speakers || []).forEach((s) => {
       if (s.email) targetEmails.add(s.email.trim().toLowerCase());
     });
 
-    // Also include creator
     if (record.creator?.email) {
       targetEmails.add(record.creator.email.trim().toLowerCase());
     }
@@ -650,12 +832,14 @@ export async function sendKmSharingBookingNotification({
       .map((s) => `<strong>${s.name}</strong> (${s.department || s.position || 'บุคลากร'})`)
       .join('<br />');
 
-    const tagsHtml = (record.tags || [])
-      .map(
-        (t) =>
-          `<span style="display:inline-block;background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;padding:2px 8px;border-radius:12px;font-size:12px;margin-right:4px;margin-bottom:4px;font-weight:600;">#${t}</span>`
-      )
-      .join(' ');
+    const tagsHtml = (record.tags || []).length > 0
+      ? (record.tags || [])
+          .map(
+            (t) =>
+              `<span style="display:inline-block;background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;padding:2px 8px;border-radius:12px;font-size:12px;margin-right:4px;margin-bottom:4px;font-weight:600;">#${t}</span>`
+          )
+          .join(' ')
+      : '<span style="color:#94A3B8;font-size:13px;">รอการกำหนดแท็กเนื้อหา</span>';
 
     const actionTitle = actionType === 'CREATED' ? 'แจ้งการจองวันเวลาบรรยายกลุ่มย่อยใหม่' : 'แจ้งการอัปเดตรายละเอียดการบรรยายกลุ่มย่อย';
 
@@ -666,7 +850,13 @@ export async function sendKmSharingBookingNotification({
     const startDateTimeIso = new Date(Date.UTC(year, month - 1, day, startParts[0] - 7, startParts[1])).toISOString();
     const endDateTimeIso = new Date(Date.UTC(year, month - 1, day, endParts[0] - 7, endParts[1])).toISOString();
 
-    // Collect all personnel emails for calendar invite if desired
+    const isOnline = record.locationType === 'ONLINE' || Boolean(record.meetUrl);
+    const resolvedMeetUrl = record.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${record.id}` : '');
+    const locationDisplay = isOnline
+      ? '🌐 Google Meet (ออนไลน์)'
+      : `🏢 Onsite (ห้อง ${record.roomNumber || record.location || 'สำนักคอมพิวเตอร์ฯ'})`;
+
+    // Collect all personnel emails for calendar invite
     const allPersonnelEmails = (allPersonnelList || [])
       .map((p) => p.email)
       .filter((e) => e && e.includes('@'));
@@ -688,8 +878,8 @@ export async function sendKmSharingBookingNotification({
             <div style="font-size: 17px; font-weight: 800; color: #0F172A; line-height: 1.4;">
               ${record.topic}
             </div>
-            <div style="margin-top: 8px; display: inline-block; background: #E0F2FE; color: #0369A1; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;">
-              รูปแบบ: ${record.format || 'บรรยายกลุ่มย่อย/Focus group'}
+            <div style="margin-top: 8px; display: inline-block; background: ${isOnline ? '#E0F2FE' : '#ECFDF5'}; color: ${isOnline ? '#0369A1' : '#047857'}; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;">
+              ${isOnline ? '🌐 การบรรยายแบบออนไลน์ (Google Meet)' : `🏢 ในสถานที่ (ห้อง ${record.roomNumber || record.location})`}
             </div>
           </div>
 
@@ -701,16 +891,26 @@ export async function sendKmSharingBookingNotification({
               </td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📍 สถานที่ / ช่องทาง:</td>
-              <td style="padding: 8px 0; color: #0F172A;">${record.location || '-'}</td>
+              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📍 รูปแบบ / สถานที่:</td>
+              <td style="padding: 8px 0; color: #0F172A; font-weight: 600;">${locationDisplay}</td>
             </tr>
+            ${isOnline && resolvedMeetUrl ? `
+            <tr>
+              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📹 Google Meet:</td>
+              <td style="padding: 8px 0;">
+                <a href="${resolvedMeetUrl}" target="_blank" style="color: #0284C7; font-weight: 700; text-decoration: underline;">
+                  คลิกเพื่อเข้าห้องประชุม Google Meet
+                </a>
+              </td>
+            </tr>
+            ` : ''}
             <tr>
               <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">🎤 ผู้บรรยาย (${record.speakers?.length || 0} ท่าน):</td>
               <td style="padding: 8px 0; color: #0F172A; line-height: 1.6;">${speakersText || '-'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">🏷️ หมวดหมู่แท็ก:</td>
-              <td style="padding: 8px 0;">${tagsHtml || '-'}</td>
+              <td style="padding: 8px 0;">${tagsHtml}</td>
             </tr>
             ${record.materialUrl ? `
             <tr>
@@ -735,6 +935,12 @@ export async function sendKmSharingBookingNotification({
 
           <!-- Actions -->
           <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+            ${isOnline && resolvedMeetUrl ? `
+            <a href="${resolvedMeetUrl}" target="_blank" style="display: inline-block; background: #059669; color: #FFFFFF; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);">
+              📹 เข้าห้อง Google Meet
+            </a>
+            ` : ''}
+
             ${googleCalendarUrl ? `
             <a href="${googleCalendarUrl}" target="_blank" style="display: inline-block; background: #0284C7; color: #FFFFFF; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);">
               📅 เพิ่มลง Google Calendar
@@ -758,14 +964,15 @@ export async function sendKmSharingBookingNotification({
         subject: `[KM Sharing] ${actionTitle}: ${record.topic} (วันที่ ${record.date})`,
         htmlBody,
         senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace',
-        // Optional parameters for Google Calendar creation in Google Apps Script
         createCalendarEvent: true,
         calendarEvent: {
           title: `[KM Sharing] ${record.topic}`,
           startTime: startDateTimeIso,
           endTime: endDateTimeIso,
-          location: record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.',
-          description: `หัวข้อ: ${record.topic}\nผู้บรรยาย: ${(record.speakers || []).map(s => s.name).join(', ')}\nรูปแบบ: ${record.format || 'บรรยายกลุ่มย่อย'}\nรายละเอียด: ${record.overview}\nเอกสารประกอบ: ${record.materialUrl || '-'}\n\nระบบ ICIT Workspace KM Hub`,
+          location: isOnline ? (resolvedMeetUrl || 'Google Meet') : (record.roomNumber || record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.'),
+          isOnline,
+          meetUrl: resolvedMeetUrl,
+          description: `หัวข้อ: ${record.topic}\nผู้บรรยาย: ${(record.speakers || []).map(s => s.name).join(', ')}\nรูปแบบ: ${isOnline ? 'ออนไลน์ (Google Meet: ' + resolvedMeetUrl + ')' : 'ในสถานที่ (ห้อง ' + record.roomNumber + ')'}\nรายละเอียด: ${record.overview}\nเอกสารประกอบ: ${record.materialUrl || '-'}\n\nระบบ ICIT Workspace KM Hub`,
           guests: allPersonnelEmails.length > 0 ? allPersonnelEmails : emailList,
         },
       }),

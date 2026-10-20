@@ -119,9 +119,17 @@ function doPost(e) {
         var startDt = new Date(calData.startTime);
         var endDt = new Date(calData.endTime);
         var calTitle = calData.title || subject;
+        var calLocation = calData.location || '';
+        if (calData.isOnline && calData.meetUrl) {
+          calLocation = calData.meetUrl;
+        }
+        var calDescription = calData.description || plainText;
+        if (calData.meetUrl && calDescription.indexOf(calData.meetUrl) === -1) {
+          calDescription = 'Google Meet: ' + calData.meetUrl + '\n\n' + calDescription;
+        }
         var calOptions = {
-          description: calData.description || plainText,
-          location: calData.location || '',
+          description: calDescription,
+          location: calLocation,
           sendInvites: true
         };
         if (calData.guests) {

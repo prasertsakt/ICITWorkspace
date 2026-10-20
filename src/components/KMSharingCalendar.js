@@ -18,8 +18,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Video,
+  Building2,
 } from 'lucide-react';
-import { SHARING_FORMATS, SHARING_STATUSES } from '@/lib/kmSharingService';
+import { SHARING_STATUSES } from '@/lib/kmSharingService';
 import { MAIN_6_DEPTS } from '@/lib/constants';
 
 const THAI_MONTHS = [
@@ -577,8 +579,6 @@ export default function KMSharingCalendar({
                     {/* Sessions list in this day */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       {daySessions.map((s) => {
-                        const fmt =
-                          SHARING_FORMATS.find((f) => f.key === s.format) || SHARING_FORMATS[0];
                         const isDone = s.status === 'COMPLETED';
 
                         return (
@@ -617,7 +617,18 @@ export default function KMSharingCalendar({
                               }}
                             >
                               <span>🕒 {s.startTime}</span>
-                              {isDone && <span>✓ เสร็จสิ้น</span>}
+                              <span
+                                style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  color: s.locationType === 'ONLINE' ? '#2563EB' : '#475569',
+                                  background: s.locationType === 'ONLINE' ? '#DBEAFE' : '#F1F5F9',
+                                  padding: '1px 4px',
+                                  borderRadius: '4px',
+                                }}
+                              >
+                                {s.locationType === 'ONLINE' ? '🌐 Meet' : `🏢 ${s.roomNumber || 'Onsite'}`}
+                              </span>
                             </div>
 
                             <div
@@ -668,7 +679,6 @@ export default function KMSharingCalendar({
           ) : (
             filteredSessions.map((s) => {
               const st = SHARING_STATUSES[s.status] || SHARING_STATUSES.SCHEDULED;
-              const fmt = SHARING_FORMATS.find((f) => f.key === s.format) || SHARING_FORMATS[0];
 
               return (
                 <div
@@ -698,19 +708,43 @@ export default function KMSharingCalendar({
                 >
                   <div style={{ flex: '1 1 320px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          background: fmt.bg,
-                          color: fmt.color,
-                          border: `1px solid ${fmt.border}`,
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '999px',
-                        }}
-                      >
-                        {fmt.label}
-                      </span>
+                      {s.locationType === 'ONLINE' ? (
+                        <span
+                          style={{
+                            background: '#EFF6FF',
+                            color: '#1D4ED8',
+                            border: '1px solid #BFDBFE',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Video size={12} />
+                          <span>Google Meet (Online)</span>
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            background: '#F8FAFC',
+                            color: '#334155',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Building2 size={12} />
+                          <span>{s.roomNumber ? `ห้อง ${s.roomNumber} (Onsite)` : s.location || 'Onsite'}</span>
+                        </span>
+                      )}
 
                       <span
                         style={{

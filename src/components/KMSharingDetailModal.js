@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Calendar,
@@ -17,8 +17,18 @@ import {
   AlertCircle,
   FileText,
   CalendarPlus,
+  Video,
+  Building2,
+  Plus,
+  Check,
+  Search,
 } from 'lucide-react';
-import { SHARING_STATUSES, SHARING_FORMATS, getGoogleCalendarUrl } from '@/lib/kmSharingService';
+import {
+  SHARING_STATUSES,
+  getGoogleCalendarUrl,
+  updateSessionTags,
+  canUserManageKmTags,
+} from '@/lib/kmSharingService';
 
 export default function KMSharingDetailModal({
   isOpen,
@@ -26,22 +36,74 @@ export default function KMSharingDetailModal({
   session,
   onEdit,
   onDelete,
+  onTagsUpdated,
+  availableTags = [],
+  tagManagers = [],
   currentUser,
   currentPersonnel,
   isAdmin = false,
 }) {
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [tagSearch, setTagSearch] = useState('');
+  const [isSavingTags, setIsSavingTags] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      setSelectedTags(session.tags || []);
+      setIsEditingTags(false);
+      setTagSearch('');
+    }
+  }, [session]);
+
   if (!isOpen || !session) return null;
 
   const userEmail = (currentUser?.email || currentPersonnel?.email || '').toLowerCase().trim();
   const isCreator =
     (session.creator?.email || '').toLowerCase().trim() === userEmail ||
     (session.speakers || []).some((s) => (s.email || '').toLowerCase().trim() === userEmail);
-  const canManage = isAdmin || isCreator;
+  const canManageSession = isAdmin || isCreator;
+  const canManageTags = canUserManageKmTags(currentUser, currentPersonnel, isAdmin, tagManagers);
 
   const stConfig = SHARING_STATUSES[session.status] || SHARING_STATUSES.SCHEDULED;
-  const fmtConfig =
-    SHARING_FORMATS.find((f) => f.key === session.format) || SHARING_FORMATS[0];
   const googleCalUrl = getGoogleCalendarUrl(session);
+
+  const isOnline = session.locationType === 'ONLINE' || Boolean(session.meetUrl);
+  const resolvedMeetUrl = session.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${session.id}` : '');
+
+  const filteredAvailableTags = availableTags.filter((t) =>
+    !tagSearch ? true : t.toLowerCase().includes(tagSearch.toLowerCase().trim())
+  );
+
+  const handleToggleTag = (tag) => {
+    setSelectedTags((prev) => {
+      if (prev.includes(tag)) {
+        return prev.filter((t) => t !== tag);
+      } else {
+        return [...prev, tag];
+      }
+    });
+  };
+
+  const handleSaveTags = async () => {
+    setIsSavingTags(true);
+    try {
+      const actor = {
+        name: currentPersonnel?.name || currentUser?.displayName || 'Tag Manager',
+        email: currentUser?.email || currentPersonnel?.email || '',
+        role: isAdmin ? 'Admin' : 'TagManager',
+      };
+      await updateSessionTags(session.id, selectedTags, actor);
+      if (onTagsUpdated) {
+        onTagsUpdated(session.id, selectedTags);
+      }
+      setIsEditingTags(false);
+    } catch (err) {
+      console.error('Failed to update tags:', err);
+    } finally {
+      setIsSavingTags(false);
+    }
+  };
 
   return (
     <div
@@ -90,15 +152,19 @@ export default function KMSharingDetailModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <span
                 style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
+                  background: isOnline ? '#0284C7' : '#10B981',
                   color: '#FFFFFF',
                   padding: '3px 10px',
                   borderRadius: '999px',
                   fontSize: '0.75rem',
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                {session.format || 'บรรยายกลุ่มย่อย'}
+                {isOnline ? <Video size={13} /> : <Building2 size={13} />}
+                <span>{isOnline ? 'การบรรยายออนไลน์' : 'ในสถานที่ (Onsite)'}</span>
               </span>
 
               <span
@@ -185,20 +251,40 @@ export default function KMSharingDetailModal({
                   width: '36px',
                   height: '36px',
                   borderRadius: '10px',
-                  background: '#EFF6FF',
-                  color: '#2563EB',
+                  background: isOnline ? '#E0F2FE' : '#FEF3C7',
+                  color: isOnline ? '#0284C7' : '#D97706',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <MapPin size={18} />
+                {isOnline ? <Video size={18} /> : <MapPin size={18} />}
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>สถานที่ / ช่องทาง</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
-                  {session.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ'}
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
+                  {isOnline ? 'Google Meet (ออนไลน์)' : session.roomNumber || session.location || 'สำนักคอมพิวเตอร์ฯ'}
                 </div>
+                {isOnline && resolvedMeetUrl && (
+                  <a
+                    href={resolvedMeetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.75rem',
+                      color: '#0284C7',
+                      fontWeight: 700,
+                      marginTop: '2px',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    <span>เข้าร่วม Google Meet</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -256,36 +342,195 @@ export default function KMSharingDetailModal({
             </div>
           </div>
 
-          {/* Tags */}
-          {session.tags && session.tags.length > 0 && (
-            <div>
-              <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Tag size={15} color="#D97706" />
-                <span>เนื้อหาองค์ความรู้ที่เกี่ยวข้อง (Tags)</span>
+          {/* Tags Section with Admin / Specific Users Tag Assignment */}
+          <div
+            style={{
+              background: '#FFFBEB',
+              border: '1.5px solid #FDE68A',
+              borderRadius: '14px',
+              padding: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Tag size={16} color="#D97706" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#92400E' }}>
+                  เนื้อหาองค์ความรู้ที่เกี่ยวข้อง (Tags)
+                </span>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {session.tags.map((t) => (
-                  <span
-                    key={t}
+
+              {canManageTags && !isEditingTags && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTags(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #F59E0B',
+                    background: '#FFFFFF',
+                    color: '#B45309',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Edit2 size={12} />
+                  <span>กำหนด / แก้ไขแท็ก</span>
+                </button>
+              )}
+            </div>
+
+            {/* Displaying current tags or editor */}
+            {isEditingTags ? (
+              <div style={{ marginTop: '0.5rem' }}>
+                {/* Search Box */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    marginBottom: '8px',
+                    gap: '6px',
+                  }}
+                >
+                  <Search size={14} color="#94A3B8" />
+                  <input
+                    type="text"
+                    value={tagSearch}
+                    onChange={(e) => setTagSearch(e.target.value)}
+                    placeholder="ค้นหาแท็ก..."
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      background: '#FEF3C7',
-                      color: '#B45309',
-                      border: '1px solid #FDE68A',
-                      borderRadius: '20px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '0.8rem',
+                      width: '100%',
+                      background: 'transparent',
+                    }}
+                  />
+                </div>
+
+                {/* Checkboxes matching image 3 */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gap: '6px',
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    padding: '4px',
+                    background: '#FFFFFF',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {filteredAvailableTags.map((t) => {
+                    const isChecked = selectedTags.includes(t);
+                    return (
+                      <label
+                        key={t}
+                        onClick={() => handleToggleTag(t)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '6px',
+                          background: isChecked ? '#FEF3C7' : 'transparent',
+                          fontSize: '0.8rem',
+                          color: isChecked ? '#B45309' : '#334155',
+                          fontWeight: isChecked ? 700 : 500,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#D97706' }}
+                        />
+                        <span>{t}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTags(session.tags || []);
+                      setIsEditingTags(false);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
                       padding: '4px 10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
                     }}
                   >
-                    #{t}
-                  </span>
-                ))}
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveTags}
+                    disabled={isSavingTags}
+                    style={{
+                      background: '#D97706',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isSavingTags ? 'กำลังบันทึก...' : 'บันทึกแท็ก'}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div>
+                {(session.tags || []).length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {session.tags.map((t) => (
+                      <span
+                        key={t}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#FFFFFF',
+                          color: '#B45309',
+                          border: '1px solid #FDE68A',
+                          borderRadius: '20px',
+                          padding: '4px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: '#92400E', fontStyle: 'italic' }}>
+                    ยังไม่ได้กำหนดแท็กเนื้อหา (Admin และผู้มีสิทธิ์จัดการแท็กสามารถกดกำหนดแท็กได้)
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Overview details */}
           <div>
@@ -391,7 +636,7 @@ export default function KMSharingDetailModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CalendarPlus size={20} color="#0284C7" />
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0369A1' }}>
-                  บันทึกลงปฏิทินส่วนบุคคลของคุณ
+                  บันทึกลงปฏิทิน Google Calendar ส่วนบุคคลของคุณ
                 </span>
               </div>
               <a
@@ -438,7 +683,7 @@ export default function KMSharingDetailModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {canManage && (
+            {canManageSession && (
               <>
                 <button
                   type="button"
