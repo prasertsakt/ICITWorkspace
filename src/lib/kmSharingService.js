@@ -240,6 +240,7 @@ export function getGoogleCalendarUrl(record) {
       .join(', ');
 
     const isOnline = record.locationType === 'ONLINE' || Boolean(record.meetUrl);
+    const resolvedMeetUrl = record.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${record.id}` : '');
     let resolvedLocation = '';
     if (isOnline) {
       resolvedLocation = resolvedMeetUrl || 'Google Meet (ออนไลน์)';
@@ -255,7 +256,7 @@ export function getGoogleCalendarUrl(record) {
     const details = [
       `หัวข้อบรรยาย: ${record.topic}`,
       `ผู้บรรยาย: ${speakersText || '-'}`,
-      isOnline ? `📹 ลิงก์เข้าร่วม Google Meet: ${resolvedMeetUrl}` : `📍 สถานที่/ห้องบรรยาย: ${record.roomNumber ? `${record.roomNumber} อาคารสำนักคอมพิวเตอร์ฯ` : (record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.')}`,
+      isOnline ? `ลิงก์เข้าร่วม Google Meet: ${resolvedMeetUrl}` : `สถานที่/ห้องบรรยาย: ${record.roomNumber ? `${record.roomNumber} อาคารสำนักคอมพิวเตอร์ฯ` : (record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.')}`,
       `รายละเอียดเนื้อหา: ${record.overview || '-'}`,
       record.materialUrl ? `เอกสารประกอบการบรรยาย: ${record.materialUrl}` : '',
       `แท็กเนื้อหา: ${(record.tags || []).join(', ') || '-'}`,
@@ -937,8 +938,8 @@ export async function sendKmSharingBookingNotification({
     const isOnline = record.locationType === 'ONLINE' || Boolean(record.meetUrl);
     const resolvedMeetUrl = record.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${record.id}` : '');
     const locationDisplay = isOnline
-      ? '🌐 Google Meet (ออนไลน์)'
-      : `🏢 Onsite (ห้อง ${record.roomNumber || record.location || 'สำนักคอมพิวเตอร์ฯ'})`;
+      ? 'การบรรยายแบบออนไลน์ (Google Meet)'
+      : `ในสถานที่ (ห้อง ${record.roomNumber || record.location || 'สำนักคอมพิวเตอร์ฯ'})`;
 
     // Collect all personnel emails for calendar invite
     const allPersonnelEmails = (allPersonnelList || [])
@@ -948,11 +949,11 @@ export async function sendKmSharingBookingNotification({
     const htmlBody = `
       <div style="font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 620px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
         <div style="background: linear-gradient(135deg, #065F46 0%, #047857 100%); padding: 24px 28px; color: #FFFFFF;">
-          <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; margin-bottom: 6px;">
-            ICIT Workspace • ศูนย์จัดการความรู้ (KM Hub)
+          <div style="display: inline-block; background: rgba(255, 255, 255, 0.18); padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            ICIT Workspace &bull; ศูนย์จัดการความรู้ (KM Hub)
           </div>
           <h2 style="margin: 0; font-size: 20px; font-weight: 800; line-height: 1.4; color: #FFFFFF;">
-            📢 ${actionTitle}
+            ${actionTitle}
           </h2>
         </div>
 
@@ -962,26 +963,32 @@ export async function sendKmSharingBookingNotification({
             <div style="font-size: 17px; font-weight: 800; color: #0F172A; line-height: 1.4;">
               ${record.topic}
             </div>
-            <div style="margin-top: 8px; display: inline-block; background: ${isOnline ? '#E0F2FE' : '#ECFDF5'}; color: ${isOnline ? '#0369A1' : '#047857'}; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;">
-              ${isOnline ? '🌐 การบรรยายแบบออนไลน์ (Google Meet)' : `🏢 ในสถานที่ (ห้อง ${record.roomNumber || record.location})`}
+            <div style="margin-top: 8px; display: inline-block; background: ${isOnline ? '#E0F2FE' : '#ECFDF5'}; color: ${isOnline ? '#0369A1' : '#047857'}; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid ${isOnline ? '#BAE6FD' : '#A7F3D0'};">
+              ${isOnline ? 'ONLINE &bull; การบรรยายแบบออนไลน์ (Google Meet)' : `ONSITE &bull; ในสถานที่ (ห้อง ${record.roomNumber || record.location || 'สำนักคอมพิวเตอร์ฯ'})`}
             </div>
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
             <tr>
-              <td style="padding: 8px 0; color: #64748B; width: 140px; vertical-align: top; font-weight: 600;">📅 วันที่บรรยาย:</td>
-              <td style="padding: 8px 0; color: #0F172A; font-weight: 700;">
+              <td style="padding: 10px 0; color: #64748B; width: 150px; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #10B981; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>วันที่บรรยาย:
+              </td>
+              <td style="padding: 10px 0; color: #0F172A; font-weight: 700;">
                 ${record.date} (เวลา ${record.startTime} - ${record.endTime} น.)
               </td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📍 รูปแบบ / สถานที่:</td>
-              <td style="padding: 8px 0; color: #0F172A; font-weight: 600;">${locationDisplay}</td>
+              <td style="padding: 10px 0; color: #64748B; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #0284C7; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>รูปแบบ / สถานที่:
+              </td>
+              <td style="padding: 10px 0; color: #0F172A; font-weight: 600;">${locationDisplay}</td>
             </tr>
             ${isOnline && resolvedMeetUrl ? `
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📹 Google Meet:</td>
-              <td style="padding: 8px 0;">
+              <td style="padding: 10px 0; color: #64748B; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #0284C7; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>ห้องประชุมออนไลน์:
+              </td>
+              <td style="padding: 10px 0;">
                 <a href="${resolvedMeetUrl}" target="_blank" style="color: #0284C7; font-weight: 700; text-decoration: underline;">
                   คลิกเพื่อเข้าห้องประชุม Google Meet
                 </a>
@@ -989,17 +996,23 @@ export async function sendKmSharingBookingNotification({
             </tr>
             ` : ''}
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">🎤 ผู้บรรยาย (${record.speakers?.length || 0} ท่าน):</td>
-              <td style="padding: 8px 0; color: #0F172A; line-height: 1.6;">${speakersText || '-'}</td>
+              <td style="padding: 10px 0; color: #64748B; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #8B5CF6; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>คณะผู้บรรยาย:
+              </td>
+              <td style="padding: 10px 0; color: #0F172A; line-height: 1.6;">${speakersText || '-'}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">🏷️ หมวดหมู่แท็ก:</td>
-              <td style="padding: 8px 0;">${tagsHtml}</td>
+              <td style="padding: 10px 0; color: #64748B; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #F59E0B; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>หมวดหมู่แท็ก:
+              </td>
+              <td style="padding: 10px 0;">${tagsHtml}</td>
             </tr>
             ${record.materialUrl ? `
             <tr>
-              <td style="padding: 8px 0; color: #64748B; vertical-align: top; font-weight: 600;">📎 เอกสารประกอบ:</td>
-              <td style="padding: 8px 0;">
+              <td style="padding: 10px 0; color: #64748B; vertical-align: top; font-weight: 600;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #059669; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>เอกสารประกอบ:
+              </td>
+              <td style="padding: 10px 0;">
                 <a href="${record.materialUrl}" target="_blank" style="color: #059669; font-weight: 700; text-decoration: underline;">
                   คลิกเพื่อเปิดเอกสารประกอบการบรรยาย
                 </a>
@@ -1010,7 +1023,7 @@ export async function sendKmSharingBookingNotification({
 
           <div style="background: #F1F5F9; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
             <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-              📝 รายละเอียดเนื้อหาในภาพรวม:
+              <span style="display: inline-block; width: 6px; height: 6px; background: #059669; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>รายละเอียดเนื้อหาในภาพรวม:
             </div>
             <div style="font-size: 14px; color: #475569; line-height: 1.6; white-space: pre-line;">
               ${record.overview || '-'}
@@ -1021,13 +1034,13 @@ export async function sendKmSharingBookingNotification({
           <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
             ${isOnline && resolvedMeetUrl ? `
             <a href="${resolvedMeetUrl}" target="_blank" style="display: inline-block; background: #059669; color: #FFFFFF; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);">
-              📹 เข้าห้อง Google Meet
+              เข้าห้อง Google Meet
             </a>
             ` : ''}
 
             ${googleCalendarUrl ? `
             <a href="${googleCalendarUrl}" target="_blank" style="display: inline-block; background: #0284C7; color: #FFFFFF; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);">
-              📅 เพิ่มลง Google Calendar
+              + เพิ่มลง Google Calendar
             </a>
             ` : ''}
           </div>
@@ -1038,14 +1051,14 @@ export async function sendKmSharingBookingNotification({
           </div>
         </div>
       </div>
-    `;
+    `.replace(/\uFFFD/g, '');
 
     const response = await fetch('/api/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         to: emailList,
-        subject: `[KM Sharing] ${actionTitle}: ${record.topic} (วันที่ ${record.date})`,
+        subject: `[KM Sharing] ${actionTitle}: ${record.topic} (วันที่ ${record.date})`.replace(/\uFFFD/g, ''),
         htmlBody,
         senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace',
         createCalendarEvent: true,

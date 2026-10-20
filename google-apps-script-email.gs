@@ -34,8 +34,8 @@ function doPost(e) {
       recipient = String(data.to).trim();
     }
 
-    var subject = data.subject ? String(data.subject).trim() : '';
-    var htmlBody = data.htmlBody || '';
+    var subject = data.subject ? String(data.subject).replace(/\uFFFD/g, '').trim() : '';
+    var htmlBody = data.htmlBody ? String(data.htmlBody).replace(/\uFFFD/g, '') : '';
 
     // Normalize CC
     var cc = '';
