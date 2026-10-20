@@ -13,19 +13,14 @@ import {
   ChevronRight,
   ArrowRight,
   Sparkles,
-  Settings,
   Layers,
-  FileText,
   Lock,
   LogIn,
   ExternalLink,
   Tag,
-  BellRing,
-  Award,
 } from 'lucide-react';
 import {
   subscribeKmRecords,
-  subscribeKmDocConfig,
   calculateKmNotificationStatus,
 } from '@/lib/kmHubService';
 import {
@@ -33,18 +28,13 @@ import {
   subscribeKmSharingTags,
   DEFAULT_SHARING_TAGS,
 } from '@/lib/kmSharingService';
-import { getCurrentThaiFiscalYear, getAvailableFiscalYears } from '@/lib/dateUtils';
-import KMDocConfigModal from '@/components/KMDocConfigModal';
 
 export default function KMHubLandingPage() {
   const { currentUser, currentPersonnel, isAdmin, isLoading: isAuthLoading, handleGoogleSignIn } = useAuth();
 
-  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
   const [kmRecords, setKmRecords] = useState([]);
   const [sharingRecords, setSharingRecords] = useState([]);
   const [sharingTags, setSharingTags] = useState(DEFAULT_SHARING_TAGS);
-  const [docConfig, setDocConfig] = useState(null);
-  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Subscriptions
@@ -69,27 +59,14 @@ export default function KMHubLandingPage() {
     };
   }, []);
 
-  // Document Config subscription for selected fiscal year
-  useEffect(() => {
-    const unsubDoc = subscribeKmDocConfig(fiscalYear, (cfg) => {
-      setDocConfig(cfg);
-    });
-    return () => {
-      if (typeof unsubDoc === 'function') unsubDoc();
-    };
-  }, [fiscalYear]);
-
   // Overall combined statistics
   const stats = useMemo(() => {
-    // 1. KM Tracking stats (optionally filtered by fiscal year if not ALL)
-    const yearKm = kmRecords.filter(
-      (r) => fiscalYear === 'ALL' || String(r.fiscalYear) === String(fiscalYear)
-    );
-    const totalKm = yearKm.length;
-    const completedKm = yearKm.filter((r) => r.status === 'COMPLETED').length;
-    const inProgressKm = yearKm.filter((r) => r.status === 'IN_PROGRESS').length;
+    // 1. KM Tracking stats
+    const totalKm = kmRecords.length;
+    const completedKm = kmRecords.filter((r) => r.status === 'COMPLETED').length;
+    const inProgressKm = kmRecords.filter((r) => r.status === 'IN_PROGRESS').length;
     let overdueKm = 0;
-    yearKm.forEach((r) => {
+    kmRecords.forEach((r) => {
       const trk = calculateKmNotificationStatus(r);
       if (trk.isOverdue && r.status !== 'COMPLETED') overdueKm += 1;
     });
@@ -113,7 +90,7 @@ export default function KMHubLandingPage() {
 
     // Unique attendees in KM
     const uniqueAttendees = new Set();
-    yearKm.forEach((r) => {
+    kmRecords.forEach((r) => {
       (r.attendees || []).forEach((a) => {
         if (a.name || a.email) uniqueAttendees.add(a.name || a.email);
       });
@@ -132,7 +109,7 @@ export default function KMHubLandingPage() {
       attendeesCount: uniqueAttendees.size,
       tagsCount: sharingTags.length,
     };
-  }, [kmRecords, sharingRecords, sharingTags, fiscalYear]);
+  }, [kmRecords, sharingRecords, sharingTags]);
 
   // Auth Loading
   if (isAuthLoading) {
@@ -293,7 +270,7 @@ export default function KMHubLandingPage() {
         />
 
         <div style={{ maxWidth: '1180px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Top Breadcrumb & Settings Toolbar */}
+          {/* Top Breadcrumb Toolbar */}
           <div
             style={{
               display: 'flex',
@@ -329,57 +306,6 @@ export default function KMHubLandingPage() {
               <span style={{ fontSize: '0.825rem', color: '#CBD5E1', fontWeight: 600 }}>
                 KM Hub
               </span>
-            </div>
-
-            {/* Admin Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setIsDocModalOpen(true)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: '#E2E8F0',
-                    padding: '6px 14px',
-                    borderRadius: '10px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  <FileText size={15} color="#A7F3D0" />
-                  <span>แบบฟอร์มเอกสาร KM ({fiscalYear === 'ALL' ? 'ทั่วไป' : `ปี ${fiscalYear}`})</span>
-                </button>
-              )}
-
-              {/* Fiscal Year Filter */}
-              <select
-                value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF',
-                  padding: '6px 12px',
-                  borderRadius: '10px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="ALL" style={{ color: '#0F172A' }}>ปีงบประมาณทั้งหมด</option>
-                {getAvailableFiscalYears().map((y) => (
-                  <option key={y} value={String(y)} style={{ color: '#0F172A' }}>
-                    ปีงบประมาณ {y}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -864,111 +790,7 @@ export default function KMHubLandingPage() {
             </div>
           </Link>
         </div>
-
-        {/* Documentation Guidelines & Template Links Card */}
-        {docConfig && (docConfig.documentUrl || (docConfig.additionalLinks && docConfig.additionalLinks.length > 0)) && (
-          <div
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1.5px solid #E2E8F0',
-              padding: '1.25rem 1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: '#ECFDF5',
-                  color: '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FileText size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>
-                  {docConfig.documentTitle || 'แบบฟอร์มและแนวทางการจัดการความรู้ (KM)'}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  ดาวน์โหลดแบบฟอร์มสรุปรายงานการอบรม และเอกสารแนวทางทางการประจำปีงบประมาณ
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              {docConfig.documentUrl && (
-                <a
-                  href={docConfig.documentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary btn-sm"
-                  style={{
-                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    color: '#FFFFFF',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    padding: '0.45rem 1rem',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <span>ดาวน์โหลดแบบฟอร์มหลัก</span>
-                  <ExternalLink size={13} />
-                </a>
-              )}
-
-              {(docConfig.additionalLinks || []).map((link, idx) => (
-                <a
-                  key={idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '0.8rem',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <span>{link.title || `เอกสารแนบ ${idx + 1}`}</span>
-                  <ExternalLink size={13} />
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Admin KM Doc Config Modal */}
-      {isDocModalOpen && (
-        <KMDocConfigModal
-          isOpen={isDocModalOpen}
-          onClose={() => setIsDocModalOpen(false)}
-          fiscalYear={fiscalYear}
-          initialConfig={docConfig}
-          onSaved={(newCfg) => setDocConfig(newCfg)}
-          currentUser={currentUser}
-          currentPersonnel={currentPersonnel}
-        />
-      )}
     </div>
   );
 }
