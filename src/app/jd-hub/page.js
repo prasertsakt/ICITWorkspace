@@ -22,6 +22,14 @@ import {
   User as UserIcon,
   ChevronRight,
   ArrowLeft,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  AlertTriangle,
+  Key,
+  X,
+  HelpCircle,
+  Filter,
 } from 'lucide-react';
 import {
   subscribeJDList,
@@ -35,7 +43,7 @@ import {
   subscribeDepartmentList,
   subscribeExecutiveList,
 } from '@/lib/storageService';
-import { SAMPLE_SEED_JD, createBlankJD } from '@/lib/jdTemplateData';
+import { SAMPLE_SEED_JD, createBlankJD, JD_SECURITY_RISK_LEVELS } from '@/lib/jdTemplateData';
 import { MAIN_6_DEPTS } from '@/lib/constants';
 import JDPreviewModal from '@/components/JDPreviewModal';
 import JDModal from '@/components/JDModal';
@@ -58,12 +66,14 @@ export default function JDHubPage() {
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'CONFIRMED' | 'DRAFT'
   const [myJdOnly, setMyJdOnly] = useState(false);
+  const [riskFilter, setRiskFilter] = useState('ALL'); // 'ALL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'CRITICAL_ACCESS'
 
   // Modals state
   const [previewJD, setPreviewJD] = useState(null);
   const [editingJD, setEditingJD] = useState(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [deletingJD, setDeletingJD] = useState(null);
+  const [showRiskInfoModal, setShowRiskInfoModal] = useState(false);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -118,15 +128,24 @@ export default function JDHubPage() {
       const persDept = item.department || '';
       const persEmail = item.personnelEmail || '';
       const isConfirmed = item.userConfirmed || item.status === 'CONFIRMED';
+      const riskLvl = item.securityRiskAssessment?.riskLevel || 'LOW';
+      const accessRights = item.securityRiskAssessment?.accessRights || '';
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const riskThai = riskLvl === 'HIGH' ? 'สูง' : riskLvl === 'MEDIUM' ? 'ปานกลาง' : 'ต่ำ';
+        const riskEng = riskLvl.toLowerCase();
         const matches =
           persName.toLowerCase().includes(q) ||
           posTitle.toLowerCase().includes(q) ||
           posNum.toLowerCase().includes(q) ||
           persDept.toLowerCase().includes(q) ||
-          persEmail.toLowerCase().includes(q);
+          persEmail.toLowerCase().includes(q) ||
+          accessRights.toLowerCase().includes(q) ||
+          riskThai.includes(q) ||
+          riskEng.includes(q) ||
+          (`ความเสี่ยง${riskThai}`).includes(q) ||
+          (`เสี่ยง${riskThai}`).includes(q);
         if (!matches) return false;
       }
 
@@ -140,6 +159,15 @@ export default function JDHubPage() {
       if (myJdOnly) {
         const itemEmail = persEmail.toLowerCase().trim();
         if (!userEmail || itemEmail !== userEmail) return false;
+      }
+
+      // Information Security Risk Filter
+      if (riskFilter === 'HIGH' && riskLvl !== 'HIGH') return false;
+      if (riskFilter === 'MEDIUM' && riskLvl !== 'MEDIUM') return false;
+      if (riskFilter === 'LOW' && riskLvl !== 'LOW') return false;
+      if (riskFilter === 'CRITICAL_ACCESS') {
+        const hasAccess = !!(accessRights && accessRights.trim() && accessRights.trim() !== '-');
+        if (!hasAccess) return false;
       }
 
       return true;
@@ -179,7 +207,43 @@ export default function JDHubPage() {
       const numB = String(b.positionNumber || b.positionNo || '');
       return numA.localeCompare(numB, 'th', { numeric: true });
     });
-  }, [jds, searchQuery, selectedDept, statusFilter, myJdOnly, userEmail]);
+  }, [jds, searchQuery, selectedDept, statusFilter, myJdOnly, userEmail, riskFilter]);
+
+  // Statistics of Security Risk Levels based on current department & user context
+  const riskStats = useMemo(() => {
+    const baseList = jds.filter((item) => {
+      const persDept = item.department || '';
+      const persEmail = (item.personnelEmail || '').toLowerCase().trim();
+      if (selectedDept !== 'ALL' && persDept !== selectedDept) return false;
+      if (myJdOnly && (!userEmail || persEmail !== userEmail)) return false;
+      return true;
+    });
+
+    let high = 0;
+    let medium = 0;
+    let low = 0;
+    let hasAccessRights = 0;
+
+    baseList.forEach((j) => {
+      const lvl = j.securityRiskAssessment?.riskLevel || 'LOW';
+      if (lvl === 'HIGH') high++;
+      else if (lvl === 'MEDIUM') medium++;
+      else low++;
+
+      const acc = j.securityRiskAssessment?.accessRights;
+      if (acc && acc.trim() && acc.trim() !== '-') {
+        hasAccessRights++;
+      }
+    });
+
+    return {
+      total: baseList.length,
+      high,
+      medium,
+      low,
+      hasAccessRights,
+    };
+  }, [jds, selectedDept, myJdOnly, userEmail]);
 
   // Department list sorted in organizational order (6 main departments)
   const departments = useMemo(() => {
@@ -668,82 +732,444 @@ export default function JDHubPage() {
         </div>
       </div>
 
-      {/* Toolbar: Search, Filters & "My JD Only" */}
+      {/* Toolbar: Search, Filters, Risk Buttons & "My JD Only" */}
       <div
         className="card-glass"
         style={{
-          padding: '1rem 1.25rem',
+          padding: '1.15rem 1.25rem',
           borderRadius: 'var(--radius-lg)',
           marginBottom: '1.5rem',
           display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
+          flexDirection: 'column',
+          gap: '0.85rem',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: '280px' }}>
-          {/* Search box */}
-          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาชื่อผู้ครองตำแหน่ง, ตำแหน่ง, เลขที่ตำแหน่ง..."
-              className="form-input"
-              style={{ paddingLeft: '2.2rem', fontSize: '0.85rem' }}
-            />
+        {/* Row 1: Search, Department, Status, My JD Only */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: '280px' }}>
+            {/* Search box */}
+            <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+              <Search
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                }}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ค้นหาชื่อผู้ครองตำแหน่ง, ตำแหน่ง, เลขที่, ระดับความเสี่ยง..."
+                className="form-input"
+                style={{ paddingLeft: '2.2rem', paddingRight: searchQuery ? '2.2rem' : '0.75rem', fontSize: '0.85rem' }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '0.65rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="ล้างข้อความค้นหา"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Department Filter */}
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="form-select"
+              style={{ width: 'auto', minWidth: '160px', fontSize: '0.85rem' }}
+            >
+              <option value="ALL">ทุกฝ่าย / กลุ่มงาน</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-select"
+              style={{ width: 'auto', minWidth: '130px', fontSize: '0.85rem' }}
+            >
+              <option value="ALL">ทุกสถานะ</option>
+              <option value="CONFIRMED">ยืนยันแล้ว</option>
+              <option value="DRAFT">ฉบับร่าง</option>
+            </select>
           </div>
 
-          {/* Department Filter */}
-          <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            className="form-select"
-            style={{ width: 'auto', minWidth: '160px', fontSize: '0.85rem' }}
-          >
-            <option value="ALL">ทุกฝ่าย / กลุ่มงาน</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="form-select"
-            style={{ width: 'auto', minWidth: '130px', fontSize: '0.85rem' }}
-          >
-            <option value="ALL">ทุกสถานะ</option>
-            <option value="CONFIRMED">ยืนยันแล้ว</option>
-            <option value="DRAFT">ฉบับร่าง</option>
-          </select>
+          {/* Toggle: My JD only */}
+          <div>
+            <button
+              onClick={() => setMyJdOnly(!myJdOnly)}
+              className={`btn btn-sm ${myJdOnly ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.8rem' }}
+            >
+              <UserCheck size={14} />
+              <span>เฉพาะ JD ของฉัน</span>
+            </button>
+          </div>
         </div>
 
-        {/* Toggle: My JD only */}
-        <div>
-          <button
-            onClick={() => setMyJdOnly(!myJdOnly)}
-            className={`btn btn-sm ${myJdOnly ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '0.8rem' }}
-          >
-            <UserCheck size={14} />
-            <span>เฉพาะ JD ของฉัน</span>
-          </button>
+        {/* Row 2: Security Risk Quick Filter Buttons Bar */}
+        <div
+          style={{
+            paddingTop: '0.75rem',
+            borderTop: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.65rem',
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.2rem' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '6px',
+                  background: 'var(--peach-50)',
+                  color: 'var(--peach-500)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Shield size={14} />
+              </div>
+              <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                ความเสี่ยงสารสนเทศ:
+              </span>
+            </div>
+
+            {/* Button 1: ALL */}
+            <button
+              type="button"
+              onClick={() => setRiskFilter('ALL')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                border: riskFilter === 'ALL' ? '1.5px solid var(--text-primary)' : '1px solid var(--border-subtle)',
+                background: riskFilter === 'ALL' ? 'var(--text-primary)' : '#FFFFFF',
+                color: riskFilter === 'ALL' ? '#FFFFFF' : 'var(--text-secondary)',
+                boxShadow: riskFilter === 'ALL' ? '0 2px 6px rgba(0, 0, 0, 0.15)' : 'none',
+              }}
+              title="แสดงทุกระดับความเสี่ยง"
+            >
+              <span>ทั้งหมด</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  background: riskFilter === 'ALL' ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-card-subtle)',
+                  color: riskFilter === 'ALL' ? '#FFFFFF' : 'var(--text-muted)',
+                }}
+              >
+                {riskStats.total}
+              </span>
+            </button>
+
+            {/* Button 2: HIGH */}
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'HIGH' ? 'ALL' : 'HIGH')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                border: riskFilter === 'HIGH' ? '1.5px solid #DC2626' : '1px solid #FECACA',
+                background: riskFilter === 'HIGH' ? '#DC2626' : '#FEF2F2',
+                color: riskFilter === 'HIGH' ? '#FFFFFF' : '#DC2626',
+                boxShadow: riskFilter === 'HIGH' ? '0 3px 10px rgba(220, 38, 38, 0.35)' : 'none',
+              }}
+              title="กรองเฉพาะตำแหน่งระดับความเสี่ยงสูง (High Risk)"
+            >
+              <ShieldAlert size={14} />
+              <span>เสี่ยงสูง (High)</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  background: riskFilter === 'HIGH' ? 'rgba(255, 255, 255, 0.3)' : '#FEE2E2',
+                  color: riskFilter === 'HIGH' ? '#FFFFFF' : '#B91C1C',
+                }}
+              >
+                {riskStats.high}
+              </span>
+            </button>
+
+            {/* Button 3: MEDIUM */}
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'MEDIUM' ? 'ALL' : 'MEDIUM')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                border: riskFilter === 'MEDIUM' ? '1.5px solid #D97706' : '1px solid #FDE68A',
+                background: riskFilter === 'MEDIUM' ? '#D97706' : '#FEF3C7',
+                color: riskFilter === 'MEDIUM' ? '#FFFFFF' : '#B45309',
+                boxShadow: riskFilter === 'MEDIUM' ? '0 3px 10px rgba(217, 119, 6, 0.35)' : 'none',
+              }}
+              title="กรองเฉพาะตำแหน่งระดับความเสี่ยงปานกลาง (Medium Risk)"
+            >
+              <AlertTriangle size={14} />
+              <span>เสี่ยงปานกลาง (Medium)</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  background: riskFilter === 'MEDIUM' ? 'rgba(255, 255, 255, 0.3)' : '#FDE68A',
+                  color: riskFilter === 'MEDIUM' ? '#FFFFFF' : '#92400E',
+                }}
+              >
+                {riskStats.medium}
+              </span>
+            </button>
+
+            {/* Button 4: LOW */}
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'LOW' ? 'ALL' : 'LOW')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                border: riskFilter === 'LOW' ? '1.5px solid #059669' : '1px solid #A7F3D0',
+                background: riskFilter === 'LOW' ? '#059669' : '#ECFDF5',
+                color: riskFilter === 'LOW' ? '#FFFFFF' : '#059669',
+                boxShadow: riskFilter === 'LOW' ? '0 3px 10px rgba(5, 150, 105, 0.35)' : 'none',
+              }}
+              title="กรองเฉพาะตำแหน่งระดับความเสี่ยงต่ำ (Low Risk)"
+            >
+              <ShieldCheck size={14} />
+              <span>เสี่ยงต่ำ (Low)</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  background: riskFilter === 'LOW' ? 'rgba(255, 255, 255, 0.3)' : '#D1FAE5',
+                  color: riskFilter === 'LOW' ? '#FFFFFF' : '#065F46',
+                }}
+              >
+                {riskStats.low}
+              </span>
+            </button>
+
+            {/* Button 5: Critical Access Rights */}
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'CRITICAL_ACCESS' ? 'ALL' : 'CRITICAL_ACCESS')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                border: riskFilter === 'CRITICAL_ACCESS' ? '1.5px solid #2563EB' : '1px solid #BFDBFE',
+                background: riskFilter === 'CRITICAL_ACCESS' ? '#2563EB' : '#EFF6FF',
+                color: riskFilter === 'CRITICAL_ACCESS' ? '#FFFFFF' : '#1D4ED8',
+                boxShadow: riskFilter === 'CRITICAL_ACCESS' ? '0 3px 10px rgba(37, 99, 235, 0.35)' : 'none',
+              }}
+              title="กรองเฉพาะตำแหน่งที่มีการระบุสิทธิการเข้าถึงระบบสำคัญ (Critical/Privileged Access Rights)"
+            >
+              <Key size={14} />
+              <span>มีสิทธิระบบสำคัญ</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  background: riskFilter === 'CRITICAL_ACCESS' ? 'rgba(255, 255, 255, 0.3)' : '#DBEAFE',
+                  color: riskFilter === 'CRITICAL_ACCESS' ? '#FFFFFF' : '#1E40AF',
+                }}
+              >
+                {riskStats.hasAccessRights}
+              </span>
+            </button>
+          </div>
+
+          {/* Right helper buttons: Reset & Info modal */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {riskFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setRiskFilter('ALL')}
+                className="btn btn-ghost btn-sm"
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '0.25rem 0.5rem',
+                }}
+                title="ล้างตัวกรองความเสี่ยง"
+              >
+                <X size={13} />
+                <span>ล้างตัวกรอง</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowRiskInfoModal(true)}
+              className="btn btn-ghost btn-sm"
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--primary-600)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '0.25rem 0.5rem',
+              }}
+              title="ดูนิยามและเกณฑ์ระดับความเสี่ยงสารสนเทศตาม ISO 27001"
+            >
+              <HelpCircle size={14} />
+              <span>เกณฑ์ความหมาย (ISO 27001)</span>
+            </button>
+          </div>
         </div>
+
+        {/* Active Filter Hint Banner if riskFilter is active */}
+        {riskFilter !== 'ALL' && (
+          <div
+            style={{
+              padding: '0.5rem 0.85rem',
+              borderRadius: '8px',
+              background:
+                riskFilter === 'HIGH'
+                  ? '#FEF2F2'
+                  : riskFilter === 'MEDIUM'
+                  ? '#FEF3C7'
+                  : riskFilter === 'LOW'
+                  ? '#ECFDF5'
+                  : '#EFF6FF',
+              border:
+                riskFilter === 'HIGH'
+                  ? '1px solid #FECACA'
+                  : riskFilter === 'MEDIUM'
+                  ? '1px solid #FDE68A'
+                  : riskFilter === 'LOW'
+                  ? '1px solid #A7F3D0'
+                  : '1px solid #BFDBFE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.785rem',
+              color:
+                riskFilter === 'HIGH'
+                  ? '#991B1B'
+                  : riskFilter === 'MEDIUM'
+                  ? '#92400E'
+                  : riskFilter === 'LOW'
+                  ? '#065F46'
+                  : '#1E40AF',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Filter size={14} />
+              <span>
+                กำลังกรองเฉพาะ:{' '}
+                <strong>
+                  {riskFilter === 'HIGH'
+                    ? 'ระดับความเสี่ยงสูง (High Risk)'
+                    : riskFilter === 'MEDIUM'
+                    ? 'ระดับความเสี่ยงปานกลาง (Medium Risk)'
+                    : riskFilter === 'LOW'
+                    ? 'ระดับความเสี่ยงต่ำ (Low Risk)'
+                    : 'ตำแหน่งที่มีสิทธิการเข้าถึงระบบที่สำคัญ (Privileged Access)'}
+                </strong>{' '}
+                — พบทั้งหมด <strong>{filteredJDs.length}</strong> ตำแหน่ง
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRiskFilter('ALL')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontSize: '0.75rem',
+              }}
+            >
+              แสดงทั้งหมด
+            </button>
+          </div>
+        )}
       </div>
 
       {/* JD Cards Grid */}
@@ -758,7 +1184,7 @@ export default function JDHubPage() {
           style={{
             padding: '3rem 1.5rem',
             textAlign: 'center',
-            maxWidth: '500px',
+            maxWidth: '520px',
             margin: '2rem auto',
             borderRadius: 'var(--radius-lg)',
           }}
@@ -776,22 +1202,52 @@ export default function JDHubPage() {
               margin: '0 auto 1rem',
             }}
           >
-            <FileText size={28} />
+            {riskFilter !== 'ALL' ? <ShieldAlert size={28} /> : <FileText size={28} />}
           </div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>
             ไม่พบแบบบรรยายลักษณะงาน
           </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-            {myJdOnly
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+            {riskFilter !== 'ALL'
+              ? `ไม่พบรายการที่มีระดับความเสี่ยง "${riskFilter === 'HIGH' ? 'สูง' : riskFilter === 'MEDIUM' ? 'ปานกลาง' : riskFilter === 'LOW' ? 'ต่ำ' : 'มีสิทธิระบบสำคัญ'}" ในเงื่อนไขที่เลือก`
+              : myJdOnly
               ? 'ยังไม่มี JD ที่ผูกกับอีเมลของคุณในระบบ'
               : 'ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา'}
           </p>
-          {isAdmin && (
-            <button onClick={handleCreateNew} className="btn btn-primary btn-sm">
-              <Plus size={14} />
-              <span>สร้าง JD รายการแรก</span>
-            </button>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {riskFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setRiskFilter('ALL')}
+                className="btn btn-secondary btn-sm"
+              >
+                <Shield size={14} />
+                <span>แสดงทุกระดับความเสี่ยง</span>
+              </button>
+            )}
+            {(searchQuery || selectedDept !== 'ALL' || statusFilter !== 'ALL' || myJdOnly) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedDept('ALL');
+                  setStatusFilter('ALL');
+                  setMyJdOnly(false);
+                  setRiskFilter('ALL');
+                }}
+                className="btn btn-secondary btn-sm"
+              >
+                <X size={14} />
+                <span>รีเซ็ตตัวกรองทั้งหมด</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button onClick={handleCreateNew} className="btn btn-primary btn-sm">
+                <Plus size={14} />
+                <span>สร้าง JD รายการแรก</span>
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div
@@ -967,21 +1423,119 @@ export default function JDHubPage() {
                       <strong style={{ color: 'var(--text-primary)' }}>{fcCount} สมรรถนะ</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>ความเสี่ยงสารสนเทศ:</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Shield size={12} style={{ color: 'var(--peach-500)' }} />
+                        ความเสี่ยงสารสนเทศ:
+                      </span>
                       {jd.securityRiskAssessment?.riskLevel === 'HIGH' ? (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#DC2626', background: '#FEF2F2', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRiskFilter(riskFilter === 'HIGH' ? 'ALL' : 'HIGH');
+                          }}
+                          title="คลิกเพื่อกรองเฉพาะระดับความเสี่ยงสูง (High)"
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#DC2626',
+                            background: '#FEF2F2',
+                            padding: '1px 7px',
+                            borderRadius: '5px',
+                            border: '1px solid #FECACA',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <ShieldAlert size={12} />
                           สูง (High)
-                        </span>
+                        </button>
                       ) : jd.securityRiskAssessment?.riskLevel === 'MEDIUM' ? (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D97706', background: '#FEF3C7', padding: '1px 6px', borderRadius: '4px', border: '1px solid #FDE68A' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRiskFilter(riskFilter === 'MEDIUM' ? 'ALL' : 'MEDIUM');
+                          }}
+                          title="คลิกเพื่อกรองเฉพาะระดับความเสี่ยงปานกลาง (Medium)"
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#D97706',
+                            background: '#FEF3C7',
+                            padding: '1px 7px',
+                            borderRadius: '5px',
+                            border: '1px solid #FDE68A',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <AlertTriangle size={12} />
                           ปานกลาง (Medium)
-                        </span>
+                        </button>
                       ) : (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '1px 6px', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRiskFilter(riskFilter === 'LOW' ? 'ALL' : 'LOW');
+                          }}
+                          title="คลิกเพื่อกรองเฉพาะระดับความเสี่ยงต่ำ (Low)"
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#059669',
+                            background: '#ECFDF5',
+                            padding: '1px 7px',
+                            borderRadius: '5px',
+                            border: '1px solid #A7F3D0',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <ShieldCheck size={12} />
                           ต่ำ (Low)
-                        </span>
+                        </button>
                       )}
                     </div>
+                    {/* Critical Access Rights Hint */}
+                    {jd.securityRiskAssessment?.accessRights && jd.securityRiskAssessment.accessRights.trim() && jd.securityRiskAssessment.accessRights.trim() !== '-' && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRiskFilter(riskFilter === 'CRITICAL_ACCESS' ? 'ALL' : 'CRITICAL_ACCESS');
+                        }}
+                        style={{
+                          marginTop: '0.2rem',
+                          padding: '0.25rem 0.5rem',
+                          background: 'rgba(37, 99, 235, 0.05)',
+                          border: '1px dashed rgba(37, 99, 235, 0.25)',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          color: '#1D4ED8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s ease',
+                        }}
+                        title={`คลิกเพื่อกรองตำแหน่งที่มีสิทธิระบบสำคัญ\nรายละเอียด: ${jd.securityRiskAssessment.accessRights}`}
+                      >
+                        <Key size={11} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          สิทธิระบบ: {jd.securityRiskAssessment.accessRights}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1111,6 +1665,218 @@ export default function JDHubPage() {
             setJds((prev) => prev.filter((item) => item.id !== deletedId));
           }}
         />
+      )}
+
+      {/* Information Security Risk Definition Modal */}
+      {showRiskInfoModal && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setShowRiskInfoModal(false)}
+        >
+          <div
+            className="card-glass"
+            style={{
+              maxWidth: '620px',
+              width: '100%',
+              borderRadius: 'var(--radius-xl)',
+              background: '#FFFFFF',
+              boxShadow: 'var(--shadow-lg)',
+              overflow: 'hidden',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                color: '#FFFFFF',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(249, 115, 22, 0.25)',
+                    border: '1px solid rgba(249, 115, 22, 0.4)',
+                    color: '#FB923C',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+                    เกณฑ์การประเมินความเสี่ยงด้านความมั่นคงปลอดภัยสารสนเทศ
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#CBD5E1' }}>
+                    แบบบรรยายลักษณะงาน (JD) ส่วนที่ 9 ตามมาตรฐาน ISO/IEC 27001:2022
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRiskInfoModal(false)}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#94A3B8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                การกำหนดระดับความเสี่ยงของตำแหน่งงาน พิจารณาจาก <strong>ระดับสิทธิการเข้าถึง (Privilege Levels)</strong> และผลกระทบต่อความลับ ความถูกต้องครบถ้วน และความพร้อมใช้งาน (CIA Triad) ของระบบสารสนเทศหลักสำนักฯ
+              </div>
+
+              {/* 3 Risk Cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {JD_SECURITY_RISK_LEVELS.map((lvl) => (
+                  <div
+                    key={lvl.key}
+                    style={{
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      background: lvl.bgColor,
+                      border: `1.5px solid ${lvl.borderColor}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            color: '#FFFFFF',
+                            background: lvl.color,
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          {lvl.key}
+                        </span>
+                        <strong style={{ fontSize: '0.925rem', color: '#0F172A' }}>
+                          {lvl.fullTitle}
+                        </strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRiskFilter(lvl.key);
+                          setShowRiskInfoModal(false);
+                        }}
+                        style={{
+                          fontSize: '0.725rem',
+                          fontWeight: 700,
+                          color: lvl.color,
+                          background: '#FFFFFF',
+                          border: `1px solid ${lvl.borderColor}`,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        กรองดูเฉพาะกลุ่มนี้ →
+                      </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {lvl.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Critical Access Box */}
+              <div
+                style={{
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: '#EFF6FF',
+                  border: '1.5px solid #BFDBFE',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.4rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Key size={16} color="#2563EB" />
+                    <strong style={{ fontSize: '0.925rem', color: '#1E40AF' }}>
+                      สิทธิการเข้าถึงระบบที่สำคัญ (Critical System Access Rights)
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRiskFilter('CRITICAL_ACCESS');
+                      setShowRiskInfoModal(false);
+                    }}
+                    style={{
+                      fontSize: '0.725rem',
+                      fontWeight: 700,
+                      color: '#2563EB',
+                      background: '#FFFFFF',
+                      border: '1px solid #BFDBFE',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    กรองดูเฉพาะกลุ่มนี้ →
+                  </button>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#1E3A8A', lineHeight: 1.5 }}>
+                  ระดับสิทธิในการเข้าถึงและดูแลเครื่องแม่ข่าย (Server), ระบบเครือข่ายแกนหลัก (Core Network), ฐานข้อมูล (Database) หรือโครงสร้างพื้นฐานสำคัญ เช่น สิทธิระดับ Root, Domain Admin, หรือการจัดการ Firewalls ตามมาตรฐานการควบคุมการเข้าถึง (Access Control Policy)
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '0.85rem 1.5rem',
+                borderTop: '1px solid var(--border-subtle)',
+                background: 'var(--bg-card-subtle)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowRiskInfoModal(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
