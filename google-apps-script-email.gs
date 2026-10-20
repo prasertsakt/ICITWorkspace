@@ -6,7 +6,12 @@
  * 1. เข้าไปที่ https://script.google.com/
  * 2. เปิดโปรเจกต์เดิม (ICIT Email Relay)
  * 3. วางโค้ดนี้ทั้งหมดลงในไฟล์ Code.gs
- * 4. ***สำคัญมาก (Deploy New Version)***:
+ * 4. ***สำคัญมาก: อนุมัติสิทธิ์ Google Calendar (Authorize Permissions)***:
+ *    - ที่แถบเมนูด้านบน เลือกฟังก์ชัน "authorizeCalendar"
+ *    - กดปุ่ม "Run" (เรียกใช้)
+ *    - จะมีหน้าต่าง "Authorization required" (จำเป็นต้องได้รับสิทธิ์) ปรากฏขึ้น
+ *    - กด "Review permissions" > เลือกบัญชีของคุณ > กด "Advanced" (ขั้นสูง) > กด "Go to ... (unsafe)" > กด "Allow" (อนุญาต)
+ * 5. ***Deploy New Version***:
  *    - กดปุ่ม "Deploy" (การทำให้ใช้งานได้) > "Manage deployments" (จัดการการทำให้ใช้งานได้)
  *    - กดที่ไอคอนดินสอ (Edit) บน Web App deployment
  *    - ในช่อง "Version" (เวอร์ชัน) เลือก "New version" (เวอร์ชันใหม่)
@@ -271,4 +276,14 @@ function doGet(e) {
     organization: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ. (ICIT KMUTNB)',
     time: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * ฟังก์ชันสำหรับกดปุ่ม "Run" (เรียกใช้) ในหน้า Google Apps Script Editor
+ * เพื่อให้ระบบแสดงหน้าต่างอนุมัติสิทธิ์การเข้าถึง Google Calendar (Calendar Authorization)
+ */
+function authorizeCalendar() {
+  var cal = CalendarApp.getDefaultCalendar();
+  Logger.log('Google Calendar Access Authorized successfully for: ' + cal.getName());
+  return 'Authorized: ' + cal.getName();
 }
