@@ -69,7 +69,7 @@ export default function KMSharingModal({
       setStartTime('10:00');
       setEndTime('12:00');
       setLocationType('ONSITE');
-      setRoomNumber('ห้องประชุม 204 อาคารสำนักคอมพิวเตอร์ฯ');
+      setRoomNumber('');
       setOverview('');
       setMaterialUrl('');
       setStatus('SCHEDULED');
@@ -627,7 +627,7 @@ export default function KMSharingModal({
                     setRoomNumber(e.target.value);
                     if (errors.roomNumber) setErrors((prev) => ({ ...prev, roomNumber: null }));
                   }}
-                  placeholder="ระบุหมายเลขห้องประชุม เช่น ห้องประชุม 204 ชั้น 2 หรือ ห้องสัมมนา ชั้น 3..."
+                  placeholder="เช่น ห้องประชุม 512"
                   style={{
                     width: '100%',
                     padding: '0.65rem 0.85rem',

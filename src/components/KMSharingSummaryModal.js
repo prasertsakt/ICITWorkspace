@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   BarChart2,
@@ -13,8 +13,11 @@ import {
   ExternalLink,
   BookOpen,
   Filter,
+  RotateCcw,
+  Video,
+  Building2,
 } from 'lucide-react';
-import { SHARING_STATUSES, SHARING_FORMATS } from '@/lib/kmSharingService';
+import { SHARING_STATUSES } from '@/lib/kmSharingService';
 
 export default function KMSharingSummaryModal({
   isOpen,
@@ -24,27 +27,74 @@ export default function KMSharingSummaryModal({
   tags = [],
   onSelectSession,
 }) {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Reset date range filter when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setStartDate('');
+      setEndDate('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const nowIso = new Date().toISOString().slice(0, 10);
 
   // Compute breakdown data depending on dimension
   let title = 'สรุปภาพรวมการแบ่งปันความรู้ (KM Sharing Summary)';
-  let filteredList = [...sessions];
+  let baseList = [...sessions];
 
-  if (dimension === 'UPCOMING') {
+  if (dimension === 'TOTAL') {
+    title = 'การบรรยายทั้งหมด (All Knowledge Sharing Sessions)';
+    baseList = [...sessions];
+  } else if (dimension === 'UPCOMING') {
     title = 'สรุปการบรรยายที่กำลังจะมาถึง (Upcoming Sessions)';
-    filteredList = sessions.filter(
+    baseList = sessions.filter(
       (s) => s.status === 'SCHEDULED' || s.date >= nowIso
     );
   } else if (dimension === 'COMPLETED') {
     title = 'สรุปการบรรยายที่เสร็จสิ้นแล้ว (Completed Sessions)';
-    filteredList = sessions.filter((s) => s.status === 'COMPLETED');
+    baseList = sessions.filter((s) => s.status === 'COMPLETED');
   } else if (dimension === 'SPEAKERS') {
     title = 'สรุปทำเนียบผู้บรรยายและผู้แชร์ความรู้ (Speakers Directory)';
   } else if (dimension === 'TAGS') {
     title = 'สรุปการกระจายตัวตามหมวดหมู่แท็ก (Knowledge Tags Breakdown)';
   }
+
+  // Filter list by date range if specified
+  const filteredList = baseList.filter((s) => {
+    if (!s.date) return false;
+    if (startDate && s.date < startDate) return false;
+    if (endDate && s.date > endDate) return false;
+    return true;
+  });
+
+  // Preset handlers
+  const handlePreset = (presetKey) => {
+    const today = new Date();
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth();
+
+    if (presetKey === 'ALL') {
+      setStartDate('');
+      setEndDate('');
+    } else if (presetKey === 'THIS_MONTH') {
+      const firstDay = new Date(curYear, curMonth, 1).toISOString().slice(0, 10);
+      const lastDay = new Date(curYear, curMonth + 1, 0).toISOString().slice(0, 10);
+      setStartDate(firstDay);
+      setEndDate(lastDay);
+    } else if (presetKey === 'NEXT_3_MONTHS') {
+      const start = today.toISOString().slice(0, 10);
+      const future = new Date(curYear, curMonth + 3, today.getDate());
+      setStartDate(start);
+      setEndDate(future.toISOString().slice(0, 10));
+    } else if (presetKey === 'THIS_YEAR') {
+      setStartDate(`${curYear}-01-01`);
+      setEndDate(`${curYear}-12-31`);
+    }
+  };
 
   // Speakers aggregation
   const speakersMap = {};
@@ -270,21 +320,187 @@ export default function KMSharingSummaryModal({
             </div>
           ) : (
             /* Dimension 3: Session list for TOTAL, UPCOMING, COMPLETED */
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Date Range Filter Box */}
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  border: '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
+                    <Calendar size={15} color="#059669" />
+                    <span>กรองตามช่วงวันที่ (Date Range)</span>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => handlePreset('ALL')}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.725rem',
+                        fontWeight: 600,
+                        border: '1px solid #CBD5E1',
+                        background: !startDate && !endDate ? '#059669' : '#FFFFFF',
+                        color: !startDate && !endDate ? '#FFFFFF' : '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ทั้งหมด
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreset('THIS_MONTH')}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.725rem',
+                        fontWeight: 600,
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      เดือนนี้
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreset('NEXT_3_MONTHS')}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.725rem',
+                        fontWeight: 600,
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      3 เดือนข้างหน้า
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreset('THIS_YEAR')}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.725rem',
+                        fontWeight: 600,
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ปีนี้
+                    </button>
+                    {(startDate || endDate) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStartDate('');
+                          setEndDate('');
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.725rem',
+                          fontWeight: 700,
+                          border: '1px solid #FECACA',
+                          background: '#FEF2F2',
+                          color: '#DC2626',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        <RotateCcw size={11} />
+                        <span>ล้างตัวกรอง</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Date Inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                      ตั้งแต่วันที่
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '0.8rem',
+                        background: '#FFFFFF',
+                        color: '#1E293B',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                      ถึงวันที่
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '0.8rem',
+                        background: '#FFFFFF',
+                        color: '#1E293B',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Session List Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
-                  รายการการบรรยาย ({filteredList.length} รายการ)
+                  รายการการบรรยาย ({filteredList.length} รายการ
+                  {(startDate || endDate) && (
+                    <span style={{ color: '#059669', marginLeft: '4px', fontWeight: 600, fontSize: '0.775rem' }}>
+                      • จากช่วง {startDate || 'เริ่มต้น'} ถึง {endDate || 'ปัจจุบัน/อนาคต'}
+                    </span>
+                  )}
+                  )
                 </span>
               </div>
 
+              {/* Sessions */}
               {filteredList.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#94A3B8', fontSize: '0.875rem' }}>
-                  ไม่พบรายการการบรรยายในหมวดหมู่นี้
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94A3B8', fontSize: '0.875rem', background: '#F8FAFC', borderRadius: '12px' }}>
+                  ไม่พบรายการการบรรยายตามเงื่อนไขช่วงวันที่ที่เลือก
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {filteredList.map((s) => {
                     const st = SHARING_STATUSES[s.status] || SHARING_STATUSES.SCHEDULED;
+                    const isOnline = s.locationType === 'ONLINE' || Boolean(s.meetUrl);
+
                     return (
                       <div
                         key={s.id}
@@ -317,18 +533,59 @@ export default function KMSharingSummaryModal({
                       >
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                            {/* Location Badge */}
+                            {isOnline ? (
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  background: '#EFF6FF',
+                                  color: '#1D4ED8',
+                                  border: '1px solid #BFDBFE',
+                                  padding: '1px 7px',
+                                  borderRadius: '999px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                }}
+                              >
+                                <Video size={10} />
+                                <span>Google Meet</span>
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  background: '#F8FAFC',
+                                  color: '#334155',
+                                  border: '1px solid #CBD5E1',
+                                  padding: '1px 7px',
+                                  borderRadius: '999px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                }}
+                              >
+                                <Building2 size={10} />
+                                <span>{s.roomNumber || s.location || 'Onsite'}</span>
+                              </span>
+                            )}
+
+                            {/* Status Badge */}
                             <span
                               style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
                                 background: st.bgColor,
                                 color: st.color,
-                                padding: '2px 8px',
+                                padding: '1px 7px',
                                 borderRadius: '999px',
                               }}
                             >
                               {st.badgeText}
                             </span>
+
                             <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
                               📅 {s.date} ({s.startTime} - {s.endTime} น.)
                             </span>
@@ -341,6 +598,26 @@ export default function KMSharingSummaryModal({
                           <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '4px', fontWeight: 600 }}>
                             🎤 ผู้บรรยาย: {(s.speakers || []).map((sp) => sp.name).join(', ') || '-'}
                           </div>
+
+                          {s.tags && s.tags.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                              {s.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  style={{
+                                    fontSize: '0.675rem',
+                                    fontWeight: 600,
+                                    background: '#FEF3C7',
+                                    color: '#B45309',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px',
+                                  }}
+                                >
+                                  #{t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', fontSize: '0.8rem', fontWeight: 700 }}>

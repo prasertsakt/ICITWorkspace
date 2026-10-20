@@ -240,15 +240,22 @@ export function getGoogleCalendarUrl(record) {
       .join(', ');
 
     const isOnline = record.locationType === 'ONLINE' || Boolean(record.meetUrl);
-    const resolvedMeetUrl = record.meetUrl || (isOnline ? `https://meet.google.com/lookup/icit-km-${record.id}` : '');
-    const resolvedLocation = isOnline
-      ? (resolvedMeetUrl || 'Google Meet (ออนไลน์)')
-      : (record.roomNumber || record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.');
+    let resolvedLocation = '';
+    if (isOnline) {
+      resolvedLocation = resolvedMeetUrl || 'Google Meet (ออนไลน์)';
+    } else {
+      const room = (record.roomNumber || record.location || '').trim();
+      if (room) {
+        resolvedLocation = room.includes('สำนักคอมพิวเตอร์') ? room : `${room} อาคารสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.`;
+      } else {
+        resolvedLocation = 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.';
+      }
+    }
 
     const details = [
       `หัวข้อบรรยาย: ${record.topic}`,
       `ผู้บรรยาย: ${speakersText || '-'}`,
-      isOnline ? `📹 ลิงก์เข้าร่วม Google Meet: ${resolvedMeetUrl}` : `📍 สถานที่/ห้องประชุม: ${record.roomNumber || record.location}`,
+      isOnline ? `📹 ลิงก์เข้าร่วม Google Meet: ${resolvedMeetUrl}` : `📍 สถานที่/ห้องบรรยาย: ${record.roomNumber ? `${record.roomNumber} อาคารสำนักคอมพิวเตอร์ฯ` : (record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.')}`,
       `รายละเอียดเนื้อหา: ${record.overview || '-'}`,
       record.materialUrl ? `เอกสารประกอบการบรรยาย: ${record.materialUrl}` : '',
       `แท็กเนื้อหา: ${(record.tags || []).join(', ') || '-'}`,
@@ -375,7 +382,7 @@ export async function saveKmSharingRecord(recordData, actor) {
   const roomNumber = isOnline ? '' : String(recordData.roomNumber || recordData.location || '').trim();
   const location = isOnline
     ? 'Google Meet (ออนไลน์)'
-    : roomNumber || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.';
+    : (roomNumber ? (roomNumber.includes('สำนักคอมพิวเตอร์') ? roomNumber : `${roomNumber} อาคารสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.`) : 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.');
 
   const payload = {
     ...recordData,
@@ -969,10 +976,14 @@ export async function sendKmSharingBookingNotification({
           title: `[KM Sharing] ${record.topic}`,
           startTime: startDateTimeIso,
           endTime: endDateTimeIso,
-          location: isOnline ? (resolvedMeetUrl || 'Google Meet') : (record.roomNumber || record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.'),
+          location: isOnline
+            ? (resolvedMeetUrl || 'Google Meet')
+            : (record.roomNumber
+                ? (record.roomNumber.includes('สำนักคอมพิวเตอร์') ? record.roomNumber : `${record.roomNumber} อาคารสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.`)
+                : (record.location || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.')),
           isOnline,
           meetUrl: resolvedMeetUrl,
-          description: `หัวข้อ: ${record.topic}\nผู้บรรยาย: ${(record.speakers || []).map(s => s.name).join(', ')}\nรูปแบบ: ${isOnline ? 'ออนไลน์ (Google Meet: ' + resolvedMeetUrl + ')' : 'ในสถานที่ (ห้อง ' + record.roomNumber + ')'}\nรายละเอียด: ${record.overview}\nเอกสารประกอบ: ${record.materialUrl || '-'}\n\nระบบ ICIT Workspace KM Hub`,
+          description: `หัวข้อ: ${record.topic}\nผู้บรรยาย: ${(record.speakers || []).map(s => s.name).join(', ')}\nสถานที่/รูปแบบ: ${isOnline ? 'ออนไลน์ (Google Meet: ' + resolvedMeetUrl + ')' : (record.roomNumber ? `ในสถานที่ (${record.roomNumber} อาคารสำนักคอมพิวเตอร์ฯ)` : (record.location || 'ในสถานที่'))}\nรายละเอียด: ${record.overview}\nเอกสารประกอบ: ${record.materialUrl || '-'}\n\nระบบ ICIT Workspace KM Hub`,
           guests: allPersonnelEmails.length > 0 ? allPersonnelEmails : emailList,
         },
       }),
