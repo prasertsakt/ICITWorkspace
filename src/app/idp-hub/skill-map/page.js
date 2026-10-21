@@ -54,6 +54,7 @@ import SkillRadarAnalysisModal from '@/components/SkillRadarAnalysisModal';
 import SkillOrgRadarAnalysisModal from '@/components/SkillOrgRadarAnalysisModal';
 import SkillMapConfigModal from '@/components/SkillMapConfigModal';
 import SkillMapPreviewModal from '@/components/SkillMapPreviewModal';
+import SkillScoreSummaryModal from '@/components/SkillScoreSummaryModal';
 
 export default function IDPSkillMapPage() {
   const { currentUser, currentPersonnel: authPersonnel, isAdmin, isLoading: authLoading, handleGoogleSignIn } = useAuth();
@@ -79,6 +80,7 @@ export default function IDPSkillMapPage() {
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
   const [isOrgRadarModalOpen, setIsOrgRadarModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isScoreSummaryModalOpen, setIsScoreSummaryModalOpen] = useState(false);
   const [targetPersonnelForModal, setTargetPersonnelForModal] = useState(null);
   const [targetAssessmentForModal, setTargetAssessmentForModal] = useState(null);
   const [isModalSelfMode, setIsModalSelfMode] = useState(false);
@@ -266,9 +268,9 @@ export default function IDPSkillMapPage() {
     setIsPreviewModalOpen(true);
   };
 
-  // Handle Assessment Save Success
+  // Handle Assessment Save Success (Realtime snapshot handles update automatically)
   const handleAssessmentSaved = (savedPayload) => {
-    loadYearData(fiscalYear);
+    // State is synchronized automatically via subscribeSkillMapAssessments
   };
 
   // Handle Excel Export (Admin/HR only)
@@ -491,6 +493,31 @@ export default function IDPSkillMapPage() {
               >
                 <TrendingUp size={14} color="#38BDF8" />
                 <span>Radar &amp; AI ภาพรวมสำนักฯ</span>
+              </button>
+
+              {/* Score Level Summary Dashboard Modal Button */}
+              <button
+                type="button"
+                onClick={() => setIsScoreSummaryModalOpen(true)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="ดูแดชบอร์ดสรุปผลการประเมินทักษะตามระดับคะแนน 0 - 5 และรายชื่อบุคลากร"
+              >
+                <Layers size={14} color="#A78BFA" />
+                <span>สรุปผลตามระดับคะแนน (0-5)</span>
               </button>
 
               {/* Export to Excel Button (Admin/HR only) */}
@@ -733,6 +760,75 @@ export default function IDPSkillMapPage() {
           </div>
         </div>
       </div>
+
+      {/* Notice banner when structure is empty for the year (e.g. 2570, 2571) */}
+      {workAreas.length === 0 && (
+        <div
+          style={{
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: '1rem',
+            padding: '1.25rem 1.5rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+            boxShadow: '0 2px 6px rgba(217, 119, 6, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertCircle size={26} color="#D97706" />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#92400E' }}>
+                โครงสร้างแผนที่ทักษะ (Skill Map) ปีงบประมาณ {fiscalYear} ยังคงว่างเปล่า
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#B45309', marginTop: '2px' }}>
+                เนื่องจากยังไม่ได้เริ่มทำการดึงข้อมูลมาหรือยังไม่ได้กำหนดโครงสร้างสำหรับปีงบประมาณนี้
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {fiscalYear !== '2569' && (
+              <button
+                type="button"
+                onClick={() => setFiscalYear('2569')}
+                style={{
+                  background: '#FFFFFF',
+                  color: '#92400E',
+                  border: '1px solid #FCD34D',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                สลับไปดูปี 2569
+              </button>
+            )}
+            {isHrOrAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsConfigModalOpen(true)}
+                style={{
+                  background: '#D97706',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                ตั้งค่าโครงสร้าง / ดึงข้อมูล
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 3. Filter & Search Controls */}
       <div
@@ -1179,7 +1275,7 @@ export default function IDPSkillMapPage() {
         currentYear={Number(fiscalYear)}
         operatorName={currentPersonnel?.name || 'HR Officer'}
         personnelList={staffList}
-        onConfigSaved={() => loadYearData(fiscalYear)}
+        onConfigSaved={() => {}}
       />
 
       {/* 6. Individual PDF Preview & Print Modal */}
@@ -1193,6 +1289,17 @@ export default function IDPSkillMapPage() {
           fiscalYear={fiscalYear}
         />
       )}
+
+      {/* 7. Skill Score Level Dashboard Summary Modal */}
+      <SkillScoreSummaryModal
+        isOpen={isScoreSummaryModalOpen}
+        onClose={() => setIsScoreSummaryModalOpen(false)}
+        fiscalYear={fiscalYear}
+        workAreas={workAreas}
+        assessments={assessments}
+        personnelList={staffList}
+        onSelectFiscalYear={(newYear) => setFiscalYear(newYear)}
+      />
     </div>
   );
 }

@@ -455,14 +455,39 @@ export const DEFAULT_WORK_AREAS = [
 // 3. Fiscal Year Configuration Management
 // -------------------------------------------------------------
 export function getDefaultFiscalYear() {
-  const today = new Date();
-  const beYear = today.getFullYear() + 543;
-  // If month is >= October (month index >= 9), fiscal year is next year
-  return today.getMonth() >= 9 ? beYear + 1 : beYear;
+  // ปีงบประมาณ 2569 เป็นปีงบประมาณหลักที่มีโครงสร้างและผลการประเมินสมบูรณ์
+  // ปี 2570 และ 2571 ยังคงโครงสร้างว่างเปล่าไว้เนื่องจากยังไม่ได้เริ่มทำการดึงข้อมูลมา
+  return 2569;
 }
 
 export function getSkillMapConfig(fiscalYear) {
   const targetYear = Number(fiscalYear) || getDefaultFiscalYear();
+
+  // ปีงบประมาณ 2570 และ 2571 ต้องยังคงว่างเปล่า เนื่องจากยังไม่ได้เริ่มทำการดึงข้อมูลมา
+  // ยกเว้นกรณีที่ HR ได้เข้ามาบันทึก/โคลนโครงสร้างจริงเองแล้ว (updatedBy ไม่ใช่ค่าตั้งต้นอัตโนมัติ)
+  if (targetYear === 2570 || targetYear === 2571) {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY_SKILL_MAP_CONFIGS);
+        if (raw) {
+          const allConfigs = JSON.parse(raw);
+          const yearCfg = allConfigs && allConfigs[targetYear];
+          if (yearCfg && yearCfg.workAreas && yearCfg.workAreas.length > 0 && !yearCfg.updatedBy?.includes('default')) {
+            return yearCfg;
+          }
+        }
+      } catch (e) {
+        console.error('Failed reading skill map configs from localStorage', e);
+      }
+    }
+    return {
+      fiscalYear: targetYear,
+      workAreas: [],
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'system (รอการดึงข้อมูล)',
+    };
+  }
+
   if (typeof window === 'undefined') {
     return {
       fiscalYear: targetYear,
@@ -484,7 +509,7 @@ export function getSkillMapConfig(fiscalYear) {
     console.error('Failed reading skill map configs from localStorage', e);
   }
 
-  // Return default template
+  // Return default template for years with configured base (e.g. 2568, 2569)
   return {
     fiscalYear: targetYear,
     workAreas: DEFAULT_WORK_AREAS,
@@ -579,6 +604,20 @@ export function subscribeSkillMapConfig(fiscalYear, callback) {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+
+            // ปีงบประมาณ 2570 และ 2571: หากข้อมูลเป็น default หรือยังไม่ได้เริ่มดึงข้อมูลมาจริง ให้ถือว่าโครงสร้างยังว่างเปล่า
+            if ((targetYear === 2570 || targetYear === 2571) && 
+                (data.updatedBy?.includes('default') || !data.workAreas?.length)) {
+              const emptyCfg = {
+                fiscalYear: targetYear,
+                workAreas: [],
+                updatedAt: new Date().toISOString(),
+                updatedBy: 'system (รอการดึงข้อมูล)',
+              };
+              notifySkillConfigSubscribers(targetYear, emptyCfg);
+              return;
+            }
+
             try {
               const raw = localStorage.getItem(LOCAL_KEY_SKILL_MAP_CONFIGS);
               const allConfigs = raw ? JSON.parse(raw) : {};

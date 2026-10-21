@@ -154,13 +154,13 @@ service cloud.firestore {
 
     // 19. Rules for 'skill_map_configs' collection (Knowledge & Skill Map Master Hierarchy)
     match /skill_map_configs/{configId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isHrOrAdmin();
     }
 
     // 20. Rules for 'skill_map_assessments' collection (Personnel Skill Map Assessments)
     match /skill_map_assessments/{assessmentId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create, update: if isAuthenticated();
       allow delete: if isHrOrAdmin();
     }
