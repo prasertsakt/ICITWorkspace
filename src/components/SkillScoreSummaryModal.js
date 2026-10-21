@@ -443,49 +443,6 @@ export default function SkillScoreSummaryModal({
                 />
               </div>
             </div>
-
-            {/* Quick Horizontal Tabs for fast navigation between Competencies in the same Area */}
-            {activeCompetency && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  overflowX: 'auto',
-                  paddingTop: '2px',
-                }}
-              >
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  ในหมวดงานนี้:
-                </span>
-                {allCompetencies
-                  .filter((c) => c.areaId === activeCompetency.areaId)
-                  .map((comp) => {
-                    const isCurrent = comp.id === activeCompId;
-                    return (
-                      <button
-                        key={comp.id}
-                        type="button"
-                        onClick={() => setSelectedCompId(comp.id)}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.76rem',
-                          fontWeight: isCurrent ? 800 : 600,
-                          backgroundColor: isCurrent ? '#0284C7' : '#FFFFFF',
-                          color: isCurrent ? '#FFFFFF' : '#475569',
-                          border: isCurrent ? '1px solid #0284C7' : '1px solid #E2E8F0',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {comp.name}
-                      </button>
-                    );
-                  })}
-              </div>
-            )}
           </div>
         )}
 
