@@ -84,112 +84,8 @@ export const SHARING_STATUSES = {
   },
 };
 
-// Realistic Seed Records
-export const SAMPLE_KM_SHARING_RECORDS = [
-  {
-    id: 'kms-sample-01',
-    topic: 'การประยุกต์ใช้ Prompt Engineering และ Generative AI เพื่อเพิ่มประสิทธิภาพงานบริการสารสนเทศ',
-    format: 'บรรยายกลุ่มย่อย',
-    date: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10), // 3 days from now
-    startTime: '10:00',
-    endTime: '12:00',
-    locationType: 'ONLINE',
-    meetUrl: 'https://meet.google.com/lookup/icit-km-sample-01',
-    location: 'Google Meet (ออนไลน์)',
-    roomNumber: '',
-    overview: 'แลกเปลี่ยนเทคนิคการเขียน prompt อย่างเป็นระบบ (Role-Task-Context-Constraint) สำหรับ Gemini และ ChatGPT ในการร่างหนังสือราชการ สรุปรายงาน และช่วยเขียนโค้ดเบื้องต้น',
-    materialUrl: 'https://docs.google.com/presentation/d/1sample-ai-prompting',
-    tags: ['AI', 'Google', 'งานบริการ'],
-    speakers: [
-      {
-        id: 'pers-km-01',
-        name: 'นายกนก บุญพันธ์จันที',
-        email: 'kanok.b@icit.kmutnb.ac.th',
-        department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-        position: 'นักวิชาการคอมพิวเตอร์',
-      },
-      {
-        id: 'pers-km-02',
-        name: 'นางสาวชาลินทร์ เกรียงสินยศ',
-        email: 'chalin.k@icit.kmutnb.ac.th',
-        department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-        position: 'นักวิชาการคอมพิวเตอร์',
-      },
-    ],
-    status: 'SCHEDULED',
-    creator: {
-      name: 'นายกนก บุญพันธ์จันที',
-      email: 'kanok.b@icit.kmutnb.ac.th',
-      department: 'ฝ่ายบริการวิชาการและส่งเสริมการวิจัย',
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'kms-sample-02',
-    topic: 'เทคนิคการรักษาความมั่นคงปลอดภัยสารสนเทศส่วนบุคคลและการรับมือภัยคุกคามทางไซเบอร์',
-    format: 'บรรยายกลุ่มย่อย',
-    date: new Date(Date.now() - 86400000 * 7).toISOString().slice(0, 10), // 7 days ago
-    startTime: '13:30',
-    endTime: '15:30',
-    locationType: 'ONSITE',
-    roomNumber: 'ห้องสัมมนา ชั้น 3 สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-    location: 'ห้องสัมมนา ชั้น 3 สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ',
-    meetUrl: '',
-    overview: 'สรุปประเด็นสำคัญจากกรณีศึกษา Phishing Mail ล่าสุด วิธีสังเกตลิงก์หลอกลวง และการเปิดใช้งาน 2-Factor Authentication สำหรับอีเมล @cit.kmutnb.ac.th',
-    materialUrl: 'https://drive.google.com/file/d/sample-cyber-security-guide/view',
-    tags: ['ความปลอดภัยทางไซเบอร์', 'เครือข่าย', 'Microsoft 365'],
-    speakers: [
-      {
-        id: 'pers-km-03',
-        name: 'นายสิทธิโชค ศิริพันธุ์',
-        email: 'sittichok.s@icit.kmutnb.ac.th',
-        department: 'ฝ่ายวิศวกรรมระบบเครือข่าย',
-        position: 'วิศวกร',
-      },
-    ],
-    status: 'COMPLETED',
-    creator: {
-      name: 'นายสิทธิโชค ศิริพันธุ์',
-      email: 'sittichok.s@icit.kmutnb.ac.th',
-      department: 'ฝ่ายวิศวกรรมระบบเครือข่าย',
-    },
-    createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-  },
-  {
-    id: 'kms-sample-03',
-    topic: 'แนวทางการจัดทำเอกสารและงานสารบรรณดิจิทัลอย่างถูกต้องตามระเบียบสารบรรณ',
-    format: 'บรรยายกลุ่มย่อย',
-    date: new Date(Date.now() - 86400000 * 14).toISOString().slice(0, 10),
-    startTime: '09:30',
-    endTime: '11:30',
-    locationType: 'ONSITE',
-    roomNumber: 'ห้องประชุมสำนักงานผู้อำนวยการ ชั้น 2',
-    location: 'ห้องประชุมสำนักงานผู้อำนวยการ ชั้น 2',
-    meetUrl: '',
-    overview: 'แนะนำรูปแบบหนังสือราชการภายนอก/ภายใน การเว้นวรรค การใช้ตราครุฑ และระบบสารบรรณอิเล็กทรอนิกส์ e-Saraban',
-    materialUrl: 'https://icit.kmutnb.ac.th/km/e-saraban-guide.pdf',
-    tags: ['งานสารบรรณ/จัดทำเอกสาร', 'งานบริหาร'],
-    speakers: [
-      {
-        id: 'pers-km-04',
-        name: 'นางสาวจารุชา จันทจร',
-        email: 'jarucha.j@icit.kmutnb.ac.th',
-        department: 'สำนักงานผู้อำนวยการ',
-        position: 'เจ้าหน้าที่บริหารงานทั่วไป',
-      },
-    ],
-    status: 'COMPLETED',
-    creator: {
-      name: 'นางสาวจารุชา จันทจร',
-      email: 'jarucha.j@icit.kmutnb.ac.th',
-      department: 'สำนักงานผู้อำนวยการ',
-    },
-    createdAt: new Date(Date.now() - 86400000 * 18).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 14).toISOString(),
-  },
-];
+// No sample/mock records - production clean state
+export const SAMPLE_KM_SHARING_RECORDS = [];
 
 // In-Memory Caches
 let cachedSharingRecords = null;
@@ -294,30 +190,26 @@ export function subscribeKmSharingRecords(callback) {
 
   sharingListeners.push(callback);
 
-  // Return cached or local storage data immediately
+  // Return cached or local storage data immediately (filtering out any legacy mock data)
   if (cachedSharingRecords) {
     callback(cachedSharingRecords);
   } else {
     try {
       const raw = localStorage.getItem(LOCAL_KEY_KM_SHARING);
       if (raw) {
-        cachedSharingRecords = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        cachedSharingRecords = (Array.isArray(parsed) ? parsed : []).filter(
+          (r) => !r.id?.startsWith('kms-sample-')
+        );
+        localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(cachedSharingRecords));
         callback(cachedSharingRecords);
       } else {
-        const isSeeded = localStorage.getItem(LOCAL_KEY_KM_SHARING_SEEDED);
-        if (!isSeeded) {
-          cachedSharingRecords = [...SAMPLE_KM_SHARING_RECORDS];
-          localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(cachedSharingRecords));
-          localStorage.setItem(LOCAL_KEY_KM_SHARING_SEEDED, 'true');
-          callback(cachedSharingRecords);
-        } else {
-          cachedSharingRecords = [];
-          callback([]);
-        }
+        cachedSharingRecords = [];
+        callback([]);
       }
     } catch (e) {
-      cachedSharingRecords = [...SAMPLE_KM_SHARING_RECORDS];
-      callback(cachedSharingRecords);
+      cachedSharingRecords = [];
+      callback([]);
     }
   }
 
@@ -334,21 +226,28 @@ export function subscribeKmSharingRecords(callback) {
       q,
       (snapshot) => {
         if (!snapshot.empty) {
-          const records = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          // Filter out any mock/sample records
+          const records = snapshot.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((r) => !r.id?.startsWith('kms-sample-'));
+
+          // Automatically purge legacy sample documents from Firestore
+          snapshot.docs.forEach(async (d) => {
+            if (d.id.startsWith('kms-sample-')) {
+              try {
+                await deleteDoc(doc(db, 'km_sharing_records', d.id));
+              } catch (err) {}
+            }
+          });
+
           localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify(records));
           localStorage.setItem(LOCAL_KEY_KM_SHARING_SEEDED, 'true');
           notifySharingSubscribers(records);
         } else {
-          // If Firestore is empty, optionally write sample records
-          const isSeeded = localStorage.getItem(LOCAL_KEY_KM_SHARING_SEEDED);
-          if (!isSeeded && SAMPLE_KM_SHARING_RECORDS.length > 0) {
-            SAMPLE_KM_SHARING_RECORDS.forEach(async (item) => {
-              try {
-                await setDoc(doc(db, 'km_sharing_records', item.id), item);
-              } catch (err) {}
-            });
-            localStorage.setItem(LOCAL_KEY_KM_SHARING_SEEDED, 'true');
-          }
+          cachedSharingRecords = [];
+          localStorage.setItem(LOCAL_KEY_KM_SHARING, JSON.stringify([]));
+          localStorage.setItem(LOCAL_KEY_KM_SHARING_SEEDED, 'true');
+          notifySharingSubscribers([]);
         }
       },
       (error) => {
