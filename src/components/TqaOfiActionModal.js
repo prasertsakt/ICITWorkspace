@@ -24,6 +24,7 @@ import {
   Calendar,
   Layers,
   Copy,
+  Search,
 } from 'lucide-react';
 import { saveTqaOfiItem, canEditTqaOfiProgress, normalizeTqaRounds, computeOverallStatus } from '@/lib/tqaOfiService';
 import { useModal } from '@/context/ModalContext';
@@ -494,9 +495,62 @@ export default function TqaOfiActionModal({
               {ofiItem.finding}
             </div>
 
+            {ofiItem.evidence && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px dashed #CBD5E1',
+                  fontSize: '0.85rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: '#0369A1',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <Search size={14} color="#0284C7" />
+                  <span>หลักฐานเชิงประจักษ์ (Evidence):</span>
+                </div>
+                <div style={{ color: '#334155', whiteSpace: 'pre-line' }}>
+                  {ofiItem.evidence}
+                </div>
+              </div>
+            )}
+
             {ofiItem.potentialImpact && (
-              <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#475569', lineHeight: 1.5, borderTop: '1px dashed #CBD5E1', paddingTop: '6px' }}>
-                <strong style={{ color: '#0F766E' }}>คุณค่าเชิงกลยุทธ์ (Potential Impact):</strong> {ofiItem.potentialImpact}
+              <div
+                style={{
+                  marginTop: '8px',
+                  paddingTop: '8px',
+                  borderTop: '1px dashed #CBD5E1',
+                  fontSize: '0.85rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: '#0F766E',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <span>💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):</span>
+                </div>
+                <div style={{ color: '#334155' }}>
+                  {ofiItem.potentialImpact}
+                </div>
               </div>
             )}
           </div>
