@@ -28,7 +28,7 @@
 8. 📊 **Digital Skill Map (`/skill-map`)**: ประเมินทักษะดิจิทัล 4 กลุ่มงาน กราฟเรดาร์ และ AI ให้คำแนะนำ
 9. 📚 **KM Hub (`/km-hub`)**: คลังความรู้ สรุปการฝึกอบรม และแบบฟอร์มเอกสารมาตรฐาน
 10. 🛡️ **IMS Quality Hub (`/ims`)**: ตรวจประเมินภายใน (Audit), จัดการข้อบกพร่อง (CAR) และข้อเสนอแนะ (OFI)
-11. 🏆 **TQA Quality Hub (`/tqa`)**: ติดตามผลการดำเนินงาน 7 หมวดรางวัลคุณภาพแห่งชาติ และ Feedback Report
+11. 🏆 **TQA Quality Hub (`/tqa` & `/tqa/ofi-tracking`)**: ติดตามผลการดำเนินงาน 7 หมวดรางวัลคุณภาพแห่งชาติ (3 Tracking Rounds, AI Prompt & JSON Import Engine พร้อม Safe Smart Sync)
 12. ⚙️ **Admin Console & Audit Logs (`/admin`)**: จัดการข้อมูลบุคลากร ผู้บริหาร ฝ่ายงาน และระบบตรวจสอบย้อนหลัง
 
 ---
