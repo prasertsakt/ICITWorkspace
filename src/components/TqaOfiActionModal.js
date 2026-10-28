@@ -25,6 +25,8 @@ import {
   Layers,
   Copy,
   Search,
+  Eye,
+  FileText,
 } from 'lucide-react';
 import { saveTqaOfiItem, canEditTqaOfiProgress, normalizeTqaRounds, computeOverallStatus } from '@/lib/tqaOfiService';
 import { useModal } from '@/context/ModalContext';
@@ -57,6 +59,7 @@ export default function TqaOfiActionModal({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const editorRef = useRef(null);
 
   const canEdit = canEditTqaOfiProgress(ofiItem, currentUser, currentPersonnel, isAdmin);
@@ -480,98 +483,95 @@ export default function TqaOfiActionModal({
 
         {/* Modal Body Scrollable */}
         <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Finding Reference Box */}
+          {/* Compact Finding, Evidence & Impact trigger bar */}
           <div
+            onClick={() => setIsDetailModalOpen(true)}
             style={{
-              background: '#F8FAFC',
+              background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
               borderRadius: '10px',
-              padding: '1rem 1.25rem',
+              padding: '0.75rem 1rem',
               border: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
           >
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6D28D9', marginBottom: '4px' }}>
-              ข้อค้นพบ (Finding):
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#0F172A', fontWeight: 600, lineHeight: 1.5 }}>
-              {ofiItem.finding}
-            </div>
-
-            {ofiItem.evidence && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  marginTop: '10px',
-                  paddingTop: '8px',
-                  borderTop: '1px dashed #CBD5E1',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.6,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: '#EDE9FE',
+                  color: '#6D28D9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
-                <div
-                  style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    color: '#0369A1',
-                    marginBottom: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Search size={14} color="#0284C7" />
-                  <span>หลักฐานเชิงประจักษ์ (Evidence):</span>
-                  {parseBulletItems(ofiItem.evidence).length > 1 && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#0284C7', background: '#E0F2FE', padding: '1px 6px', borderRadius: '10px' }}>
-                      {parseBulletItems(ofiItem.evidence).length} รายการ
+                <FileText size={17} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4C1D95' }}>
+                    ข้อค้นพบและหลักฐาน (Finding & Evidence)
+                  </span>
+                  {ofiItem.evidence && (
+                    <span style={{ fontSize: '0.7rem', color: '#0369A1', background: '#E0F2FE', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                      Evidence {parseBulletItems(ofiItem.evidence).length > 1 ? `(${parseBulletItems(ofiItem.evidence).length})` : ''}
+                    </span>
+                  )}
+                  {ofiItem.potentialImpact && (
+                    <span style={{ fontSize: '0.7rem', color: '#065F46', background: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                      Impact {parseBulletItems(ofiItem.potentialImpact).length > 1 ? `(${parseBulletItems(ofiItem.potentialImpact).length})` : ''}
                     </span>
                   )}
                 </div>
-                <TqaBulletList
-                  text={ofiItem.evidence}
-                  bulletColor="#0284C7"
-                  bulletBg="#E0F2FE"
-                  textColor="#334155"
-                  fontSize="0.85rem"
-                />
-              </div>
-            )}
-
-            {ofiItem.potentialImpact && (
-              <div
-                style={{
-                  marginTop: '8px',
-                  paddingTop: '8px',
-                  borderTop: '1px dashed #CBD5E1',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.6,
-                }}
-              >
                 <div
                   style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    color: '#0F766E',
-                    marginBottom: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
+                    fontSize: '0.85rem',
+                    color: '#334155',
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    marginTop: '2px',
                   }}
+                  title={ofiItem.finding}
                 >
-                  <span>💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):</span>
-                  {parseBulletItems(ofiItem.potentialImpact).length > 1 && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '10px' }}>
-                      {parseBulletItems(ofiItem.potentialImpact).length} รายการ
-                    </span>
-                  )}
+                  {ofiItem.finding}
                 </div>
-                <TqaBulletList
-                  text={ofiItem.potentialImpact}
-                  bulletColor="#0F766E"
-                  bulletBg="#CCFBF1"
-                  textColor="#334155"
-                  fontSize="0.85rem"
-                />
               </div>
-            )}
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDetailModalOpen(true);
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{
+                background: '#FFFFFF',
+                color: '#6D28D9',
+                borderColor: '#DDD6FE',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                gap: '6px',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                boxShadow: '0 2px 5px rgba(109, 40, 217, 0.08)',
+                flexShrink: 0,
+                cursor: 'pointer',
+              }}
+            >
+              <Eye size={15} color="#7C3AED" />
+              <span>ดูรายละเอียด Finding / Evidence / Impact</span>
+            </button>
           </div>
 
           {/* Assigned Persons & Round Status Selector */}
@@ -905,6 +905,239 @@ export default function TqaOfiActionModal({
           </div>
         </div>
       </div>
+
+      {/* Sub-Modal: Finding, Evidence & Potential Impact Detail View */}
+      {isDetailModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 10005,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setIsDetailModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '1.25rem',
+              maxWidth: '680px',
+              width: '100%',
+              maxHeight: '85vh',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid #E2E8F0',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.15rem 1.35rem',
+                background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: 'rgba(139, 92, 246, 0.25)',
+                    color: '#C4B5FD',
+                    border: '1px solid rgba(139, 92, 246, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        background: '#8B5CF6',
+                        color: '#FFFFFF',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {ofiItem.itemRef || 'TQA OFI'}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: '#CBD5E1' }}>
+                      {ofiItem.category}
+                    </span>
+                  </div>
+                  <h4 style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    รายละเอียดข้อค้นพบ หลักฐาน และผลกระทบ
+                  </h4>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#94A3B8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: '1.25rem 1.35rem',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                maxHeight: 'calc(85vh - 120px)',
+              }}
+            >
+              {/* Finding Section */}
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  border: '1px solid #E2E8F0',
+                  borderLeft: '4px solid #8B5CF6',
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6D28D9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📌 ข้อค้นพบ (Finding)</span>
+                  {ofiItem.keyTheme && (
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                      {ofiItem.keyTheme}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#0F172A', fontWeight: 600, lineHeight: 1.6 }}>
+                  {ofiItem.finding}
+                </div>
+              </div>
+
+              {/* Evidence Section */}
+              {ofiItem.evidence && (
+                <div
+                  style={{
+                    background: '#F0F9FF',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid #BAE6FD',
+                    borderLeft: '4px solid #0284C7',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: '#0369A1',
+                      marginBottom: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Search size={14} color="#0284C7" />
+                    <span>🔍 หลักฐานเชิงประจักษ์ (Evidence)</span>
+                    {parseBulletItems(ofiItem.evidence).length > 1 && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284C7', background: '#E0F2FE', padding: '1px 6px', borderRadius: '10px' }}>
+                        {parseBulletItems(ofiItem.evidence).length} รายการ
+                      </span>
+                    )}
+                  </div>
+                  <TqaBulletList
+                    text={ofiItem.evidence}
+                    bulletColor="#0284C7"
+                    bulletBg="#E0F2FE"
+                    textColor="#1E293B"
+                    fontSize="0.85rem"
+                  />
+                </div>
+              )}
+
+              {/* Potential Impact Section */}
+              {ofiItem.potentialImpact && (
+                <div
+                  style={{
+                    background: '#F0FDF4',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid #BBF7D0',
+                    borderLeft: '4px solid #059669',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: '#065F46',
+                      marginBottom: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact)</span>
+                    {parseBulletItems(ofiItem.potentialImpact).length > 1 && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#065F46', background: '#DCFCE7', padding: '1px 6px', borderRadius: '10px' }}>
+                        {parseBulletItems(ofiItem.potentialImpact).length} รายการ
+                      </span>
+                    )}
+                  </div>
+                  <TqaBulletList
+                    text={ofiItem.potentialImpact}
+                    bulletColor="#059669"
+                    bulletBg="#DCFCE7"
+                    textColor="#1E293B"
+                    fontSize="0.85rem"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '0.75rem 1.25rem',
+                background: '#F8FAFC',
+                borderTop: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
