@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for large PDF analysis
 
 const GEMINI_MODELS = [
+  'gemini-2.5-flash',
   'gemini-3.5-flash',
   'gemini-3.6-flash',
   'gemini-3.8-flash',
