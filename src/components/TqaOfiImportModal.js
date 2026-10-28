@@ -97,7 +97,7 @@ export default function TqaOfiImportModal({
     setExtractedItems(null);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     try {
       const formData = new FormData();
@@ -452,7 +452,7 @@ export default function TqaOfiImportModal({
                 {isExtracting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    <span>กำลังอ่านเอกสาร PDF และสกัดข้อเสนอแนะด้วย Gemini AI (ประมาณ 10-25 วินาที)...</span>
+                    <span>กำลังอ่านเอกสาร PDF และสกัดข้อเสนอแนะด้วย Gemini AI (เอกสารขนาดใหญ่ใช้เวลาประมาณ 30-70 วินาที กรุณารอสักครู่)...</span>
                   </>
                 ) : (
                   <>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Allow up to 60s for large PDF analysis
+export const maxDuration = 120; // Allow up to 120s for comprehensive PDF analysis
 
 const GEMINI_MODELS = [
   'gemini-2.5-flash',
@@ -114,7 +114,7 @@ export async function POST(request) {
           headers: {
             'Content-Type': 'application/json',
           },
-          signal: AbortSignal.timeout(18000),
+          signal: AbortSignal.timeout(90000), // Allow up to 90s for deep PDF parsing and full JSON generation
           body: JSON.stringify({
             contents: [
               {
