@@ -21,6 +21,26 @@ export const LOCAL_KEY_TQA_OFI = 'icit_tqa_ofi_items';
 export const LOCAL_KEY_TQA_REPORTS = 'icit_tqa_reports';
 
 /**
+ * Clean object for Firestore by removing any undefined properties recursively
+ */
+export function cleanFirestoreData(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanFirestoreData(item)).filter((x) => x !== undefined);
+  }
+  const clean = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (val === undefined) continue;
+    if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
+      clean[key] = cleanFirestoreData(val);
+    } else {
+      clean[key] = val;
+    }
+  }
+  return clean;
+}
+
+/**
  * Check if the user has permission to write Action Progress & change status for a specific OFI item
  * Rules: Only Admin and Assigned Persons can edit.
  */
@@ -393,7 +413,7 @@ export async function saveTqaOfiItem(itemData, fiscalYear = String(getCurrentTha
 
   try {
     const docRef = doc(db, 'tqa_ofi_items', id);
-    await setDoc(docRef, payload, { merge: true });
+    await setDoc(docRef, cleanFirestoreData(payload), { merge: true });
   } catch (e) {
     console.error('Error saving TQA OFI item to Firestore:', e);
     throw e;
@@ -543,9 +563,9 @@ export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'A
           ? existing.actionReport
           : (item.actionReport || ''),
         // Preserve tracking scope
-        isTracking: existing.isTracking !== undefined ? existing.isTracking : item.isTracking,
-        executionStatus: existing.executionStatus || item.executionStatus,
-        isExcluded: existing.isExcluded !== undefined ? existing.isExcluded : item.isExcluded,
+        isTracking: existing.isTracking !== undefined ? existing.isTracking : (item.isTracking !== undefined ? item.isTracking : true),
+        executionStatus: existing.executionStatus || item.executionStatus || 'TRACKED',
+        isExcluded: existing.isExcluded !== undefined ? existing.isExcluded : (item.isExcluded !== undefined ? item.isExcluded : false),
         updatedAt: now,
         updatedBy: `${updatedByName} (Safe Smart Sync)`,
       };
@@ -560,6 +580,9 @@ export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'A
       assignedPersons: Array.isArray(item.assignedPersons) ? item.assignedPersons : [],
       actionReport: item.actionReport || '',
       rounds: item.rounds || normalizeTqaRounds(item),
+      isTracking: item.isTracking !== undefined ? item.isTracking : true,
+      executionStatus: item.executionStatus || 'TRACKED',
+      isExcluded: item.isExcluded !== undefined ? item.isExcluded : false,
       updatedAt: now,
       updatedBy: updatedByName,
     };
@@ -578,7 +601,7 @@ export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'A
     const batch = writeBatch(db);
     formattedItems.forEach((item) => {
       const docRef = doc(db, 'tqa_ofi_items', item.id);
-      batch.set(docRef, item, { merge: true });
+      batch.set(docRef, cleanFirestoreData(item), { merge: true });
     });
     await batch.commit();
 
