@@ -879,10 +879,10 @@ export default function TqaOfiTrackingPage() {
                   onClick={() => setIsImportModalOpen(true)}
                   className="btn btn-secondary"
                   style={{ gap: '6px', fontSize: '0.85rem' }}
-                  title="นำเข้าชุดข้อมูลมาตรฐานจาก PDF หรือคัดลอกจากปีก่อนหน้า"
+                  title="อัปโหลดเล่มรายงาน PDF และใช้ AI สกัดข้อเสนอแนะ OFI ทั้งหมด"
                 >
-                  <Download size={15} />
-                  <span>นำเข้าข้อมูล / คัดลอก</span>
+                  <Sparkles size={15} color="#8B5CF6" />
+                  <span>อัปโหลดไฟล์ PDF (AI Extract)</span>
                 </button>
 
                 <button
@@ -1146,8 +1146,9 @@ export default function TqaOfiTrackingPage() {
                   onClick={() => setIsImportModalOpen(true)}
                   className="btn btn-secondary"
                   style={{ gap: '6px', fontWeight: 700 }}
+                  title="อัปโหลดเล่มรายงาน PDF และใช้ AI สกัดข้อเสนอแนะ OFI ทั้งหมด"
                 >
-                  <Download size={16} /> นำเข้าข้อมูล / คัดลอก
+                  <Sparkles size={16} color="#8B5CF6" /> อัปโหลดไฟล์ PDF (AI Extract)
                 </button>
                 <button
                   type="button"
