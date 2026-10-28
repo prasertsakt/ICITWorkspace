@@ -879,10 +879,10 @@ export default function TqaOfiTrackingPage() {
                   onClick={() => setIsImportModalOpen(true)}
                   className="btn btn-secondary"
                   style={{ gap: '6px', fontSize: '0.85rem' }}
-                  title="อัปโหลดเล่มรายงาน PDF และใช้ AI สกัดข้อเสนอแนะ OFI ทั้งหมด"
+                  title="นำเข้าชุดข้อมูลข้อเสนอแนะ TQA OFI ด้วย AI Prompt & JSON"
                 >
                   <Sparkles size={15} color="#8B5CF6" />
-                  <span>อัปโหลดไฟล์ PDF (AI Extract)</span>
+                  <span>นำเข้าข้อมูล TQA OFI (AI Prompt & JSON)</span>
                 </button>
 
                 <button
