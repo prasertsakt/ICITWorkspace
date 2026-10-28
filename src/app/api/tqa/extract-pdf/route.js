@@ -7,7 +7,6 @@ const GEMINI_MODELS = [
   'gemini-2.5-flash',
   'gemini-3.5-flash',
   'gemini-3.6-flash',
-  'gemini-3.8-flash',
   'gemini-3.5-flash-lite',
   'gemini-flash-latest',
 ];
@@ -115,6 +114,7 @@ export async function POST(request) {
           headers: {
             'Content-Type': 'application/json',
           },
+          signal: AbortSignal.timeout(18000),
           body: JSON.stringify({
             contents: [
               {

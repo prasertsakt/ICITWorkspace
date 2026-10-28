@@ -46,6 +46,11 @@ export default function TqaOfiImportModal({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        if (file.size > 4.5 * 1024 * 1024) {
+          setPdfFile(null);
+          setErrorMsg(`ขนาดไฟล์ (${(file.size / (1024 * 1024)).toFixed(2)} MB) เกินขีดจำกัด 4.5 MB ของ Vercel กรุณาลดขนาดไฟล์ หรือแยกเฉพาะหน้าที่ต้องการสกัด`);
+          return;
+        }
         setPdfFile(file);
         setErrorMsg('');
       } else {
@@ -58,6 +63,11 @@ export default function TqaOfiImportModal({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        if (file.size > 4.5 * 1024 * 1024) {
+          setPdfFile(null);
+          setErrorMsg(`ขนาดไฟล์ (${(file.size / (1024 * 1024)).toFixed(2)} MB) เกินขีดจำกัด 4.5 MB ของ Vercel กรุณาลดขนาดไฟล์ หรือแยกเฉพาะหน้าที่ต้องการสกัด`);
+          return;
+        }
         setPdfFile(file);
         setErrorMsg('');
       } else {
@@ -73,10 +83,21 @@ export default function TqaOfiImportModal({
       return;
     }
 
+    // Vercel Serverless payload limit check (4.5 MB)
+    if (pdfFile.size > 4.5 * 1024 * 1024) {
+      setErrorMsg(
+        `ขนาดไฟล์ PDF (${(pdfFile.size / (1024 * 1024)).toFixed(2)} MB) ใหญ่เกินขีดจำกัดของเซิร์ฟเวอร์ (สูงสุด 4.5 MB) กรุณาลดขนาดไฟล์ หรือแยกเฉพาะหน้าที่ต้องการสกัดก่อนอัปโหลด`
+      );
+      return;
+    }
+
     setIsExtracting(true);
     setErrorMsg('');
     setSuccessMsg('');
     setExtractedItems(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000);
 
     try {
       const formData = new FormData();
@@ -86,9 +107,34 @@ export default function TqaOfiImportModal({
       const res = await fetch('/api/tqa/extract-pdf', {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
 
-      const data = await res.json();
+      clearTimeout(timeoutId);
+
+      const rawText = await res.text();
+      let data = null;
+
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        if (res.status === 413 || rawText.includes('413') || rawText.includes('Payload Too Large')) {
+          throw new Error('ขนาดไฟล์ PDF ใหญ่เกินขีดจำกัดของ Vercel (สูงสุด 4.5 MB) กรุณาลดขนาดไฟล์ก่อนอัปโหลด');
+        }
+        if (
+          res.status === 504 ||
+          rawText.includes('FUNCTION_INVOCATION_TIMEOUT') ||
+          rawText.includes('Timeout') ||
+          rawText.includes('timeout')
+        ) {
+          throw new Error(
+            'เซิร์ฟเวอร์ประมวลผลหมดเวลา (Timeout) เนื่องจากไฟล์มีหลายหน้าหรือโมเดล AI ตอบสนองช้า กรุณาลองใหม่อีกครั้ง'
+          );
+        }
+        throw new Error(
+          `เซิร์ฟเวอร์แจ้งข้อผิดพลาด (${res.status}): ${rawText.slice(0, 150)}`
+        );
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'ไม่สามารถสกัดข้อมูลจากไฟล์ PDF ได้');
@@ -98,8 +144,13 @@ export default function TqaOfiImportModal({
       setExtractedModel(data.modelUsed || 'Gemini Flash');
       setSuccessMsg(`AI สกัดข้อมูลสำเร็จทั้งหมด ${data.count} รายการ จากเล่มรายงาน (โดยโมเดล ${data.modelUsed || 'Gemini'})`);
     } catch (err) {
-      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการสกัดข้อมูลจากไฟล์ PDF');
+      if (err.name === 'AbortError') {
+        setErrorMsg('การเชื่อมต่อหมดเวลา (Client Timeout) กรุณาลองใหม่อีกครั้ง');
+      } else {
+        setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการสกัดข้อมูลจากไฟล์ PDF');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsExtracting(false);
     }
   };
