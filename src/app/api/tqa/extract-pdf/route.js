@@ -4,9 +4,11 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for large PDF analysis
 
 const GEMINI_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-pro',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-flash-latest',
 ];
 
 /**
@@ -136,7 +138,14 @@ export async function POST(request) {
         if (!response.ok) {
           const errBody = await response.text();
           console.warn(`Gemini model ${model} failed (${response.status}):`, errBody);
-          lastError = new Error(`Gemini API (${model}) error: ${response.status} - ${errBody}`);
+          let parsedMsg = '';
+          try {
+            const parsedErr = JSON.parse(errBody);
+            parsedMsg = parsedErr?.error?.message || errBody;
+          } catch (e) {
+            parsedMsg = errBody;
+          }
+          lastError = new Error(`Gemini API (${model}): ${parsedMsg}`);
           continue;
         }
 
