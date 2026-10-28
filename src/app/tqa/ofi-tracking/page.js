@@ -21,6 +21,7 @@ import TqaReportUrlModal from '@/components/TqaReportUrlModal';
 import TqaOfiActionModal from '@/components/TqaOfiActionModal';
 import TqaOfiFormModal from '@/components/TqaOfiFormModal';
 import TqaOfiImportModal from '@/components/TqaOfiImportModal';
+import TqaBulletList, { parseBulletItems } from '@/components/TqaBulletList';
 
 import {
   Target,
@@ -1590,23 +1591,39 @@ export default function TqaOfiTrackingPage() {
                     >
                       {item.evidence && (
                         <div>
-                          <div style={{ fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                            🔍 หลักฐานเชิงประจักษ์ (Evidence):
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0369A1', marginBottom: '4px' }}>
+                            <span>🔍 หลักฐานเชิงประจักษ์ (Evidence):</span>
+                            {parseBulletItems(item.evidence).length > 1 && (
+                              <span style={{ fontSize: '0.725rem', fontWeight: 600, color: '#0284C7', background: '#E0F2FE', padding: '1px 7px', borderRadius: '10px' }}>
+                                {parseBulletItems(item.evidence).length} รายการ
+                              </span>
+                            )}
                           </div>
-                          <div style={{ color: '#475569', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                            {item.evidence}
-                          </div>
+                          <TqaBulletList
+                            text={item.evidence}
+                            bulletColor="#0284C7"
+                            bulletBg="#E0F2FE"
+                            textColor="#475569"
+                          />
                         </div>
                       )}
 
                       {item.potentialImpact && (
                         <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: '8px' }}>
-                          <div style={{ fontWeight: 700, color: '#0F766E', marginBottom: '4px' }}>
-                            💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0F766E', marginBottom: '4px' }}>
+                            <span>💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):</span>
+                            {parseBulletItems(item.potentialImpact).length > 1 && (
+                              <span style={{ fontSize: '0.725rem', fontWeight: 600, color: '#0F766E', background: '#CCFBF1', padding: '1px 7px', borderRadius: '10px' }}>
+                                {parseBulletItems(item.potentialImpact).length} รายการ
+                              </span>
+                            )}
                           </div>
-                          <div style={{ color: '#334155', lineHeight: 1.6 }}>
-                            {item.potentialImpact}
-                          </div>
+                          <TqaBulletList
+                            text={item.potentialImpact}
+                            bulletColor="#0F766E"
+                            bulletBg="#CCFBF1"
+                            textColor="#334155"
+                          />
                         </div>
                       )}
 

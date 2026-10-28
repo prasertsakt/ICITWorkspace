@@ -30,6 +30,7 @@ import { saveTqaOfiItem, canEditTqaOfiProgress, normalizeTqaRounds, computeOvera
 import { useModal } from '@/context/ModalContext';
 import { TQA_STATUS_CONFIG } from '@/lib/tqaSeedData';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
+import TqaBulletList, { parseBulletItems } from '@/components/TqaBulletList';
 
 const ROUND_TABS = [
   { key: 'round1', num: 1, label: 'รอบที่ 1', shortLabel: 'รอบ 1 (ครั้งที่ 1)' },
@@ -513,15 +514,24 @@ export default function TqaOfiActionModal({
                     marginBottom: '4px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
+                    gap: '6px',
                   }}
                 >
                   <Search size={14} color="#0284C7" />
                   <span>หลักฐานเชิงประจักษ์ (Evidence):</span>
+                  {parseBulletItems(ofiItem.evidence).length > 1 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#0284C7', background: '#E0F2FE', padding: '1px 6px', borderRadius: '10px' }}>
+                      {parseBulletItems(ofiItem.evidence).length} รายการ
+                    </span>
+                  )}
                 </div>
-                <div style={{ color: '#334155', whiteSpace: 'pre-line' }}>
-                  {ofiItem.evidence}
-                </div>
+                <TqaBulletList
+                  text={ofiItem.evidence}
+                  bulletColor="#0284C7"
+                  bulletBg="#E0F2FE"
+                  textColor="#334155"
+                  fontSize="0.85rem"
+                />
               </div>
             )}
 
@@ -543,14 +553,23 @@ export default function TqaOfiActionModal({
                     marginBottom: '4px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
+                    gap: '6px',
                   }}
                 >
                   <span>💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):</span>
+                  {parseBulletItems(ofiItem.potentialImpact).length > 1 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '10px' }}>
+                      {parseBulletItems(ofiItem.potentialImpact).length} รายการ
+                    </span>
+                  )}
                 </div>
-                <div style={{ color: '#334155' }}>
-                  {ofiItem.potentialImpact}
-                </div>
+                <TqaBulletList
+                  text={ofiItem.potentialImpact}
+                  bulletColor="#0F766E"
+                  bulletBg="#CCFBF1"
+                  textColor="#334155"
+                  fontSize="0.85rem"
+                />
               </div>
             )}
           </div>

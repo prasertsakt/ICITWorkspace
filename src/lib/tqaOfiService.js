@@ -457,22 +457,113 @@ export async function deleteTqaOfiItem(itemId, fiscalYear = String(getCurrentTha
 }
 
 /**
- * Import a list of OFI items into a fiscal year (Batch save)
+ * Helper to fetch existing items for a fiscal year
  */
-export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'Admin') {
+export async function getExistingTqaItems(fiscalYear) {
+  const fy = String(fiscalYear);
+  const localKey = `${LOCAL_KEY_TQA_OFI}_${fy}`;
+  let localItems = [];
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) localItems = JSON.parse(raw);
+  } catch (e) {}
+
+  if (!isFirebaseConfigured || !db) {
+    return Array.isArray(localItems) ? localItems : [];
+  }
+
+  try {
+    const q = query(collection(db, 'tqa_ofi_items'), where('fiscalYear', '==', fy));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    }
+    return Array.isArray(localItems) ? localItems : [];
+  } catch (err) {
+    console.warn('Error fetching existing TQA items from Firestore:', err);
+    return Array.isArray(localItems) ? localItems : [];
+  }
+}
+
+/**
+ * Import a list of OFI items into a fiscal year (Batch save with Safe Smart Sync)
+ */
+export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'Admin', options = { preserveProgress: true }) {
   const fy = String(fiscalYear || getCurrentThaiFiscalYear());
   const now = new Date().toISOString();
+  const preserve = options?.preserveProgress !== false;
 
-  const formattedItems = itemsList.map((item, idx) => ({
-    ...item,
-    id: item.id || `tqa-${fy}-${Date.now()}-${idx}`,
-    fiscalYear: fy,
-    status: item.status || 'PENDING',
-    assignedPersons: Array.isArray(item.assignedPersons) ? item.assignedPersons : [],
-    actionReport: item.actionReport || '',
-    updatedAt: now,
-    updatedBy: updatedByName,
-  }));
+  let existingMap = new Map();
+  if (preserve) {
+    try {
+      const existingItems = await getExistingTqaItems(fy);
+      existingItems.forEach((ex) => {
+        if (ex.id) existingMap.set(ex.id, ex);
+        // Also map unpadded legacy IDs like tqa-2568-1 -> tqa-2568-01
+        const legacyMatch = typeof ex.id === 'string' ? ex.id.match(/^tqa-(\d+)-(\d+)$/) : null;
+        if (legacyMatch) {
+          const padded = `tqa-${legacyMatch[1]}-${legacyMatch[2].padStart(2, '0')}`;
+          existingMap.set(padded, ex);
+        }
+        if (ex.itemRef) existingMap.set(`ref_${ex.itemRef}`, ex);
+      });
+    } catch (e) {
+      console.warn('Could not read existing items for merge:', e);
+    }
+  }
+
+  const formattedItems = itemsList.map((item, idx) => {
+    const stdId = item.id || `tqa-${fy}-${String(idx + 1).padStart(2, '0')}`;
+    const existing = preserve
+      ? (existingMap.get(stdId) || (item.id ? existingMap.get(item.id) : null) || (item.itemRef ? existingMap.get(`ref_${item.itemRef}`) : null))
+      : null;
+
+    if (existing) {
+      // Safe Smart Sync: Merge content changes, PRESERVE user progress and reporter assignments!
+      const existingRounds = existing.rounds || normalizeTqaRounds(existing);
+      const hasExistingReports = Object.values(existingRounds).some((r) => r?.actionReport && r.actionReport.trim());
+      const hasExistingAssignment = Array.isArray(existing.assignedPersons) && existing.assignedPersons.length > 0;
+
+      return {
+        ...existing,
+        ...item,
+        id: existing.id || stdId,
+        fiscalYear: fy,
+        // Preserve assignments
+        assignedPersons: hasExistingAssignment
+          ? existing.assignedPersons
+          : (Array.isArray(item.assignedPersons) ? item.assignedPersons : []),
+        // Preserve status if already changed or in progress
+        status: (existing.status && existing.status !== 'PENDING')
+          ? existing.status
+          : (hasExistingReports ? computeOverallStatus(existingRounds, 'IN_PROGRESS') : (item.status || 'PENDING')),
+        // Preserve rounds and actionReport
+        rounds: existingRounds,
+        actionReport: (existing.actionReport && existing.actionReport.trim())
+          ? existing.actionReport
+          : (item.actionReport || ''),
+        // Preserve tracking scope
+        isTracking: existing.isTracking !== undefined ? existing.isTracking : item.isTracking,
+        executionStatus: existing.executionStatus || item.executionStatus,
+        isExcluded: existing.isExcluded !== undefined ? existing.isExcluded : item.isExcluded,
+        updatedAt: now,
+        updatedBy: `${updatedByName} (Safe Smart Sync)`,
+      };
+    }
+
+    // New item (no prior existing record)
+    return {
+      ...item,
+      id: stdId,
+      fiscalYear: fy,
+      status: item.status || 'PENDING',
+      assignedPersons: Array.isArray(item.assignedPersons) ? item.assignedPersons : [],
+      actionReport: item.actionReport || '',
+      rounds: item.rounds || normalizeTqaRounds(item),
+      updatedAt: now,
+      updatedBy: updatedByName,
+    };
+  });
 
   const localKey = `${LOCAL_KEY_TQA_OFI}_${fy}`;
   try {
@@ -490,6 +581,18 @@ export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'A
       batch.set(docRef, item, { merge: true });
     });
     await batch.commit();
+
+    logActivity({
+      action: 'UPDATE_TQA_OFI',
+      category: ACTIVITY_CATEGORIES.TQA_OFI,
+      status: 'SUCCESS',
+      title: `นำเข้าชุดข้อมูล TQA OFI (Safe Smart Sync) ปี ${fy}`,
+      details: `${updatedByName} นำเข้าและซิงก์ข้อมูลข้อเสนอแนะ TQA OFI จำนวน ${formattedItems.length} รายการ (รักษาผู้รายงานผลและผลการดำเนินงานเดิม)`,
+      actor: { name: updatedByName, role: 'ADMIN' },
+      target: { id: `tqa-${fy}-batch`, name: `TQA OFI ปี ${fy}`, type: 'TQA_OFI' },
+      metadata: { fiscalYear: fy, count: formattedItems.length, safeSync: true },
+    });
+
     return { success: true, count: formattedItems.length };
   } catch (e) {
     console.error('Error importing TQA OFI items:', e);
@@ -498,9 +601,13 @@ export async function importTqaOfiList(itemsList, fiscalYear, updatedByName = 'A
 }
 
 /**
- * Duplicate OFI items from a previous year to target year
+ * Duplicate OFI items from a previous year to target year (with duplicate protection)
  */
 export async function duplicateTqaOfiFromPreviousYear(sourceYear, targetYear, updatedByName = 'Admin') {
+  if (String(sourceYear) === String(targetYear)) {
+    throw new Error('ปีงบประมาณต้นทางและปลายทางต้องไม่เป็นปีเดียวกัน');
+  }
+
   const srcKey = `${LOCAL_KEY_TQA_OFI}_${sourceYear}`;
   let sourceItems = [];
 
@@ -514,20 +621,30 @@ export async function duplicateTqaOfiFromPreviousYear(sourceYear, targetYear, up
   }
 
   if (!sourceItems || sourceItems.length === 0) {
+    sourceItems = await getExistingTqaItems(sourceYear);
+  }
+
+  if (!sourceItems || sourceItems.length === 0) {
     throw new Error(`ไม่พบข้อมูล OFI ในปีงบประมาณ ${sourceYear} เพื่อคัดลอก`);
   }
 
   const duplicated = sourceItems.map((item, idx) => ({
     ...item,
-    id: `tqa-${targetYear}-${Date.now()}-${idx}`,
+    id: `tqa-${targetYear}-${String(idx + 1).padStart(2, '0')}`,
     fiscalYear: String(targetYear),
     status: 'PENDING',
+    assignedPersons: [], // Reset assigned persons for the new year
     actionReport: '', // Reset action report for the new year
+    rounds: {
+      round1: { round: 1, status: 'PENDING', actionReport: '', reportedBy: '', reportedAt: '' },
+      round2: { round: 2, status: 'PENDING', actionReport: '', reportedBy: '', reportedAt: '' },
+      round3: { round: 3, status: 'PENDING', actionReport: '', reportedBy: '', reportedAt: '' },
+    },
     updatedAt: new Date().toISOString(),
     updatedBy: `คัดลอกจากปี ${sourceYear} โดย ${updatedByName}`,
   }));
 
-  return await importTqaOfiList(duplicated, targetYear, updatedByName);
+  return await importTqaOfiList(duplicated, targetYear, updatedByName, { preserveProgress: false });
 }
 
 /**

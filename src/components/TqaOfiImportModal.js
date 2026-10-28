@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Upload,
+  ShieldCheck,
 } from 'lucide-react';
 import { SEED_TQA_OFI_2568 } from '@/lib/tqaSeedData';
 import { importTqaOfiList, duplicateTqaOfiFromPreviousYear } from '@/lib/tqaOfiService';
@@ -39,12 +40,12 @@ export default function TqaOfiImportModal({
       const updatedByName = currentUser?.displayName || currentUser?.email || 'Admin';
       const itemsToImport = SEED_TQA_OFI_2568.map((item, idx) => ({
         ...item,
-        id: `tqa-${fiscalYear}-${idx + 1}`,
+        id: `tqa-${fiscalYear}-${String(idx + 1).padStart(2, '0')}`,
         fiscalYear: String(fiscalYear),
       }));
 
-      await importTqaOfiList(itemsToImport, fiscalYear, updatedByName);
-      setSuccessMsg(`นำเข้าข้อมูลข้อเสนอแนะจากเล่มรายงาน 2568 จำนวน ${itemsToImport.length} รายการสำเร็จ`);
+      await importTqaOfiList(itemsToImport, fiscalYear, updatedByName, { preserveProgress: true });
+      setSuccessMsg(`นำเข้าและซิงก์ข้อมูลข้อเสนอแนะ 2568 (Safe Smart Sync) จำนวน ${itemsToImport.length} รายการสำเร็จ`);
       if (onImportSuccess) onImportSuccess();
       setTimeout(() => {
         onClose();
@@ -96,7 +97,7 @@ export default function TqaOfiImportModal({
       }
 
       const updatedByName = currentUser?.displayName || currentUser?.email || 'Admin';
-      await importTqaOfiList(parsed, fiscalYear, updatedByName);
+      await importTqaOfiList(parsed, fiscalYear, updatedByName, { preserveProgress: true });
       setSuccessMsg(`นำเข้าข้อมูลจำนวน ${parsed.length} รายการสำเร็จ`);
       if (onImportSuccess) onImportSuccess();
       setTimeout(() => {
@@ -315,6 +316,25 @@ export default function TqaOfiImportModal({
                 <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#64748B' }}>
                   ประกอบด้วยข้อเสนอแนะเพื่อการปรับปรุงทั้งหมด <strong>47 รายการ</strong> ครอบคลุมหมวด 1 - 7 (Finding, Evidence, Potential Impact, Key Themes)
                 </p>
+                <div
+                  style={{
+                    marginTop: '10px',
+                    padding: '8px 12px',
+                    background: '#ECFDF5',
+                    border: '1px solid #A7F3D0',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    color: '#065F46',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <ShieldCheck size={18} color="#059669" style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>Safe Smart Sync:</strong> ระบบจะอัปเดตเฉพาะเนื้อหา และคงรักษารายชื่อผู้รายงานผล (Assigned Persons) และผลการดำเนินงานเดิมไว้ 100% ไม่สูญหาย
+                  </span>
+                </div>
               </div>
 
               <button

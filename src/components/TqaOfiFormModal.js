@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { TQA_CATEGORIES, TQA_KEY_THEMES, TQA_STATUS_CONFIG } from '@/lib/tqaSeedData';
 import { saveTqaOfiItem } from '@/lib/tqaOfiService';
+import TqaBulletList, { parseBulletItems } from '@/components/TqaBulletList';
 
 export default function TqaOfiFormModal({
   isOpen,
@@ -300,29 +301,127 @@ export default function TqaOfiFormModal({
           </div>
 
           <div>
-            <label className="form-label" style={{ fontWeight: 700 }}>
-              หลักฐานเชิงประจักษ์ (Evidence)
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label className="form-label" style={{ fontWeight: 700, marginBottom: 0, color: '#0369A1' }}>
+                หลักฐานเชิงประจักษ์ (Evidence)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setEvidence((prev) => (prev ? `${prev.trim()}\n• ` : '• '));
+                }}
+                className="btn btn-ghost btn-sm"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  color: '#0284C7',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  borderRadius: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="แทรกเครื่องหมาย Bullet สำหรับขึ้นข้อใหม่"
+              >
+                <Plus size={12} /> เพิ่ม Bullet (•)
+              </button>
+            </div>
             <textarea
-              rows={3}
+              rows={4}
               className="form-input"
-              placeholder="ระบุข้อเท็จจริง สิ่งที่ตรวจพบ หรือหลักฐานจากรายงาน SAR / หน้างาน..."
+              placeholder="• ระบุข้อเท็จจริง สิ่งที่ตรวจพบ หรือหลักฐานจากรายงาน SAR / หน้างาน (ขึ้นบรรทัดใหม่เพื่อแยกหลายรายการ)..."
               value={evidence}
               onChange={(e) => setEvidence(e.target.value)}
             />
+            {parseBulletItems(evidence).length > 1 ? (
+              <div
+                style={{
+                  marginTop: '6px',
+                  padding: '8px 10px',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  borderRadius: '6px',
+                }}
+              >
+                <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#0369A1', marginBottom: '4px' }}>
+                  🔍 ตัวอย่างการแสดงผล ({parseBulletItems(evidence).length} รายการ):
+                </div>
+                <TqaBulletList
+                  text={evidence}
+                  bulletColor="#0284C7"
+                  bulletBg="#E0F2FE"
+                  textColor="#334155"
+                  fontSize="0.8rem"
+                />
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
+                💡 รองรับหลายรายการ: กดปุ่ม <strong>&ldquo;+ เพิ่ม Bullet (•)&rdquo;</strong> หรือกด Enter ขึ้นบรรทัดใหม่เพื่อแยกแต่ละประเด็น
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="form-label" style={{ fontWeight: 700 }}>
-              ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact)
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label className="form-label" style={{ fontWeight: 700, marginBottom: 0, color: '#0F766E' }}>
+                ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setPotentialImpact((prev) => (prev ? `${prev.trim()}\n• ` : '• '));
+                }}
+                className="btn btn-ghost btn-sm"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  color: '#0F766E',
+                  background: '#F0FDFA',
+                  border: '1px solid #99F6E4',
+                  borderRadius: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="แทรกเครื่องหมาย Bullet สำหรับขึ้นข้อใหม่"
+              >
+                <Plus size={12} /> เพิ่ม Bullet (•)
+              </button>
+            </div>
             <textarea
-              rows={3}
+              rows={4}
               className="form-input"
-              placeholder="ระบุประโยชน์ ผลกระทบเชิงบวก หรือความเชื่อมโยงกับ SC, SA, CC, Vision..."
+              placeholder="• ระบุประโยชน์ ผลกระทบเชิงบวก หรือความเชื่อมโยงกับ SC, SA, CC, Vision (ขึ้นบรรทัดใหม่เพื่อแยกหลายรายการ)..."
               value={potentialImpact}
               onChange={(e) => setPotentialImpact(e.target.value)}
             />
+            {parseBulletItems(potentialImpact).length > 1 ? (
+              <div
+                style={{
+                  marginTop: '6px',
+                  padding: '8px 10px',
+                  background: '#F0FDFA',
+                  border: '1px solid #99F6E4',
+                  borderRadius: '6px',
+                }}
+              >
+                <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#0F766E', marginBottom: '4px' }}>
+                  💡 ตัวอย่างการแสดงผล ({parseBulletItems(potentialImpact).length} รายการ):
+                </div>
+                <TqaBulletList
+                  text={potentialImpact}
+                  bulletColor="#0F766E"
+                  bulletBg="#CCFBF1"
+                  textColor="#334155"
+                  fontSize="0.8rem"
+                />
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
+                💡 รองรับหลายรายการ: กดปุ่ม <strong>&ldquo;+ เพิ่ม Bullet (•)&rdquo;</strong> หรือกด Enter ขึ้นบรรทัดใหม่เพื่อแยกแต่ละประเด็น
+              </div>
+            )}
           </div>
 
           {/* Assigned Persons Multi-select */}
