@@ -221,6 +221,18 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // 28. Rules for 'tqa_ofi_items' collection (TQA Opportunity for Improvement Tracking)
+    match /tqa_ofi_items/{itemId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // 29. Rules for 'tqa_configs' collection (TQA Feedback Report links and configurations)
+    match /tqa_configs/{configId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
   }
 }
 
