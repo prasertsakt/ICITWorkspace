@@ -16,7 +16,7 @@ export async function POST(request) {
     // 1. Generate baseline Intelligent Analysis
     const baselineAnalysis = generateIntelligentAnalysis(personnel, assessment, workAreas);
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     // 2. If Gemini API Key is available, enhance with Google Gemini
     if (apiKey) {

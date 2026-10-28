@@ -44,11 +44,8 @@ export async function POST(request) {
       );
     }
 
-    // Resolve API Key
-    const apiKey =
-      clientApiKey.trim() ||
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    // Resolve API Key (Private server-side environment variable)
+    const apiKey = clientApiKey.trim() || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
