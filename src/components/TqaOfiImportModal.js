@@ -1,31 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
-  Copy,
-  FileText,
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Upload,
   ShieldCheck,
   FileUp,
   File,
-  Key,
-  Eye,
-  EyeOff,
-  ExternalLink,
   Loader2,
   ChevronDown,
   ChevronUp,
-  Layers,
   Search,
-  Check,
 } from 'lucide-react';
-import { SEED_TQA_OFI_2568, TQA_CATEGORIES } from '@/lib/tqaSeedData';
-import { importTqaOfiList, duplicateTqaOfiFromPreviousYear } from '@/lib/tqaOfiService';
-import TqaBulletList, { parseBulletItems } from '@/components/TqaBulletList';
+import { importTqaOfiList } from '@/lib/tqaOfiService';
+import TqaBulletList from '@/components/TqaBulletList';
 
 export default function TqaOfiImportModal({
   isOpen,
@@ -34,17 +24,12 @@ export default function TqaOfiImportModal({
   currentUser,
   onImportSuccess,
 }) {
-  const [activeTab, setActiveTab] = useState('pdf'); // 'pdf' | 'seed' | 'duplicate' | 'json'
-  const [sourceYear, setSourceYear] = useState(String(Number(fiscalYear) - 1));
-  const [jsonText, setJsonText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // PDF & AI State
   const [pdfFile, setPdfFile] = useState(null);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedItems, setExtractedItems] = useState(null);
   const [extractedModel, setExtractedModel] = useState('');
@@ -52,14 +37,6 @@ export default function TqaOfiImportModal({
   const [previewSearch, setPreviewSearch] = useState('');
   const [expandedPreviewIdx, setExpandedPreviewIdx] = useState(null);
   const fileInputRef = useRef(null);
-
-  // Load saved Gemini API Key from localStorage
-  useEffect(() => {
-    try {
-      const savedKey = localStorage.getItem('icit_gemini_api_key');
-      if (savedKey) setGeminiApiKey(savedKey);
-    } catch (e) {}
-  }, []);
 
   if (!isOpen) return null;
 
@@ -89,7 +66,7 @@ export default function TqaOfiImportModal({
     }
   };
 
-  // Extract OFI items from PDF via /api/tqa/extract-pdf
+  // Extract OFI items from PDF via /api/tqa/extract-pdf (using server-side GEMINI_API_KEY)
   const handleExtractPdf = async () => {
     if (!pdfFile) {
       setErrorMsg('กรุณาเลือกไฟล์ PDF เล่มรายงาน TQA Feedback Report');
@@ -102,19 +79,9 @@ export default function TqaOfiImportModal({
     setExtractedItems(null);
 
     try {
-      // Save API key locally if entered
-      if (geminiApiKey.trim()) {
-        try {
-          localStorage.setItem('icit_gemini_api_key', geminiApiKey.trim());
-        } catch (e) {}
-      }
-
       const formData = new FormData();
       formData.append('file', pdfFile);
       formData.append('fiscalYear', fiscalYear);
-      if (geminiApiKey.trim()) {
-        formData.append('apiKey', geminiApiKey.trim());
-      }
 
       const res = await fetch('/api/tqa/extract-pdf', {
         method: 'POST',
@@ -137,7 +104,7 @@ export default function TqaOfiImportModal({
     }
   };
 
-  // Confirm saving extracted items to Firestore & LocalStorage
+  // Confirm saving extracted items to Firestore (Safe Smart Sync)
   const handleSaveExtracted = async () => {
     if (!extractedItems || extractedItems.length === 0) return;
 
@@ -156,89 +123,6 @@ export default function TqaOfiImportModal({
       }, 1000);
     } catch (err) {
       setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleImportSeed = async () => {
-    setIsProcessing(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    try {
-      const updatedByName = currentUser?.displayName || currentUser?.email || 'Admin';
-      const itemsToImport = SEED_TQA_OFI_2568.map((item, idx) => ({
-        ...item,
-        id: `tqa-${fiscalYear}-${String(idx + 1).padStart(2, '0')}`,
-        fiscalYear: String(fiscalYear),
-      }));
-
-      await importTqaOfiList(itemsToImport, fiscalYear, updatedByName, { preserveProgress: true });
-      setSuccessMsg(`นำเข้าและซิงก์ข้อมูลข้อเสนอแนะ 2568 (Safe Smart Sync) จำนวน ${itemsToImport.length} รายการสำเร็จ`);
-      if (onImportSuccess) onImportSuccess();
-      setTimeout(() => {
-        onClose();
-      }, 900);
-    } catch (err) {
-      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleDuplicate = async () => {
-    if (!sourceYear) {
-      setErrorMsg('กรุณาระบุปีงบประมาณต้นทาง');
-      return;
-    }
-    if (String(sourceYear) === String(fiscalYear)) {
-      setErrorMsg('ปีงบประมาณต้นทางและปลายทางต้องไม่เป็นปีเดียวกัน');
-      return;
-    }
-    setIsProcessing(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    try {
-      const updatedByName = currentUser?.displayName || currentUser?.email || 'Admin';
-      await duplicateTqaOfiFromPreviousYear(sourceYear, fiscalYear, updatedByName);
-      setSuccessMsg(`คัดลอกข้อมูล OFI จากปี ${sourceYear} มายังปี ${fiscalYear} สำเร็จ`);
-      if (onImportSuccess) onImportSuccess();
-      setTimeout(() => {
-        onClose();
-      }, 900);
-    } catch (err) {
-      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการคัดลอกข้อมูล');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleImportJson = async () => {
-    if (!jsonText.trim()) {
-      setErrorMsg('กรุณาวางโค้ด JSON');
-      return;
-    }
-    setIsProcessing(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    try {
-      const parsed = JSON.parse(jsonText);
-      if (!Array.isArray(parsed)) {
-        throw new Error('รูปแบบ JSON ต้องเป็น Array ของรายการ OFI');
-      }
-
-      const updatedByName = currentUser?.displayName || currentUser?.email || 'Admin';
-      await importTqaOfiList(parsed, fiscalYear, updatedByName, { preserveProgress: true });
-      setSuccessMsg(`นำเข้าข้อมูลจำนวน ${parsed.length} รายการสำเร็จ`);
-      if (onImportSuccess) onImportSuccess();
-      setTimeout(() => {
-        onClose();
-      }, 900);
-    } catch (err) {
-      setErrorMsg(err.message || 'รูปแบบ JSON ไม่ถูกต้อง');
     } finally {
       setIsProcessing(false);
     }
@@ -325,10 +209,10 @@ export default function TqaOfiImportModal({
             </div>
             <div>
               <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
-                อัปโหลดไฟล์ PDF (AI Extract) & นำเข้าข้อมูล TQA OFI
+                อัปโหลดไฟล์ PDF (AI Extract) TQA OFI
               </h2>
               <p style={{ margin: 0, fontSize: '0.8rem', color: '#94A3B8' }}>
-                สกัดข้อเสนอแนะอัตโนมัติด้วย Google Gemini AI หรือใช้ชุดข้อมูลมาตรฐาน (ปีงบประมาณ {fiscalYear})
+                สกัดข้อเสนอแนะอัตโนมัติด้วย AI จากเล่มรายงาน TQA Feedback Report (ปีงบประมาณ {fiscalYear})
               </p>
             </div>
           </div>
@@ -342,126 +226,7 @@ export default function TqaOfiImportModal({
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            background: '#F8FAFC',
-            borderBottom: '1px solid #E2E8F0',
-            padding: '0 1rem',
-            overflowX: 'auto',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('pdf');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            style={{
-              padding: '10px 14px',
-              borderBottom: activeTab === 'pdf' ? '2px solid #8B5CF6' : '2px solid transparent',
-              color: activeTab === 'pdf' ? '#7C3AED' : '#64748B',
-              fontWeight: activeTab === 'pdf' ? 700 : 500,
-              fontSize: '0.85rem',
-              background: 'none',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Sparkles size={15} color={activeTab === 'pdf' ? '#7C3AED' : '#64748B'} />
-            <span>อัปโหลดไฟล์ PDF (AI Extract)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('seed');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            style={{
-              padding: '10px 14px',
-              borderBottom: activeTab === 'seed' ? '2px solid #EA580C' : '2px solid transparent',
-              color: activeTab === 'seed' ? '#EA580C' : '#64748B',
-              fontWeight: activeTab === 'seed' ? 700 : 500,
-              fontSize: '0.85rem',
-              background: 'none',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <FileText size={15} />
-            <span>จาก Feedback Report 2568</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('duplicate');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            style={{
-              padding: '10px 14px',
-              borderBottom: activeTab === 'duplicate' ? '2px solid #EA580C' : '2px solid transparent',
-              color: activeTab === 'duplicate' ? '#EA580C' : '#64748B',
-              fontWeight: activeTab === 'duplicate' ? 700 : 500,
-              fontSize: '0.85rem',
-              background: 'none',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Copy size={15} />
-            <span>คัดลอกจากปีก่อนหน้า</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('json');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            style={{
-              padding: '10px 14px',
-              borderBottom: activeTab === 'json' ? '2px solid #EA580C' : '2px solid transparent',
-              color: activeTab === 'json' ? '#EA580C' : '#64748B',
-              fontWeight: activeTab === 'json' ? 700 : 500,
-              fontSize: '0.85rem',
-              background: 'none',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Layers size={15} />
-            <span>นำเข้า JSON</span>
-          </button>
-        </div>
-
-        {/* Tab Content Body */}
+        {/* Content Body */}
         <div
           style={{
             padding: '1.25rem 1.5rem',
@@ -469,7 +234,7 @@ export default function TqaOfiImportModal({
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            maxHeight: 'calc(90vh - 140px)',
+            maxHeight: 'calc(90vh - 100px)',
           }}
         >
           {errorMsg && (
@@ -510,534 +275,347 @@ export default function TqaOfiImportModal({
             </div>
           )}
 
-          {/* TAB 1: PDF AI EXTRACT */}
-          {activeTab === 'pdf' && (
+          {!extractedItems ? (
+            <>
+              {/* Upload Drop Zone */}
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleFileDrop}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: '2px dashed #CBD5E1',
+                  borderRadius: '12px',
+                  padding: '2.5rem 1.5rem',
+                  textAlign: 'center',
+                  background: pdfFile ? '#F5F3FF' : '#F8FAFC',
+                  borderColor: pdfFile ? '#8B5CF6' : '#CBD5E1',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+
+                {pdfFile ? (
+                  <>
+                    <div
+                      style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        background: '#EDE9FE',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <File size={28} color="#7C3AED" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#4C1D95', fontSize: '1rem' }}>
+                        {pdfFile.name}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6D28D9', marginTop: '2px' }}>
+                        ขนาดไฟล์: {(pdfFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#8B5CF6', textDecoration: 'underline', fontWeight: 600 }}>
+                      คลิกเพื่อเปลี่ยนไฟล์ PDF
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        background: '#F1F5F9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <FileUp size={26} color="#64748B" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#334155', fontSize: '1rem' }}>
+                        ลากและวางไฟล์เล่มรายงาน TQA Feedback Report (.pdf)
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748B', marginTop: '4px' }}>
+                        หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Safe Smart Sync Notice */}
+              <div
+                style={{
+                  padding: '10px 14px',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: '10px',
+                  fontSize: '0.85rem',
+                  color: '#065F46',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  lineHeight: 1.5,
+                }}
+              >
+                <ShieldCheck size={20} color="#059669" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>
+                  <strong>Safe Smart Sync:</strong> AI จะประมวลผลสกัดแยกหัวข้อ Finding, Evidence (ทุก bullet) และ Potential Impact (ทุก bullet) พร้อมระบุหมวด 1 - 7 อย่างแม่นยำ โดยจะ<strong>คงรักษารายชื่อผู้รายงานผล (Assigned Persons) และผลการดำเนินงานเดิมไว้ 100%</strong> ไม่สูญหาย
+                </span>
+              </div>
+
+              {/* Extract Button */}
+              <button
+                type="button"
+                onClick={handleExtractPdf}
+                disabled={!pdfFile || isExtracting}
+                className="btn btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+                  borderColor: '#6D28D9',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                  justifyContent: 'center',
+                  padding: '0.9rem',
+                  gap: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                }}
+              >
+                {isExtracting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>กำลังอ่านเอกสาร PDF และสกัดข้อเสนอแนะด้วย Gemini AI (ประมาณ 10-25 วินาที)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    <span>เริ่มสกัดข้อมูล OFI จากไฟล์ PDF ด้วย AI</span>
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            /* EXTRACTED PREVIEW & CONFIRMATION */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {!extractedItems ? (
-                <>
-                  {/* Upload Drop Zone */}
-                  <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleFileDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      border: '2px dashed #CBD5E1',
-                      borderRadius: '12px',
-                      padding: '2rem 1.5rem',
-                      textAlign: 'center',
-                      background: pdfFile ? '#F5F3FF' : '#F8FAFC',
-                      borderColor: pdfFile ? '#8B5CF6' : '#CBD5E1',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '10px',
-                    }}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,application/pdf"
-                      style={{ display: 'none' }}
-                      onChange={handleFileChange}
-                    />
-
-                    {pdfFile ? (
-                      <>
-                        <div
-                          style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '50%',
-                            background: '#EDE9FE',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <File size={26} color="#7C3AED" />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 800, color: '#4C1D95', fontSize: '0.95rem' }}>
-                            {pdfFile.name}
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: '#6D28D9', marginTop: '2px' }}>
-                            ขนาดไฟล์: {(pdfFile.size / (1024 * 1024)).toFixed(2)} MB
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#8B5CF6', textDecoration: 'underline' }}>
-                          คลิกเพื่อเปลี่ยนไฟล์ PDF
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div
-                          style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '50%',
-                            background: '#F1F5F9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <FileUp size={24} color="#64748B" />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.95rem' }}>
-                            ลากและวางไฟล์เล่มรายงาน TQA Feedback Report (.pdf)
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>
-                            หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ
-                          </div>
-                        </div>
-                      </>
-                    )}
+              <div
+                style={{
+                  background: '#F5F3FF',
+                  border: '1px solid #DDD6FE',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 800, color: '#5B21B6', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="#7C3AED" />
+                    <span>สกัดข้อมูลสำเร็จ {extractedItems.length} รายการ</span>
                   </div>
-
-                  {/* Gemini API Key Configuration */}
-                  <div
-                    style={{
-                      background: '#F8FAFC',
-                      padding: '1rem',
-                      borderRadius: '10px',
-                      border: '1px solid #E2E8F0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Key size={14} color="#7C3AED" />
-                        <span>Google Gemini API Key (สำหรับประมวลผลเอกสาร):</span>
-                      </label>
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: '0.75rem', color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
-                      >
-                        รับ API Key ฟรีที่ Google AI Studio <ExternalLink size={11} />
-                      </a>
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showApiKey ? 'text' : 'password'}
-                        className="form-input"
-                        placeholder="วาง API Key เช่น AIzaSy..."
-                        value={geminiApiKey}
-                        onChange={(e) => setGeminiApiKey(e.target.value)}
-                        style={{ paddingRight: '40px', fontSize: '0.85rem' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        style={{
-                          position: 'absolute',
-                          right: '10px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          color: '#64748B',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                      * หากในไฟล์ <code>.env.local</code> มีการตั้งค่า <code>GEMINI_API_KEY</code> ไว้แล้ว สามารถเว้นว่างช่องนี้ได้
-                    </div>
+                  <div style={{ fontSize: '0.8rem', color: '#6D28D9', marginTop: '2px' }}>
+                    ประมวลผลโดยโมเดล <strong>{extractedModel}</strong> จากไฟล์: {pdfFile?.name}
                   </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExtractedItems(null);
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '0.8rem' }}
+                >
+                  เลือกไฟล์ใหม่ / สกัดใหม่
+                </button>
+              </div>
 
-                  {/* Safe Smart Sync Notice */}
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      background: '#ECFDF5',
-                      border: '1px solid #A7F3D0',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: '#065F46',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <ShieldCheck size={18} color="#059669" style={{ flexShrink: 0 }} />
-                    <span>
-                      <strong>Safe Smart Sync:</strong> AI จะสกัดแยกหัวข้อ Finding, Evidence (ทุก bullet) และ Potential Impact (ทุก bullet) โดยจะคงรักษารายชื่อผู้รายงานผลและผลการดำเนินงานเดิมไว้ 100%
-                    </span>
-                  </div>
-
-                  {/* Extract Button */}
+              {/* Category Pills & Search */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={handleExtractPdf}
-                    disabled={!pdfFile || isExtracting}
-                    className="btn btn-primary"
-                    style={{
-                      background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
-                      borderColor: '#6D28D9',
-                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
-                      justifyContent: 'center',
-                      padding: '0.85rem',
-                      gap: '8px',
-                      fontWeight: 700,
-                      fontSize: '0.95rem',
-                    }}
+                    onClick={() => setSelectedPreviewCat('ALL')}
+                    className={`btn btn-sm ${selectedPreviewCat === 'ALL' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ fontSize: '0.75rem', padding: '3px 8px' }}
                   >
-                    {isExtracting ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        <span>กำลังอ่านเอกสาร PDF และสกัดข้อเสนอแนะด้วย Gemini AI (ประมาณ 10-25 วินาที)...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={18} />
-                        <span>เริ่มสกัดข้อมูล OFI จากไฟล์ PDF ด้วย AI</span>
-                      </>
-                    )}
+                    ทั้งหมด ({extractedItems.length})
                   </button>
-                </>
-              ) : (
-                /* EXTRACTED PREVIEW & CONFIRMATION */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div
-                    style={{
-                      background: '#F5F3FF',
-                      border: '1px solid #DDD6FE',
-                      borderRadius: '10px',
-                      padding: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '10px',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 800, color: '#5B21B6', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Sparkles size={16} color="#7C3AED" />
-                        <span>สกัดข้อมูลสำเร็จ {extractedItems.length} รายการ</span>
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#6D28D9', marginTop: '2px' }}>
-                        ประมวลผลโดยโมเดล <strong>{extractedModel}</strong> จากไฟล์: {pdfFile?.name}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExtractedItems(null);
-                        setErrorMsg('');
-                        setSuccessMsg('');
-                      }}
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '0.8rem' }}
-                    >
-                      เลือกไฟล์ใหม่ / สกัดใหม่
-                    </button>
-                  </div>
-
-                  {/* Category Pills & Search */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((num) => {
+                    const count = extractedItems.filter((i) => i.categoryNum === num || i.category?.includes(String(num))).length;
+                    return (
                       <button
+                        key={num}
                         type="button"
-                        onClick={() => setSelectedPreviewCat('ALL')}
-                        className={`btn btn-sm ${selectedPreviewCat === 'ALL' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setSelectedPreviewCat(String(num))}
+                        className={`btn btn-sm ${selectedPreviewCat === String(num) ? 'btn-primary' : 'btn-ghost'}`}
                         style={{ fontSize: '0.75rem', padding: '3px 8px' }}
                       >
-                        ทั้งหมด ({extractedItems.length})
+                        หมวด {num} ({count})
                       </button>
-                      {[1, 2, 3, 4, 5, 6, 7].map((num) => {
-                        const count = extractedItems.filter((i) => i.categoryNum === num || i.category?.includes(String(num))).length;
-                        return (
-                          <button
-                            key={num}
-                            type="button"
-                            onClick={() => setSelectedPreviewCat(String(num))}
-                            className={`btn btn-sm ${selectedPreviewCat === String(num) ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ fontSize: '0.75rem', padding: '3px 8px' }}
-                          >
-                            หมวด {num} ({count})
-                          </button>
-                        );
-                      })}
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    <div style={{ position: 'relative', minWidth: '180px' }}>
-                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-                      <input
-                        type="text"
-                        className="form-input form-input-sm"
-                        placeholder="ค้นหาข้อความ..."
-                        value={previewSearch}
-                        onChange={(e) => setPreviewSearch(e.target.value)}
-                        style={{ paddingLeft: '30px', fontSize: '0.8rem' }}
-                      />
-                    </div>
-                  </div>
+                <div style={{ position: 'relative', minWidth: '180px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                  <input
+                    type="text"
+                    className="form-input form-input-sm"
+                    placeholder="ค้นหาข้อความ..."
+                    value={previewSearch}
+                    onChange={(e) => setPreviewSearch(e.target.value)}
+                    style={{ paddingLeft: '30px', fontSize: '0.8rem' }}
+                  />
+                </div>
+              </div>
 
-                  {/* List of Preview Items */}
-                  <div
-                    style={{
-                      maxHeight: '320px',
-                      overflowY: 'auto',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      background: '#FAFAFA',
-                    }}
-                  >
-                    {filteredPreviewItems.map((item, idx) => {
-                      const isExpanded = expandedPreviewIdx === idx;
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            background: '#FFFFFF',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: '8px',
-                            padding: '10px 12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                          }}
-                        >
-                          <div
-                            onClick={() => setExpandedPreviewIdx(isExpanded ? null : idx)}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+              {/* List of Preview Items */}
+              <div
+                style={{
+                  maxHeight: '340px',
+                  overflowY: 'auto',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  padding: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  background: '#FAFAFA',
+                }}
+              >
+                {filteredPreviewItems.map((item, idx) => {
+                  const isExpanded = expandedPreviewIdx === idx;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                      }}
+                    >
+                      <div
+                        onClick={() => setExpandedPreviewIdx(isExpanded ? null : idx)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span
+                            style={{
+                              background: '#EDE9FE',
+                              color: '#6D28D9',
+                              fontWeight: 800,
+                              fontSize: '0.75rem',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                            }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span
-                                style={{
-                                  background: '#EDE9FE',
-                                  color: '#6D28D9',
-                                  fontWeight: 800,
-                                  fontSize: '0.75rem',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                }}
-                              >
-                                {item.itemRef || `ข้อที่ ${idx + 1}`}
-                              </span>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
-                                {item.category}
-                              </span>
-                              {item.keyTheme && (
-                                <span style={{ fontSize: '0.7rem', color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px' }}>
-                                  {item.keyTheme}
-                                </span>
-                              )}
+                            {item.itemRef || `ข้อที่ ${idx + 1}`}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                            {item.category}
+                          </span>
+                          {item.keyTheme && (
+                            <span style={{ fontSize: '0.7rem', color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px' }}>
+                              {item.keyTheme}
+                            </span>
+                          )}
+                        </div>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" style={{ padding: '2px', color: '#64748B' }}>
+                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      </div>
+
+                      <div style={{ fontSize: '0.85rem', color: '#1E293B', fontWeight: 500, lineHeight: 1.5 }}>
+                        {item.finding}
+                      </div>
+
+                      {isExpanded && (
+                        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {item.evidence && (
+                            <div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0369A1', marginBottom: '2px' }}>
+                                🔍 หลักฐานเชิงประจักษ์ (Evidence):
+                              </div>
+                              <TqaBulletList text={item.evidence} bulletColor="#0284C7" bulletBg="#E0F2FE" fontSize="0.8rem" />
                             </div>
-                            <button type="button" className="btn btn-ghost btn-sm btn-icon" style={{ padding: '2px', color: '#64748B' }}>
-                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            </button>
-                          </div>
-
-                          <div style={{ fontSize: '0.85rem', color: '#1E293B', fontWeight: 500, lineHeight: 1.5 }}>
-                            {item.finding}
-                          </div>
-
-                          {isExpanded && (
-                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                              {item.evidence && (
-                                <div>
-                                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0369A1', marginBottom: '2px' }}>
-                                    🔍 หลักฐานเชิงประจักษ์ (Evidence):
-                                  </div>
-                                  <TqaBulletList text={item.evidence} bulletColor="#0284C7" bulletBg="#E0F2FE" fontSize="0.8rem" />
-                                </div>
-                              )}
-                              {item.potentialImpact && (
-                                <div>
-                                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F766E', marginBottom: '2px' }}>
-                                    💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):
-                                  </div>
-                                  <TqaBulletList text={item.potentialImpact} bulletColor="#0F766E" bulletBg="#CCFBF1" fontSize="0.8rem" />
-                                </div>
-                              )}
+                          )}
+                          {item.potentialImpact && (
+                            <div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F766E', marginBottom: '2px' }}>
+                                💡 ผลกระทบและคุณค่าเชิงกลยุทธ์ (Potential Impact):
+                              </div>
+                              <TqaBulletList text={item.potentialImpact} bulletColor="#0F766E" bulletBg="#CCFBF1" fontSize="0.8rem" />
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Save Confirmation Button */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setExtractedItems(null)}
-                      className="btn btn-secondary"
-                      disabled={isProcessing}
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveExtracted}
-                      disabled={isProcessing}
-                      className="btn btn-primary"
-                      style={{
-                        background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                        borderColor: '#059669',
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                        gap: '6px',
-                        fontWeight: 700,
-                        padding: '0.75rem 1.25rem',
-                      }}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          <span>กำลังบันทึกชุดข้อมูล...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck size={18} />
-                          <span>ยืนยันบันทึกชุดข้อมูล {extractedItems.length} รายการเข้าสู่ปีงบประมาณ {fiscalYear} (Safe Smart Sync)</span>
-                        </>
                       )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                  );
+                })}
+              </div>
 
-          {/* TAB 2: SEED 2568 */}
-          {activeTab === 'seed' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.9rem', lineHeight: 1.6, color: '#334155' }}>
-                <strong style={{ color: '#EA580C' }}>ชุดข้อมูลสกัดจากเล่มรายงานประเมินตนเอง 2568:</strong>
-                <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#64748B' }}>
-                  ประกอบด้วยข้อเสนอแนะเพื่อการปรับปรุงทั้งหมด <strong>47 รายการ</strong> ครอบคลุมหมวด 1 - 7 (Finding, Evidence, Potential Impact, Key Themes)
-                </p>
-                <div
+              {/* Save Confirmation Button */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setExtractedItems(null)}
+                  className="btn btn-secondary"
+                  disabled={isProcessing}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveExtracted}
+                  disabled={isProcessing}
+                  className="btn btn-primary"
                   style={{
-                    marginTop: '10px',
-                    padding: '8px 12px',
-                    background: '#ECFDF5',
-                    border: '1px solid #A7F3D0',
-                    borderRadius: '8px',
-                    fontSize: '0.8rem',
-                    color: '#065F46',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                    borderColor: '#059669',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                    gap: '6px',
+                    fontWeight: 700,
+                    padding: '0.75rem 1.25rem',
                   }}
                 >
-                  <ShieldCheck size={18} color="#059669" style={{ flexShrink: 0 }} />
-                  <span>
-                    <strong>Safe Smart Sync:</strong> ระบบจะอัปเดตเฉพาะเนื้อหา และคงรักษารายชื่อผู้รายงานผล (Assigned Persons) และผลการดำเนินงานเดิมไว้ 100% ไม่สูญหาย
-                  </span>
-                </div>
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>กำลังบันทึกชุดข้อมูล...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={18} />
+                      <span>ยืนยันบันทึกชุดข้อมูล {extractedItems.length} รายการเข้าสู่ปีงบประมาณ {fiscalYear} (Safe Smart Sync)</span>
+                    </>
+                  )}
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={handleImportSeed}
-                disabled={isProcessing}
-                className="btn btn-primary"
-                style={{
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  borderColor: '#EA580C',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                  justifyContent: 'center',
-                  padding: '0.75rem',
-                  gap: '8px',
-                  fontWeight: 700,
-                }}
-              >
-                <Sparkles size={16} />
-                <span>{isProcessing ? 'กำลังนำเข้า...' : `นำเข้าชุดข้อมูลเข้าสู่ปีงบประมาณ ${fiscalYear}`}</span>
-              </button>
-            </div>
-          )}
-
-          {/* TAB 3: DUPLICATE PREVIOUS YEAR */}
-          {activeTab === 'duplicate' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label className="form-label" style={{ fontWeight: 700 }}>
-                  คัดลอกจากปีงบประมาณต้นทาง:
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={sourceYear}
-                  onChange={(e) => setSourceYear(e.target.value)}
-                  placeholder="เช่น 2568"
-                />
-                <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>
-                  ระบบจะคัดลอกโครงสร้างหัวข้อข้อเสนอแนะทั้งหมดจากปีที่ระบุมายังปี {fiscalYear} โดยรีเซ็ตสถานะเป็นเริ่มต้น
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDuplicate}
-                disabled={isProcessing}
-                className="btn btn-primary"
-                style={{
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  borderColor: '#EA580C',
-                  justifyContent: 'center',
-                  padding: '0.75rem',
-                  gap: '8px',
-                  fontWeight: 700,
-                }}
-              >
-                <Copy size={16} />
-                <span>{isProcessing ? 'กำลังคัดลอก...' : `คัดลอกข้อเสนอแนะมายังปี ${fiscalYear}`}</span>
-              </button>
-            </div>
-          )}
-
-          {/* TAB 4: JSON IMPORT */}
-          {activeTab === 'json' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label className="form-label" style={{ fontWeight: 700 }}>
-                  วางโค้ด JSON (Array ของข้อเสนอแนะ):
-                </label>
-                <textarea
-                  rows={8}
-                  className="form-input"
-                  style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-                  placeholder="[{ &quot;category&quot;: &quot;หมวด 1 การนำองค์กร&quot;, &quot;itemRef&quot;: &quot;1.1ก(2)&quot;, &quot;finding&quot;: &quot;...&quot; }]"
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleImportJson}
-                disabled={isProcessing}
-                className="btn btn-primary"
-                style={{
-                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                  borderColor: '#EA580C',
-                  justifyContent: 'center',
-                  padding: '0.75rem',
-                  gap: '8px',
-                  fontWeight: 700,
-                }}
-              >
-                <Upload size={16} />
-                <span>{isProcessing ? 'กำลังนำเข้า...' : `นำเข้าชุดข้อมูล JSON เข้าสู่ปี ${fiscalYear}`}</span>
-              </button>
             </div>
           )}
         </div>

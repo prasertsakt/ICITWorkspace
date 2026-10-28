@@ -53,7 +53,7 @@ export async function POST(request) {
           success: false,
           error: 'NO_API_KEY',
           message:
-            'ไม่พบ Google Gemini API Key กรุณาระบุ API Key ในช่องตั้งค่าหรือใน Environment Variables',
+            'ไม่พบ Google Gemini API Key กรุณากำหนดค่า GEMINI_API_KEY ใน Environment Variables ของระบบ (Vercel / .env.local)',
         },
         { status: 400 }
       );
