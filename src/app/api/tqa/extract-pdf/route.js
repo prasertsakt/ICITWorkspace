@@ -6,7 +6,7 @@ export const maxDuration = 60; // Allow up to 60s for large PDF analysis
 const GEMINI_MODELS = [
   'gemini-1.5-flash',
   'gemini-2.0-flash',
-  'gemini-2.5-flash',
+  'gemini-1.5-pro',
 ];
 
 /**
