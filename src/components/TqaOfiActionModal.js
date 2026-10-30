@@ -67,6 +67,8 @@ export default function TqaOfiActionModal({
   const [linkModalUrl, setLinkModalUrl] = useState('');
   const [linkModalText, setLinkModalText] = useState('');
   const [linkModalError, setLinkModalError] = useState('');
+  const [linkModalSuccess, setLinkModalSuccess] = useState('');
+  const [insertedCount, setInsertedCount] = useState(0);
   const savedRangeRef = useRef(null);
   const editorRef = useRef(null);
 
@@ -191,7 +193,19 @@ export default function TqaOfiActionModal({
     setLinkModalUrl(defaultUrl);
     setLinkModalText(defaultText);
     setLinkModalError('');
+    setLinkModalSuccess('');
+    setInsertedCount(0);
     setIsLinkModalOpen(true);
+  };
+
+  const handleCloseLinkModal = () => {
+    setIsLinkModalOpen(false);
+    setLinkModalUrl('');
+    setLinkModalText('');
+    setLinkModalError('');
+    setLinkModalSuccess('');
+    setInsertedCount(0);
+    savedRangeRef.current = null;
   };
 
   const handleConfirmInsertLink = (e) => {
@@ -200,6 +214,7 @@ export default function TqaOfiActionModal({
     const trimmedUrl = (linkModalUrl || '').trim();
     if (!trimmedUrl || trimmedUrl === 'https://' || trimmedUrl === 'http://') {
       setLinkModalError('กรุณาระบุ URL ของลิงก์ที่ต้องการแนบ');
+      setLinkModalSuccess('');
       return;
     }
 
@@ -235,18 +250,29 @@ export default function TqaOfiActionModal({
       }
     }
 
-    // 5. Ensure all <a> tags inside editor have target="_blank", rel="noopener noreferrer", and blue underline styling
+    // 5. Update savedRangeRef to cursor position after the inserted link for subsequent links
+    const newSelection = window.getSelection();
+    if (newSelection && newSelection.rangeCount > 0) {
+      try {
+        savedRangeRef.current = newSelection.getRangeAt(0).cloneRange();
+      } catch {
+        savedRangeRef.current = null;
+      }
+    }
+
+    // 6. Ensure all <a> tags inside editor have target="_blank", rel="noopener noreferrer", and blue underline styling
     if (editorRef.current) {
       const formatted = formatHtmlLinks(editorRef.current.innerHTML);
       editorRef.current.innerHTML = formatted;
       setHtmlContent(formatted);
     }
 
-    setIsLinkModalOpen(false);
+    // 7. Keep modal OPEN, clear input fields, show success feedback
     setLinkModalUrl('');
     setLinkModalText('');
     setLinkModalError('');
-    savedRangeRef.current = null;
+    setInsertedCount((prev) => prev + 1);
+    setLinkModalSuccess('แทรกลิงก์ลงในรายงานเรียบร้อยแล้ว (สามารถแทรกลิงก์อื่นต่อ หรือคลิก "ปิดหน้าต่าง" เมื่อเสร็จสิ้น)');
   };
 
   const handleCopyFromPreviousRound = (sourceKey) => {
@@ -1194,10 +1220,6 @@ export default function TqaOfiActionModal({
             justifyContent: 'center',
             padding: '1rem',
           }}
-          onClick={() => {
-            setIsLinkModalOpen(false);
-            setLinkModalError('');
-          }}
         >
           <div
             style={{
@@ -1211,7 +1233,6 @@ export default function TqaOfiActionModal({
               flexDirection: 'column',
               border: '1px solid #E2E8F0',
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div
@@ -1254,10 +1275,7 @@ export default function TqaOfiActionModal({
 
               <button
                 type="button"
-                onClick={() => {
-                  setIsLinkModalOpen(false);
-                  setLinkModalError('');
-                }}
+                onClick={handleCloseLinkModal}
                 className="btn btn-ghost btn-icon"
                 style={{ color: '#94A3B8' }}
                 title="ปิดหน้าต่าง"
@@ -1297,7 +1315,10 @@ export default function TqaOfiActionModal({
                     className="form-control"
                     placeholder="เช่น รายงานผลฉบับเต็ม, สไลด์สรุป, โฟลเดอร์หลักฐาน..."
                     value={linkModalText}
-                    onChange={(e) => setLinkModalText(e.target.value)}
+                    onChange={(e) => {
+                      setLinkModalText(e.target.value);
+                      if (linkModalSuccess) setLinkModalSuccess('');
+                    }}
                     style={{
                       width: '100%',
                       padding: '0.65rem 0.85rem',
@@ -1339,6 +1360,7 @@ export default function TqaOfiActionModal({
                       onChange={(e) => {
                         setLinkModalUrl(e.target.value);
                         if (linkModalError) setLinkModalError('');
+                        if (linkModalSuccess) setLinkModalSuccess('');
                       }}
                       autoFocus
                       style={{
@@ -1388,6 +1410,7 @@ export default function TqaOfiActionModal({
                             setLinkModalUrl(`${chip}${linkModalUrl}`);
                           }
                           if (linkModalError) setLinkModalError('');
+                          if (linkModalSuccess) setLinkModalSuccess('');
                         }}
                         style={{
                           background: '#F1F5F9',
@@ -1422,6 +1445,27 @@ export default function TqaOfiActionModal({
                     </div>
                   )}
                 </div>
+
+                {/* Success Feedback (When link is inserted, modal stays open) */}
+                {linkModalSuccess && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      background: '#ECFDF5',
+                      border: '1px solid #A7F3D0',
+                      color: '#059669',
+                      fontSize: '0.825rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
+                    <span>{linkModalSuccess}</span>
+                  </div>
+                )}
 
                 {/* Live Preview */}
                 {(linkModalUrl || linkModalText) && (
@@ -1470,14 +1514,11 @@ export default function TqaOfiActionModal({
               >
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsLinkModalOpen(false);
-                    setLinkModalError('');
-                  }}
+                  onClick={handleCloseLinkModal}
                   className="btn btn-secondary"
                   style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
                 >
-                  ยกเลิก
+                  {insertedCount > 0 ? 'ปิดหน้าต่าง' : 'ยกเลิก / ปิด'}
                 </button>
                 <button
                   type="submit"
