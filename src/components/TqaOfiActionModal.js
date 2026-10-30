@@ -13,6 +13,9 @@ import {
   List,
   ListOrdered,
   Link as LinkIcon,
+  Link2,
+  ExternalLink,
+  Globe,
   Heading1,
   Heading2,
   Quote,
@@ -60,6 +63,11 @@ export default function TqaOfiActionModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkModalUrl, setLinkModalUrl] = useState('');
+  const [linkModalText, setLinkModalText] = useState('');
+  const [linkModalError, setLinkModalError] = useState('');
+  const savedRangeRef = useRef(null);
   const editorRef = useRef(null);
 
   const canEdit = canEditTqaOfiProgress(ofiItem, currentUser, currentPersonnel, isAdmin);
@@ -149,7 +157,7 @@ export default function TqaOfiActionModal({
     }
   };
 
-  const handleInsertLink = () => {
+  const handleOpenLinkModal = () => {
     if (!canEdit) return;
 
     // 1. Get current selection from window
@@ -166,20 +174,36 @@ export default function TqaOfiActionModal({
       }
     }
 
-    // 2. Pre-fill default URL from selected text if it looks like a URL
-    let defaultUrl = 'https://';
+    savedRangeRef.current = savedRange;
+
+    // 2. Pre-fill default URL and display text
+    let defaultUrl = '';
+    let defaultText = selectedText;
+
     if (selectedText.startsWith('http://') || selectedText.startsWith('https://')) {
       defaultUrl = selectedText;
+      defaultText = selectedText;
     } else if (selectedText.includes('.') && !selectedText.includes(' ') && selectedText.length > 3) {
       defaultUrl = `https://${selectedText}`;
+      defaultText = selectedText;
     }
 
-    const inputUrl = window.prompt('ระบุ URL ลิงก์ที่ต้องการแทรก (เช่น https://...):', defaultUrl);
-    if (!inputUrl || !inputUrl.trim() || inputUrl.trim() === 'https://' || inputUrl.trim() === 'http://') {
+    setLinkModalUrl(defaultUrl);
+    setLinkModalText(defaultText);
+    setLinkModalError('');
+    setIsLinkModalOpen(true);
+  };
+
+  const handleConfirmInsertLink = (e) => {
+    if (e) e.preventDefault();
+
+    const trimmedUrl = (linkModalUrl || '').trim();
+    if (!trimmedUrl || trimmedUrl === 'https://' || trimmedUrl === 'http://') {
+      setLinkModalError('กรุณาระบุ URL ของลิงก์ที่ต้องการแนบ');
       return;
     }
 
-    let finalUrl = inputUrl.trim();
+    let finalUrl = trimmedUrl;
     if (!/^https?:\/\//i.test(finalUrl)) {
       finalUrl = `https://${finalUrl}`;
     }
@@ -189,18 +213,26 @@ export default function TqaOfiActionModal({
       editorRef.current.focus();
     }
 
-    if (savedRange && selection) {
-      selection.removeAllRanges();
-      selection.addRange(savedRange);
+    const selection = window.getSelection();
+    if (savedRangeRef.current && selection) {
+      try {
+        selection.removeAllRanges();
+        selection.addRange(savedRangeRef.current);
+      } catch {
+        // ignore range restore error
+      }
     }
 
-    // 4. If text was selected, execute createLink. Otherwise insert HTML anchor element
-    if (savedRange && !savedRange.collapsed && selectedText.length > 0) {
-      document.execCommand('createLink', false, finalUrl);
-    } else {
-      const linkText = selectedText || finalUrl;
-      const linkHtml = `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563EB; text-decoration: underline; font-weight: 500; word-break: break-all;">${linkText}</a>&nbsp;`;
+    // 4. Insert link HTML
+    const displayText = (linkModalText || '').trim() || finalUrl;
+    const linkHtml = `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563EB; text-decoration: underline; font-weight: 500; word-break: break-all;">${displayText}</a>&nbsp;`;
+
+    try {
       document.execCommand('insertHTML', false, linkHtml);
+    } catch {
+      if (editorRef.current) {
+        editorRef.current.innerHTML += ` ${linkHtml}`;
+      }
     }
 
     // 5. Ensure all <a> tags inside editor have target="_blank", rel="noopener noreferrer", and blue underline styling
@@ -209,6 +241,12 @@ export default function TqaOfiActionModal({
       editorRef.current.innerHTML = formatted;
       setHtmlContent(formatted);
     }
+
+    setIsLinkModalOpen(false);
+    setLinkModalUrl('');
+    setLinkModalText('');
+    setLinkModalError('');
+    savedRangeRef.current = null;
   };
 
   const handleCopyFromPreviousRound = (sourceKey) => {
@@ -780,10 +818,10 @@ export default function TqaOfiActionModal({
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={handleInsertLink}
+                  onClick={handleOpenLinkModal}
                   className="btn btn-ghost btn-icon"
                   style={{ padding: '4px', height: '28px', width: '28px' }}
-                  title="แทรก URL ลิงก์ (Link)"
+                  title="แนบ / แทรก URL ลิงก์ (Attach Link)"
                 >
                   <LinkIcon size={15} />
                 </button>
@@ -1135,6 +1173,329 @@ export default function TqaOfiActionModal({
                 ปิดหน้าต่าง
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attach Link Modal (Suited to TQA / Enterprise Theme) */}
+      {isLinkModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.72)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 10002,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => {
+            setIsLinkModalOpen(false);
+            setLinkModalError('');
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '1.25rem',
+              maxWidth: '540px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid #E2E8F0',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: '#EDE9FE',
+                    color: '#6D28D9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(109, 40, 217, 0.2)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Link2 size={19} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF' }}>
+                    แนบลิงก์เอกสาร / แหล่งอ้างอิง
+                  </h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#94A3B8' }}>
+                    แทรกลิงก์เว็บไซต์ เอกสาร Google Drive หรือระบบบริการในรายงานผล
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLinkModalOpen(false);
+                  setLinkModalError('');
+                }}
+                className="btn btn-ghost btn-icon"
+                style={{ color: '#94A3B8' }}
+                title="ปิดหน้าต่าง"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form
+              onSubmit={handleConfirmInsertLink}
+              style={{ display: 'flex', flexDirection: 'column', flex: 1 }}
+            >
+              <div
+                style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem',
+                }}
+              >
+                {/* Field 1: Display Text */}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    ข้อความที่จะแสดง (Display Text)
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="เช่น รายงานผลฉบับเต็ม, สไลด์สรุป, โฟลเดอร์หลักฐาน..."
+                    value={linkModalText}
+                    onChange={(e) => setLinkModalText(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.875rem',
+                      color: '#0F172A',
+                      outline: 'none',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                    * หากเว้นว่างไว้ ระบบจะใช้ที่อยู่ URL เป็นข้อความแสดงผลโดยอัตโนมัติ
+                  </span>
+                </div>
+
+                {/* Field 2: Target URL */}
+                <div>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    <span>
+                      URL ลิงก์ปลายทาง (Target URL) <strong style={{ color: '#DC2626' }}>*</strong>
+                    </span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="https://drive.google.com/... หรือ https://..."
+                      value={linkModalUrl}
+                      onChange={(e) => {
+                        setLinkModalUrl(e.target.value);
+                        if (linkModalError) setLinkModalError('');
+                      }}
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem 0.65rem 2.4rem',
+                        borderRadius: '8px',
+                        border: linkModalError ? '1px solid #DC2626' : '1px solid #CBD5E1',
+                        fontSize: '0.875rem',
+                        color: '#0F172A',
+                        outline: 'none',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#94A3B8',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <ExternalLink size={16} />
+                    </div>
+                  </div>
+
+                  {/* Quick Chips for convenience */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      flexWrap: 'wrap',
+                      marginTop: '8px',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>ตัวช่วยเติม:</span>
+                    {['https://drive.google.com/', 'https://docs.google.com/', 'https://cit.kmutnb.ac.th/'].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => {
+                          if (!linkModalUrl || linkModalUrl === 'https://') {
+                            setLinkModalUrl(chip);
+                          } else if (!linkModalUrl.startsWith('http')) {
+                            setLinkModalUrl(`${chip}${linkModalUrl}`);
+                          }
+                          if (linkModalError) setLinkModalError('');
+                        }}
+                        style={{
+                          background: '#F1F5F9',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '0.72rem',
+                          color: '#475569',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                        }}
+                      >
+                        +{chip.replace('https://', '')}
+                      </button>
+                    ))}
+                  </div>
+
+                  {linkModalError && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '0.78rem',
+                        color: '#DC2626',
+                        marginTop: '6px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <AlertCircle size={14} />
+                      <span>{linkModalError}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Preview */}
+                {(linkModalUrl || linkModalText) && (
+                  <div
+                    style={{
+                      background: '#F8FAFC',
+                      border: '1px dashed #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                      ตัวอย่างการแสดงผลในรายงานผล:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                      <span
+                        style={{
+                          color: '#2563EB',
+                          textDecoration: 'underline',
+                          fontWeight: 500,
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {linkModalText.trim() || linkModalUrl.trim() || 'https://...'}
+                      </span>
+                      <ExternalLink size={12} color="#2563EB" style={{ flexShrink: 0 }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div
+                style={{
+                  padding: '1rem 1.5rem',
+                  background: '#F8FAFC',
+                  borderTop: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLinkModalOpen(false);
+                    setLinkModalError('');
+                  }}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '0.85rem',
+                    padding: '0.5rem 1.25rem',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%)',
+                    borderColor: '#6D28D9',
+                    boxShadow: '0 2px 6px rgba(109, 40, 217, 0.25)',
+                  }}
+                >
+                  <Link2 size={16} />
+                  <span>แทรกลิงก์</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
