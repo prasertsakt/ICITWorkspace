@@ -272,7 +272,7 @@ export default function TqaOfiActionModal({
     setLinkModalText('');
     setLinkModalError('');
     setInsertedCount((prev) => prev + 1);
-    setLinkModalSuccess('แทรกลิงก์ลงในรายงานเรียบร้อยแล้ว (สามารถแทรกลิงก์อื่นต่อ หรือคลิก "ปิดหน้าต่าง" เมื่อเสร็จสิ้น)');
+    setLinkModalSuccess('แทรกลิงก์ลงในกล่องข้อความแล้ว (อย่าลืมคลิกปุ่ม "บันทึกรายงานผล" ด้านล่างเพื่อบันทึกลงฐานข้อมูล)');
   };
 
   const handleCopyFromPreviousRound = (sourceKey) => {

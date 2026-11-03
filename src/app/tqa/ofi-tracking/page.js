@@ -72,8 +72,26 @@ export default function TqaOfiTrackingPage() {
   const { showAlert } = useModal();
 
   // Fiscal Year State (Dynamic list including past and future years)
-  const [fiscalYear, setFiscalYear] = useState(() => String(getCurrentThaiFiscalYear()));
+  const [fiscalYear, setFiscalYear] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedYear = sessionStorage.getItem('icit_tqa_selected_year');
+        if (savedYear) return savedYear;
+      } catch {}
+    }
+    // Default to 2569 where active TQA OFI items currently reside, or current fiscal year
+    return '2569';
+  });
   const availableFiscalYears = useMemo(() => getAvailableFiscalYears(2568, 1, true), []);
+
+  const handleFiscalYearChange = (year) => {
+    setFiscalYear(year);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('icit_tqa_selected_year', year);
+      } catch {}
+    }
+  };
 
   // Data States
   const [ofiItems, setOfiItems] = useState([]);
@@ -435,7 +453,7 @@ export default function TqaOfiTrackingPage() {
                   borderRadius: '6px',
                 }}
                 value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
+                onChange={(e) => handleFiscalYearChange(e.target.value)}
               >
                 {availableFiscalYears.map((fy) => (
                   <option key={fy} value={fy} style={{ color: '#0F172A', background: '#FFFFFF' }}>
@@ -1764,8 +1782,18 @@ export default function TqaOfiTrackingPage() {
         currentPersonnel={currentPersonnel}
         isAdmin={isAdmin}
         initialRound={actionModalRound}
-        onSaved={() => {
-          // Real-time listener will refresh
+        onSaved={(savedItem) => {
+          if (savedItem) {
+            setOfiItems((prev) => {
+              const idx = prev.findIndex((x) => x.id === savedItem.id);
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = savedItem;
+                return copy;
+              }
+              return [savedItem, ...prev];
+            });
+          }
         }}
       />
 
@@ -1779,8 +1807,18 @@ export default function TqaOfiTrackingPage() {
         fiscalYear={fiscalYear}
         personnelList={personnelList}
         currentUser={currentUser}
-        onSaved={() => {
-          // Real-time listener will refresh
+        onSaved={(savedItem) => {
+          if (savedItem) {
+            setOfiItems((prev) => {
+              const idx = prev.findIndex((x) => x.id === savedItem.id);
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = savedItem;
+                return copy;
+              }
+              return [savedItem, ...prev];
+            });
+          }
         }}
       />
 

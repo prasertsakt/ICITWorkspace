@@ -405,6 +405,7 @@ export async function saveTqaOfiItem(itemData, fiscalYear = String(getCurrentTha
       list.push(payload);
     }
     localStorage.setItem(localKey, JSON.stringify(list));
+    notifyTqaSubscribers(fy, list);
   } catch (e) {}
 
   if (!isFirebaseConfigured || !db) {
