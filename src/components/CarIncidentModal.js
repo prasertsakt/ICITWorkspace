@@ -1818,11 +1818,11 @@ export default function CarIncidentModal({
                 </button>
               </div>
 
-              {/* Radio options grid */}
+              {/* Radio options grid - displaying only title */}
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                   gap: '10px',
                 }}
               >
@@ -1841,8 +1841,9 @@ export default function CarIncidentModal({
                         style={{
                           position: 'relative',
                           display: 'flex',
-                          flexDirection: 'column',
-                          padding: '10px 12px',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 14px',
                           borderRadius: '8px',
                           border: isSelected ? `2px solid ${info.color}` : '1.5px solid #CBD5E1',
                           backgroundColor: isSelected ? info.bg : '#FFFFFF',
@@ -1852,45 +1853,24 @@ export default function CarIncidentModal({
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <input
-                              type="radio"
-                              name="carSeverityLevel"
-                              value={lvl}
-                              checked={isSelected}
-                              onChange={() => canEditPart2 && setSeverityLevel(lvl)}
-                              disabled={!canEditPart2}
-                              style={{
-                                accentColor: info.color,
-                                cursor: canEditPart2 ? 'pointer' : 'not-allowed',
-                                margin: 0,
-                                width: '16px',
-                                height: '16px',
-                              }}
-                            />
-                            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: info.color }}>
-                              {info.label}
-                            </span>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '0.675rem',
-                              fontWeight: 700,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: isSelected ? '#FFFFFF' : info.bg,
-                              color: info.color,
-                              border: `1px solid ${info.border}`,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {info.sla}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#475569', lineHeight: 1.45, paddingLeft: '24px' }}>
-                          {info.descriptions[0].substring(0, 95)}...
-                        </div>
+                        <input
+                          type="radio"
+                          name="carSeverityLevel"
+                          value={lvl}
+                          checked={isSelected}
+                          onChange={() => canEditPart2 && setSeverityLevel(lvl)}
+                          disabled={!canEditPart2}
+                          style={{
+                            accentColor: info.color,
+                            cursor: canEditPart2 ? 'pointer' : 'not-allowed',
+                            margin: 0,
+                            width: '18px',
+                            height: '18px',
+                          }}
+                        />
+                        <span style={{ fontSize: '0.925rem', fontWeight: 800, color: isSelected ? info.color : '#1E293B' }}>
+                          {info.label}
+                        </span>
                       </label>
                     );
                   })}
@@ -3641,7 +3621,7 @@ export default function CarIncidentModal({
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10650,
-            padding: '1rem',
+            padding: '1.5rem',
           }}
           onClick={() => setIsSeverityGuideOpen(false)}
         >
@@ -3649,9 +3629,9 @@ export default function CarIncidentModal({
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
-              maxWidth: '820px',
+              maxWidth: '920px',
               width: '100%',
-              maxHeight: '90vh',
+              maxHeight: '92vh',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -3663,7 +3643,7 @@ export default function CarIncidentModal({
             {/* Modal Header */}
             <div
               style={{
-                padding: '1.25rem 1.5rem',
+                padding: '1.5rem 2rem',
                 background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
@@ -3672,10 +3652,10 @@ export default function CarIncidentModal({
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.4 }}>
                   การประเมินสถานการณ์ (ระดับความรุนแรงและความเร่งด่วน)
                 </h3>
-                <div style={{ fontSize: '0.8rem', color: '#CCFBF1', marginTop: '2px' }}>
+                <div style={{ fontSize: '0.875rem', color: '#CCFBF1', marginTop: '4px', lineHeight: 1.5 }}>
                   เกณฑ์และนิยามมาตรฐานสำหรับการจำแนกความรุนแรงของปัญหาและอุบัติการณ์ (ICIT-FM-COMMON-013 ส่วนที่ 2)
                 </div>
               </div>
@@ -3686,27 +3666,28 @@ export default function CarIncidentModal({
                   background: 'rgba(255, 255, 255, 0.15)',
                   border: 'none',
                   color: '#FFFFFF',
-                  width: '32px',
-                  height: '32px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
+                  transition: 'background-color 0.15s ease',
                 }}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
             {/* Modal Content */}
             <div
               style={{
-                padding: '1.25rem 1.5rem',
+                padding: '1.75rem 2rem',
                 overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1rem',
+                gap: '1.5rem',
                 backgroundColor: '#F8FAFC',
               }}
             >
@@ -3719,9 +3700,9 @@ export default function CarIncidentModal({
                       key={lvl}
                       style={{
                         backgroundColor: '#FFFFFF',
-                        borderRadius: '12px',
-                        border: isCurrentSelected ? `2px solid ${info.color}` : `1px solid ${info.border}`,
-                        boxShadow: isCurrentSelected ? `0 4px 12px ${info.color}25` : '0 2px 4px rgba(0,0,0,0.03)',
+                        borderRadius: '14px',
+                        border: isCurrentSelected ? `2.5px solid ${info.color}` : `1.5px solid ${info.border}`,
+                        boxShadow: isCurrentSelected ? `0 6px 16px ${info.color}25` : '0 2px 6px rgba(0,0,0,0.04)',
                         overflow: 'hidden',
                         transition: 'all 0.15s ease',
                       }}
@@ -3729,21 +3710,21 @@ export default function CarIncidentModal({
                       {/* Card Header Banner */}
                       <div
                         style={{
-                          padding: '10px 14px',
+                          padding: '14px 20px',
                           backgroundColor: info.bg,
                           borderBottom: `1px solid ${info.border}`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           flexWrap: 'wrap',
-                          gap: '8px',
+                          gap: '10px',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <span
                             style={{
-                              width: '28px',
-                              height: '28px',
+                              width: '34px',
+                              height: '34px',
                               borderRadius: '50%',
                               backgroundColor: info.badgeBg,
                               color: info.badgeText,
@@ -3751,25 +3732,25 @@ export default function CarIncidentModal({
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 900,
-                              fontSize: '0.85rem',
+                              fontSize: '1rem',
+                              boxShadow: `0 2px 4px ${info.color}35`,
                             }}
                           >
                             {info.level}
                           </span>
-                          <div>
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: info.color }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 800, color: info.color }}>
                               {info.label}
                             </span>
                             {isCurrentSelected && (
                               <span
                                 style={{
-                                  marginLeft: '8px',
-                                  fontSize: '0.725rem',
+                                  fontSize: '0.775rem',
                                   fontWeight: 800,
                                   color: '#059669',
                                   backgroundColor: '#ECFDF5',
                                   border: '1px solid #A7F3D0',
-                                  padding: '2px 8px',
+                                  padding: '3px 10px',
                                   borderRadius: '9999px',
                                 }}
                               >
@@ -3779,16 +3760,17 @@ export default function CarIncidentModal({
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <span
                             style={{
-                              fontSize: '0.75rem',
+                              fontSize: '0.825rem',
                               fontWeight: 700,
-                              padding: '4px 10px',
+                              padding: '5px 14px',
                               borderRadius: '6px',
                               backgroundColor: '#FFFFFF',
                               color: info.color,
-                              border: `1px solid ${info.border}`,
+                              border: `1.5px solid ${info.border}`,
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                             }}
                           >
                             ⏱️ {info.sla}
@@ -3801,14 +3783,16 @@ export default function CarIncidentModal({
                                 setIsSeverityGuideOpen(false);
                               }}
                               style={{
-                                padding: '4px 12px',
-                                borderRadius: '6px',
+                                padding: '6px 16px',
+                                borderRadius: '8px',
                                 border: 'none',
                                 backgroundColor: isCurrentSelected ? info.color : '#0D9488',
                                 color: '#FFFFFF',
-                                fontSize: '0.775rem',
+                                fontSize: '0.825rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                                transition: 'all 0.15s ease',
                               }}
                             >
                               {isCurrentSelected ? 'เลือกอยู่แล้ว' : `เลือกระดับนี้`}
@@ -3817,22 +3801,23 @@ export default function CarIncidentModal({
                         </div>
                       </div>
 
-                      {/* Card Descriptions (Verbatim as specified) */}
-                      <div style={{ padding: '12px 16px' }}>
+                      {/* Card Descriptions (Clean, spacious, comfortable Thai line-height) */}
+                      <div style={{ padding: '20px 24px' }}>
                         <ul
                           style={{
                             margin: 0,
-                            paddingLeft: '1.25rem',
-                            fontSize: '0.825rem',
-                            color: '#334155',
-                            lineHeight: 1.6,
+                            paddingLeft: '1.5rem',
+                            fontSize: '0.925rem',
+                            color: '#1E293B',
+                            lineHeight: 1.85,
+                            letterSpacing: '0.01em',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '6px',
+                            gap: '12px',
                           }}
                         >
                           {info.descriptions.map((desc, idx) => (
-                            <li key={idx} style={{ color: '#334155' }}>
+                            <li key={idx} style={{ color: '#1E293B', paddingBottom: '2px' }}>
                               {desc}
                             </li>
                           ))}
@@ -3846,7 +3831,7 @@ export default function CarIncidentModal({
             {/* Modal Footer */}
             <div
               style={{
-                padding: '0.875rem 1.5rem',
+                padding: '1.25rem 2rem',
                 backgroundColor: '#FFFFFF',
                 borderTop: '1px solid #E2E8F0',
                 display: 'flex',
@@ -3854,9 +3839,9 @@ export default function CarIncidentModal({
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+              <div style={{ fontSize: '0.875rem', color: '#64748B' }}>
                 {severityLevel && CAR_SEVERITY_INFO[severityLevel] ? (
-                  <span>ระดับที่เลือกในขณะนี้: <strong style={{ color: CAR_SEVERITY_INFO[severityLevel].color }}>{CAR_SEVERITY_INFO[severityLevel].label}</strong></span>
+                  <span>ระดับที่เลือกในขณะนี้: <strong style={{ color: CAR_SEVERITY_INFO[severityLevel].color, fontWeight: 800 }}>{CAR_SEVERITY_INFO[severityLevel].label}</strong></span>
                 ) : (
                   <span>ยังไม่ได้เลือกระดับความรุนแรง</span>
                 )}
@@ -3865,7 +3850,7 @@ export default function CarIncidentModal({
                 type="button"
                 onClick={() => setIsSeverityGuideOpen(false)}
                 className="btn btn-secondary btn-sm"
-                style={{ padding: '6px 18px' }}
+                style={{ padding: '8px 24px', fontSize: '0.875rem', fontWeight: 600 }}
               >
                 ปิดหน้าต่าง
               </button>
