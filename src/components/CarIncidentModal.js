@@ -3649,6 +3649,7 @@ export default function CarIncidentModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexShrink: 0,
               }}
             >
               <div>
@@ -3683,11 +3684,13 @@ export default function CarIncidentModal({
             {/* Modal Content */}
             <div
               style={{
-                padding: '1.75rem 2rem',
+                padding: '1.5rem 2rem',
                 overflowY: 'auto',
+                flex: '1 1 auto',
+                minHeight: 0,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1.5rem',
+                gap: '1.25rem',
                 backgroundColor: '#F8FAFC',
               }}
             >
@@ -3704,6 +3707,8 @@ export default function CarIncidentModal({
                         border: isCurrentSelected ? `2.5px solid ${info.color}` : `1.5px solid ${info.border}`,
                         boxShadow: isCurrentSelected ? `0 6px 16px ${info.color}25` : '0 2px 6px rgba(0,0,0,0.04)',
                         overflow: 'hidden',
+                        flexShrink: 0,
+                        minHeight: 'fit-content',
                         transition: 'all 0.15s ease',
                       }}
                     >
@@ -3802,7 +3807,7 @@ export default function CarIncidentModal({
                       </div>
 
                       {/* Card Descriptions (Clean, spacious, comfortable Thai line-height) */}
-                      <div style={{ padding: '20px 24px' }}>
+                      <div style={{ padding: '18px 24px', backgroundColor: '#FFFFFF', minHeight: 'fit-content' }}>
                         <ul
                           style={{
                             margin: 0,
@@ -3814,6 +3819,7 @@ export default function CarIncidentModal({
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '12px',
+                            listStyleType: 'disc',
                           }}
                         >
                           {info.descriptions.map((desc, idx) => (
@@ -3837,6 +3843,7 @@ export default function CarIncidentModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexShrink: 0,
               }}
             >
               <div style={{ fontSize: '0.875rem', color: '#64748B' }}>
