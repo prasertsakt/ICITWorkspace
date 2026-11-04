@@ -43,6 +43,8 @@ import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 import {
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
+  CAR_SEVERITY_LEVELS,
+  CAR_SEVERITY_INFO,
   saveCarIncident,
   canUserEditPart1And4,
   canUserEditPart2And3,
@@ -149,9 +151,11 @@ export default function CarIncidentModal({
   const [requestees, setRequestees] = useState(record?.requestees || []);
 
   // Part 2
+  const [severityLevel, setSeverityLevel] = useState(record?.severityLevel ? String(record.severityLevel) : '');
   const [immediateCorrection, setImmediateCorrection] = useState(record?.immediateCorrection || '');
   const [rootCause, setRootCause] = useState(record?.rootCause || '');
   const [part2Date, setPart2Date] = useState(record?.part2Date || '');
+  const [isSeverityGuideOpen, setIsSeverityGuideOpen] = useState(false);
 
   // Part 3
   const [actionPlans, setActionPlans] = useState(
@@ -276,6 +280,7 @@ export default function CarIncidentModal({
       setDescription(record.description || '');
       setRequestees(record.requestees || []);
 
+      setSeverityLevel(record.severityLevel ? String(record.severityLevel) : '');
       setImmediateCorrection(record.immediateCorrection || '');
       setRootCause(record.rootCause || '');
       setPart2Date(record.part2Date || '');
@@ -331,6 +336,7 @@ export default function CarIncidentModal({
       setDescription('');
       setRequestees([]);
 
+      setSeverityLevel('');
       setImmediateCorrection('');
       setRootCause('');
       setPart2Date('');
@@ -708,9 +714,10 @@ export default function CarIncidentModal({
         requestees,
 
         // Part 2
+        severityLevel: severityLevel || null,
         immediateCorrection,
         rootCause,
-        part2Date: part2Date || (immediateCorrection ? new Date().toISOString().split('T')[0] : ''),
+        part2Date: part2Date || ((immediateCorrection || rootCause || severityLevel) ? new Date().toISOString().split('T')[0] : ''),
 
         // Part 3
         actionPlans,
@@ -1132,7 +1139,7 @@ export default function CarIncidentModal({
             let badge = null;
             if (tab.id === 'part1' && requesters.length > 0) {
               badge = `${requesters.length} คน`;
-            } else if (tab.id === 'part2' && (immediateCorrection || rootCause)) {
+            } else if (tab.id === 'part2' && (immediateCorrection || rootCause || severityLevel)) {
               badge = '✓ ระบุแล้ว';
             } else if (tab.id === 'part3' && actionPlans.length > 0) {
               badge = `${actionPlans.length} ขั้นตอน`;
@@ -1752,6 +1759,189 @@ export default function CarIncidentModal({
                 </span>
               </div>
             )}
+
+            {/* ระดับความรุนแรงและความเร่งด่วน (Severity and Urgency Assessment) */}
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: '1.5px solid #E2E8F0',
+                borderRadius: '10px',
+                padding: '1rem',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ margin: 0, fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>
+                      การประเมินสถานการณ์ (ระดับความรุนแรงและความเร่งด่วน)
+                    </label>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
+                      (เลือก 1 ระดับ)
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+                    เกณฑ์กำหนดตามมาตรฐานเพื่อจัดลำดับความสำคัญและกรอบเวลาในการเข้าแก้ไขปัญหา
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsSeverityGuideOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #0D9488',
+                    backgroundColor: '#F0FDFA',
+                    color: '#0F766E',
+                    fontSize: '0.775rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="คลิกเพื่ออ่านคำอธิบายและนิยามของแต่ละระดับ"
+                >
+                  <Info size={14} />
+                  <span>ดูรายละเอียดและความหมายของแต่ละระดับ</span>
+                </button>
+              </div>
+
+              {/* Radio options grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                  gap: '10px',
+                }}
+              >
+                {Object.entries(CAR_SEVERITY_INFO)
+                  .sort((a, b) => Number(b[0]) - Number(a[0])) // 4, 3, 2, 1
+                  .map(([lvl, info]) => {
+                    const isSelected = String(severityLevel) === String(lvl);
+                    return (
+                      <label
+                        key={lvl}
+                        onClick={() => {
+                          if (canEditPart2) {
+                            setSeverityLevel(lvl);
+                          }
+                        }}
+                        style={{
+                          position: 'relative',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: isSelected ? `2px solid ${info.color}` : '1.5px solid #CBD5E1',
+                          backgroundColor: isSelected ? info.bg : '#FFFFFF',
+                          boxShadow: isSelected ? `0 2px 8px ${info.color}25` : 'none',
+                          cursor: canEditPart2 ? 'pointer' : 'not-allowed',
+                          opacity: canEditPart2 ? 1 : 0.75,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="radio"
+                              name="carSeverityLevel"
+                              value={lvl}
+                              checked={isSelected}
+                              onChange={() => canEditPart2 && setSeverityLevel(lvl)}
+                              disabled={!canEditPart2}
+                              style={{
+                                accentColor: info.color,
+                                cursor: canEditPart2 ? 'pointer' : 'not-allowed',
+                                margin: 0,
+                                width: '16px',
+                                height: '16px',
+                              }}
+                            />
+                            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: info.color }}>
+                              {info.label}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '0.675rem',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: isSelected ? '#FFFFFF' : info.bg,
+                              color: info.color,
+                              border: `1px solid ${info.border}`,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {info.sla}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#475569', lineHeight: 1.45, paddingLeft: '24px' }}>
+                          {info.descriptions[0].substring(0, 95)}...
+                        </div>
+                      </label>
+                    );
+                  })}
+              </div>
+
+              {severityLevel && CAR_SEVERITY_INFO[severityLevel] && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    padding: '8px 12px',
+                    backgroundColor: CAR_SEVERITY_INFO[severityLevel].bg,
+                    border: `1px solid ${CAR_SEVERITY_INFO[severityLevel].border}`,
+                    borderRadius: '6px',
+                    fontSize: '0.775rem',
+                    color: CAR_SEVERITY_INFO[severityLevel].color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={15} />
+                    <span>
+                      เลือกระดับ: <strong>{CAR_SEVERITY_INFO[severityLevel].label}</strong> &bull; {CAR_SEVERITY_INFO[severityLevel].sla}
+                    </span>
+                  </div>
+                  {canEditPart2 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSeverityLevel('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748B',
+                        fontSize: '0.725rem',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                      }}
+                    >
+                      ล้างตัวเลือก
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Immediate Correction */}
             <div>
@@ -3433,6 +3623,251 @@ export default function CarIncidentModal({
                 className="btn btn-secondary btn-sm"
               >
                 ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== Severity Guide Modal (ดูรายละเอียดและความหมายของแต่ละระดับ) ===================== */}
+      {isSeverityGuideOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10650,
+            padding: '1rem',
+          }}
+          onClick={() => setIsSeverityGuideOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '820px',
+              width: '100%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+                  การประเมินสถานการณ์ (ระดับความรุนแรงและความเร่งด่วน)
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: '#CCFBF1', marginTop: '2px' }}>
+                  เกณฑ์และนิยามมาตรฐานสำหรับการจำแนกความรุนแรงของปัญหาและอุบัติการณ์ (ICIT-FM-COMMON-013 ส่วนที่ 2)
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSeverityGuideOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                backgroundColor: '#F8FAFC',
+              }}
+            >
+              {Object.entries(CAR_SEVERITY_INFO)
+                .sort((a, b) => Number(b[0]) - Number(a[0])) // 4, 3, 2, 1
+                .map(([lvl, info]) => {
+                  const isCurrentSelected = String(severityLevel) === String(lvl);
+                  return (
+                    <div
+                      key={lvl}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        border: isCurrentSelected ? `2px solid ${info.color}` : `1px solid ${info.border}`,
+                        boxShadow: isCurrentSelected ? `0 4px 12px ${info.color}25` : '0 2px 4px rgba(0,0,0,0.03)',
+                        overflow: 'hidden',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {/* Card Header Banner */}
+                      <div
+                        style={{
+                          padding: '10px 14px',
+                          backgroundColor: info.bg,
+                          borderBottom: `1px solid ${info.border}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              backgroundColor: info.badgeBg,
+                              color: info.badgeText,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 900,
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            {info.level}
+                          </span>
+                          <div>
+                            <span style={{ fontSize: '1rem', fontWeight: 800, color: info.color }}>
+                              {info.label}
+                            </span>
+                            {isCurrentSelected && (
+                              <span
+                                style={{
+                                  marginLeft: '8px',
+                                  fontSize: '0.725rem',
+                                  fontWeight: 800,
+                                  color: '#059669',
+                                  backgroundColor: '#ECFDF5',
+                                  border: '1px solid #A7F3D0',
+                                  padding: '2px 8px',
+                                  borderRadius: '9999px',
+                                }}
+                              >
+                                ✓ กำลังเลือกอยู่นี้
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: '#FFFFFF',
+                              color: info.color,
+                              border: `1px solid ${info.border}`,
+                            }}
+                          >
+                            ⏱️ {info.sla}
+                          </span>
+                          {canEditPart2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSeverityLevel(lvl);
+                                setIsSeverityGuideOpen(false);
+                              }}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: isCurrentSelected ? info.color : '#0D9488',
+                                color: '#FFFFFF',
+                                fontSize: '0.775rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {isCurrentSelected ? 'เลือกอยู่แล้ว' : `เลือกระดับนี้`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Descriptions (Verbatim as specified) */}
+                      <div style={{ padding: '12px 16px' }}>
+                        <ul
+                          style={{
+                            margin: 0,
+                            paddingLeft: '1.25rem',
+                            fontSize: '0.825rem',
+                            color: '#334155',
+                            lineHeight: 1.6,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                          }}
+                        >
+                          {info.descriptions.map((desc, idx) => (
+                            <li key={idx} style={{ color: '#334155' }}>
+                              {desc}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '0.875rem 1.5rem',
+                backgroundColor: '#FFFFFF',
+                borderTop: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                {severityLevel && CAR_SEVERITY_INFO[severityLevel] ? (
+                  <span>ระดับที่เลือกในขณะนี้: <strong style={{ color: CAR_SEVERITY_INFO[severityLevel].color }}>{CAR_SEVERITY_INFO[severityLevel].label}</strong></span>
+                ) : (
+                  <span>ยังไม่ได้เลือกระดับความรุนแรง</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSeverityGuideOpen(false)}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '6px 18px' }}
+              >
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>

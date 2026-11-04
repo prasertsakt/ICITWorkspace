@@ -53,6 +53,89 @@ export const CAR_INCIDENT_STATUS_INFO = {
   },
 };
 
+/**
+ * ระดับความรุนแรงและความเร่งด่วน (Severity and Urgency Assessment)
+ * แบบฟอร์ม ICIT-FM-COMMON-013 ส่วนที่ 2
+ */
+export const CAR_SEVERITY_LEVELS = {
+  CRITICAL: '4', // วิกฤติ (4)
+  HIGH: '3',     // รุนแรง (3)
+  MEDIUM: '2',   // ปานกลาง (2)
+  LOW: '1',      // เล็กน้อย (1)
+};
+
+export const CAR_SEVERITY_INFO = {
+  '4': {
+    level: '4',
+    code: 'CRITICAL',
+    label: 'วิกฤติ (4)',
+    title: 'วิกฤติ',
+    sla: 'แก้ไขด่วนที่สุด ภายใน 4 ชม.',
+    color: '#DC2626',
+    bg: '#FEF2F2',
+    border: '#FCA5A5',
+    badgeBg: '#DC2626',
+    badgeText: '#FFFFFF',
+    descriptions: [
+      'ระบบสารสนเทศหลักหรือทรัพยากรที่จำเป็นต่อการให้บริการ หรือระบบโครงสร้างพื้นฐานสำคัญทั้งหมดหรือหลายส่วน เช่น ระบบเครือข่ายหลัก ระบบไฟฟ้าหลัก ระบบปรับอากาศของศูนย์คอมพิวเตอร์ เป็นต้น ได้รับความเสียหายรุนแรง ไม่สามารถให้บริการได้',
+      'บุคลากรไม่สามารถปฏิบัติงานได้',
+      'จำเป็นต้องดำเนินการแก้ไขอย่างรวดเร็วที่สุด ภายใน 4 ชั่วโมง',
+      'หากไม่สามารถแก้ไขได้ภายในเวลา อาจพิจารณาประกาศใช้แผนความต่อเนื่องทางธุรกิจ หรือแผนรองรับสถานการณ์ฉุกเฉินต่อไป',
+    ],
+  },
+  '3': {
+    level: '3',
+    code: 'HIGH',
+    label: 'รุนแรง (3)',
+    title: 'รุนแรง',
+    sla: 'แก้ไขด่วน ภายใน 8 ชม.',
+    color: '#EA580C',
+    bg: '#FFF7ED',
+    border: '#FDBA74',
+    badgeBg: '#EA580C',
+    badgeText: '#FFFFFF',
+    descriptions: [
+      'ระบบสารสนเทศหลักหรือทรัพยากรที่จำเป็นต่อการให้บริการ หรือระบบโครงสร้างพื้นฐานสำคัญหลายส่วน เช่น ระบบเครือข่าย ระบบปรับอากาศ เป็นต้น ได้รับความเสียหายรุนแรง แต่ยังคงสามารถให้บริการได้ ส่งผลต่อระดับการให้บริการที่จะมีประสิทธิภาพลดลงอย่างเห็นได้ชัด และผู้ใช้บริการส่วนใหญ่ได้รับผลกระทบ',
+      'บุคลากรสามารถปฏิบัติงานได้',
+      'จำเป็นต้องดำเนินการแก้ไขอย่างรวดเร็ว ภายใน 8 ชั่วโมง',
+    ],
+  },
+  '2': {
+    level: '2',
+    code: 'MEDIUM',
+    label: 'ปานกลาง (2)',
+    title: 'ปานกลาง',
+    sla: 'แก้ไขตามกำหนดที่ตกลงร่วมกัน',
+    color: '#D97706',
+    bg: '#FEF3C7',
+    border: '#FCD34D',
+    badgeBg: '#D97706',
+    badgeText: '#FFFFFF',
+    descriptions: [
+      'ระบบสารสนเทศหลักหรือทรัพยากรที่จำเป็นต่อการให้บริการ หรือระบบโครงสร้างพื้นฐานสำคัญบางส่วน เช่น ระบบเครือข่ายอย่างเดียว เป็นต้น ได้รับความเสียหายแต่ยังคงสามารถให้บริการได้ ส่งผลต่อระดับการให้บริการที่จะมีประสิทธิภาพลดลง และผู้ใช้บริการบางส่วนได้รับผลกระทบ',
+      'บุคลากรสามารถปฏิบัติงานได้',
+      'จำเป็นต้องแก้ไขภายในระยะเวลา ตามที่กำหนดไว้ และ/หรือตกลงร่วมกันกับผู้ที่เกี่ยวข้อง',
+    ],
+  },
+  '1': {
+    level: '1',
+    code: 'LOW',
+    label: 'เล็กน้อย (1)',
+    title: 'เล็กน้อย',
+    sla: 'แก้ไขตามความเห็นชอบของผู้บริหาร',
+    color: '#16A34A',
+    bg: '#F0FDF4',
+    border: '#86EFAC',
+    badgeBg: '#16A34A',
+    badgeText: '#FFFFFF',
+    descriptions: [
+      'ระบบสารสนเทศ หรือทรัพยากรที่จำเป็นต่อการให้บริการบางส่วนได้รับผลกระทบ แต่ไม่มีความเสียหาย และยังคงสามารถให้บริการได้ตามปกติ',
+      'บุคลากรสามารถปฏิบัติงานได้',
+      'จำเป็นต้องแก้ไขภายในระยะเวลาที่เหมาะสม ตามที่ได้รับความเห็นชอบจากผู้บริหารที่กำกับดูแลฝ่ายที่เกี่ยวข้องกับบริการนั้นๆ',
+    ],
+  },
+};
+
 // Pub/Sub Single Shared Listener Cache
 let carSubscribers = [];
 let sharedCarsUnsubscribe = null;
@@ -259,7 +342,8 @@ export async function saveCarIncident(recordData, actor) {
     // ผู้รับการร้องขอ (Multiple persons)
     requestees: Array.isArray(recordData.requestees) ? recordData.requestees : [],
 
-    // Part 2: ผู้รับการร้องขอ (Correction actions & Root Cause)
+    // Part 2: ผู้รับการร้องขอ (Severity, Correction actions & Root Cause)
+    severityLevel: recordData.severityLevel ? String(recordData.severityLevel) : null,
     immediateCorrection: recordData.immediateCorrection || '',
     rootCause: recordData.rootCause || '',
     part2Date: recordData.part2Date || '',
@@ -1357,6 +1441,9 @@ async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus
         <div><strong>เลขที่เอกสาร:</strong> <span style="color: #0D9488; font-weight: bold;">${record.docNumber}</span></div>
         <div style="margin-top: 6px;"><strong>หัวข้อ:</strong> ${record.topic}</div>
         <div style="margin-top: 6px;"><strong>มาตรฐาน:</strong> ${record.standard}</div>
+        ${record.severityLevel && CAR_SEVERITY_INFO[record.severityLevel] ? `
+        <div style="margin-top: 6px;"><strong>ระดับความรุนแรงและความเร่งด่วน:</strong> <span style="color: ${CAR_SEVERITY_INFO[record.severityLevel].color}; font-weight: bold;">${CAR_SEVERITY_INFO[record.severityLevel].label}</span> (${CAR_SEVERITY_INFO[record.severityLevel].sla})</div>
+        ` : ''}
       </div>
       <div style="text-align: center; margin: 24px 0;">
         <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/ims/car-incident?openExternalBrowser=1" style="background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block;">

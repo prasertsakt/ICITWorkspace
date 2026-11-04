@@ -20,6 +20,7 @@ import {
 import {
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
+  CAR_SEVERITY_INFO,
   canUserDeleteCarIncident,
   canUserManageCarIncidentStatus,
   isDccUser,
@@ -373,6 +374,38 @@ export default function CarIncidentDetailModal({
                 </div>
                 <div>
                   วันที่: <u>&nbsp;{formatDateDDMMYYYYBE(record.part2Date) || '-'}&nbsp;</u>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '8px' }}>
+                <strong>การประเมินสถานการณ์ (ระดับความรุนแรงและความเร่งด่วน):</strong>
+                <div style={{ marginTop: '4px' }}>
+                  {record.severityLevel && CAR_SEVERITY_INFO[record.severityLevel] ? (
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: CAR_SEVERITY_INFO[record.severityLevel].bg,
+                        color: CAR_SEVERITY_INFO[record.severityLevel].color,
+                        border: `1px solid ${CAR_SEVERITY_INFO[record.severityLevel].border}`,
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      <span>●</span>
+                      <span>ระดับ {CAR_SEVERITY_INFO[record.severityLevel].label}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.9 }}>
+                        ({CAR_SEVERITY_INFO[record.severityLevel].sla})
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.825rem', color: '#888888', fontStyle: 'italic' }}>
+                      ยังไม่ได้ระบุระดับความรุนแรง
+                    </span>
+                  )}
                 </div>
               </div>
 

@@ -9,6 +9,8 @@ import {
   deleteCarIncident,
   CAR_INCIDENT_STATUS,
   CAR_INCIDENT_STATUS_INFO,
+  CAR_SEVERITY_LEVELS,
+  CAR_SEVERITY_INFO,
   canUserEditPart1And4,
   canUserEditPart2And3,
   canUserManageCarIncidentStatus,
@@ -78,6 +80,7 @@ export default function CarIncidentHubPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [standardFilter, setStandardFilter] = useState('ALL');
   const [topicFilter, setTopicFilter] = useState('ALL');
+  const [severityFilter, setSeverityFilter] = useState('ALL');
 
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -233,6 +236,15 @@ export default function CarIncidentHubPage() {
         return false;
       }
 
+      // Severity Filter
+      if (severityFilter !== 'ALL') {
+        if (severityFilter === 'NONE') {
+          if (item.severityLevel) return false;
+        } else if (String(item.severityLevel) !== String(severityFilter)) {
+          return false;
+        }
+      }
+
       // Standard Filter
       if (standardFilter !== 'ALL' && item.standard !== standardFilter) {
         return false;
@@ -251,13 +263,16 @@ export default function CarIncidentHubPage() {
         const desc = (item.description || '').toLowerCase();
         const reqNames = (item.requesters || []).map((r) => (r.name || '').toLowerCase()).join(' ');
         const recNames = (item.requestees || []).map((r) => (r.name || '').toLowerCase()).join(' ');
+        const sevObj = item.severityLevel && CAR_SEVERITY_INFO[item.severityLevel];
+        const sevText = sevObj ? `${sevObj.label} ${sevObj.title} ${sevObj.sla}`.toLowerCase() : '';
 
         if (
           !docNo.includes(q) &&
           !top.includes(q) &&
           !desc.includes(q) &&
           !reqNames.includes(q) &&
-          !recNames.includes(q)
+          !recNames.includes(q) &&
+          !sevText.includes(q)
         ) {
           return false;
         }
@@ -265,7 +280,7 @@ export default function CarIncidentHubPage() {
 
       return true;
     });
-  }, [carIncidents, selectedYear, typeFilter, statusFilter, standardFilter, topicFilter, searchQuery]);
+  }, [carIncidents, selectedYear, typeFilter, statusFilter, severityFilter, standardFilter, topicFilter, searchQuery]);
 
   // Counters for selected year
   const stats = useMemo(() => {
@@ -276,6 +291,11 @@ export default function CarIncidentHubPage() {
       onProgress: yearItems.filter((c) => c.status === CAR_INCIDENT_STATUS.ON_PROGRESS).length,
       closed: yearItems.filter((c) => c.status === CAR_INCIDENT_STATUS.CLOSED).length,
       cancelled: yearItems.filter((c) => c.status === CAR_INCIDENT_STATUS.CANCELLED).length,
+      critical: yearItems.filter((c) => String(c.severityLevel) === '4').length,
+      high: yearItems.filter((c) => String(c.severityLevel) === '3').length,
+      medium: yearItems.filter((c) => String(c.severityLevel) === '2').length,
+      low: yearItems.filter((c) => String(c.severityLevel) === '1').length,
+      unassigned: yearItems.filter((c) => !c.severityLevel).length,
     };
   }, [carIncidents, selectedYear]);
 
@@ -703,6 +723,95 @@ export default function CarIncidentHubPage() {
           </div>
         </div>
 
+        {/* Severity Quick Indicator / Filter Pills */}
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '0.75rem',
+            padding: '0.75rem 1.25rem',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.03)',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: '#334155' }}>
+            <span>⚡ ระดับความรุนแรง (Severity):</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B' }}>
+              (คลิกเพื่อกรองข้อมูลด่วน)
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { id: '4', label: 'วิกฤติ (4)', count: stats.critical, color: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5' },
+              { id: '3', label: 'รุนแรง (3)', count: stats.high, color: '#EA580C', bg: '#FFF7ED', border: '#FDBA74' },
+              { id: '2', label: 'ปานกลาง (2)', count: stats.medium, color: '#D97706', bg: '#FEF3C7', border: '#FCD34D' },
+              { id: '1', label: 'เล็กน้อย (1)', count: stats.low, color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
+            ].map((pill) => {
+              const isActive = severityFilter === pill.id;
+              return (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => setSeverityFilter(isActive ? 'ALL' : pill.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    border: `1.5px solid ${isActive ? pill.color : pill.border}`,
+                    backgroundColor: isActive ? pill.color : pill.bg,
+                    color: isActive ? '#FFFFFF' : pill.color,
+                    fontSize: '0.775rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: isActive ? `0 2px 6px ${pill.color}35` : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>●</span>
+                  <span>{pill.label}</span>
+                  <span
+                    style={{
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#FFFFFF',
+                      fontSize: '0.725rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {pill.count}
+                  </span>
+                </button>
+              );
+            })}
+
+            {severityFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setSeverityFilter('ALL')}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  color: '#64748B',
+                  fontSize: '0.75rem',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                }}
+              >
+                ล้างตัวกรอง ({severityFilter === 'NONE' ? 'ยังไม่ได้ระบุ' : CAR_SEVERITY_INFO[severityFilter]?.label || severityFilter})
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Filters & Search Bar */}
         <div
           style={{
@@ -801,6 +910,27 @@ export default function CarIncidentHubPage() {
               <option value={CAR_INCIDENT_STATUS.CANCELLED}>ยกเลิก (Cancelled)</option>
             </select>
 
+            {/* Severity Filter */}
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.8rem',
+                color: '#334155',
+                backgroundColor: '#FFFFFF',
+              }}
+            >
+              <option value="ALL">-- ทุกระดับความรุนแรง --</option>
+              <option value="4">🔴 วิกฤติ (4)</option>
+              <option value="3">🟠 รุนแรง (3)</option>
+              <option value="2">🟡 ปานกลาง (2)</option>
+              <option value="1">🟢 เล็กน้อย (1)</option>
+              <option value="NONE">⚪ ยังไม่ได้ระบุ</option>
+            </select>
+
             {/* Standard */}
             <select
               value={standardFilter}
@@ -862,6 +992,7 @@ export default function CarIncidentHubPage() {
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
                   <th style={{ padding: '12px 16px', textAlign: 'left', minWidth: '130px' }}>เลขที่เอกสาร</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', minWidth: '90px' }}>ประเภท</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', minWidth: '130px' }}>ความรุนแรง</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', minWidth: '240px' }}>มาตรฐาน & หัวข้อ</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', minWidth: '160px' }}>ผู้ร้องขอ</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', minWidth: '170px' }}>ผู้รับการร้องขอ</th>
@@ -933,6 +1064,38 @@ export default function CarIncidentHubPage() {
                         >
                           {item.docType}
                         </span>
+                      </td>
+
+                      {/* Severity Badge */}
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        {item.severityLevel && CAR_SEVERITY_INFO[item.severityLevel] ? (
+                          <span
+                            onClick={() => {
+                              setSelectedRecordForDetail(item);
+                              setIsDetailModalOpen(true);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              backgroundColor: CAR_SEVERITY_INFO[item.severityLevel].bg,
+                              color: CAR_SEVERITY_INFO[item.severityLevel].color,
+                              border: `1px solid ${CAR_SEVERITY_INFO[item.severityLevel].border}`,
+                              whiteSpace: 'nowrap',
+                              cursor: 'pointer',
+                            }}
+                            title={`ระดับความรุนแรง: ${CAR_SEVERITY_INFO[item.severityLevel].label} (${CAR_SEVERITY_INFO[item.severityLevel].sla})`}
+                          >
+                            <span>●</span>
+                            <span>{CAR_SEVERITY_INFO[item.severityLevel].label}</span>
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>-</span>
+                        )}
                       </td>
 
                       {/* Standard & Topic */}
@@ -1092,7 +1255,7 @@ export default function CarIncidentHubPage() {
 
                 {filteredList.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: '#94A3B8' }}>
+                    <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: '#94A3B8' }}>
                       <FileText size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
                       <div>ไม่พบเอกสาร CAR หรือ Incident ตามเงื่อนไขที่เลือก</div>
                     </td>
