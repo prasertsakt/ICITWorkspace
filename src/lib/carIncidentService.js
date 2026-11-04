@@ -193,7 +193,7 @@ export function subscribeCarIncidentGuideConfig(callback) {
   }
 
   // Setup Firestore listener if not already active
-  if (!sharedGuideConfigUnsubscribe && isFirebaseConfigured()) {
+  if (!sharedGuideConfigUnsubscribe && isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'ims_config', 'car_incident_guide');
       sharedGuideConfigUnsubscribe = onSnapshot(
@@ -259,7 +259,7 @@ export async function saveCarIncidentGuideConfig(config, actor, isAdmin) {
   }
   notifyGuideConfigSubscribers(payload);
 
-  if (isFirebaseConfigured()) {
+  if (isFirebaseConfigured && db) {
     try {
       const docRef = doc(db, 'ims_config', 'car_incident_guide');
       await setDoc(docRef, cleanForFirestore(payload), { merge: true });
