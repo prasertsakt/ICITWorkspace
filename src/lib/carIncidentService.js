@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 
 export const LOCAL_KEY_CAR_INCIDENTS = 'icit_ims_car_incidents';
+export const LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG = 'icit_ims_car_incident_guide_config';
 export { isLeadAuditorUser } from './imsService';
 export const CAR_INCIDENT_STATUS = {
   NOT_YET_APPROVED: 'NOT_YET_APPROVED', // รอดำเนินการ / ยังไม่อนุมัติ
@@ -136,6 +137,148 @@ export const CAR_SEVERITY_INFO = {
     ],
   },
 };
+
+// Severity Guide Document Config Cache & Pub/Sub
+let guideConfigSubscribers = [];
+let sharedGuideConfigUnsubscribe = null;
+let cachedGuideConfig = null;
+
+function notifyGuideConfigSubscribers(data) {
+  cachedGuideConfig = data;
+  guideConfigSubscribers.forEach((cb) => {
+    try {
+      cb(data);
+    } catch (e) {
+      console.error('Guide config subscriber error:', e);
+    }
+  });
+}
+
+/**
+ * Subscribe to CAR Incident Guide Config (real-time with Firestore + localStorage)
+ */
+export function subscribeCarIncidentGuideConfig(callback) {
+  guideConfigSubscribers.push(callback);
+
+  // Return cached or localStorage immediately
+  if (cachedGuideConfig) {
+    callback(cachedGuideConfig);
+  } else if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG);
+      const parsed = raw ? JSON.parse(raw) : { severityDocUrl: '', severityDocTitle: '' };
+      cachedGuideConfig = parsed;
+      callback(parsed);
+    } catch (e) {
+      callback({ severityDocUrl: '', severityDocTitle: '' });
+    }
+  } else {
+    callback({ severityDocUrl: '', severityDocTitle: '' });
+  }
+
+  // Cross-tab sync
+  const handleStorageChange = (e) => {
+    if (!e || e.key === LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG) {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG);
+        const parsed = raw ? JSON.parse(raw) : { severityDocUrl: '', severityDocTitle: '' };
+        cachedGuideConfig = parsed;
+        callback(parsed);
+      } catch (err) {}
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', handleStorageChange);
+  }
+
+  // Setup Firestore listener if not already active
+  if (!sharedGuideConfigUnsubscribe && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'ims_config', 'car_incident_guide');
+      sharedGuideConfigUnsubscribe = onSnapshot(
+        docRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            const config = {
+              severityDocUrl: data.severityDocUrl || '',
+              severityDocTitle: data.severityDocTitle || 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)',
+              updatedAt: data.updatedAt || '',
+              updatedBy: data.updatedBy || null,
+            };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG, JSON.stringify(config));
+            }
+            notifyGuideConfigSubscribers(config);
+          }
+        },
+        (error) => {
+          console.warn('Firestore onSnapshot car_incident_guide error:', error);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to listen to Firestore car_incident_guide:', e);
+    }
+  }
+
+  return () => {
+    guideConfigSubscribers = guideConfigSubscribers.filter((cb) => cb !== callback);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('storage', handleStorageChange);
+    }
+    if (guideConfigSubscribers.length === 0 && sharedGuideConfigUnsubscribe) {
+      sharedGuideConfigUnsubscribe();
+      sharedGuideConfigUnsubscribe = null;
+    }
+  };
+}
+
+/**
+ * Save CAR Incident Guide Config (Admin only)
+ */
+export async function saveCarIncidentGuideConfig(config, actor, isAdmin) {
+  if (!isAdmin) {
+    throw new Error('สิทธิ์เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น');
+  }
+
+  const payload = {
+    severityDocUrl: typeof config.severityDocUrl === 'string' ? config.severityDocUrl.trim() : '',
+    severityDocTitle: typeof config.severityDocTitle === 'string' && config.severityDocTitle.trim()
+      ? config.severityDocTitle.trim()
+      : 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)',
+    updatedAt: new Date().toISOString(),
+    updatedBy: actor ? {
+      email: actor.email || '',
+      name: actor.name || actor.displayName || 'Admin',
+    } : null,
+  };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_KEY_CAR_INCIDENT_GUIDE_CONFIG, JSON.stringify(payload));
+  }
+  notifyGuideConfigSubscribers(payload);
+
+  if (isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'ims_config', 'car_incident_guide');
+      await setDoc(docRef, cleanForFirestore(payload), { merge: true });
+    } catch (err) {
+      console.error('Failed to save car_incident_guide config to Firestore:', err);
+      throw err;
+    }
+  }
+
+  try {
+    await logActivity('UPDATE_CAR_INCIDENT_GUIDE_CONFIG', {
+      action: 'ปรับปรุงลิงก์เอกสารเกณฑ์การประเมินความรุนแรง CAR/Incident',
+      severityDocUrl: payload.severityDocUrl,
+      actor: actor?.email || 'admin',
+    });
+  } catch (e) {}
+
+  return payload;
+}
 
 // Pub/Sub Single Shared Listener Cache
 let carSubscribers = [];

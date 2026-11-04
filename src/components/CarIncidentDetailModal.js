@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   X,
   Printer,
@@ -16,6 +16,7 @@ import {
   Users,
   Building,
   Lock,
+  ExternalLink,
 } from 'lucide-react';
 import {
   CAR_INCIDENT_STATUS,
@@ -24,6 +25,7 @@ import {
   canUserDeleteCarIncident,
   canUserManageCarIncidentStatus,
   isDccUser,
+  subscribeCarIncidentGuideConfig,
 } from '../lib/carIncidentService';
 import { formatDateDDMMYYYYBE } from '@/lib/dateUtils';
 
@@ -41,6 +43,15 @@ export default function CarIncidentDetailModal({
   onSendReminder,
 }) {
   const printRef = useRef(null);
+  const [guideConfig, setGuideConfig] = useState({ severityDocUrl: '', severityDocTitle: '' });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeCarIncidentGuideConfig((cfg) => {
+      if (cfg) setGuideConfig(cfg);
+    });
+    return () => unsub && unsub();
+  }, [isOpen]);
 
   if (!isOpen || !record) return null;
 
@@ -379,7 +390,7 @@ export default function CarIncidentDetailModal({
 
               <div style={{ marginBottom: '8px' }}>
                 <strong>การประเมินสถานการณ์ (ระดับความรุนแรงและความเร่งด่วน):</strong>
-                <div style={{ marginTop: '4px' }}>
+                <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {record.severityLevel && CAR_SEVERITY_INFO[record.severityLevel] ? (
                     <div
                       style={{
@@ -405,6 +416,30 @@ export default function CarIncidentDetailModal({
                     <span style={{ fontSize: '0.825rem', color: '#888888', fontStyle: 'italic' }}>
                       ยังไม่ได้ระบุระดับความรุนแรง
                     </span>
+                  )}
+                  {guideConfig.severityDocUrl && (
+                    <a
+                      href={guideConfig.severityDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: '#F0FDFA',
+                        border: '1px solid #99F6E4',
+                        color: '#0F766E',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                      title="เปิดดูเอกสารเกณฑ์ฉบับเต็มในแท็บใหม่"
+                    >
+                      <ExternalLink size={12} />
+                      <span>เอกสารฉบับเต็ม</span>
+                    </a>
                   )}
                 </div>
               </div>

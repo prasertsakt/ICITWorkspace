@@ -32,6 +32,9 @@ import {
   XCircle,
   Info,
   UserCheck,
+  ExternalLink,
+  Link2,
+  Edit3,
 } from 'lucide-react';
 import {
   IMS_STANDARDS,
@@ -57,6 +60,8 @@ import {
   confirmExecutiveSignature,
   approveActionPlanByAuditor,
   requestActionPlanRevision,
+  subscribeCarIncidentGuideConfig,
+  saveCarIncidentGuideConfig,
 } from '../lib/carIncidentService';
 
 const CAR_TABS = [
@@ -156,6 +161,23 @@ export default function CarIncidentModal({
   const [rootCause, setRootCause] = useState(record?.rootCause || '');
   const [part2Date, setPart2Date] = useState(record?.part2Date || '');
   const [isSeverityGuideOpen, setIsSeverityGuideOpen] = useState(false);
+
+  // Severity Guide Reference Document Config State (Admin managed)
+  const [guideConfig, setGuideConfig] = useState({ severityDocUrl: '', severityDocTitle: '' });
+  const [isEditingDocUrl, setIsEditingDocUrl] = useState(false);
+  const [docUrlInput, setDocUrlInput] = useState('');
+  const [docTitleInput, setDocTitleInput] = useState('');
+  const [isSavingDocUrl, setIsSavingDocUrl] = useState(false);
+
+  // Subscribe to real-time Severity Guide Config
+  useEffect(() => {
+    const unsub = subscribeCarIncidentGuideConfig((cfg) => {
+      if (cfg) {
+        setGuideConfig(cfg);
+      }
+    });
+    return () => unsub && unsub();
+  }, []);
 
   // Part 3
   const [actionPlans, setActionPlans] = useState(
@@ -259,6 +281,85 @@ export default function CarIncidentModal({
 
   const handleNextTab = () => {
     if (nextTab) goToTab(nextTab.id);
+  };
+
+  // Severity Guide Document URL Handlers (Admin only)
+  const handleOpenEditDocUrl = () => {
+    setDocUrlInput(guideConfig.severityDocUrl || '');
+    setDocTitleInput(guideConfig.severityDocTitle || 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)');
+    setIsEditingDocUrl(true);
+  };
+
+  const handleSaveDocUrl = async () => {
+    if (!isAdmin) {
+      showAlert({ title: 'ข้อผิดพลาด', message: 'สิทธิ์เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', type: 'error' });
+      return;
+    }
+    const trimmedUrl = docUrlInput.trim();
+    if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+      showAlert({
+        title: 'รูปแบบ URL ไม่ถูกต้อง',
+        message: 'กรุณากรอก URL ที่ขึ้นต้นด้วย http:// หรือ https:// (เช่น Google Drive, One Drive, หรือลิงก์เว็บไซต์)',
+        type: 'warning',
+      });
+      return;
+    }
+    setIsSavingDocUrl(true);
+    try {
+      await saveCarIncidentGuideConfig(
+        {
+          severityDocUrl: trimmedUrl,
+          severityDocTitle: docTitleInput.trim() || 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)',
+        },
+        currentPersonnel || currentUser,
+        isAdmin
+      );
+      setIsEditingDocUrl(false);
+      showAlert({
+        title: 'บันทึกสำเร็จ',
+        message: trimmedUrl ? 'บันทึกลิงก์เอกสารฉบับเต็มเรียบร้อยแล้ว' : 'ล้างลิงก์เอกสารเรียบร้อยแล้ว',
+        type: 'success',
+      });
+    } catch (err) {
+      showAlert({
+        title: 'เกิดข้อผิดพลาด',
+        message: err.message || 'ไม่สามารถบันทึกลิงก์เอกสารได้',
+        type: 'error',
+      });
+    } finally {
+      setIsSavingDocUrl(false);
+    }
+  };
+
+  const handleRemoveDocUrl = () => {
+    if (!isAdmin) return;
+    showConfirm({
+      title: 'ยืนยันการลบลิงก์เอกสาร',
+      message: 'คุณต้องการลบลิงก์เอกสารฉบับเต็มนี้ออกจากระบบใช่หรือไม่?',
+      confirmText: 'ลบลิงก์',
+      cancelText: 'ยกเลิก',
+      type: 'danger',
+      onConfirm: async () => {
+        setIsSavingDocUrl(true);
+        try {
+          await saveCarIncidentGuideConfig(
+            {
+              severityDocUrl: '',
+              severityDocTitle: docTitleInput.trim() || 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)',
+            },
+            currentPersonnel || currentUser,
+            isAdmin
+          );
+          setDocUrlInput('');
+          setIsEditingDocUrl(false);
+          showAlert({ title: 'สำเร็จ', message: 'ลบลิงก์เอกสารเรียบร้อยแล้ว', type: 'success' });
+        } catch (err) {
+          showAlert({ title: 'เกิดข้อผิดพลาด', message: err.message || 'ไม่สามารถลบลิงก์ได้', type: 'error' });
+        } finally {
+          setIsSavingDocUrl(false);
+        }
+      },
+    });
   };
 
   // Reset or initialize state on record change
@@ -1794,28 +1895,58 @@ export default function CarIncidentModal({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsSeverityGuideOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #0D9488',
-                    backgroundColor: '#F0FDFA',
-                    color: '#0F766E',
-                    fontSize: '0.775rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="คลิกเพื่ออ่านคำอธิบายและนิยามของแต่ละระดับ"
-                >
-                  <Info size={14} />
-                  <span>ดูรายละเอียดและความหมายของแต่ละระดับ</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {guideConfig.severityDocUrl && (
+                    <a
+                      href={guideConfig.severityDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #14B8A6',
+                        backgroundColor: '#CCFBF1',
+                        color: '#0F766E',
+                        fontSize: '0.775rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="คลิกเพื่อเปิดดูเอกสารฉบับเต็มในแท็บใหม่"
+                    >
+                      <ExternalLink size={13} />
+                      <span>เปิดดูเอกสารฉบับเต็ม</span>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingDocUrl(false);
+                      setIsSeverityGuideOpen(true);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #0D9488',
+                      backgroundColor: '#F0FDFA',
+                      color: '#0F766E',
+                      fontSize: '0.775rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="คลิกเพื่ออ่านคำอธิบายและนิยามของแต่ละระดับ"
+                  >
+                    <Info size={14} />
+                    <span>ดูรายละเอียดและความหมายของแต่ละระดับ</span>
+                  </button>
+                </div>
               </div>
 
               {/* Radio options grid - displaying only title */}
@@ -3681,6 +3812,284 @@ export default function CarIncidentModal({
               </button>
             </div>
 
+            {/* Reference Document Bar */}
+            <div
+              style={{
+                padding: '12px 2rem',
+                backgroundColor: '#F0FDFA',
+                borderBottom: '1px solid #CCFBF1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 700,
+                    color: '#0F766E',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <FileText size={16} />
+                  <span>{guideConfig.severityDocTitle || 'เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)'}</span>
+                </span>
+
+                {guideConfig.severityDocUrl ? (
+                  <a
+                    href={guideConfig.severityDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#0D9488',
+                      color: '#FFFFFF',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.825rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      boxShadow: '0 2px 4px rgba(13, 148, 136, 0.25)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="คลิกเพื่อเปิดดูเอกสารฉบับเต็มในแท็บใหม่"
+                  >
+                    <ExternalLink size={14} />
+                    <span>เปิดดูเอกสารฉบับเต็ม</span>
+                  </a>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      color: '#64748B',
+                      fontStyle: 'italic',
+                      backgroundColor: '#FFFFFF',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                    }}
+                  >
+                    ยังไม่มีการแนบลิงก์เอกสารฉบับเต็ม
+                  </span>
+                )}
+              </div>
+
+              {/* Admin-only Button to Edit/Attach Link */}
+              {isAdmin && !isEditingDocUrl && (
+                <button
+                  type="button"
+                  onClick={handleOpenEditDocUrl}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#FFFFFF',
+                    color: '#0F766E',
+                    border: '1.5px solid #0D9488',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแนบหรือแก้ไขลิงก์เอกสารได้"
+                >
+                  <Edit3 size={13} />
+                  <span>{guideConfig.severityDocUrl ? 'แก้ไขลิงก์เอกสาร (Admin)' : 'แนบลิงก์เอกสารฉบับเต็ม (Admin)'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Admin Editing Inline Panel */}
+            {isAdmin && isEditingDocUrl && (
+              <div
+                style={{
+                  padding: '14px 2rem',
+                  backgroundColor: '#EFF6FF',
+                  borderBottom: '1.5px solid #BFDBFE',
+                  flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div
+                    style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 800,
+                      color: '#1E3A8A',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Link2 size={16} />
+                    <span>จัดการลิงก์เอกสารฉบับเต็ม (เฉพาะผู้ดูแลระบบ - Admin)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDocUrl(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748B',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ปิดแถบแก้ไข ✕
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '10px',
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      URL ลิงก์เอกสารฉบับเต็ม (Google Drive / One Drive / ลิงก์ PDF):
+                    </label>
+                    <input
+                      type="url"
+                      value={docUrlInput}
+                      onChange={(e) => setDocUrlInput(e.target.value)}
+                      placeholder="https://drive.google.com/... หรือ https://..."
+                      style={{
+                        width: '100%',
+                        padding: '7px 12px',
+                        fontSize: '0.85rem',
+                        border: '1.5px solid #93C5FD',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      ชื่อเอกสาร (Document Title):
+                    </label>
+                    <input
+                      type="text"
+                      value={docTitleInput}
+                      onChange={(e) => setDocTitleInput(e.target.value)}
+                      placeholder="เอกสารเกณฑ์และนิยามมาตรฐาน (ICIT-FM-COMMON-013)"
+                      style={{
+                        width: '100%',
+                        padding: '7px 12px',
+                        fontSize: '0.85rem',
+                        border: '1.5px solid #93C5FD',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '8px',
+                    marginTop: '4px',
+                  }}
+                >
+                  {guideConfig.severityDocUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveDocUrl}
+                      disabled={isSavingDocUrl}
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#DC2626',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #FCA5A5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        marginRight: 'auto',
+                      }}
+                    >
+                      ลบลิงก์ออก
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDocUrl(false)}
+                    disabled={isSavingDocUrl}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDocUrl}
+                    disabled={isSavingDocUrl}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 16px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      backgroundColor: '#2563EB',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: isSavingDocUrl ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
+                    }}
+                  >
+                    <Save size={14} />
+                    <span>{isSavingDocUrl ? 'กำลังบันทึก...' : 'บันทึกลิงก์'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Modal Content */}
             <div
               style={{
@@ -3844,13 +4253,34 @@ export default function CarIncidentModal({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 flexShrink: 0,
+                flexWrap: 'wrap',
+                gap: '12px',
               }}
             >
-              <div style={{ fontSize: '0.875rem', color: '#64748B' }}>
+              <div style={{ fontSize: '0.875rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                 {severityLevel && CAR_SEVERITY_INFO[severityLevel] ? (
                   <span>ระดับที่เลือกในขณะนี้: <strong style={{ color: CAR_SEVERITY_INFO[severityLevel].color, fontWeight: 800 }}>{CAR_SEVERITY_INFO[severityLevel].label}</strong></span>
                 ) : (
                   <span>ยังไม่ได้เลือกระดับความรุนแรง</span>
+                )}
+                {guideConfig.severityDocUrl && (
+                  <a
+                    href={guideConfig.severityDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      color: '#0D9488',
+                      fontSize: '0.825rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <ExternalLink size={13} />
+                    <span>เปิดดูเอกสารฉบับเต็ม</span>
+                  </a>
                 )}
               </div>
               <button
