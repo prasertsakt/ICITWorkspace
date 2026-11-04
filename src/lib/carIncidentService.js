@@ -1206,8 +1206,11 @@ export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO'
         </a>
       </div>
 
-      <div style="border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 24px; font-size: 12px; color: #94A3B8; text-align: center;">
-        ส่งโดย: ${actor?.name || 'ผู้ควบคุมเอกสาร (DCC)'} &bull; สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT) มจพ.
+      <div style="border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 24px; font-size: 12px; color: #64748B; text-align: center;">
+        <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+          ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+        </div>
+        <div>ส่งโดย: ${actor?.name || 'ผู้ควบคุมเอกสาร (DCC)'} &bull; สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT) มจพ.</div>
       </div>
     </div>
   `;
@@ -1220,6 +1223,10 @@ export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO'
     } catch (e) {}
   }
 
+  const effectiveSender = actor?.name
+    ? (actor.name.includes('(No-Reply)') ? actor.name : `${actor.name} (No-Reply)`)
+    : 'DCC (ผู้ควบคุมเอกสาร) (No-Reply)';
+
   const logEntry = {
     id: `email-car-${Date.now()}`,
     recordId: record.id,
@@ -1230,7 +1237,7 @@ export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO'
     subject,
     sentAt: new Date().toISOString(),
     status: 'PENDING',
-    senderName: actor?.name || 'DCC (ผู้ควบคุมเอกสาร)',
+    senderName: effectiveSender,
   };
 
   try {
@@ -1241,7 +1248,8 @@ export async function sendCarIncidentReminder(record, actor, targetRole = 'AUTO'
         to: recipientEmails.join(','),
         subject,
         htmlBody,
-        senderName: actor?.name || 'DCC (ผู้ควบคุมเอกสาร)',
+        senderName: effectiveSender,
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
         webhookUrl,
       }),
     });
@@ -1355,6 +1363,12 @@ async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus
           เปิดดูเอกสารในระบบ
         </a>
       </div>
+      <div style="border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 20px; font-size: 12px; color: #64748B; text-align: center;">
+        <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+          ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+        </div>
+        <div>สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT) มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ</div>
+      </div>
     </div>
   `;
 
@@ -1374,7 +1388,8 @@ async function triggerCarIncidentEmail({ record, eventType, oldStatus, newStatus
         to: recipients.join(','),
         subject,
         htmlBody,
-        senderName: 'ระบบบริหารงาน IMS (ICIT)',
+        senderName: 'ระบบบริหารงาน IMS (No-Reply)',
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
         webhookUrl,
       }),
     });

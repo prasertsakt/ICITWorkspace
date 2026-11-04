@@ -103,7 +103,7 @@ graph TD
 - **Database Engine**: Firebase Cloud Firestore (NoSQL, Real-time Snapshot Synchronization)
 - **Authentication**: Firebase Authentication เชื่อมต่อ Google Workspace OAuth
 - **AI Integration**: Google Gemini AI API สำหรับการประเมินทักษะดิจิทัลและแนะนำแผนพัฒนา
-- **Email Gateway**: Google Apps Script Webhook สำหรับการส่งอีเมลแจ้งเตือน Workflow และใบเตือน CAR
+- **Email Gateway & No-Reply Notification Engine**: สถาปัตยกรรมส่งอีเมลแจ้งเตือนอัตโนมัติผ่าน Google Apps Script Webhook ภายใต้นโยบาย **No-Reply Identity** เต็มรูปแบบ (บังคับ `replyTo: noreply-icit@icit.kmutnb.ac.th`, ชื่อผู้ส่งต่อท้ายด้วย `(No-Reply)`, และแนบแถบป้ายเตือน "⚠️ กรุณาอย่าตอบกลับ / No-Reply" ในทุก Email Template) สำหรับ Workflow ขอลงเวลา, ระบบวันลา, ระบบบริหารงานคุณภาพ IMS, ใบแจ้ง CAR/Incident, และ KM Hub
 
 ---
 
@@ -393,15 +393,26 @@ Firestore Root
 
 ### 6.1 Serverless Route Handlers (`src/app/api/`)
 1. **`/api/email/send` (POST)**:
-   - รับคำขอส่งอีเมลจากทุกโมดูล ส่งต่อให้ Google Apps Script Webhook
-   - บันทึกผลลัพธ์ลงคอลเลกชัน `email_logs`
+   - รับคำขอส่งอีเมลจากทุกโมดูล (ระบบวันลา, IMS Audit, CAR/Incident Hub, KM Sharing, Admin Email Composer)
+   - **Enforce No-Reply Identity**:
+     - ตรวจสอบและต่อท้าย `(No-Reply)` ใน `senderName` เสมอ (เช่น `สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)`)
+     - กำหนด `replyTo` เริ่มต้นเป็น `noreply-icit@icit.kmutnb.ac.th`
+     - หากส่งมาในรูปแบบข้อความธรรมดา (`message`) จะแปลงเป็น Rich HTML Template ที่มีแถบแจ้งเตือน No-Reply ที่ส่วนท้ายโดยอัตโนมัติ
+   - ส่งต่อคำขอให้ Google Apps Script Webhook พร้อมพารามิเตอร์ `senderName` และ `replyTo`
+   - บันทึกผลลัพธ์ลงคอลเลกชัน `email_logs` ใน Firestore และ Local Storage
 2. **`/api/attendance/notify` (POST)**:
-   - บริการส่งอีเมลแจ้งเตือนสำหรับ Workflow ลงเวลา 4 ขั้นตอน
+   - บริการส่งอีเมลแจ้งเตือนสำหรับ Workflow ลงเวลา 4 ขั้นตอน (ฝ่ายบุคคล, พยาน, หัวหน้าฝ่าย, รองผู้อำนวยการ)
+   - บังคับใช้ No-Reply Identity (`replyTo: noreply-icit@icit.kmutnb.ac.th`, `senderName: สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)`)
+   - รองรับปุ่ม 1-Click Interactive Approval และแนบหลักฐานภาพ CCTV
 3. **`/api/skill-map/ai-analyze` (POST)**:
    - รับคะแนนทักษะดิจิทัล ส่งวิเคราะห์ผ่าน Gemini AI เพื่อจัดทำบทวิเคราะห์และข้อเสนอแนะ
 
 ### 6.2 Google Apps Script Email Gateway (`google-apps-script-email.gs`)
 - ใช้สิทธิ์ส่งเมลของ Google Workspace องค์กร ปลอดภัย เสถียร ไม่ติดสแปม และไม่ต้องตั้งค่า SMTP Server แยก
+- **No-Reply Delivery Configuration**:
+  - กำหนด `emailOptions.replyTo = data.replyTo || 'noreply-icit@icit.kmutnb.ac.th'` เพื่อให้โปรแกรมรับ-ส่งอีเมล (Gmail, Outlook, Apple Mail) ชี้เป้าการตอบกลับไปยัง No-Reply Address เสมอ
+  - กำหนด `emailOptions.name = data.senderName` (พร้อมต่อท้าย `(No-Reply)`)
+  - รองรับการสร้าง/ลบ Google Calendar Event อัตโนมัติ (`CalendarApp.getDefaultCalendar()`) พร้อมส่ง Google Meet Link และส่งคำเชิญ (Invites) ไปยังผู้เกี่ยวข้อง
 
 ---
 

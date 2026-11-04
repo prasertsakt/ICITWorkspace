@@ -39,7 +39,7 @@ export function getEmailConfig() {
 
   const defaults = {
     googleAppsScriptUrl: envUrl,
-    senderName: 'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)',
+    senderName: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)',
     senderEmail: 'noreply-icit@icit.kmutnb.ac.th',
     hrEmail: envHrEmail,
     deptHeadEmail: envDeptHeadEmail,
@@ -390,9 +390,14 @@ export function generateEmailContent(record, targetStep, recipient, appBaseUrl =
     </div>
 
     <!-- Footer -->
-    <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; text-align: center; font-size: 12px; color: #94A3B8;">
-      อีเมลนี้เป็นข้อความอัตโนมัติจากระบบขอลงเวลา สำนักวิทยบริการและเทคโนโลยีสารสนเทศ (ICIT)<br />
-      หากมีข้อสงสัยหรือข้อผิดพลาด กรุณาติดต่อฝ่ายบริหารงานบุคคล สำนักงานผู้อำนวยการ
+    <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748B;">
+      <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 9999px; margin-bottom: 8px;">
+        ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ ICIT Workspace (กรุณาอย่าตอบกลับ / No-Reply)
+      </div>
+      <div>
+        สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT) มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ<br />
+        หากมีข้อสงสัยหรือข้อผิดพลาด กรุณาติดต่อฝ่ายบริหารงานบุคคล สำนักงานผู้อำนวยการ
+      </div>
     </div>
   </div>
 </body>
@@ -809,6 +814,8 @@ export async function sendTimeAttendanceNotification(record, targetStep, recipie
           recordId: record?.id || '',
           step: targetStep,
           webhookUrl: scriptUrl,
+          senderName: config.senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)',
+          replyTo: 'noreply-icit@icit.kmutnb.ac.th',
         }),
       });
 
@@ -939,7 +946,7 @@ export function generateManualEmailHtml({
   subject,
   message,
   recipientName = '',
-  senderName = 'ผู้ดูแลระบบ (Admin) สำนักคอมพิวเตอร์ฯ',
+  senderName = 'ผู้ดูแลระบบ (Admin) สำนักคอมพิวเตอร์ฯ (No-Reply)',
 }) {
   // Check if message is already HTML from WYSIWYG editor
   const isHtml = /<[a-z][\s\S]*>/i.test(message || '');
@@ -1006,6 +1013,9 @@ export function generateManualEmailHtml({
 
     <!-- Official Footer -->
     <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 18px 24px; font-size: 12px; color: #64748B; line-height: 1.6;">
+      <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+        ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ ICIT Workspace (กรุณาอย่าตอบกลับ / No-Reply)
+      </div>
       <div><strong>ส่งโดย:</strong> ${senderName}</div>
       <div><strong>ระบบ:</strong> ระบบบริหารจัดการองค์กร ICIT Workspace</div>
       <div style="margin-top: 6px; font-size: 11.5px; color: #94A3B8;">
@@ -1028,7 +1038,7 @@ export async function sendManualAdminEmail({
   subject,
   message,
   recipientName = '',
-  senderName = 'ผู้ดูแลระบบ (Admin) ICIT Workspace',
+  senderName = 'ผู้ดูแลระบบ (Admin) ICIT Workspace (No-Reply)',
   senderEmail = '',
 }) {
   const config = getEmailConfig();
@@ -1037,11 +1047,13 @@ export async function sendManualAdminEmail({
     process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_EMAIL_URL ||
     process.env.GOOGLE_SCRIPT_EMAIL_URL;
 
+  const effectiveSenderName = senderName.includes('(No-Reply)') ? senderName : `${senderName} (No-Reply)`;
+
   const htmlBody = generateManualEmailHtml({
     subject,
     message,
     recipientName,
-    senderName,
+    senderName: effectiveSenderName,
   });
 
   const logEntry = {
@@ -1074,7 +1086,8 @@ export async function sendManualAdminEmail({
         subject: (subject || '').trim(),
         htmlBody,
         webhookUrl: scriptUrl,
-        senderName,
+        senderName: effectiveSenderName,
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
       }),
     });
 

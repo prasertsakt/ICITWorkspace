@@ -795,10 +795,14 @@ export function generateLeaveLimitEmailContent({
     </div>
 
     <!-- Footer -->
-    <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; text-align: center; font-size: 11px; color: #94A3B8;">
-      อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ ICIT Workspace &bull; วันที่ส่ง: ${new Date().toLocaleString('th-TH')}
-      <br />
-      สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)
+    <div style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; text-align: center; font-size: 11px; color: #64748B;">
+      <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+        ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+      </div>
+      <div>
+        อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ ICIT Workspace &bull; วันที่ส่ง: ${new Date().toLocaleString('th-TH')}<br />
+        สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (ICIT KMUTNB)
+      </div>
     </div>
   </div>
 </body>
@@ -835,6 +839,8 @@ export async function sendLeaveLimitEmailNotification({
     customNote,
   });
 
+  const effectiveSenderName = 'ระบบบริหารวันลา ICIT Workspace (No-Reply)';
+
   const logEntry = {
     id: `email-leavelimit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     recordId: personStat.personnelId || '',
@@ -846,6 +852,7 @@ export async function sendLeaveLimitEmailNotification({
     sentAt: new Date().toISOString(),
     status: 'PENDING',
     deliveryMethod: 'Next.js Relay / Google Apps Script',
+    senderName: effectiveSenderName,
     metadata: {
       totalDays: personStat.totalDays,
       maxDays: personStat.limits.maxDays,
@@ -866,7 +873,8 @@ export async function sendLeaveLimitEmailNotification({
         to: personStat.email,
         subject,
         htmlBody: html,
-        senderName: 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)',
+        senderName: effectiveSenderName,
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
       }),
     });
 

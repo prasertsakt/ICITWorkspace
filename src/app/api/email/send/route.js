@@ -7,6 +7,7 @@ export async function POST(request) {
       to,
       cc,
       bcc,
+      replyTo,
       subject,
       htmlBody,
       attachments,
@@ -28,6 +29,13 @@ export async function POST(request) {
       );
     }
 
+    // Default No-Reply identity & Reply-To address
+    const defaultSenderName = 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)';
+    const effectiveSenderName = senderName
+      ? (senderName.includes('No-Reply') ? senderName : `${senderName} (No-Reply)`)
+      : defaultSenderName;
+    const effectiveReplyTo = (replyTo || '').trim() || 'noreply-icit@icit.kmutnb.ac.th';
+
     const scriptUrl =
       webhookUrl ||
       process.env.GOOGLE_SCRIPT_EMAIL_URL ||
@@ -44,9 +52,10 @@ export async function POST(request) {
           to: to || '',
           cc: cc || '',
           bcc: bcc || '',
+          replyTo: effectiveReplyTo,
           subject: (subject || '').replace(/\uFFFD/g, '').trim(),
           htmlBody: (htmlBody || '').replace(/\uFFFD/g, ''),
-          senderName: senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)',
+          senderName: effectiveSenderName,
           createCalendarEvent: Boolean(createCalendarEvent),
           calendarEvent: calendarEvent || null,
         }),
@@ -63,6 +72,8 @@ export async function POST(request) {
         recipient: to || '',
         cc: cc || '',
         bcc: bcc || '',
+        replyTo: effectiveReplyTo,
+        senderName: effectiveSenderName,
       });
     }
 

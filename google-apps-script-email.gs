@@ -58,10 +58,12 @@ function doPost(e) {
       bcc = String(data.bcc).trim();
     }
 
-    var replyTo = data.replyTo ? String(data.replyTo).trim() : '';
+    var replyTo = data.replyTo ? String(data.replyTo).trim() : 'noreply-icit@icit.kmutnb.ac.th';
     var recordId = data.recordId || '';
     var step = data.step || '';
-    var senderName = data.senderName || 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)';
+    var senderName = data.senderName
+      ? (String(data.senderName).indexOf('(No-Reply)') !== -1 ? String(data.senderName) : String(data.senderName) + ' (No-Reply)')
+      : 'สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (No-Reply)';
 
     // =========================================================================
     // 1. CALENDAR EVENT DELETION ACTION (DELETE_CALENDAR_EVENT)
@@ -194,7 +196,7 @@ function doPost(e) {
     var emailOptions = {
       htmlBody: htmlBody,
       name: senderName,
-      noReply: false
+      replyTo: replyTo || 'noreply-icit@icit.kmutnb.ac.th'
     };
 
     if (cc && cc.length > 0) {
@@ -203,10 +205,6 @@ function doPost(e) {
 
     if (bcc && bcc.length > 0) {
       emailOptions.bcc = bcc;
-    }
-
-    if (replyTo && replyTo.length > 0) {
-      emailOptions.replyTo = replyTo;
     }
 
     // Send email using GmailApp with institutional Google Workspace account

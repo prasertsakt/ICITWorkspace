@@ -451,7 +451,8 @@ export async function deleteKmCalendarEvent(record, actor) {
           startTime: startDateTimeIso,
           endTime: endDateTimeIso,
         },
-        senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace',
+        senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace (No-Reply)',
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
       }),
     });
 
@@ -944,9 +945,14 @@ export async function sendKmSharingBookingNotification({
             ` : ''}
           </div>
 
-          <div style="font-size: 12px; color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 16px;">
-            ผู้ทำรายการ: ${actor?.name || record.creator?.name || 'บุคลากรสำนักฯ'} (${actor?.email || record.creator?.email || ''})<br />
-            ข้อความแจ้งเตือนอัตโนมัติจากระบบ ICIT Workspace สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+          <div style="font-size: 12px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 16px; text-align: center;">
+            <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+              ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+            </div>
+            <div>
+              ผู้ทำรายการ: ${actor?.name || record.creator?.name || 'บุคลากรสำนักฯ'} (${actor?.email || record.creator?.email || ''})<br />
+              ระบบ ICIT Workspace สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            </div>
           </div>
         </div>
       </div>
@@ -959,7 +965,8 @@ export async function sendKmSharingBookingNotification({
         to: emailList,
         subject: `[KM Sharing] ${actionTitle}: ${record.topic} (วันที่ ${record.date})`.replace(/\uFFFD/g, ''),
         htmlBody,
-        senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace',
+        senderName: 'ระบบแบ่งปันความรู้ ICIT Workspace (No-Reply)',
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
         createCalendarEvent: true,
         calendarEvent: {
           title: `[KM Sharing] ${record.topic}`,

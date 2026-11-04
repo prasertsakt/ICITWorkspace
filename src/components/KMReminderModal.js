@@ -81,6 +81,8 @@ export default function KMReminderModal({
                 to: attendeeEmails,
                 subject: `[แจ้งเตือนการแบ่งปันองค์ความรู้] หลักสูตร: ${item.courseTitle}`,
                 message: `เรียน ผู้เข้าอบรม\n\nระบบขอแจ้งเตือนให้ท่านดำเนินการแบ่งปันองค์ความรู้จากการอบรมหลักสูตร "${item.courseTitle}" (วันที่อบรม: ${formatDateDDMMYYYYBE(item.startDate)} - ${formatDateDDMMYYYYBE(item.endDate)})\n\nสถานะการติดตาม: ${item.tracking.statusMessage}\n\nกรุณาดำเนินการจัดทำรายงานสรุปความรู้ หรือบรรยายกลุ่มย่อย และอัปเดตสถานะในระบบ KM Hub\n\nสำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ (ICIT)`,
+                senderName: 'ระบบแจ้งเตือน KM Hub (No-Reply)',
+                replyTo: 'noreply-icit@icit.kmutnb.ac.th',
               }),
             });
           } catch (err) {

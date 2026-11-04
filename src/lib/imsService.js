@@ -203,12 +203,14 @@ export async function sendImsAuditEmail({
   htmlBody,
   auditId,
   targetStep = 'IMS_AUDIT',
-  senderName = 'ระบบบริหารงาน IMS สำนักคอมพิวเตอร์ฯ (ICIT)',
+  senderName = 'ระบบบริหารงาน IMS (No-Reply)',
 }) {
   if (!to) {
     console.warn('sendImsAuditEmail: No recipient email provided');
     return { success: false, message: 'No recipient email' };
   }
+
+  const effectiveSenderName = senderName.includes('(No-Reply)') ? senderName : `${senderName} (No-Reply)`;
 
   const logEntry = {
     id: `email-ims-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -223,7 +225,7 @@ export async function sendImsAuditEmail({
     sentAt: new Date().toISOString(),
     status: 'PENDING',
     deliveryMethod: 'API Relay',
-    senderName,
+    senderName: effectiveSenderName,
   };
 
   let webhookUrl = '';
@@ -244,7 +246,8 @@ export async function sendImsAuditEmail({
         bcc: (bcc || '').trim(),
         subject: subject.trim(),
         htmlBody,
-        senderName,
+        senderName: effectiveSenderName,
+        replyTo: 'noreply-icit@icit.kmutnb.ac.th',
         webhookUrl,
       }),
     });
@@ -416,8 +419,11 @@ export function generateImsLeadNotificationHtml({ audit, recipientName = 'Lead I
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; text-align: center;">
-              อีเมลอัตโนมัติจากระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #64748B; text-align: center;">
+              <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+                ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+              </div>
+              <div>ระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
             </td>
           </tr>
         </table>
@@ -550,8 +556,11 @@ export function generateImsApprovalNotificationHtml({ audit, leadActorName = 'Le
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; text-align: center;">
-              อีเมลอัตโนมัติจากระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #64748B; text-align: center;">
+              <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+                ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+              </div>
+              <div>ระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
             </td>
           </tr>
         </table>
@@ -694,8 +703,11 @@ export function generateImsRevisionNotificationHtml({ audit, comment, leadActorN
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; text-align: center;">
-              อีเมลอัตโนมัติจากระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #64748B; text-align: center;">
+              <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+                ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+              </div>
+              <div>ระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
             </td>
           </tr>
         </table>
@@ -885,8 +897,11 @@ export function generateImsEvaluationNotificationHtml({ audit, appBaseUrl = '' }
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; text-align: center;">
-              อีเมลอัตโนมัติจากระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; font-size: 12px; color: #64748B; text-align: center;">
+              <div style="display: inline-block; background-color: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; margin-bottom: 8px;">
+                ⚠️ อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติจากระบบ (กรุณาอย่าตอบกลับ / No-Reply)
+              </div>
+              <div>ระบบบริหารงาน IMS สำนักคอมพิวเตอร์และเทคโนโลยีสารสนเทศ มจพ.</div>
             </td>
           </tr>
         </table>
