@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 
 export const LOCAL_KEY_CAR_INCIDENTS = 'icit_ims_car_incidents';
+export { isLeadAuditorUser } from './imsService';
 export const CAR_INCIDENT_STATUS = {
   NOT_YET_APPROVED: 'NOT_YET_APPROVED', // รอดำเนินการ / ยังไม่อนุมัติ
   ON_PROGRESS: 'ON_PROGRESS',           // กำลังดำเนินการ

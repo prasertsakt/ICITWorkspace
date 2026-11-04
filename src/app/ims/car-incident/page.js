@@ -22,6 +22,7 @@ import {
 import {
   subscribeImsAudits,
   subscribeYearlyAuditors,
+  isLeadAuditorUser,
 } from '@/lib/imsService';
 import { subscribePersonnelList } from '@/lib/storageService';
 import {
